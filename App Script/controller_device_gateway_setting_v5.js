@@ -45,11 +45,11 @@ window.device_gateway_setting_component = {
                       </div>
                       <div class="item-inner">
                           <div class="item-title-row">
-                              <div class="item-title" :signal="item.signal">
-                              <div class="signal" style="postion:relative;top:-6px"></div>
+                              <div class="item-title display-flex justify-content-flex-start align-content-center" :signal="item.signal" >
+                              <div class="signal"></div>
                               <span>{{ item.device_model }} (v{{item.firmware}})</span>
-                              <i class="material-icons" style="position: relative;top:5px;color:red;" v-if="item.checked && !item.link">link_off</i>
-                              <i class="material-icons" style="position: relative;top:5px;color:green;" v-if="item.checked && item.link">link</i>
+                              <i class="material-icons" style="color:red;" v-if="item.checked && !item.link">link_off</i>
+                              <i class="material-icons" style="color:green;" v-if="item.checked && item.link">link</i>
                               </div>
                           </div>
                           <div class="item-subtitle text-muted">{{ item.subdeviceNameList }}-{{ item.device_name.substring(0, 12) }}</div>
@@ -234,7 +234,30 @@ window.device_gateway_setting_component = {
       this.profileDevice.forEach(item=>{
         item.checked = !this.allchecked;
         item.gateway = !this.allchecked?this.gateway:false;
+        /*
+        handle defalut connect,choose the max value
+        1.get the network list
+        2.compare the network list and create a obj
+        3.create new list save default connect obj
+        4.change the profileDevice list
+        */
       })
+      if(!this.allchecked){
+        console.log(this.profileDevice)
+        this.profileDevice.forEach(item=>{
+          if(!item.isGroup && item.network_id){
+            item.default_connect = 0;
+            this.profileDevice.forEach(kitem=>{
+              if(item.network_id === kitem.network_id && item.device_name !== kitem.device_name){
+                if(item.signal > kitem.signal){
+                  item.default_connect = 1;
+                  //kitem.default_connect = 0;
+                }
+              }
+            })
+          }
+        })
+      }
       this.allchecked = !this.allchecked;
     },
     async postDataToErp(item,status){
