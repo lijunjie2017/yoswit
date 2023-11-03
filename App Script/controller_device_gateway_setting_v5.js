@@ -21,8 +21,14 @@ window.device_gateway_setting_component = {
     <div class="list media-list no-margin list-group no-more-class">
       <ul>
           <template v-for="item in profileDevice" :key="item.isGroup ? item.groupName : item.name">
-              <li class="list-group-title swipeout" v-if="item.isGroup">
+              <li class="list-group-title swipeout display-flex justify-content-space-between" v-if="item.isGroup">
                 <div class="swipeout-content">{{ item.groupName }}</div>
+                <label class="checkbox p-2 mx-1" v-if="item.groupName === _('Mob-Mob Devices')">
+                  <!-- checkbox input -->
+                  <input type="checkbox" v-model="allchecked" @click.stop="handleChangeAllGateway"/>
+                  <!-- checkbox icon -->
+                  <i class="icon-checkbox" style="opacity: 1;"></i>
+                </label>
               </li>
 
               <li class="swipeout" :guid="item.device" v-if="!item.isGroup && item.device_model != 'YO105'">
@@ -40,7 +46,7 @@ window.device_gateway_setting_component = {
                       <div class="item-inner">
                           <div class="item-title-row">
                               <div class="item-title" :signal="item.signal">
-                              <div class="signal"></div>
+                              <div class="signal" style="postion:relative;top:-6px"></div>
                               <span>{{ item.device_model }} (v{{item.firmware}})</span>
                               <i class="material-icons" style="position: relative;top:5px;color:red;" v-if="item.checked && !item.link">link_off</i>
                               <i class="material-icons" style="position: relative;top:5px;color:green;" v-if="item.checked && item.link">link</i>
@@ -69,6 +75,7 @@ window.device_gateway_setting_component = {
         mac_address: '',
         device_model: '',
       },
+      allchecked : false,
     }
   },
   mounted() {
@@ -221,6 +228,14 @@ window.device_gateway_setting_component = {
       }else{
         this.postDataToErp(item,action);
       }
+    },
+    async handleChangeAllGateway(){
+      console.log(this.allchecked);
+      this.profileDevice.forEach(item=>{
+        item.checked = !this.allchecked;
+        item.gateway = !this.allchecked?this.gateway:false;
+      })
+      this.allchecked = !this.allchecked;
     },
     async postDataToErp(item,status){
         const action = item.checked;
