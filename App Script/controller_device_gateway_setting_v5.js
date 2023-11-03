@@ -87,6 +87,7 @@ window.device_gateway_setting_component = {
           if (rs.data && rs.data.data.profile_device) {
             let profile_device = rs.data.data.profile_device;
             let profile_subdevice = rs.data.data.profile_subdevice;
+            //in order to get the firmware on gateways list
             profile_device.forEach(item=>{
                 for(let i in window.profile_subdevice){
                     if(item.name === window.profile_subdevice[i].profile_device){
