@@ -231,6 +231,7 @@ window.device_gateway_setting_component = {
     },
     async handleChangeAllGateway(){
       console.log(this.allchecked);
+      let default_connect_count = 0;
       this.profileDevice.forEach(item=>{
         item.checked = !this.allchecked;
         item.gateway = !this.allchecked?this.gateway:false;
@@ -245,18 +246,37 @@ window.device_gateway_setting_component = {
       if(!this.allchecked){
         console.log(this.profileDevice)
         this.profileDevice.forEach(item=>{
-          if(!item.isGroup && item.network_id){
-            item.default_connect = 0;
+          if(!item.isGroup && item.network_id != "0"){
+            item.default_connect = 1;
             this.profileDevice.forEach(kitem=>{
-              if(item.network_id === kitem.network_id && item.device_name !== kitem.device_name){
-                if(item.signal > kitem.signal){
-                  item.default_connect = 1;
-                  //kitem.default_connect = 0;
+              if(item.network_id === kitem.network_id){
+                if(item.device_name !== kitem.device_name){
+                  if(item.signal < kitem.signal){
+                    item.default_connect = 0;
+                    kitem.default_connect = 1;
+                  }else{
+                    if(kitem.default_connect == 1){
+                      item.default_connect = 0;
+                    }
+                  }
                 }
               }
             })
+          }else if(item.network_id == "0"){
+            item.default_connect = 1;
           }
         })
+      }
+      //check num of default network
+      default_connect_count = this.profileDevice.filter(item=>item.default_connect == 1 && !item.isGroup && item.device_model == "YO105");
+      console.log(default_connect_count)
+      if(default_connect_count.length >5){
+        app.dialog.confirm('Exceeds the default connection limit,do you want to go to the network setup page'+'?', ()=>{
+          //this.postDataToErp(item,action);
+          _emitter.emit('loadindex',{})
+        }, function(){
+            //item.checked = true;
+        });
       }
       this.allchecked = !this.allchecked;
     },
