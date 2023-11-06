@@ -211,7 +211,7 @@ window.iot_emitter_device = ()=>{
             }
         }else if(rs.startsWith("8b")){
             let img_url = runtime.appConfig.app_api_url+'/files/';
-            if(rs.startsWith( "8b00")){
+            if(rs.startsWith( "8b00") && rs.length == 4){
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".material-icons").text("sensor_door")
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".button img").attr('src',img_url+'door_close.svg')
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".on_flag").attr("ref",0)
