@@ -302,7 +302,10 @@ window.controller_gateway_wifi_config = (guid,device_name)=>{
                         // ignore
                     }
                 })
-                .catch((err)=>{
+                .catch((errs)=>{
+                    if(errs){
+                        app.dialog.alert(errs, runtime.appInfo.name);
+                    }
                     this.bluetooth_status = 0;
                     try {
                         $(this.$refs.sureChecked).remove();
