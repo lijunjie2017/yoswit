@@ -76,6 +76,7 @@ window.device_gateway_setting_component = {
         device_model: '',
       },
       allchecked : false,
+      profileData : null
     }
   },
   mounted() {
@@ -92,6 +93,7 @@ window.device_gateway_setting_component = {
         })
         .then((rs) => {
           if (rs.data && rs.data.data.profile_device) {
+            this.profileData = rs.data.data;
             let profile_device = rs.data.data.profile_device;
             let profile_subdevice = rs.data.data.profile_subdevice;
             //in order to get the firmware on gateways list
@@ -280,6 +282,25 @@ window.device_gateway_setting_component = {
       }
       this.allchecked = !this.allchecked;
     },
+    //send more data to the profile
+    async postMoredataToErp(){
+      //change the value of the profile device
+      let list = this.profileData.profile_device;
+      list.forEach(item=>{
+        this.profileDevice.forEach(kitem=>{
+          if(kitem.name == item.name && kitem.checked){
+            item.gateway = kitem.gateway;
+            item.default_connect = kitem.default_connect;
+          }
+        })
+      })
+      console.log('this.profileData',this.profileData);
+      await http.request(encodeURI('/api/resource/Profile/' + this.profileData.name), {
+        method: 'PUT',
+        serializer: 'json',
+        data: this.profileData
+      });
+    },
     async postDataToErp(item,status){
         const action = item.checked;
         const gateway = !status ? this.gateway : '';
@@ -329,8 +350,9 @@ window.device_gateway_setting_component = {
       
     },
     //sync gateways to erp
-    syncGateways(){
+    async syncGateways(){
         //check network group only have defalut connect
+        console.log('check network group only have defalut connect');
         let list = [];
         let default_connect_count = 0;
         let checklist = [];
@@ -339,7 +361,7 @@ window.device_gateway_setting_component = {
             if(kitem.default_connect == 1 && parseInt(kitem.network_id )> 0){
                 default_connect_count++;
             }
-            if(kitem.checked){
+            if(kitem.checked && !kitem.isGroup){
                 checklist.push(kitem)
                 if(kitem.default_connect == 1){
                     list.push({
@@ -391,6 +413,12 @@ window.device_gateway_setting_component = {
                 }
             }
         })
+        try{
+          await this.postMoredataToErp();
+        }catch(err){
+          app.dialog.alert(tran(`Sync Gateway Error.`));
+          return
+        }
         app.dialog.confirm('Do you confirm to sync the device list to the gateway '+this.gateway+'?', ()=>{
             app.preloader.show();
             core_mqtt_publish("cmd/"+md5(md5(this.gateway.toLowerCase())), {
