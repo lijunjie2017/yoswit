@@ -28,13 +28,19 @@ window.iot_update_profile_subdevice_config = (subdevice,config)=>{
             method: "GET",
             data: {}
         }).then((rs)=>{
-            let data = rs.data;
+            let data = rs.data.data;
             let config_data = {};
             if(data.config){
-                config_data = data.config;
+                config_data = JSON.parse(data.config);
                 if(isset(obj["virtual"]) && obj["virtual"] == ""){
                     delete obj.virtual;
                     delete config_data.virtual;
+                }
+                if(isset(obj["mapping"]) && obj["mapping"] == ""){
+                    config_data["mapping"] = "";
+                }
+                if(isset(obj["be_pairing"]) && obj["be_pairing"] == ""){
+                    config_data["be_pairing"] = "";
                 }
                 config_data = Object.assign(config_data,obj);
                 upload_data = JSON.stringify(config_data)

@@ -71,7 +71,21 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                 })
                 $(picker.$el).find(".toolbar-save-link").on("click", () => {
                   iot_mode_setup_pairing_mode_picker.close();
-
+                  doms.forEach((ele)=>{
+                    let name = $(ele).attr("name");
+                    let guid = $(ele).attr("guid");
+                    let button_group = $(ele).attr("button-group");
+                    let subdevice_name = $(ele).attr("subdevice-name");
+                    let title = $(ele).attr("display-name");
+                    if(guid != this_guid){
+                      command[name] = guid + "|"+button_group + "|" + subdevice_name;
+                      commandList[title] = "";
+                    }
+                    if(name == setting_value){
+                      command["No Pairing"] = guid;
+                      command['name'] = subdevice_name;
+                    }
+                  })
                     const selected = inputEl.val();
                     console.log("iot_mode_setup_pairing_mode_picker")
                     app.preloader.show();
@@ -88,7 +102,7 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                     let target_name = "";
                     let this_gang = this_button_group.replace("ONOFF GANG","")*1;
                     for(let i in scanned_periperals){
-                      console.log(scanned_periperals[i].guid)
+                      //console.log(scanned_periperals[i].guid)
                       if(scanned_periperals[i].guid == this_guid){
                         uuid = i;
                       }
@@ -104,8 +118,12 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                     let other_server_data = {
                       "be_pairing" : true
                     }
-                    let profile_subdevice_data = {};
-                    let target_profile_subdevice_data = {};
+                    let profile_subdevice_data = {
+                      "mapping" : "",
+                    };
+                    let target_profile_subdevice_data = {
+                      "mapping" : "",
+                    };
                     let read_cmd = [];
                     read_cmd.push({action:"connect"});
                     // read firmware version 2a26
@@ -118,7 +136,7 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                       let gang2 = other_button_group.length>2?other_button_group[other_button_group.length-1].replace("ONOFF GANG","")*1:1;
                       
                       for(let i in scanned_periperals){
-                        console.log(scanned_periperals[i].guid)
+                        //console.log(scanned_periperals[i].guid)
                         if(scanned_periperals[i].guid == this_guid){
                           uuid = i;
                         }
@@ -132,7 +150,7 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                         params.obj.find(".setting-value").html(_(selected));
                         app.preloader.hide();
                         server_data[this_button_group] = null;
-                        console.log("server_data",server_data);
+                        //console.log("server_data",server_data);
                         other_server_data["be_pairing"] = null;
                         iot_device_setting_sync_server(this_guid, null, null, true,server_data).then(()=>{
                           iot_device_setting_sync_server(guid,null,null,true,other_server_data);
@@ -159,7 +177,7 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                       new_mac = core_utils_get_mac_address_from_guid(guid,true);
                       ower_mac = core_utils_get_mac_address_from_guid(this_guid,true);
                       for(let i in scanned_periperals){
-                        console.log(scanned_periperals[i].guid)
+                        //console.log(scanned_periperals[i].guid)
                         if(scanned_periperals[i].guid == this_guid){
                           uuid = i;
                         }
@@ -190,7 +208,7 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                               let cmd = [];
                               cmd.push({action:"connect"});
                               cmd.push({action:"write",data:command_data});
-                              console.log("uuid",uuid)
+                              //console.log("uuid",uuid)
                               
                               ha_process_periperal_cmd(uuid, cmd,true).then(()=>{
                                 params.obj.attr("setting-value", selected);
