@@ -115,7 +115,7 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                       }
                     let server_data = {};
                     server_data[server_key] = selected;
-                    server_data[pairing_guid_key] = null;
+                    server_data[pairing_guid_key] = 'null';
                     let other_server_data = {
                       "be_pairing" : true
                     }
@@ -156,10 +156,11 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                         //console.log("server_data",server_data);
                         other_server_data["be_pairing"] = null;
                         iot_device_setting_sync_server(this_guid, null, null, true,server_data).then(()=>{
-                          iot_device_setting_sync_server(guid,null,null,true,other_server_data);
+                          //iot_device_setting_sync_server(guid,null,null,true,other_server_data);
                           window.iot_update_profile_subdevice_config(this_subdevice,JSON.stringify(profile_subdevice_data)).then(()=>{
-                            window.iot_update_profile_subdevice_config(target_name,JSON.stringify({"be_pairing":""}));
-                            app.ptr.refresh('.frappe-detail-ptr-content');
+                            window.iot_update_profile_subdevice_config(target_name,JSON.stringify({"be_pairing":""})).then(()=>{
+                              app.ptr.refresh('.frappe-detail-ptr-content');
+                            })
                           })
                         })
                       }).catch((error)=>{
@@ -219,11 +220,12 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                                 
                                 app.preloader.hide();
                                 iot_device_setting_sync_server(this_guid, null, null, true,server_data).then(()=>{
-                                  iot_device_setting_sync_server(guid,null,null,true,other_server_data);
+                                  //iot_device_setting_sync_server(guid,null,null,true,other_server_data);
                                   window.iot_update_profile_subdevice_config(this_subdevice,JSON.stringify(profile_subdevice_data)).then(()=>{
-                                    window.iot_update_profile_subdevice_config(target_name,JSON.stringify({'be_pairing':true}));
+                                    window.iot_update_profile_subdevice_config(target_name,JSON.stringify({'be_pairing':true})).then(()=>{
+                                      app.ptr.refresh('.frappe-detail-ptr-content');
+                                    })
                                   })
-                                  app.ptr.refresh('.frappe-detail-ptr-content');
                                 })
                               },(e)=>{
                                   if(e!="Password is not correct"){
