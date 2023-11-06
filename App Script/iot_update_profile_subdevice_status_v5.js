@@ -42,6 +42,9 @@ window.iot_update_profile_subdevice_config = (subdevice,config)=>{
                 if(isset(obj["be_pairing"]) && obj["be_pairing"] == ""){
                     config_data["be_pairing"] = "";
                 }
+                if(isset(obj["pairing_guid"]) && obj["pairing_guid"] == ""){
+                    config_data["pairing_guid"] = "";
+                }
                 config_data = Object.assign(config_data,obj);
                 upload_data = JSON.stringify(config_data)
             }

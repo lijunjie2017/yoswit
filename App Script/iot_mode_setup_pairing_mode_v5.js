@@ -101,6 +101,8 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                     let button_group = "";
                     let target_name = "";
                     let this_gang = this_button_group.replace("ONOFF GANG","")*1;
+                    let server_key = `Device Pairing${this_gang}`;
+                    let pairing_guid_key = `pairing_guid${this_gang}`;
                     for(let i in scanned_periperals){
                       //console.log(scanned_periperals[i].guid)
                       if(scanned_periperals[i].guid == this_guid){
@@ -111,15 +113,16 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                       if(this_firmware<10.0 && this_gang ==2){
                         this_gang = 3;
                       }
-                    let server_data = {
-                      "Device Pairing" : selected,
-                      "pairing_guid" : null
-                    }
+                    let server_data = {};
+                    server_data[server_key] = selected;
+                    server_data[pairing_guid_key] = null;
                     let other_server_data = {
                       "be_pairing" : true
                     }
                     let profile_subdevice_data = {
                       "mapping" : "",
+                      "pairing_guid" : ""
+                      
                     };
                     let target_profile_subdevice_data = {
                       "mapping" : "",
@@ -193,15 +196,15 @@ window.iot_mode_setup_pairing_mode_auto_init = function(params) {
                         }
                         command_data = `02${ower_mac}81080${this_gang}fe${new_mac}ff0${gang}00`;
                         other_command_data = `81080${gang}fe${ower_mac}ff0${this_gang}00`;
-                        server_data["pairing_guid"] = guid;
+                        server_data[pairing_guid_key] = guid;
                         server_data[this_button_group] = button_group;
                         profile_subdevice_data = {
                             "mapping" : target_name,
-                            "virtual" : ""
+                            "virtual" : "",
+                            "pairing_guid" : guid
                         }
                         target_profile_subdevice_data = {
                             "mapping" : this_subdevice,
-                            "virtual" : ""
                         };
                         
                           if (command_data) {

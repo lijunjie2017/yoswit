@@ -311,7 +311,7 @@ window.ha_home_profile_room_load = ()=>{
           peripheral.subdevice_name = roomJsonItem[j].subdevice_name;
           peripheral.status = roomJsonItem[j].status;
           peripheral.button_group = roomJsonItem[j].device_button_group;
-          peripheral.pairing_guid = roomJsonItem[j].pairing_guid;
+          //peripheral.pairing_guid = roomJsonItem[j].pairing_guid;
           peripheral.pairing_gang = roomJsonItem[j].pairing_gang;
           //peripheral.be_pairing = roomJsonItem[j].be_pairing;
           peripheral.config = roomJsonItem[j].config;
@@ -329,10 +329,13 @@ window.ha_home_profile_room_load = ()=>{
           peripheral.gateway = roomJsonItem[j].gateway;
           peripheral.mobmob = 0;
           //check config
-          if(roomJsonItem[j].config){
+          if(roomJsonItem[j].config && roomJsonItem[j].config!= 'None'){
             let configObj = JSON.parse(roomJsonItem[j].config);
             if(isset(configObj['be_pairing'])){
-              peripheral.be_pairing = configObj['be_pairing'];
+              peripheral.be_pairing = configObj['be_pairing']?1:"";
+            }
+            if(isset(configObj['pairing_guid'])){
+              peripheral.pairing_guid = configObj['pairing_guid'];
             }
           }
           for(let z in window.local_scanned_periperals){

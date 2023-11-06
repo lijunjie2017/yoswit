@@ -52,7 +52,8 @@ window.iot_device_setting_label_init = (title)=>{
                         dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
                     }
                 }
-                if(device_item.setting_type == data.device_button_group){
+                let key = "Device Pairing"+data.device_button_group.replace("ONOFF GANG","")*1;
+                if(device_item.setting_type == key){
                     data.pair_data = {
                         setting_type : device_item.setting_type,
                         setting : device_item.setting,

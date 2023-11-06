@@ -481,23 +481,23 @@ window.iot_emitter_device = ()=>{
                         uuid = i;
                     }
                 }
-                // let cmd = [];
-                // cmd.push({action:"connect"});
-                // let data = `55aa040200`;
-                // data += core_util_calculate_crc16_modbus_for_doa(data);
-                // console.log(data);
-                // cmd.push({action:"write",data:`${data}`});
-                // ha_process_periperal_cmd(uuid, cmd).then(()=>{
+                let cmd = [];
+                cmd.push({action:"connect"});
+                let data = `55aa040200`;
+                data += core_util_calculate_crc16_modbus_for_doa(data);
+                console.log(data);
+                cmd.push({action:"write",data:`${data}`});
+                ha_process_periperal_cmd(uuid, cmd).then(()=>{
                     
-                //   },error=>{
-                //     const toast = app.toast.create({
-                //         position: 'bottom',
-                //         closeTimeout: 3000,
-                //         text: error,
-                //       });
+                  },error=>{
+                    const toast = app.toast.create({
+                        position: 'bottom',
+                        closeTimeout: 3000,
+                        text: error,
+                      });
           
-                //       toast.open();
-                //   })
+                      toast.open();
+                  })
             }else if(rs.includes('55aa')){
 
             }

@@ -284,8 +284,8 @@ window.initSettingTemplate = ()=>{
                     </div>
                     <div class="col align-self-center no-padding-left">
                         <h5 class="no-margin-bottom">{{ _("Device Pairing") }}</h5>
-                        {% if pair_data.setting_type!= "" and self_setting_data.setting != "No Pairing" %}
-                        <p class="setting-value text-muted size-12">{{self_setting_data.setting}}</p>
+                        {% if pair_data.setting_type!= ""%}
+                        <p class="setting-value text-muted size-12">{{pair_data.setting}}</p>
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _("No Pairing") }}</p>
                         {% endif %}
