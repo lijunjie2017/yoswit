@@ -127,7 +127,7 @@ window.iot_emitter_device = ()=>{
             let gang4_status = io.substring(3,4);
             let this_date = new Date();
             let uuid = '';
-            console.log('gang4_status',gang4_status)
+            console.log('gang3_status',gang3_status)
             for(let i in scanned_periperals){
                 if(scanned_periperals[i].guid == guid){
                     uuid = i;
@@ -180,7 +180,7 @@ window.iot_emitter_device = ()=>{
                     $('ul li.home-scanned-peripheral[guid="'+guid+'"][button_group="ONOFF GANG3"]').find('.on_flag').attr('ref',gang3_status>0?1:0);
                     gang_status_render(guid,"ONOFF GANG3",gang3_status>0?1:0);
                 }
-            }else if(!isset(isset(scanned_periperals[uuid]['manual'][3]))){
+            }else if(!isset(scanned_periperals[uuid]['manual'][3])){
                 scanned_periperals[uuid]['manual'][3] = {
                     date: DateFormatter.format((new Date()), "Y-m-d H:i:s"),
                     ref: gang3_status>0?1:0
@@ -215,7 +215,7 @@ window.iot_emitter_device = ()=>{
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".material-icons").text("sensor_door")
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".button img").attr('src',img_url+'door_close.svg')
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".on_flag").attr("ref",0)
-            }else{
+            }else if(rs.length == 4){
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".on_flag").attr("ref",1)
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".material-icons").text("open_in_full")
                 $("li.device[guid='"+guid+"']").find(".control-panel-right").find(".button img").attr('src',img_url+'door_open.svg')

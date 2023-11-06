@@ -1036,7 +1036,7 @@ window.initSettingTemplate = ()=>{
                     <div class="col align-self-center no-padding-left">
                         <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
                         {% if self_setting_data.setting == "" %}
-                        <p class="setting-value text-muted size-12">0</p>
+                        <p class="setting-value text-muted size-12">20</p>
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
                         {% endif %}
@@ -1197,7 +1197,7 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
-    setting_label = "Minimum";
+    setting_label = "Maximum";
     setting_label_template[setting_label] = `
         <div class="auto-init card margin-bottom-half mx-0 my-3" 
         ref="{{ device }}" 
@@ -1218,7 +1218,42 @@ window.initSettingTemplate = ()=>{
                     <div class="col align-self-center no-padding-left">
                         <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
                         {% if self_setting_data.setting == "" %}
-                        <p class="setting-value text-muted size-12">0</p>
+                        <p class="setting-value text-muted size-12">210</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Manual Dim Steps";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_mode_setup_admin_manual_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        >
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12">8</p>
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
                         {% endif %}
