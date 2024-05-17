@@ -1,0 +1,229 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Serial Port') }}</div>
+      </div>
+    </div>
+
+    <style>
+      .serial-port-result-container::-webkit-scrollbar {
+        width: 6px !important;
+      }
+
+      .serial-port-result-container::-webkit-scrollbar-track {
+        background-color: #ccc !important;
+      }
+
+      .serial-port-result-container::-webkit-scrollbar-thumb {
+        background: #4e4e4e !important;
+        border-radius: 4px !important;
+      }
+    </style>
+
+    <div class="page-content">
+      <div
+        class="bg-color-white mb-4 p-2 serial-port-result-container"
+        style="height: 350px; overflow-y: scroll; overflow-x: hidden; box-sizing: border-box"
+      >
+        ${callbackResults.map((item) => $h`
+        <p innerHTML="${item}"></p>
+        `)}
+      </div>
+
+      <div style="box-sizing: border-box">
+        <div class="row">
+          <div class="col"><button class="button button-fill" @click="${() => connect()}">{{ _('Connect') }}</button></div>
+          <div class="col"><button class="button button-fill" @click="${() => disconnect()}">{{ _('Disconnect') }}</button></div>
+          <div class="col"><button class="button button-fill" @click="${() => clean()}">{{ _('Clean') }}</button></div>
+        </div>
+      </div>
+
+      <form class="list" id="serial-port-form">
+        <ul>
+          <li>
+            <div class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">{{ _('BaudRate') }}</div>
+                <div class="item-input-wrap">
+                  <input type="number" name="baud_rate" placeholder="BaudRate" value="9600" />
+                  <span class="input-clear-button"></span>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">{{ _('Filter') }}</div>
+                <div class="item-input-wrap">
+                  <input type="text" name="filter" placeholder="Filter" value="(^55AA\\{\\{.*\\}\\}99BB$)|(^\\{\\{.*\\}\\}$)" />
+                  <span class="input-clear-button"></span>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">{{ _('Device') }}</div>
+                <div class="item-input-wrap">
+                  <select name="device">
+                    <option value="QRCode-Q300" selected="selected">QRCode-Q300</option>
+                    <option value="NFC-Q300">NFC-Q300</option>
+                    <option value="SK100">SK100</option>
+                    <option value="QRCode-Q300-USB">QRCode-Q300-USB</option>
+                    <option value="OctopusAccess">OctopusAccess</option>
+                    <option value="SerialPort">SerialPort</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">{{ _('Path') }}</div>
+                <div class="item-input-wrap">
+                  <select name="path">
+                    <option value="/dev/ttyS0" selected="selected">/dev/ttyS0</option>
+                    <option value="/dev/ttyS1">/dev/ttyS1</option>
+                    <option value="/dev/ttyS2">/dev/ttyS2</option>
+                    <option value="/dev/ttyS3">/dev/ttyS3</option>
+                    <option value="/dev/ttyS4">/dev/ttyS4</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">{{ _('Hex') }}</div>
+                <div class="item-input-wrap">
+                  <input type="text" name="hex" placeholder="Hex" value="" />
+                  <span class="position-absolute display-flex flex-direction-row" style="right: 0; top: 0; bottom: 4px">
+                    <span class="button button-fill px-2 size-12" style="text-transform: none" @click="${() => send()}">Send</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    let callbackResults = [];
+
+    async function echo() {
+      try {
+        const result = await Capacitor.Plugins.YoswitSerialPort.echo({ 'value': 'YoswitSerialPort.echo:' });
+        console.log(result);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function clean() {
+      callbackResults = [];
+      $update();
+    }
+
+    async function addLog(log, err = false) {
+      const timestamp = dayjs().format('HH:mm:ss');
+      callbackResults.push(
+        `<p style="color: ${err ? 'red' : 'text-color-green'};"><span class="text-color-gray">[${timestamp}]</span> ${log}</p>`
+      );
+      $update();
+    }
+
+    try {
+      await Capacitor.Plugins.YoswitSerialPort.addListener('SerialPortReceiveEvent', (result) => {
+        addLog(JSON.stringify(result, null, 4));
+      });
+    } catch (err) {
+      console.error(err);
+
+      addLog(`${err}`, true);
+    }
+
+    try {
+      await Capacitor.Plugins.YoswitSerialPort.addListener('SerialPortConnectEvent', (result) => {
+        addLog(JSON.stringify(result, null, 4));
+      });
+    } catch (err) {
+      console.error(err);
+
+      addLog(`${err}`, true);
+    }
+
+    async function send() {
+      try {
+        const form = app.form.convertToData('#serial-port-form');
+        if (!form.hex) {
+          throw new Error('Hex is required');
+        }
+
+        await Capacitor.Plugins.YoswitSerialPort.sendData({
+          'deviceName': form.device,
+          'message': form.hex,
+        });
+      } catch (err) {
+        addLog(`${err}`, true);
+      }
+    }
+
+    async function connect() {
+      try {
+        const form = app.form.convertToData('#serial-port-form');
+
+        Capacitor.Plugins.YoswitSerialPort.connect({
+          deviceName: form.device,
+          baudRate: form.baud_rate,
+          path: form.path,
+          opt: {
+            filter: form.filter,
+          },
+        });
+      } catch (err) {
+        addLog(`${err}`, true);
+      }
+    }
+
+    async function disconnect() {
+      try {
+        const form = app.form.convertToData('#serial-port-form');
+
+        Capacitor.Plugins.YoswitSerialPort.disconnect({
+          'deviceName': form.device,
+        });
+      } catch (err) {
+        addLog(`${err}`, true);
+      }
+    }
+
+    return $render;
+  };
+</script>

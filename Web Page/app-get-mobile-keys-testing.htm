@@ -1,0 +1,399 @@
+<script>
+  frappe.web_form.after_load = async () => {
+    if (window.device.platform.toLowerCase() != 'ios') {
+      Capacitor.Plugins.MobileKeys.removeAllListeners();
+    }
+    frappe.web_form.set_value('end_point', 'http://yoswit.com');
+    frappe.web_form.set_value('door', 103);
+    await core_load_script('https://dev.mob-mob.com/files/crypto-js.min.js');
+    let key = `endPointId-${users[users.current].gateway}`;
+    console.log('key', key);
+    db.get(md5(key)).then((data) => {
+      console.log('data', data);
+      if (data) {
+        window.endPointId = data;
+        //window.endPointId = data;
+      }
+    });
+  };
+
+  frappe.web_form.submit = async () => {
+    let username = `LincognTechnology-demo-tenant`;
+    let password = `ETfYOsOEScDJRcUUaD0r4hnPEVmYir7d`;
+    const form = frappe.web_form.get_values();
+    let user = users[users.current].usr;
+    let gateway = users[users.current].gateway;
+    //check if reg
+    try {
+      app.preloader.show();
+      const this_config = '{"lockServiceCodes":[1],"applicationId": "Yoslock"}';
+      await Capacitor.Plugins.MobileKeys.initPlugin({ 'config': this_config });
+      const result = await Capacitor.Plugins.MobileKeys.isEndpointSetup();
+      console.log('result', result);
+      if (result.value) {
+        //const endpointInfo = await Capacitor.Plugins.MobileKeys.loadEndpointInfo();
+        const keyResult = await Capacitor.Plugins.MobileKeys.loadKeys();
+        app.preloader.hide();
+        console.log('keyResult', keyResult);
+        let thisData = keyResult.data;
+        app.dialog.alert(`cardNumber: ${thisData[0].cardNumber}`);
+      } else {
+        let url = `https://onboarding.credential-services.api.assaabloy.com/endpoint/invitation`;
+        let statusData = await http.request(encodeURI(url), {
+          method: 'POST',
+          serializer: 'utf8',
+          responseType: 'json',
+          headers: {
+            'Content-Type': 'application/vnd.assaabloy-com.credential-2.4+json',
+            'Authorization': `Basic ${btoa(username + ':' + password)}`,
+          },
+          data: JSON.stringify({
+            endpointId: `${md5(user+'-'+gateway)}`,
+          }),
+          timeout: 3,
+        });
+        console.log('list', statusData);
+        if (statusData.status == 201) {
+          window.mobileKeys = statusData.data.invitationCode;
+          window.endPointId = `${md5(user+'-'+gateway)}`;
+          let key = `endPointId-${users[users.current].gateway}`;
+          db.set(md5(key), `${md5(user+'-'+gateway)}`);
+          app.preloader.hide();
+          app.dialog.alert(`invitationCode: ${statusData.data.invitationCode}`);
+        }
+      }
+    } catch (err) {
+      console.log(err);
+      let error = JSON.parse(err);
+      app.preloader.hide();
+      if(error.code == 10008){
+        //endpoint already exists
+        window.endPointId = `${md5(user)}`;
+        let key = `endPointId-${users[users.current].gateway}`;
+        db.set(md5(key), `${md5(user+'-'+users[users.current].gateway)}`);
+        app.dialog.alert('Endpoint already exists');
+      }
+    }
+    //alert(JSON.stringify(form));
+  };
+  frappe.web_form.ui('clear_keys', {
+    template: `
+    <div class="field-container" style="width: 100%;">
+
+      <div class="button button-fill" @click="clearKeys()">Clear Keys</div>
+    </div>
+    `,
+    props: ['value'],
+    inject: ['field'],
+    methods: {
+      async clearKeys() {
+        app.preloader.show();
+        const this_config = '{"lockServiceCodes":[1],"applicationId": "Yoslock"}';
+        await Capacitor.Plugins.MobileKeys.initPlugin({ 'config': this_config });
+        const timeoutId = setTimeout(() => {
+          app.preloader.hide();
+          app.dialog.alert('Timeout');
+        }, 10000);
+        Capacitor.Plugins.MobileKeys.addListener('callback', (result) => {
+          console.log(result);
+          let message = result.msg;
+          if (message == 'unregisterEndpointSuccess') {
+            clearTimeout(timeoutId);
+            app.preloader.hide();
+            this.stopScanning();
+            app.dialog.alert('Keys Cleared');
+          } else if (message == 'unregisterEndpointFailed') {
+            clearTimeout(timeoutId);
+            app.preloader.hide();
+            app.dialog.alert('Device is not registerEndpoint');
+          }
+        });
+        try {
+          const result = await Capacitor.Plugins.MobileKeys.unregisterEndpoint();
+          console.log(result);
+        } catch (err) {
+          console.log(err);
+        }
+      },
+    },
+  });
+  frappe.web_form.ui('open_door', {
+    template: `
+    <div class="field-container" style="width: 100%;">
+
+      <div class="button button-fill" @click="openDoor()">Open Door</div>
+    </div>
+    `,
+    props: ['value'],
+    inject: ['field'],
+    data() {
+      return {
+        dateStr: '',
+      };
+    },
+    methods: {
+      async openDoor() {
+        app.preloader.show();
+        if (window.device.platform.toLowerCase() != 'ios') {
+          Capacitor.Plugins.MobileKeys.removeAllListeners();
+        }
+        const form = frappe.web_form.get_values();
+        console.log('form', form);
+        const door = form.door;
+        const from = form.from;
+        const toDate = form.to;
+        const toDateStr = dayjs(toDate).format('YYYYMMDDTHHmm');
+        this.dateStr = toDateStr;
+        console.log('toDateStr', toDateStr);
+        await this.initPlugin();
+        let endpointStatus = await this.isEndpointSetup();
+        if (endpointStatus.value) {
+          //this code is for testing only
+          const this_result = await this.loadEndpointInfo();
+          console.log('this_result', this_result);
+          let seosId = this_result.data.seosId;
+          this.createKeys(window.endPointId, door, toDateStr);
+        } else {
+          this.endpointSetup();
+        }
+        try {
+          Capacitor.Plugins.MobileKeys.addListener('callback', (result) => {
+            console.log(result);
+            //tindy the result data
+            if (result.code === 111000) {
+              //listen the endpointSetup callback
+              //next step
+              this.createKeys(window.endPointId, door, this.dateStr);
+              //this.loadKeys();
+            }
+            if (result.code === 111020) {
+              //listen the  endpointUpdate callback
+              app.preloader.hide();
+              this.startScanning();
+              app.dialog.alert(`Please place your phone's Bluetooth near the door lock.`)
+              //this.createKeys(window.endPointId, door, toDateStr);
+            }
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      },
+      async createKeys(endPointID, door, toDateStr) {
+        let url = `https://192.168.31.246:443/`;
+        let sessionUrl = `https://onboarding.credential-services.api.assaabloy.com/endpoint/invitation`;
+        let username = `LincognTechnology-demo-tenant`;
+        let password = `ETfYOsOEScDJRcUUaD0r4hnPEVmYir7d`;
+        let that = this;
+        cordova.plugin.http.setServerTrustMode(
+          'nocheck',
+          function () {
+            console.log('success!');
+            let this_body = { 'username': 'sym', 'password': 'sym' };
+            that.postToServer(url, `api/v1/sessions`, this_body).then((data) => {
+              console.log(data);
+              if (data.status == 201) {
+                let accessKey = data.data.accessKey;
+                let sessionID = data.data.id;
+                let obj = {
+                  'doorOperations': [
+                    {
+                      'doors': [`${door}`],
+                      'operation': 'guest',
+                    },
+                  ],
+                  'expireTime': toDateStr,
+                  'format': 'rfid48',
+                  'endPointID': endPointID,
+                };
+                that.postToServer(url, `api/v1/cards?action=mobileAccess&autoJoin=true`, obj, accessKey, sessionID).then(async (res) => {
+                  console.log('res', res);
+                  if (res.status == 201) {
+                    let credentialID = res.data.credentialID;
+                    await that.loadKeys();
+                    that.endpointUpdate();
+                  }
+                }).catch((error)=>{
+                  app.preloader.hide();
+                  app.dialog.alert(error)
+                })
+              }
+            }).catch((error)=>{
+              app.preloader.hide();
+              app.dialog.alert(error)
+            })
+          },
+          function () {
+            console.log('error :(');
+          }
+        );
+      },
+      async postToServer(url, uri, dataObj, accessKey, sessionID) {
+        const requestContentBase64String = CryptoJS.MD5(JSON.stringify(dataObj)).toString(CryptoJS.enc.Base64);
+        const newTime = dayjs().subtract(8, 'hour');
+        const this_date = newTime.format('ddd, DD MMM YYYY HH:mm:ss [GMT]');
+        let signature = '';
+        let headerData = {
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Content-MD5': requestContentBase64String,
+          'Date': this_date,
+          'X-Aah-Date': this_date,
+        };
+        if (accessKey) {
+          signature = this.setSignature('POST', requestContentBase64String, this_date, this_date, uri, accessKey);
+          headerData['Authorization'] = `AWS ${sessionID}:${signature}`;
+        }
+        return new Promise(async (resolve, reject) => {
+          try {
+            let status = await http.request(encodeURI(url + uri), {
+              method: 'POST',
+              serializer: 'utf8',
+              responseType: 'json',
+              headers: headerData,
+              debug: true,
+              data: JSON.stringify(dataObj),
+            });
+            resolve(status);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      },
+      async initPlugin() {
+        try {
+          //
+          const config = '{"lockServiceCodes":[1],"applicationId": "Yoslock"}';
+          const result = await Capacitor.Plugins.MobileKeys.initPlugin({ 'config': config });
+          console.log(result);
+        } catch (error) {
+          console.log(error);
+        }
+      },
+      async isEndpointSetup() {
+        return new Promise(async (resolve, reject) => {
+          try {
+            const result = await Capacitor.Plugins.MobileKeys.isEndpointSetup();
+            resolve(result);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      },
+      async endpointSetup() {
+        try {
+          const code = window.mobileKeys;
+          const result = await Capacitor.Plugins.MobileKeys.endpointSetup({ 'code': code });
+          console.log(result);
+        } catch (err) {
+          console.log(err);
+        }
+      },
+      async endpointUpdate() {
+        try {
+          const result = await Capacitor.Plugins.MobileKeys.endpointUpdate();
+          console.log(result);
+        } catch (err) {
+          console.log(err);
+        }
+      },
+      async unregisterEndpoint() {
+        try {
+          const result = await Capacitor.Plugins.MobileKeys.unregisterEndpoint();
+          console.log(result);
+        } catch (err) {
+          console.log(err);
+        }
+      },
+      async loadEndpointInfo() {
+        return new Promise(async (resolve, reject) => {
+          try {
+            const result = await Capacitor.Plugins.MobileKeys.loadEndpointInfo();
+            resolve(result);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      },
+      async loadKeys() {
+        try {
+          const result = await Capacitor.Plugins.MobileKeys.loadKeys();
+          console.log(result);
+        } catch (err) {
+          console.log(err);
+        }
+      },
+      async startScanning() {
+        try {
+          const result = await Capacitor.Plugins.MobileKeys.startScanning();
+          console.log(result);
+        } catch (err) {
+          console.error(err);
+        }
+      },
+      async stopScanning() {
+        try {
+          const result = await Capacitor.Plugins.MobileKeys.stopScanning();
+          console.log(result);
+        } catch (err) {
+          console.log(err);
+        }
+      },
+      setSignature(method, MD5Header, xDateHader, dateHader, uri, accessKey) {
+        let string_to_sign = method + '\n';
+        if (MD5Header) {
+          string_to_sign += MD5Header;
+        }
+        string_to_sign += '\n';
+        string_to_sign += `application/json;charset=UTF-8`;
+        string_to_sign += '\n';
+        if (xDateHader) {
+          string_to_sign += '\n' + 'x-aah-date' + ':' + xDateHader;
+        } else {
+          string_to_sign += dateHader;
+        }
+        string_to_sign += '\n' + '/' + uri;
+        const hash = CryptoJS.HmacSHA1(string_to_sign, accessKey);
+        const hashInBase64 = CryptoJS.enc.Base64.stringify(hash);
+        return hashInBase64;
+      },
+      async strToUTF8Bytes(str) {
+        var utf8 = unescape(encodeURIComponent(str));
+        var arr = [];
+        for (var i = 0; i < utf8.length; i++) {
+          arr.push(utf8.charCodeAt(i));
+        }
+        return new Uint8Array(arr);
+      },
+      async thisMd5(str) {
+        var bytes = this.strToUTF8Bytes(str);
+
+        var md5Hash = '';
+
+        var buffer = new Uint8Array(new TextEncoder().encode(str));
+        crypto.subtle.digest('MD5', buffer).then(function (hash) {
+          md5Hash = Array.prototype.map.call(new Uint8Array(hash), (x) => ('00' + x.toString(16)).slice(-2)).join('');
+        });
+
+        return md5Hash;
+      },
+      async calculateMD5Base64(input) {
+        return new Promise((resolve, reject) => {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(input);
+
+          crypto.subtle
+            .digest('MD5', data)
+            .then((digestBuffer) => {
+              const hashArray = Array.from(new Uint8Array(digestBuffer));
+              const hashHex = hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
+              const hashBase64 = btoa(String.fromCharCode(...new Uint8Array(digestBuffer)));
+
+              resolve(hashBase64);
+            })
+            .catch((error) => {
+              reject(error);
+            });
+        });
+      },
+    },
+  });
+</script>

@@ -1,0 +1,2284 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Room Device') }}</div>
+        <div class="right">
+          <a class="link icon-only" @click="${()=>saveAction()}">
+            <i class="icon material-icons md-only">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="page-content ptr-content" style="height: 100%" @ptr:refresh="${loadMore}">
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
+      <div class="room-box" style="min-height: 48px">
+        <div class="toolbar tabbar tabbar-scrollable toolbar-home-room no-show" style="z-index: 5; position: fixed">
+          <div class="toolbar-inner">
+            <a
+              href="#tab-hidden-0"
+              ref="0"
+              id="room-bar-title-0"
+              @click="${()=>controller_home_switch_room_onclick(0)}"
+              class="tab-link tab-link-active"
+            >
+              <i class="material-icons">home</i>
+            </a>
+            ${roomList.map((item)=> $h`
+            <a
+              href="#ab-hidden-${item.idx}"
+              ref="${item.idx}"
+              id="room-bar-title-${item.idx}"
+              @click="${()=>controller_home_switch_room_onclick(item.idx)}"
+              class="tab-link"
+            >
+              ${tran(item.title)}
+            </a>
+            `)}
+          </div>
+          <div class="room-more-icon-box">
+            <a href="/frappe/list/Room/APP_Yoswit_Room_V5/Website Sidebar Item/null/1000000/" class="button">
+              <i class="material-icons">more_vert</i>
+            </a>
+          </div>
+        </div>
+        <div class="tabs" style="display: none">
+          <div id="tab-hidden-0" class="page-content tab tab-active"></div>
+          ${roomList.map((item)=> $h`
+          <div id="tab-hidden-${item.idx}" class="page-content tab"></div>
+          `)}
+        </div>
+        <div style="height: 48px"></div>
+        <div class="pin-to-top-div" style="display: none">
+          <div class="list media-list no-margin pin-to-top">
+            <ul id="pin-to-top-ul"></ul>
+          </div>
+        </div>
+        ${roomList.map((item)=> $h`
+        <div id="room-${item.idx}-div" class="list media-list no-margin ${item.profile_subdevice.length == 0?'device-hidden':''}">
+          <ul>
+            <li id="room-${item.idx}-div-title" room="${tran(item.name)}" class="swipeout room" ref="${item.idx}">
+              <div class="item-content swipeout-content">
+                <div class="item-inner">
+                  <div class="item-title-row">
+                    <!-- title text -->
+                    <div
+                      class="item-title"
+                      lang="en"
+                      lang-packet="${item.title}"
+                      @click="${()=>controller_common_home_collapse(item.idx)}"
+                      ref="${item.idx}"
+                    >
+                      <i class="room-collapse material-icons" id="collapse-${item.idx}"> expand_more </i>
+                      ${ tran(item.title) }
+                    </div>
+
+                    <!-- click to turn on all device in room -->
+                    <div class="item-after">
+                      <p class="segmented segmented-raised segmented-round" style="display: none">
+                        <button class="button button-round link" func="controller_common_home_click_room_onoff" ref="1">Off</button>
+                        <button class="button button-round link" func="controller_common_home_click_room_onoff" ref="0">On</button>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="swipeout-actions-right">
+                <a
+                  href="/frappe/form/Edit ${ tran(item.title) }/APP_HA_Room_Form_V5/Profile Room/${ item.name }/"
+                  class="link color-orange"
+                >
+                  <i class="icon material-icons">settings</i>
+                </a>
+              </div>
+            </li>
+            <div class="room-item">
+              ${item.profile_subdevice.map((kitem)=> $h`
+              <li
+                class="device home-scanned-peripheral swipeout swipeout-delete-manual"
+                signal="${kitem.signal}"
+                uuid="${kitem.uuid}"
+                display-name="${kitem.title}"
+                subdevice-name="${kitem.name}"
+                guid="${kitem.guid}"
+                lastDiscoverDate=""
+                button_group="${kitem.device_button_group || kitem.button_group}"
+                password="${kitem.password}"
+                bluetooth="${kitem.bluetooth_status}"
+                authfail=""
+                ref="${kitem.ref}"
+                mobmob="${kitem.mobmob}"
+                gateway="${kitem.gateway}"
+                network-id="${kitem.network_id}"
+                network-position="${kitem.network_position}"
+                pairing-guid="${kitem.pairing_guid}"
+                pairing-gang=""
+                be_pairing="${kitem.be_pairing}"
+                default-connect="${kitem.default_connect}"
+                mode="${kitem.device_mode}"
+                model="${kitem.model}"
+                leader="${kitem.leader}"
+                firmware="${kitem.firmware}"
+                direction="standard"
+                @swipeout:deleted=${()=>onDeleted(kitem)}
+              >
+                <div class="item-content swipeout-content" >
+                  ${type == 2 && $h`
+                  <label class="item-checkbox item-checkbox-icon-start item-content">
+                    <input type="checkbox" name="demo-checkbox" value="${kitem.name}" />
+                    <i class="icon icon-checkbox"></i>
+                  </label>
+                  `}
+                  <a class="item-link item-content no-chevron no-ripple no-active-state" style="width: 100%;" @click="${()=>toScene(kitem)}">
+                    <div
+                      class="device-thumb item-media"
+                      style="
+                        background-position: center;
+                        background-size: contain;
+                        position: relative;
+                        background-image: url('${kitem.img_url}');
+                      "
+                    ></div>
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title ellipsis" lang="en" style="width: 180px">
+                          <i class="material-icons text-color-gray" style="position: relative;top:6px;">settings</i>
+                          ${tran(kitem.title)}</div>
+                      </div>
+                      <div class="item-subtitle">${ kitem.model }-${ kitem.mac_address }</div>
+                      <div class="signal-panel item-text height-21" style="width: 120%"><${SignalItem}/></div>
+                    </div>
+                  </a>
+                  <${OnoffButton} ref="0" gang="1" kitem="${kitem}" choose_type="${type}" />
+                </div>
+              </li>
+              <${SubdeviceButton} choose_type="${type}" signal="0" uuid="${kitem.uuid}" display_name="${kitem.title}" subdevice_name="${kitem.name}"
+              guid="${kitem.device}" lastDiscoverDate="" button_group="${kitem.device_button_group}" password="${kitem.password}"
+              bluetooth="0" authfail="" ref="0" mobmob="${kitem.mobmob}" gateway="${kitem.gateway}" network-id="${kitem.network_id}"
+              network-position="${kitem.network_position}" swipeout-delete-func="home_ui_delete_device" pairing-guid="${kitem.pairing_guid}"
+              pairing-gang="" be_pairing="${kitem.be_pairing}" default-connect="${kitem.default_connect}" mode="${kitem.device_mode}"
+              model="${kitem.model}" firmware="${kitem.firmware}" devive_type="${kitem.device_type}" kitem="${kitem}"/>
+               `)}
+            </div>
+          </ul>
+        </div>
+        `)}
+      </div>
+      <div class="popup demo-popup-swipe-handler">
+        <div class="view view-init">
+          <div class="page page-with-navbar-large">
+            <div class="navbar navbar-large navbar-transparent">
+              <div class="navbar-bg"></div>
+              <div class="navbar-inner">
+                <div class="title"></div>
+                <div class="right"><a class="link popup-close"><i class="material-icons" style="font-size: 40px;">cancel</i></a></div>
+                <div class="title-large">
+                  <div class="title-large-text"></div>
+                </div>
+              </div>
+            </div>
+            <div class="page-content">
+              <div class="block block-strong-ios block-outline-ios" style="padding: 15px;">
+                <div class="list list-strong-ios list-dividers-ios">
+                  <ul class="operate-box" style="margin-top: 15px;">
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-end" value="1" checked />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">Press</div>
+                        </div>
+                      </label>
+                    </li>
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-end" value="0" />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">Release</div>
+                        </div>
+                      </label>
+                    </li>
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-light" value="3" checked />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">Brighten</div>
+                        </div>
+                      </label>
+                    </li>
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-light" value="1" />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">Dim</div>
+                        </div>
+                      </label>
+                    </li>
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-light" value="2" />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">On Off</div>
+                        </div>
+                      </label>
+                    </li>
+                  </ul>
+                  <div class="row" style="padding-bottom: 30px;">
+                    <div class="col" @click="${()=>home_ui_click_touch_app_save()}">
+                      <div class="button button-fill">SAVE</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  //defined components
+  const SignalItem = (props, { $h }) => {
+    return () => $h`
+    <div>
+        <div class="signal"></div>
+        <div class="mesh"></div>
+    </div>
+    `;
+  };
+  const OnoffButton = (props, { $h }) => {
+    let mode = props.kitem.mode ? props.kitem.mode : props.kitem.device_mode;
+    let button_group = props.kitem.button_group;
+    let imgurl = `${erp.setting.app_api_url}/files/close-curtain.svg`;
+    let device_type = isset(props.kitem.device_type) ? props.kitem.device_type : '';
+    let choose_type = props.choose_type;
+    console.log("choose_type",choose_type);
+    if(choose_type == 1){
+      return () => $h`
+      <div class="control-panel-right">
+          <a class="right"  @click="${()=>toScene(props.kitem)}">
+              <div class="button button-raised button-big circle rf-sensor">
+                  <i class="material-icons">arrow_forward_ios</i>
+              </div>
+          </a>
+      </div>
+      `;
+    }else if (mode === 'Curtain Motor' || mode ===  'Curtain Motor Ac') {
+      return () => $h`
+      <div class="control-panel-right" style="">
+        <a class="iot-connect" func="home_ui_click_ble_connect">
+          <div class="button button-raised button-big circle">
+              <i class="material-icons">bluetooth_connected</i>
+          </div>
+        </a>
+        <a class="left on_flag" ref="0" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="" style="display:none;">
+            <div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
+        </a>
+        <a class="left on_flag" ref="2" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
+            <div class="button button-raised button-big openclose cl" style="width:57px"><div style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-top:6px;">pause</i></div></div>
+        </a>
+        <a class="left on_flag" ref="1" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
+            <div class="button button-raised button-big openclose op" style="width:57px"><div style="height:100%;width:100%;"><img src="${imgurl}" alt="" style="width:20px;height:20px;margin-top:5px;" /></div></div>
+        </a>
+      </div>
+      `;
+    } else if (mode === 'Curtain Motor Reverse') {
+      return () => $h`
+      <div class="control-panel-right" style="">
+        <a class="iot-connect" func="home_ui_click_ble_connect">
+          <div class="button button-raised button-big circle">
+              <i class="material-icons">bluetooth_connected</i>
+          </div>
+        </a>
+        <a class="left on_flag" ref="0" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="" style="display:none;">
+            <div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
+        </a>
+        <a class="left on_flag" ref="2" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
+            <div class="button button-raised button-big openclose cl" style="width:57px"><div style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-top:6px;">pause</i></div></div>
+        </a>
+        <a class="left on_flag" ref="1" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
+            <div class="button button-raised button-big openclose op" style="width:57px"><div style="height:100%;width:100%;"><img src="${erp.setting.app_api_url}/files/open-curtain.svg" alt="" style="width:20px;height:20px;margin-top:5px;" /></div></div>
+        </a>
+      </div>
+      `;
+    } else if (mode === 'On Off Switch') {
+      if(props.kitem.model == 'YO780' && (props.kitem.device_button_group === 'ONOFF GANG1')){
+        return () => $h`
+        <div class="control-panel-right" @click="${()=>toScene(props.kitem)}">
+            <a class="right" >
+                <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:20px;">settings</i></div></div>
+            </a>
+        </div>
+        `;
+      }else if(props.kitem.model == 'YO780' && props.kitem.button_group == 'ONOFF GANG1' && props.kitem.device_button_group != 'ONOFF GANG1'){
+        return () => $h`
+        <div class="control-panel-right" style="">
+          <a class="on_flag off_flag" ref="${props.kitem.ref}" gang="${props.gang}" @touchend="${() => app_ha_click_onoff(props.kitem)}">
+            
+          </a>
+        </div>
+        `;
+
+      }else{
+        return () => $h`
+        <div class="control-panel-right" style="">
+          <a class="on_flag off_flag" ref="${props.kitem.ref}" gang="${props.gang}" @click="${() => app_ha_click_onoff(props.kitem)}">
+            <div class="button button-raised button-big onoff"></div>
+          </a>
+        </div>
+        `;
+      }
+    } else if (mode === 'Multiway Switch') {
+      return () => $h`
+      <div class="control-panel-right" style="">
+        <a class="on_flag off_flag" ref="${props.kitem.ref}" gang="${props.gang}" @click="${() => app_ha_click_onoff(props.kitem)}">
+          <div class="button button-raised button-big onoff"></div>
+        </a>
+      </div>
+      `;
+    } else if (mode === 'Gateway') {
+      return () => $h`
+      <div class="control-panel-right">
+          <a href="/frappe/detail/${tran('Gateway Configuration')}/APP_CORE_Gateway_Wifi_Config_V5/null/null/guid=${
+        props.kitem.guid
+      }&device_name=${props.kitem.profile_device}/" class="right" >
+              <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:20px;">wifi</i></div></div>
+          </a>
+      </div>
+      `;
+    }else if(mode === 'IAQ Sensor'){
+      return () => $h`
+      <div class="control-panel-right">
+          <a class="iot-connect" func="home_ui_click_ble_connect">
+              <div class="button button-raised button-big circle">
+                  <i class="material-icons">bluetooth_connected</i>
+              </div>
+          </a>
+          <a class="right iaq-button-score-a" func="" button-signal="ARC_ON_OFF">
+              <div class="button iaq-button-score button-raised button-big circle display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="background-color:green;line-height:18px;padding-top:10px;color:#fff;">
+
+                  <span class="score text-color-white" style="height:29px;font-size:23px;">96</span>
+                  <div class="score-desc text-color-white" style="font-size: 12px;height:29px;line-height:29px;">Good</div>
+              </div>
+          </a>
+      </div>
+      `;
+    }else if(mode === 'MQTT Hub'){
+      if(button_group == "MQTT Curtain-Citygrow"){
+        return ()=> $h`
+        <div class="control-panel-right" style="">
+          <a ref="${props.kitem.ref}" func="app_ha_click_citygrow_openclose" gang="${props.kitem.config}">
+            <div class="button button-raised button-big circle">
+                <img src="${erp.setting.app_api_url}/files/close-curtain.svg" style="width:15px;height:15px;margin-bottom:3px;"/>
+            </div>
+        </a>
+        </div>
+        `;
+      }else if(button_group == "MQTT Dnd-Citygrow"){
+        return ()=> $h`
+        <div class="control-panel-right" style="">
+          <a ref="${props.kitem.ref}" func="app_ha_click_citygrow_dnd" gang="${props.kitem.config}">
+            <div class="button button-raised button-big circle">
+                <span>OFF</span>
+            </div>
+        </a>
+        </div>
+        `;
+      }else{
+        return () => $h`
+        <div class="control-panel-right" style="">
+          <a class="on_flag off_flag" ref="${props.kitem.ref}" gang="${props.kitem.config}" func="app_ha_click_citygrow_onoff">
+            <div class="button button-raised button-big onoff"></div>
+          </a>
+        </div>
+        `;
+      }
+    } else if (mode === 'Thermostat') {
+      return () => $h`
+      <div class="control-panel-right" type-box="Dimming" bluetooth="${props.kitem.bluetooth_status}" mobmob="${props.kitem.mobmob}">
+        <a href="#" class="on_flag off_flag" ref="${props.kitem.ref}" @click="${() => app_ha_click_onoff_thermostat_room(props.kitem)}">
+            <div class="button button-raised button-big onoff"></div>
+        </a>
+      </div>
+      `;
+    } else if (mode === 'Curtain Switch') {
+      return () => $h`
+      <div class="control-panel-right" style="">
+        <a class="iot-connect" func="home_ui_click_ble_connect">
+          <div class="button button-raised button-big circle">
+              <i class="material-icons">bluetooth_connected</i>
+          </div>
+        </a>
+        <a class="left on_flag" ref="0" tapfunc="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
+            <div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
+        </a>
+        <a class="left on_flag" ref="1" tapfunc="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
+            <div class="button button-raised button-big openclose op" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_more</i></div></div>
+        </a>
+      </div>
+      `;
+    } else if (mode === 'Triac Dimming' || mode === '0-10v Dimming') {
+      if(button_group.startsWith("RCU DIMMING")){
+        return () => $h`
+        <div class="control-panel-right" type-box="Dimming" bluetooth="${props.kitem.bluetooth_status}" mobmob="${props.kitem.mobmob}">
+          <a href="#" class="on_flag off_flag touch-flag" guid="${props.kitem.guid}" ref="${props.kitem.ref}" lastRef="${props.kitem.ref}" button-group="${button_group}" command-type="Bluetooth" command="" data-popup=".demo-popup-swipe-handler" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+            <div class="button button-raised button-big circle">
+                  <i class="material-icons">touch_app</i>
+              </div>
+          </a>
+          <a href="#" class="on_flag off_flag" ref="${props.kitem.ref}" lastRef="${props.kitem.ref}" func="app_ha_click_onoff_dimming" gang="dimming">
+              <div class="button button-raised button-big onoff"></div>
+          </a>
+        </div>
+        `;
+      }else{
+        return () => $h`
+        <div class="control-panel-right" type-box="Dimming" bluetooth="${props.kitem.bluetooth_status}" mobmob="${props.kitem.mobmob}">
+          <a class="iot-connect" func="home_ui_click_ble_connect">
+            <div class="button button-raised button-big circle">
+                <i class="material-icons">bluetooth_connected</i>
+            </div>
+          </a>
+          <a href="#" class="on_flag off_flag" ref="${props.kitem.ref}" lastRef="${props.kitem.ref}" func="app_ha_click_onoff_dimming" gang="dimming">
+              <div class="button button-raised button-big onoff"></div>
+          </a>
+        </div>
+        `;
+      }
+    } else if (mode == 'RF Sensor' || mode == '4in1 Sensor') {
+      return () => $h`
+      <div class="control-panel-right">
+          <a class="right" button-signal="ARC_ON_OFF" command="033E19010201010001030000FF" command-type="Bluetooth">
+              <div class="button button-raised button-big circle rf-sensor">
+                  <i class="material-icons">block</i>
+              </div>
+          </a>
+      </div>
+      `;
+    } else if (device_type == 'Air Conditioner') {
+      return () => $h`
+      <div class="control-panel-right">
+          <a class="right" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_ON_OFF')}" button-signal="ARC_ON_OFF" command="${props.kitem.command}" command-type="Bluetooth">
+              <div class="button button-raised button-big circle">
+                  <i class="material-icons">power_settings_new</i>
+              </div>
+          </a>
+      </div>
+      `;
+    } else if (
+      device_type == 'Television' ||
+      device_type == 'SetTop' ||
+      device_type == 'Audio' ||
+      device_type == 'Projector' ||
+      device_type == 'Fan' ||
+      device_type == 'IPTV' ||
+      device_type == 'Air Purifier' ||
+      device_type == 'Camera' ||
+      device_type == 'Dehumidifier' ||
+      device_type == 'Robot'
+    ) {
+      return () => $h`
+      <div class="control-panel-right" style="margin-right:-10px;">
+          <a class="right" func="controller_iot_device_ir_full_panel_click" guid="${props.guid}" button-signal="5"  command="0141BE02FD0DF209F603FC52AD53AC00FF10EF11EE13EC14EB15EA17E818E719E6FF001BE4FF000AF54AB547B849B64BB44DB248B720DF0000" command-type="Bluetooth">
+              <div class="button button-raised button-big circle">
+                  <i class="material-icons">power_settings_new</i>
+              </div>
+          </a>
+          <a class="right" func="iot_device_goto_ir_panel" button-signal="ARC_ON_OFF"  command="0141BE02FD0DF209F603FC52AD53AC00FF10EF11EE13EC14EB15EA17E818E719E6FF001BE4FF000AF54AB547B849B64BB44DB248B720DF0000" command-type="Bluetooth">
+              <div class="button button-raised button-big circle">
+                  <i class="material-icons">view_sidebar</i>
+              </div>
+          </a>
+      </div>
+      `;
+    } else {
+      return () => $h`
+      <div class="control-panel-right" style="">
+        <a href="#" func="ble_load_to_device_form" class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">settings</i></div></div>
+        </a>
+      </div>
+      `;
+    }
+  };
+  const SubdeviceButton = (props, { $h, $onMounted }) => {
+    let key = `dimer_slidebar_${props.guid}`;
+    let devive_type = isset(props.devive_type) ? props.devive_type : '';
+    //console.log(props.devive_type);
+    //let mode = props.mode;
+    $onMounted(() => {
+      //let elementlength = $('.curtain-subdevice .range-slider');
+      let element = $(`.curtain-subdevice .range-slider[data-id="${key}"]`);
+      //console.log('element', element);
+      if (mode == 'Curtain Motor' || mode == 'Curtain Motor Reverse' || mode == 'Curtain Motor Ac') {
+        let range_silder = app.range.create({
+          el: `.range-slider[guid="${props.guid}"]`,
+          value: props.kitem.ref || 0,
+          min: 0,
+          max: 100,
+          draggableBar: false,
+          label: true,
+          step: 1,
+          scale: true,
+          scaleSteps: 5,
+          scaleSubSteps: 4,
+          on: {
+            changed: erp.script.range_change_fun_curtain,
+          },
+        });
+      } else if (mode === 'Triac Dimming'|| mode === '0-10v Dimming') {
+        if(props.button_group.startsWith("RCU DIMMING")){
+          range_silder_list_device[`${props.button_group}`] = app.range.create({
+            el: `.range-slider-choose[guid="${props.guid}"][button-group="${props.button_group}"]`,
+            value: props.kitem.ref || 0,
+            min: 0,
+            max: 100,
+            draggableBar: false,
+            label: true,
+            step: 1,
+            scale: true,
+            scaleSteps: 5,
+            scaleSubSteps: 4,
+            on: {
+              changed: erp.script.range_change_fun_curtain,
+            },
+          });
+          console.log('range_silder_list',range_silder_list_device)
+        }else{
+          let range_silder = app.range.create({
+            el: `.range-slider[guid="${props.guid}"]`,
+            min: 0,
+            max: 100,
+            draggableBar: false,
+            label: true,
+            step: 1,
+            scale: true,
+            scaleSteps: 5,
+            scaleSubSteps: 4,
+            on: {
+              changed: erp.script.range_change_fun_dimming,
+            },
+          });
+        }
+      }
+    });
+    //check mode or model
+    //console.log('props', props);
+    let mode = props.mode;
+    let templateHtml = ``;
+    let choose_type = props.choose_type;
+    if(choose_type == 1){
+      return () => $h`
+      <a></a>
+      `;
+    }else if (mode == 'Curtain Switch') {
+      return () => $h`
+      <li class="device subdevice home-scanned-peripheral" bluetooth="${props.kitem.bluetooth_status}" guid="${props.kitem.guid}" button_group="${props.button_group}" uuid="${props.kitem.id}"  style="height:auto;">
+          <div class="item-content subdevice-item-content" style="min-height: 0px;">
+              <div class="item-inner" style="min-height: 0px;">
+                  <div class="row" style="--f7-grid-gap:3px;padding-left:20px;padding-right:15px;">
+                      <button class="col on_flag off_flag button button-large button-raised openclose cl" ref="0" button-group="${props.button_group}" func="home_ui_press_ha_device_v5" command-type="Bluetooth" command="">
+                          <div style="margin-left:-5px;"><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_right</i><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_left</i></div>
+                      </button>
+                      <button class="col on_flag off_flag button button-large button-raised stop" ref="n" button-group="${props.button_group}" func="home_ui_press_ha_device_v5" command-type="Bluetooth" command="">
+                          <div><i class="material-icons" style="line-height:65px;font-size:18px!important;">pause</i></div>
+                      </button>
+                      <button class="col on_flag off_flag button button-large button-raised openclose op" ref="1" button-group="${props.button_group}" func="home_ui_press_ha_device_v5" command-type="Bluetooth" command="">
+                          <div style="margin-left:-7px;"><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_left</i><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_right</i></div>
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </li>
+      `;
+    } else if (mode == 'Curtain Motor' || mode == 'Curtain Motor Ac') {
+      return () => $h`
+      <li class="device home-scanned-peripheral display-flex curtain-subdevice" direction="standard" style="height:67px!important;" bluetooth="${props.kitem.bluetooth_status}">
+          <div class="row padding-tb flex-direction-column justify-content-center">
+              <div class="col-100 medium-50 large-50">
+                  <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+                      <div class="tip-title"><img src="${erp.setting.app_api_url}/files/close-curtain.svg" alt="" style="width:20px;height:20px;margin-right:8px;margin-top:5px;" /></div>
+                      <div class="range-slider range-slider-init"
+                      data-min="0"
+                      data-max="100"
+                      data-label="true"
+                      data-step="10"
+                      data-value="0"
+                      data-scale-steps="5"
+                      data-scale-sub-steps="4"
+                      data-rangeWidth="15px"
+                      data-id="dimer_slidebar_${props.guid}"
+                          id="dimer_slidebar_curtain${props.guid}"
+                          changefunc="core_home_left_panel_slidbar_change"
+                          ref="0"
+                          button-group="${props.button_group}"
+                          guid="${props.guid}"
+                          authfail="0"
+                          mesh="0"
+                          mobmob="0"
+                          signal="${props.signal}"
+                          bluetooth="${props.bluetooth}"
+                          password="${props.password}"
+                          leader="${props.leader}"
+                          direction="standard"
+                          subdevice-name="${props.subdevice_name}"
+                      ></div>
+                      <div class="tip-title"><img src="${erp.setting.app_api_url}/files/open-curtain.svg" alt="" style="width:20px;height:20px;margin-left:8px;margin-top:5px;" /></div>
+                  </div>
+                  <div></div>
+              </div>
+          </div>
+      </li>
+      `;
+    } else if (mode == 'Curtain Motor Reverse') {
+      return () => $h`
+      <li class="device home-scanned-peripheral display-flex curtain-subdevice" direction="reverse" style="height:67px!important;" bluetooth="${props.kitem.bluetooth_status}">
+          <div class="row padding-tb flex-direction-column justify-content-center">
+              <div class="col-100 medium-50 large-50">
+                  <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+                      <div class="tip-title"><img src="${erp.setting.app_api_url}/files/open-curtain.svg" alt="" style="width:20px;height:20px;margin-right:8px;margin-top:5px;" /></div>
+                      <div class="range-slider range-slider-init"
+                      data-min="0"
+                      data-max="100"
+                      data-label="true"
+                      data-step="10"
+                      data-value="0"
+                      data-scale-steps="5"
+                      data-scale-sub-steps="4"
+                      data-rangeWidth="15px"
+                      data-id="dimer_slidebar_${props.guid}"
+                          id="dimer_slidebar_curtain${props.guid}"
+                          changefunc="core_home_left_panel_slidbar_change"
+                          ref="0"
+                          button-group="${props.button_group}"
+                          guid="${props.guid}"
+                          authfail="0"
+                          mesh="0"
+                          mobmob="0"
+                          signal="${props.signal}"
+                          bluetooth="${props.bluetooth}"
+                          password="${props.password}"
+                          leader="${props.leader}"
+                          direction="standard"
+                          subdevice-name="${props.subdevice_name}"
+                      ></div>
+                      <div class="tip-title"><img src="${erp.setting.app_api_url}/files/close-curtain.svg" alt="" style="width:20px;height:20px;margin-left:8px;margin-top:5px;" /></div>
+                  </div>
+                  <div></div>
+              </div>
+          </div>
+      </li>
+      `;
+    } else if (mode === 'Triac Dimming' || mode === '0-10v Dimming') {
+      return () => $h`
+      <li class="device subdevice home-scanned-peripheral display-flex dimming-subdevice" style="height:67px!important;">
+          <div class="row padding-tb flex-direction-column justify-content-center">
+              <div class="col-100 medium-50 large-50">
+                  <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+                      <div class="tip-title"><i class="icon material-icons" style="margin-right:8px;">brightness_low</i></div>
+                      <div class="range-slider range-slider-init range-slider-choose"
+                      data-min="0"
+                      data-max="100"
+                      data-label="true"
+                      data-step="10"
+                      data-value="0"
+                      data-scale-steps="5"
+                      data-scale-sub-steps="4"
+                      data-rangeWidth="15px"
+                      data-id="dimer_slidebar_${props.guid}"
+                          id="dimer_slidebar_${props.guid}"
+                          changefunc="core_home_left_panel_slidbar_change"
+                          ref="0"
+                          button-group="${props.button_group}"
+                          guid="${props.guid}"
+                          authfail="0"
+                          mesh="0"
+                          mobmob="0"
+                          signal="${props.signal}"
+                          bluetooth="${props.bluetooth}"
+                          password="${props.password}"
+                          leader="${props.leader}"
+                          subdevice-name="${props.subdevice_name}"
+                      ></div>
+                      <div class="tip-title"><i class="icon material-icons" style="margin-left:8px;">brightness_high</i></div>
+                  </div>
+                  <div></div>
+              </div>
+          </div>
+      </li>
+      `;
+    } else if (mode === 'Thermostat') {
+      return () => $h`
+      <li class="device subdevice home-scanned-peripheral" bluetooth="${props.kitem.bluetooth_status}" guid="${props.kitem.guid}" button_group="${props.button_group}" uuid="${props.kitem.id}" style="height:auto;">
+        <div class="item-content" style="width:100%;">
+          <div class="item-inner">
+            <div class="display-flex justify-content-space-between align-content-center align-items-center" style="--f7-grid-gap:3px;">
+              <a href="#" class="col" @click="${()=>home_ui_click_thermostat_room(props.kitem,1)}" command-type="mode" guid="${props.kitem.guid}" ref="2">
+                <div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="v5/view/default/style/img/air_condition/icon-mode-2.png"/></div>
+              </a>
+              <a href="#" class="col" @click="${()=>home_ui_click_thermostat_room(props.kitem,2)}" command-type="fan" guid="${props.kitem.guid}" ref="1">
+                <div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="v5/view/default/style/img/air_condition/icon-speed-1.png"/></div>
+              </a>
+              <a href="#" class="col" @click="${()=>home_ui_click_thermostat_room(props.kitem,3)}" command-type="reduce" guid="${props.kitem.guid}" ref="26">
+                <div class="button button-raised button-big stop" style="width:70px;font-size:25px;">-</div>
+              </a>
+              <a class="col set-temp" style="line-height:60px;margin-top:8px;text-align:center;" button-signal="5"><span>26</span>℃</a>
+              <a href="#" class="col" @click="${()=>home_ui_click_thermostat_room(props.kitem,4)}" command-type="add" guid="${props.kitem.guid}" ref="26">
+                <div class="button button-raised button-big stop" style="width:70px;font-size:25px;">+</div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </li>
+      `;
+    } else if (devive_type == 'Air Conditioner') {
+      return () => $h`
+      <li class="device subdevice home-scanned-peripheral device-none" leader="${props.leader}" bluetooth="${props.bluetooth}" password="${props.password}" subdevice-name="${props.subdevice_name}" guid="${props.guid}" button-group="${props.button_group}"  style="height:auto;">
+        <div class="item-content">
+          <div class="item-inner">
+            <div class="display-flex justify-content-space-between align-content-center align-items-center">
+              <a href="#" class="" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_MODE')}" command_name="" timegap="" button-group="${props.kitem.device_button_group}" command-type="" command="${props.kitem.command}" guid="${props.guid}" button-signal="ARC_MODE">
+                <div class="button button-raised button-big stop" style="width:60px;"><img style="width:25px;height:25px;" src="v5/view/default/style/img/air_condition/icon-mode-${props.kitem.ir_mode || 2}.png" /></div>
+              </a>
+              <a href="#" class="" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_SPEED')}" command_name="" timegap="" button-group="${props.kitem.device_button_group}" command-type="" command="${props.kitem.command}" guid="${props.guid}" button-signal="ARC_SPEED">
+                <div class="button button-raised button-big stop" style="width:60px;"><img style="width:25px;height:25px;" src="v5/view/default/style/img/air_condition/icon-speed-${props.kitem.ir_speed || 1}.png" /></div>
+              </a>
+              <a href="#" class="" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_SWING')}" command_name="" timegap="" button-group="${props.kitem.device_button_group}" command-type="" command="${props.kitem.command}" guid="${props.guid}" button-signal="ARC_SWING">
+                <div class="button button-raised button-big stop" style="width:60px;"><img style="width:25px;height:25px;" src="v5/view/default/style/img/air_condition/icon-swing-${props.kitem.ir_swing || 0}.png" /></div>
+              </a>
+              <a href="#" class="" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_REDUCE_TEMP')}" command_name="" timegap="" button-group="${props.kitem.device_button_group}" command-type="" command="${props.kitem.command}" guid="${props.guid}" button-signal="ARC_REDUCE_TEMP">
+                <div class="button button-raised button-big stop" style="width:60px;font-size:25px;">-</div>
+              </a>
+              <a class="" style="line-height:60px;margin-top:8px;text-align:center;">${props.kitem.ir_temp || 25}℃</a>
+              <a href="#" class="" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_ADD_TEMP')}" command_name="" timegap="" button-group="${props.kitem.device_button_group}" command-type="" command="${props.kitem.command}" guid="${props.guid}" button-signal="ARC_ADD_TEMP">
+                <div class="button button-raised button-big stop" style="width:60px;font-size:25px;">+</div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </li>
+      `;
+    } else {
+      return () => $h`<div></div>`;
+    }
+  };
+  window.throttle_ha_home_local_status_save = core_utils_throttle(ha_home_local_status_save, 1000 * 2, {
+    'trailing': true,
+    'leading': false,
+  });
+  window.throttle_upload_device_control_log = core_utils_throttle(upload_device_control_log, 1000 * 7, {
+    'trailing': true,
+    'leading': false,
+  });
+  window.throttle_iot_update_profile_subdevice_status = window.core_utils_throttle(iot_update_profile_subdevice_status, 1000 * 5, {
+    'trailing': true,
+    'leading': false,
+  });
+  //range init and change fun
+  erp.script.range_change_fun_curtain = (element) => {
+    let parentElemt = $(element.el).parents('.device').prev();
+    const this_uuid = parentElemt.attr('uuid');
+    if (!isset(window.scanned_periperals[this_uuid])) {
+      return;
+    }
+    let value = element.value;
+    const obj = $(element.el);
+    const reverse = obj.attr('direction');
+    const guid = obj.attr('guid');
+    let thisvalue = 0;
+    if (reverse == 'reverse') {
+      thisvalue = 100 - value;
+      if (value == 0) {
+        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="1"]`).attr('ref', 0);
+        $(`li.swipeout-delete-manual[guid="${guid}"]`)
+          .find('.openclose img')
+          .attr('src', erp.setting.app_api_url + '/files/open-curtain.svg');
+      } else if (value > 0) {
+        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="0"]`).attr('ref', 1);
+        $(`li.swipeout-delete-manual[guid="${guid}"]`)
+          .find('.openclose img')
+          .attr('src', erp.setting.app_api_url + '/files/close-curtain.svg');
+      }
+    } else {
+      thisvalue = value;
+      if (thisvalue == 0) {
+        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="0"]`).attr('ref', 1);
+        $(`li.swipeout-delete-manual[guid="${guid}"]`)
+          .find('.openclose img')
+          .attr('src', erp.setting.app_api_url + '/files/close-curtain.svg');
+      } else if (thisvalue > 0) {
+        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="1"]`).attr('ref', 0);
+        $(`li.swipeout-delete-manual[guid="${guid}"]`)
+          .find('.openclose img')
+          .attr('src', erp.setting.app_api_url + '/files/open-curtain.svg');
+      }
+    }
+    const bluetooth = parentElemt.attr('bluetooth') * 1;
+    const button_group = obj.attr('button-group');
+    const subdevice = obj.attr('subdevice-name');
+    const mobmob = parentElemt.attr('mobmob') * 1;
+    const network_id = parentElemt.attr('network-id') * 1;
+    const mackey = core_utils_get_mac_address_from_guid(guid, true);
+    let uart_data = '';
+    let data = '55AA060102' + thisvalue.toString(16).pad('00') + '00';
+    data += core_util_calculate_crc16_modbus_for_doa(data);
+    uart_data = '8602' + data;
+    if (!isset(scanned_periperals[this_uuid]['manual'])) scanned_periperals[this_uuid]['manual'] = {};
+    let currentDate = new Date();
+    currentDate.setSeconds(currentDate.getSeconds() + 10);
+    scanned_periperals[this_uuid]['manual'][1] = {
+      date: DateFormatter.format(currentDate, 'Y-m-d H:i:s'),
+      ref: value,
+    };
+    let newRef = `02${mackey}${uart_data}`;
+    //change status of the device list
+    roomList.forEach(item=>{
+      let list = item.profile_subdevice;
+      list.forEach(kitem=>{
+        if(kitem.name == subdevice){
+          kitem.ref = thisvalue;
+          kitem.action_command = newRef;
+        }
+      })
+    })
+    //console.log(element);
+  };
+  //range init and change fun
+  erp.script.range_change_fun_dimming = (element) => {
+    let parentElemt = $(element.el).parents('.device').prev();
+    const this_uuid = parentElemt.attr('uuid');
+    if (!isset(window.scanned_periperals[this_uuid])) {
+      return;
+    }
+    let value = element.value;
+    const obj = $(element.el);
+    const reverse = obj.attr('direction');
+    const guid = obj.attr('guid');
+    let thisvalue = element.value;
+    const bluetooth = parentElemt.attr('bluetooth') * 1;
+    const button_group = obj.attr('button_group');
+    const subdevice = obj.attr('subdevice-name');
+    const mobmob = parentElemt.attr('mobmob') * 1;
+    const network_id = parentElemt.attr('network-id') * 1;
+    const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
+    const mackey = core_utils_get_mac_address_from_guid(guid, true);
+    const ref = parseInt((thisvalue / 100) * 255);
+    let range_value = parseInt((thisvalue / 100) * 255)
+      .toString(16)
+      .pad('00');
+    iot_ble_set_ui_status_dimming(guid, 'bluetooth', button_group, ref, now);
+    //change status of the device list
+    roomList.forEach(item=>{
+      let list = item.profile_subdevice;
+      list.forEach(kitem=>{
+        if(kitem.name == subdevice){
+          kitem.ref = ref;
+        }
+      })
+    })
+  };
+  //tidy the discover device data
+  const ha_discover_ble_peripheral = (peripheral) => {
+    if (!isset(peripheral.id)) {
+      return;
+    }
+    if (isset(peripheral.disappear) && peripheral.disappear) return;
+
+    //console.log(erp.doctype.device_model[peripheral.hexModel.toUpperCase()])
+    if (!isset(erp.doctype.device_model[peripheral.hexModel.toUpperCase()])) return;
+    $('#room-0-div').removeClass('device-none');
+    let device_model = erp.doctype.device_model[peripheral.hexModel.toUpperCase()];
+    let manufactureData = isset(peripheral.manufactureData) ? peripheral.manufactureData : '000000000000000000';
+    let args = Object.assign({}, peripheral);
+    args.uuid = peripheral.id;
+    args.show_name = peripheral.name.substring(0, 12);
+    args.guid = peripheral.guid;
+    args.rssi = peripheral.rssi;
+    args.authfail = isset(peripheral.authfail) ? peripheral.authfail : 0;
+    args.password = '000000';
+    args.lastDiscoverDate = peripheral.lastDiscoverDate;
+    args.img_url = device_model.image;
+    args.device_model = device_model.name;
+    args.pairing_guid = '';
+    //rssi
+    args.signal = 0;
+    if (peripheral.rssi < 0) {
+      if (peripheral.rssi > -60) args.signal = 5;
+      else if (peripheral.rssi > -70) args.signal = 3;
+      else args.signal = 1;
+    }
+    //bluetooth
+    args.bluetooth_status = 1;
+    //args.mobmob = 0;
+    // if (isset(peripheral.connected) && peripheral.connected == 1) args.bluetooth_status = 1;
+    // else if (isset(peripheral.connecting) && peripheral.connecting == 1) args.bluetooth_status = 2;
+    let connectedSize = 0x0f & parseInt(manufactureData.substring(2, 4), 16),
+      meshHeadSet = (0x10 & parseInt(manufactureData.substring(2, 4), 16)) > 0 ? true : false,
+      meshHeadConnect = (0x20 & parseInt(manufactureData.substring(2, 4), 16)) > 0 ? true : false,
+      meshTailSet = (0x40 & parseInt(manufactureData.substring(2, 4), 16)) > 0 ? true : false,
+      meshTailConnect = (0x80 & parseInt(manufactureData.substring(2, 4), 16)) > 0 ? true : false,
+      meshSize = parseInt(manufactureData.substring(0, 2), 16),
+      noQuota = (0x20 & parseInt(manufactureData.substring(14, 16), 16)) > 0 ? true : false,
+      clockSet = (0x40 & parseInt(manufactureData.substring(14, 16), 16)) > 0 ? true : false,
+      pviOn = (0x80 & parseInt(manufactureData.substring(14, 16), 16)) > 0 ? true : false;
+    const thermostat_power = parseInt(manufactureData.substring(4, 6), 16),
+      thermostat_model = parseInt(manufactureData.substring(6, 8), 16),
+      thermostat_fan = parseInt(manufactureData.substring(8, 10), 16),
+      thermostat_temp = parseInt(manufactureData.substring(10, 12), 16),
+      thermostat_room_temp = parseInt(manufactureData.substring(12, 14), 16);
+    args.meshSize = meshSize;
+    args.connectedSize = connectedSize;
+    args.display_name = args.device_model + '-' + args.show_name.substring(0, 12);
+    args.model = args.device_model;
+    args.mac_address = args.show_name.substring(0, 12);
+    let now = new Date();
+    now.setSeconds(now.getSeconds() - 10);
+    let this_gang = peripheral.gang;
+    let this_model = args.device_model;
+    let dbkey = `${args.button_group}_hidden_${peripheral.guid}`;
+    let hidden_list = [];
+    if (isset(erp.hidden_peripherals)) {
+      for (let j in erp.hidden_peripherals) {
+        hidden_list.push(j);
+      }
+    }
+    let hidden_list_index = hidden_list.indexOf(dbkey);
+    if (hidden_list_index != -1) {
+      //delete the device
+    }
+    if (peripheral.mode == 'IR') {
+      this_gang = 'IR';
+    } else if (peripheral.mode == 'On Off IR') {
+      if (peripheral.button_group.startsWith('ONOFF GANG')) {
+        this_gang = peripheral.button_group.replace('ONOFF GANG', '');
+      } else {
+        this_gang = '';
+      }
+    } else if (peripheral.mode == 'Curtain Switch') {
+      if (peripheral.button_group.startsWith('OPENCLOSE GANG1_2')) {
+        this_gang = 1;
+      } else {
+        this_gang = 2;
+      }
+    } else if (peripheral.mode == 'Thermostat') {
+      this_gang = '';
+    }
+    args.title = `${this_model} ${this_gang}`;
+    if (peripheral.gang == 'dimming') {
+      args.ref = manufactureData.substring(4, 6) == '00' ? '0' : '1';
+      dimming_ref = parseInt(manufactureData.substring(4, 6), 16);
+    } else if (peripheral.gang == 'thermostat') {
+      args.ref = parseInt(manufactureData.substring(4, 6), 16);
+    } else if (peripheral.mode == 'IAQ Sensor') {
+      args.ref = parseInt(manufactureData.substring(4, 6), 16);
+    } else if (peripheral.mode == '4in1 Sensor' || peripheral.mode == 'RF Sensor') {
+      const sensor_ref = parseInt(manufactureData.substring(14, 16), 16) & 0x10;
+      //console.log('RF Sensor',manufactureData);
+      //console.log('RF Sensor', sensor_ref);
+      if (sensor_ref > 1) {
+        //have people;
+        $("li.device[guid='" + peripheral.guid + "'] .rf-sensor i").html('directions_walk');
+      } else {
+        $("li.device[guid='" + peripheral.guid + "'] .rf-sensor i").html('block');
+      }
+    } else if (peripheral.mode == 'On Off IR') {
+      args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x02;
+      scan_ref = args.ref;
+    } else if (peripheral.gang * 1 == 1) {
+      args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x02;
+      scan_ref = args.ref;
+    } else if (peripheral.gang * 1 == 2 && peripheral.mode != 'Multiway Switch') {
+      args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x04;
+      scan_ref = args.ref;
+    } else if (peripheral.gang * 1 == 3 && peripheral.mode != 'Multiway Switch') {
+      args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x08;
+      scan_ref = args.ref;
+    } else if (peripheral.gang * 1 == 4) {
+      args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x10;
+      scan_ref = args.ref;
+    } else if (peripheral.gang * 1 == 2 && peripheral.mode == 'Multiway Switch') {
+      args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x08;
+      scan_ref = args.ref;
+    } else if (peripheral.gang * 1 == 3 && peripheral.mode == 'Multiway Switch') {
+      let this_io = parseInt(manufactureData.substring(16, 18), 16);
+      let this_io2 = this_io.toString(2);
+      if (this_io2.length > 5) {
+        args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x20;
+        scan_ref = args.ref;
+      } else {
+        args.ref = parseInt(manufactureData.substring(16, 18), 16) & 0x08;
+        scan_ref = args.ref;
+      }
+    }
+    //console.log(`${peripheral.mode}:ref=${peripheral.gang}`);
+    //console.log("peripheral.manual",peripheral.manual)
+    if (isset(peripheral.manual)) {
+      if (isset(peripheral.manual[peripheral.gang])) {
+        let ld = new Date(peripheral.manual[peripheral.gang]['date']);
+        if (ld.getTime() > now.getTime()) {
+          args.ref = peripheral.manual[peripheral.gang]['ref'];
+        }
+      } else {
+        let ld = new Date(peripheral.manual['date']);
+        if (ld.getTime() > now.getTime()) {
+          args.ref = peripheral.manual['ref'];
+          if (isset(peripheral.manual['dimming'] && peripheral.manual['dimming']['lastref'])) {
+            dimming_ref = peripheral.manual['dimming']['lastref'];
+          }
+        }
+      }
+      //console.log(`${peripheral.mode}:ref=${args.ref}`);
+    }
+    delete args.ref;
+    args.bluetooth_status = 1;
+    return args;
+  };
+
+  //tidy the profile data
+  let profile_subdevice = erp.info.profile.profile_subdevice || [];
+  let profile_device = erp.info.profile.profile_device;
+  let physical_device = erp.info.device || {};
+  let peripherals = [];
+  let roomList = [];
+  let room_subdevice = [];
+  let range_silder_list_device = [];
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $update = ctx.$update,
+      $f7route = ctx.$f7route,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    //check type of page
+    console.log($f7route);
+    const {title,type} = $f7route.query;
+    const loadMore = (e, done) => {
+      init();
+      scan();
+      $update();
+      done();
+    };
+    emitter.off('back_action');
+    emitter.on('back_action', (data) => {
+      console.log('comming');
+      setTimeout(() => {
+        mainView.router.back(-1);
+      }, 500);
+    });
+    emitter.on('refresh', (data) => {
+      //console.log('refresh', data);
+      init();
+      scan();
+      $update();
+    });
+    const onDeleted = async (sudevice_item) => {
+      //console.log('kitem', sudevice_item);
+      let this_list = erp.info.profile.profile_subdevice;
+      let count_list = this_list.filter((zitem) => zitem.profile_device === sudevice_item.profile_device);
+      if (count_list.length > 1) {
+        this_list.forEach((kitem, kindex) => {
+          if (sudevice_item.name == kitem.name) {
+            this_list.splice(kindex, 1);
+          }
+        });
+      } else if (count_list.length == 1) {
+        let profile_device_index = profile_device.findIndex((z) => z.name === sudevice_item.profile_device);
+        profile_device.splice(profile_device_index, 1);
+        this_list.forEach((kitem, kindex) => {
+          if (sudevice_item.name == kitem.name) {
+            this_list.splice(kindex, 1);
+          }
+        });
+      }
+
+      //update profile
+      //console.log('this_list', this_list);
+      try {
+        let status = await http.request(encodeURI(`/api/resource/Profile/${erp.info.profile.name}`), {
+          method: 'PUT',
+          serializer: 'json',
+          responseType: 'json',
+          data: {
+            profile_device: profile_device,
+            profile_subdevice: this_list,
+          },
+        });
+      } catch (err) {
+        const toast = app.toast.create({
+          position: 'bottom',
+          closeTimeout: 3000,
+          text: err,
+        });
+
+        toast.open();
+        init();
+        scan();
+        $update();
+      }
+
+      //check subdevice length is null,delete the profile device
+    };
+    window.home_ui_click_touch_app_save = ()=>{
+      let press_val = $(`input[name="demo-radio-end"]:checked`).val();
+      let light_val = $(`input[name="demo-radio-light"]:checked`).val();
+      console.log(chooseIndex);
+      roomList.forEach(item=>{
+        item.profile_subdevice.forEach(kitem=>{
+          if(kitem.name === chooseIndex){
+            kitem.pressStatus = press_val;
+            kitem.turnlight = light_val;
+          }
+        })
+      })
+      popups.close();
+    }
+    window.home_ui_click_touch_app = (item)=>{
+      popups =  app.popup.create({
+        el: '.demo-popup-swipe-handler',
+        swipeToClose: true,
+        push: true,
+      })
+      popups.open();
+      chooseIndex = item.name;
+      let doms = $(`.touch-flag[guid="${item.device}"][button-group="${item.device_button_group}"]`).find(".button");
+      let leaveDom = $(`.leave-flag[guid="${item.device}"][button-group="${item.device_button_group}"]`).find(".button");
+      doms.addClass("click-touch");
+      return
+      if(doms.hasClass("click-touch")){
+        doms.removeClass("click-touch");
+        item.pressStatus = 0;
+      }else{
+        doms.addClass("click-touch");
+        item.pressStatus = 1;
+      }
+      $update();
+    }
+    window.home_ui_click_leave_app = (item)=>{
+      console.log(item);
+      let doms = $(`.leave-flag[guid="${item.device}"][button-group="${item.device_button_group}"]`).find(".button");
+      let touchDom = $(`.touch-flag[guid="${item.device}"][button-group="${item.device_button_group}"]`).find(".button");
+      if(doms.hasClass("click-touch")){
+        doms.removeClass("click-touch");
+        item.turnlight = 0;
+      }else{
+        doms.addClass("click-touch");
+        item.turnlight = 1;
+      }
+      $update();
+    }
+    const saveAction = ()=>{
+      //console.log($(`input[name="demo-checkbox"]:checked`));
+      let doms = $(`input[name="demo-checkbox"]:checked`);
+      let list = [];
+      let save_list = [];
+      roomList.forEach(item=>{
+        item.profile_subdevice.forEach(kitem=>{
+          list.push(kitem);
+        })
+      })
+      doms.forEach(ele=>{
+        let name = $(ele).val();
+        //console.log(name);
+        list.forEach(item=>{
+          if(name === item.name){
+            save_list.push(item)
+          }
+        })
+      })
+      //send to page
+      emitter.emit('save_action',{
+        data : JSON.stringify(save_list)
+      })
+      mainView.router.back(mainView.history[mainView.history.length-2],{force:false});
+    }
+    /*
+  -----------------------------------------------------------------
+  Connect bluetheet
+  -----------------------------------------------------------------
+  */
+    const home_ui_click_ble_connect = (item) => {};
+    window.home_ui_click_ir_room = (kitem,type)=>{
+      let guid = kitem.guid;
+      let mackey = core_utils_get_mac_address_from_guid(guid, true);
+      let subdevice = kitem.name;
+      let button_group = kitem.device_button_group;
+      //type is button_group_type 
+      let button_signal = type;
+      const now = DateFormatter.format((new Date()), "Y-m-d H:i:s");
+        
+      let configStr = "ir|0|25,1,2,1,0,1"; //e.g. temp|volumn|menu wind|auto wind|on off|mode //temp+"|1|2|1|1|1"
+      if(isset(runtime.virtuals) && isset(runtime.virtuals[subdevice]) && isset(runtime.virtuals[subdevice].ref)){
+          configStr = runtime.virtuals[subdevice].ref;
+      }
+      if(configStr==""||configStr=="None"||!isset(configStr)) configStr = "ir|0|25,1,2,1,0,1";
+      let config = configStr.split("|");
+      let airconfig = (isset(config[2]) && config[2]!=",,,,NaN") ? config[2].split(",") : "25,1,2,1,0,1".split(",");
+      let ref = "";
+      let ir_data = {
+        ir_mode : airconfig[5],
+        ir_speed : airconfig[1],
+        ir_swing : airconfig[3],
+        ir_temp : airconfig[0],
+        ir_ref : airconfig[4]
+      }
+      if(button_signal=="ARC_ON_OFF"){
+          if(!isset(airconfig[4])) airconfig[4] = 0;
+          airconfig[4] = (airconfig[4]*1+1) % 2;
+          ir_data.ir_ref =  airconfig[4];
+          if(ir_data.ir_ref == 1){
+            $(`.device[subdevice-name="${subdevice}"]`).removeClass('device-none');
+          }else{
+            $(`.device[subdevice-name="${subdevice}"]`).addClass('device-none');
+          }
+      }else if(button_signal=="ARC_MODE"){
+          airconfig[4] = 1;
+          airconfig[5] = airconfig[5]*1+1;
+        if(airconfig[5]>5){
+          airconfig[5]=1;
+        }
+        ir_data.ir_mode =  airconfig[5];
+      }else if(button_signal=="ARC_REDUCE_TEMP"){
+          airconfig[4] = 1;
+        airconfig[0] = airconfig[0]*1-1;
+        if(airconfig[0]<16){
+          airconfig[0] = 16;
+        }
+        ir_data.ir_temp =  airconfig[0];
+      }else if(button_signal=="ARC_ADD_TEMP"){
+          airconfig[4] = 1;
+        airconfig[0] = airconfig[0]*1+1;
+        if(airconfig[0]>32){
+          airconfig[0] = 32;
+        }
+        ir_data.ir_temp =  airconfig[0];
+      }else if(button_signal=="ARC_SPEED"){
+          airconfig[4] = 1;
+          airconfig[1] = airconfig[1]*1+1;
+        if(airconfig[1]>4){
+          airconfig[1]=1;
+        }
+        ir_data.ir_speed =  airconfig[1];
+      }else if(button_signal=="ARC_DIRECTION"){
+          airconfig[4] = 1;
+        airconfig[3] = 0;
+        airconfig[2] = airconfig[2]*1-1;
+        if(airconfig[2]<1){
+          airconfig[2]=3;
+        }
+      }else if(button_signal=="ARC_SWING"){
+          airconfig[4] = 1;
+        airconfig[3] = airconfig[3]*1-1;
+        if(airconfig[3]<0){
+          airconfig[3]=1;
+        }
+        ir_data.ir_swing =  airconfig[3];
+      }
+      config[2] = airconfig.join(",");
+      //home_ui_refresh_aircond_panel_room("Bluetooth",button_group,subdevice, config.join("|"), kitem.command);
+      ref = iot_ble_generate_ir_code(kitem.command, button_signal, airconfig.join(","));
+      if(!isset(runtime.virtuals)){
+            runtime.virtuals = {};
+        }
+        if(!isset(runtime.virtuals[subdevice])){
+            runtime.virtuals[subdevice] = {
+                "ref" :'ir|0|'+airconfig.join(",")
+            }
+        }
+        runtime.virtuals[subdevice].ref = 'ir|0|'+airconfig.join(",");
+        let bytes_array = [];
+        if(ref.length>22){
+            let group = Math.ceil(ref.length*1.0 / 22.0);
+            for(var i=0; i<group; i++){
+                bytes_array.push("87"+(group-i-1).toString(16).pad("00")+ref.substr(i*22, 22));
+            }
+        }else{
+            bytes_array.push("8700"+ref);
+        }
+        let list = [];
+        for(var i in bytes_array){
+          (function(_i, _bytes){
+            list.push(`02${mackey}${_bytes}`)
+          })(i, bytes_array[i])
+        }
+        kitem.ir_command_list = list;
+        kitem.ir_mode = ir_data.ir_mode;
+        kitem.ir_speed = ir_data.ir_speed;
+        kitem.ir_swing = ir_data.ir_swing;
+        kitem.ir_temp = ir_data.ir_temp;
+        kitem.ir_ref = ir_data.ir_ref;
+        kitem.ir_mode_text = ir_data.ir_mode == 2?'Cool':ir_data.ir_mode == 3?'Dry':ir_data.ir_mode == 4?'Fan':ir_data.ir_mode == 5?'Hot':ir_data.ir_mode == 1?'Auto':'';
+        kitem.ir_fan_text = ir_data.ir_speed == 1?'Auto':`${ir_data.ir_speed*1-1} Speed`;
+        kitem.ir_swing_text = ir_data.ir_swing == 1?'Swing':`No Swing`;
+        kitem.ir_temp_text = ir_data.ir_temp;
+        console.log('list',list);
+        roomList.forEach((roomItem) => {
+          //console.log('roomItem', roomItem);
+          let index = roomItem.profile_subdevice.findIndex((e) => e.name === kitem.name);
+          if (index != -1) {
+            roomItem.profile_subdevice[index] = kitem;
+          }
+        });
+        $update();
+    };
+    window.home_ui_click_thermostat_room = (kitem,type)=>{
+      let guid = kitem.guid;
+      let mackey = core_utils_get_mac_address_from_guid(guid, true);
+      console.log(type)
+      let data = `940300000101`;
+      let total_mode = $('li.device[guid="'+guid+'"] a[command-type="mode"]').attr('ref');
+      let total_fan= $('li.device[guid="'+guid+'"] a[command-type="fan"]').attr('ref');
+      let total_temp = $('li.device[guid="'+guid+'"] a[button-signal="5"] span').text();
+      let command_data = {
+        mode : `9404000001${parseInt(total_mode).toString(16).pad("00")}`,
+        fan : `9405000001${parseInt(total_fan).toString(16).pad("00")}`,
+        temp : `9406000001${parseInt(total_temp).toString(16).pad("00")}`
+      }
+      //1mode 2fan 3reduce 4add
+      if(type == 1){
+        let ref = $('li.device[guid="'+guid+'"] a[command-type="mode"]').attr('ref');
+        if(ref == 1){
+          ref = 0;
+          $('li.device[guid="'+guid+'"] a[command-type="mode"]').attr('ref',ref);
+          $('li.device[guid="'+guid+'"] a[command-type="mode"] img').attr('src','style/img/air_condition/icon-mode-4.png');
+        }else if(ref == 2){
+          ref = 1;
+          $('li.device[guid="'+guid+'"] a[command-type="mode"]').attr('ref',ref);
+          $('li.device[guid="'+guid+'"] a[command-type="mode"] img').attr('src','style/img/air_condition/icon-mode-5.png');
+          
+        }else if(ref == 0){
+          ref = 2;
+          $('li.device[guid="'+guid+'"] a[command-type="mode"]').attr('ref',ref);
+          $('li.device[guid="'+guid+'"] a[command-type="mode"] img').attr('src','style/img/air_condition/icon-mode-2.png');
+        }
+        total_mode = ref;
+        command_data.mode = `9404000001${parseInt(ref).toString(16).pad("00")}`;
+      }else if(type == 2){
+        let ref = $('li.device[guid="'+guid+'"] a[command-type="fan"]').attr('ref');
+        if(ref == 4){
+          ref = 1
+        }else{
+          ref++;
+        }
+        total_fan = ref;
+        $('li.device[guid="'+guid+'"] a[command-type="fan"]').attr('ref',ref);
+        $('li.device[guid="'+guid+'"] a[command-type="fan"] img').attr('src','style/img/air_condition/icon-speed-'+ref+'.png');
+        command_data.fan = `9405000001${parseInt(ref).toString(16).pad("00")}`;
+      }else if(type == 3){
+        let ref = $('li.device[guid="'+guid+'"] a[command-type="reduce"]').attr('ref')*1;
+        ref--;
+        $('li.device[guid="'+guid+'"] a[button-signal="5"] span').text(ref); 
+        $('li.device[guid="'+guid+'"] a[command-type="add"]').attr('ref',ref);
+        $('li.device[guid="'+guid+'"] a[command-type="reduce"]').attr('ref',ref);
+        total_temp = ref;
+        command_data.temp = `9406000001${parseInt(ref).toString(16).pad("00")}`;
+      }else if(type == 4){
+        let ref = $('li.device[guid="'+guid+'"] a[command-type="add"]').attr('ref')*1;
+        ref++;
+        $('li.device[guid="'+guid+'"] a[button-signal="5"] span').text(ref); 
+        $('li.device[guid="'+guid+'"] a[command-type="add"]').attr('ref',ref);
+        $('li.device[guid="'+guid+'"] a[command-type="reduce"]').attr('ref',ref);
+        total_temp = ref;
+        command_data.temp = `9406000001${parseInt(ref).toString(16).pad("00")}`;
+      }
+      let mode_text = total_mode == 2?'Cool':total_mode == 1?'Hot':total_mode == 0?'Fan':'';
+      let fan_text = total_fan == 1?'Auto':`${total_fan*1-1} Speed`;
+      let temp_text = total_temp;
+      kitem.thermostat_mode = `02${mackey}${command_data.mode}`;
+      kitem.thermostat_fan = `02${mackey}${command_data.fan}`;
+      kitem.thermostat_temp = `02${mackey}${command_data.temp}`;
+      kitem.action_command = `02${mackey}940300000101`;
+      kitem.mode_text = mode_text;
+      kitem.fan_text = fan_text;
+      kitem.temp_text = temp_text;
+      kitem.ref = 1;
+      roomList.forEach((roomItem) => {
+        //console.log('roomItem', roomItem);
+        let index = roomItem.profile_subdevice.findIndex((e) => e.guid === kitem.guid);
+        if (index != -1) {
+          roomItem.profile_subdevice[index] = kitem;
+        }
+      });
+      $update();
+      console.log(kitem);
+    }
+    window.app_ha_click_onoff_thermostat_room = (item) =>{
+      let { uuid, subdevice_name, guid, mobmob, firmware, password, ref, leader } = item;
+      let mackey = core_utils_get_mac_address_from_guid(guid, true);
+      let newRef = ref == '0' ? '1' : '0';
+      let data = `02${mackey}9403000001${parseInt(newRef).toString(16).pad("00")}`;
+      item.ref = newRef;
+      console.log(newRef);
+      item.action_command = data;
+      roomList.forEach((roomItem) => {
+        //console.log('roomItem', roomItem);
+        let index = roomItem.profile_subdevice.findIndex((e) => e.guid === item.guid);
+        if (index != -1) {
+          roomItem.profile_subdevice[index] = item;
+        }
+      });
+      $update();
+    }
+    /*
+  -----------------------------------------------------------------
+  ONOFF Click Logic
+  -----------------------------------------------------------------
+  */
+    window.app_ha_click_onoff = async (item) => {
+      const TAG = 'ERP >>> app_ha_click_onoff';
+      console.log(TAG);
+      emitter.off('startNotification');
+      console.log(item);
+      let { uuid, subdevice_name, guid, mobmob, firmware, password, ref, leader } = item;
+      item.gang = item.button_group
+          ? item.button_group.replace('ONOFF GANG', '') * 1
+          : item.device_button_group
+          ? item.device_button_group.replace('ONOFF GANG', '') * 1
+          : 1;
+      newRef = ref == '0' ? '1' : '0';
+      item.ref = newRef;
+      roomList.forEach((roomItem) => {
+        //console.log('roomItem', roomItem);
+        let index = roomItem.profile_subdevice.findIndex((e) => e.guid === item.guid && e.gang === item.gang);
+        if (index != -1) {
+          roomItem.profile_subdevice[index] = item;
+        }
+      });
+      return false;
+      const askIotSdk = async () => {
+        let { uuid, subdevice_name, guid, mobmob, firmware, password, ref, leader } = item;
+        //console.log('ref', ref);
+        let mackey = core_utils_get_mac_address_from_guid(guid, true);
+        if (window.device.platform.toLowerCase() == 'android') {
+          if (uuid) {
+            mackey = uuid.split(':').reverse().join('');
+          }
+        }
+        let cmd = [];
+        let read_cmd = [];
+        let currentDate = new Date();
+        let new_date = new Date(currentDate.getTime() + 10 * 1000);
+        newRef = ref == '0' ? '1' : '0';
+        cmd.push({ action: 'connect' });
+        read_cmd.push({ action: 'connect' });
+        read_cmd.push({ action: 'read', serv: '180a', char: '2a26' });
+        let load_status = true;
+        iot_emitter_device();
+        if (!isset(scanned_periperals[uuid])) {
+          scanned_periperals[uuid] = {};
+        }
+        if (!isset(scanned_periperals[uuid]['manual'])) {
+          scanned_periperals[uuid]['manual'] = {};
+        }
+        if (!isset(item['manual'])) {
+          item['manual'] = {};
+        }
+        scanned_periperals[uuid]['manual'][item.gang] = {
+          date: DateFormatter.format(new_date, 'Y-m-d H:i:s'),
+          ref: newRef,
+        };
+        item['manual'] = {
+          date: DateFormatter.format(new_date, 'Y-m-d H:i:s'),
+          ref: newRef,
+        };
+        item.gang = item.button_group
+          ? item.button_group.replace('ONOFF GANG', '') * 1
+          : item.device_button_group
+          ? item.device_button_group.replace('ONOFF GANG', '') * 1
+          : 1;
+        if (mobmob == 1) {
+          item.gang = item.device_button_group.replace('ONOFF GANG', '') * 1;
+          if (firmware < 6.0) {
+            load_status = false;
+            newRef = ref == '0' ? '1' : '0';
+            item.ref = newRef;
+            let cmd = [];
+            cmd.push({ action: 'connect' });
+            let gang1 = 0;
+            let gang2 = 0;
+            let gang3 = 0;
+            let gang4 = 0;
+            $(`.device.home-scanned-peripheral[guid="${guid}"]`).forEach((ele) => {
+              let obj = $(ele).find('.on_flag');
+              let ref = obj.attr('ref');
+              let gangs = obj.attr('gang') * 1;
+              let this_ref = ref > 0 ? 1 : 0;
+              if (gangs == 1) {
+                gang1 = this_ref;
+              } else if (gangs == 2) {
+                gang2 = this_ref;
+              } else if (gangs == 3) {
+                gang3 = this_ref;
+              } else if (gangs == 4) {
+                gang4 = this_ref;
+              }
+            });
+            let data = `111${gang4}${gang3}${gang2}${gang1}1`;
+            data = parseInt(data, 2).toString(16);
+            cmd.push({ action: 'write', data: data });
+            try {
+              let status = await ha_process_periperal_cmd(uuid, cmd);
+            } catch (err) {
+              const toast = app.toast.create({
+                position: 'bottom',
+                closeTimeout: 3000,
+                text: err,
+              });
+
+              toast.open();
+              load_status = false;
+            }
+          } else {
+            cmd.push({
+              action: 'write',
+              data: jinja2.render(window[(ref == '0' ? 'ON' : 'OFF') + item.gang].toString(), { mackey: mackey }).toLowerCase(),
+            });
+            //console.log('uuid', uuid);
+            window.throttle_ha_home_local_status_save.cancel();
+            window.throttle_ha_home_local_status_save('local_scanned_periperals', JSON.stringify(window.scanned_periperals));
+            ha_process_periperal_cmd(uuid, cmd).then(
+              () => {
+                item.ref = newRef;
+                let index = peripherals.findIndex((e) => item.guid == e.guid && item.gang === e.gang);
+                peripherals[index] = item;
+                roomList.forEach((roomItem) => {
+                  //console.log('roomItem', roomItem);
+                  let index = roomItem.profile_subdevice.findIndex((e) => e.guid === item.guid && e.gang === item.gang);
+                  if (index != -1) {
+                    roomItem.profile_subdevice[index] = item;
+                  }
+                });
+                $update();
+                // if (subdevice) {
+                //   window.throttle_upload_device_control_log.cancel();
+                //   window.throttle_iot_update_profile_subdevice_status.cancel();
+                //   window.throttle_upload_device_control_log(guid, control_ref, control_type, subdevice);
+                //   window.throttle_iot_update_profile_subdevice_status(subdevice, newRef);
+                // }
+              },
+              (e) => {
+                const toast = app.toast.create({ position: 'bottom', closeTimeout: 3000, text: e });
+
+                toast.open();
+              },
+            );
+          }
+        } else {
+          try {
+            //ready for connect the bluetheeth
+            if (item.bluetooth_status == 0) {
+              changeListStatus(peripherals, 'guid', item.guid, null, null, 'bluetooth_status', 2, 'connecting', 1);
+            }
+            let read_status = await ha_process_periperal_cmd(uuid, read_cmd, true);
+            firmware = window.scanned_periperals[uuid].firmware;
+            scanned_periperals[uuid].connected = 1;
+            if (!firmware || firmware < 6.0) {
+              load_status = false;
+              cmd.push({ action: 'connect' });
+              let gang1 = 0;
+              let gang2 = 0;
+              let gang3 = 0;
+              let gang4 = 0;
+              profile_subdevice.forEach((item) => {
+                if (item.guid == guid) {
+                  item.bluetooth = 2;
+                  if (item.gang == 1) {
+                    gang1 = item.ref;
+                  } else if (item.gang == 2) {
+                    gang2 = item.ref;
+                  } else if (item.gang == 3) {
+                    gang3 = item.ref;
+                  } else if (item.gang == 4) {
+                    gang4 = item.ref;
+                  }
+                }
+              });
+              let code_data = `111${gang4}${gang3}${gang2}${gang1}1`;
+              code_data = parseInt(code_data, 2).toString(16);
+              cmd.push({ action: 'write', data: code_data });
+              let write_status = await ha_process_periperal_cmd(uuid, cmd, true);
+              scanned_periperals[uuid].connected = 1;
+            } else {
+              cmd.push({
+                action: 'write',
+                data: jinja2.render(window[(ref == '0' ? 'ON' : 'OFF') + item.gang].toString(), { mackey: mackey }).toLowerCase(),
+              });
+              //console.log('uuid', uuid);
+              window.throttle_ha_home_local_status_save.cancel();
+              window.throttle_ha_home_local_status_save('local_scanned_periperals', JSON.stringify(window.scanned_periperals));
+              ha_process_periperal_cmd(uuid, cmd).then(
+                () => {
+                  item.ref = newRef;
+                  changeListStatus(peripherals, 'guid', item.guid, null, null, 'bluetooth_status', 1, 'connected', 1);
+                  item.bluetooth_status = 1;
+                  item.connected = 1;
+                  let index = peripherals.findIndex((e) => item.guid == e.guid && item.gang === e.gang);
+                  peripherals[index] = item;
+                  roomList.forEach((roomItem) => {
+                    let index = roomItem.profile_subdevice.findIndex((e) => e.guid === item.guid && e.gang === item.gang);
+                    if (index != -1) {
+                      roomItem.profile_subdevice[index] = item;
+                    }
+                  });
+                  $update();
+                  // if (subdevice) {
+                  //   window.throttle_upload_device_control_log.cancel();
+                  //   window.throttle_iot_update_profile_subdevice_status.cancel();
+                  //   window.throttle_upload_device_control_log(guid, control_ref, control_type, subdevice);
+                  //   window.throttle_iot_update_profile_subdevice_status(subdevice, newRef);
+                  // }
+                },
+                (e) => {
+                  changeListStatus(peripherals, 'guid', item.guid, null, null, item.guid, 'bluetooth_status', 0);
+                  const toast = app.toast.create({ position: 'bottom', closeTimeout: 3000, text: e });
+
+                  toast.open();
+                },
+              );
+            }
+          } catch (err) {}
+        }
+      };
+      askIotSdk();
+      //console.log(item);
+    };
+    //defined scan function
+    let scan = () => {
+      ble.stopScan(
+        function () {
+          ble.startScanWithOptions(
+            ['fff0', 'ff70', 'ffB0', 'ff80'],
+            {
+              reportDuplicates: true,
+              scanMode: 'lowLatency',
+            },
+            function (peripheral) {
+              //console.log(peripheral);
+              //let index = peripherals.map((e,i) => e.guid == peripheral.guid ? i : undefined).filter(x => x);
+              let index = peripherals.findIndex((e) => e.guid === peripheral.guid);
+
+              if (index >= 0) {
+                //check the status
+                let new_peripheral = ha_discover_ble_peripheral(Object.assign(peripherals[index], peripheral));
+                //console.log("peripherals[index]",peripherals[index]);
+                // console.log("peripheral",peripheral);
+                window.scanned_periperals[peripheral.id] = Object.assign(scanned_periperals[peripheral.id], peripherals[index]);
+                peripherals[index] = new_peripheral;
+                let roomindex = room_subdevice.findIndex(
+                  (e) => e.guid === new_peripheral.guid && e.device_button_group === new_peripheral.button_group,
+                );
+                if (roomindex != -1) {
+                  roomList.forEach((roomitem) => {
+                    let index = roomitem.profile_subdevice.findIndex(
+                      (e) => e.device === new_peripheral.guid && e.device_button_group === new_peripheral.button_group,
+                    );
+                    if (index != -1) {
+                      let this_obj = roomitem.profile_subdevice[index];
+                      new_peripheral.name = this_obj.name;
+                      new_peripheral.mobmob = this_obj.mobmob;
+                      let new_obj = Object.assign({}, this_obj, new_peripheral);
+                      roomitem.profile_subdevice[index] = Object.assign({}, new_obj);
+                      //console.log("this_obj",new_peripheral);
+                    }
+
+                    $update();
+                  });
+                }
+              } else {
+                //tidy the peripheral data;
+                let data = Object.assign({}, peripheral);
+                let device_model = erp.doctype.device_model[peripheral.hexModel.toUpperCase()];
+                //console.log(device_model);
+                if (isset(device_model)) {
+                  //console.log(device_model)
+                  for (let i in device_model['device_default_template']) {
+                    let btn = device_model['device_default_template'][i];
+                    if (btn.mode != device_model.mode) continue;
+                    data.button_group = btn.device_button_group;
+                    data.mobmob = 0;
+                    data.ref = 0;
+                    data.mode = btn.mode;
+                    data.gang = '';
+                    data.password = '000000';
+                    if (data.mode == 'On Off Switch' || data.mode == 'Multiway Switch') {
+                      data.gang = data.button_group.replace('ONOFF GANG', '') * 1;
+                    }
+                    if (!isset(window.scanned_periperals)) {
+                      window.scanned_periperals = {};
+                    }else if(isset(window.scanned_periperals[data.id])){
+                      //if have same Object,delete
+                      for(let i in window.scanned_periperals){
+                        if(window.scanned_periperals[i].guid == data.guid){
+                          if(i != data.id){
+                            delete window.scanned_periperals[i];
+                          }
+                        }
+                      }
+                      window.scanned_periperals[data.id] = Object.assign(window.scanned_periperals[data.id],data);
+                    }else{
+                      window.scanned_periperals[data.id] = data;
+                    }
+                    let new_peripheral = ha_discover_ble_peripheral(Object.assign({}, window.scanned_periperals[data.id]));
+                    //IR device
+                    room_subdevice.forEach((sub_item,index)=>{
+                      if(sub_item.guid === new_peripheral.guid && sub_item.device_mode == 'IR'){
+                        roomList.forEach(room_item=>{
+                          let list_index = room_item.profile_subdevice.findIndex(e=>sub_item.name === e.name);
+                          if(list_index != -1){
+                            room_item.profile_subdevice[list_index] = Object.assign(room_item.profile_subdevice[list_index],new_peripheral);
+                          }
+                        })
+                      }
+                    })
+                    let roomindex = room_subdevice.findIndex((e) => e.guid === data.guid && e.device_button_group === data.button_group);
+                    if (roomindex != -1) {
+                      roomList.forEach((roomitem) => {
+                        let index = roomitem.profile_subdevice.findIndex(
+                          (e) => e.device === data.guid && e.device_button_group === data.button_group,
+                        );
+                        if (index != -1) {
+                          let this_obj = roomitem.profile_subdevice[index];
+                          new_peripheral.name = this_obj.name;
+                          new_peripheral.mobmob = this_obj.mobmob;
+                          let new_obj = Object.assign({}, this_obj, new_peripheral);
+                          roomitem.profile_subdevice[index] = Object.assign({}, new_obj);
+                          //console.log("this_obj",new_peripheral);
+                        }
+
+                        $update();
+                      });
+                    } else {
+                      peripherals.push(new_peripheral);
+                    }
+                  }
+                }
+                //console.log(peripherals);
+              }
+              $update();
+            },
+            function (e) {
+              scan();
+            },
+          );
+        },
+        function () {},
+      );
+    };
+    let stopScan = () => {
+      ble.stopScan(
+        function () {},
+        function () {},
+      );
+    };
+    const init = async () => {
+      //refresh
+      profile_subdevice = erp.info.profile.profile_subdevice;
+      profile_device = erp.info.profile.profile_device;
+      physical_device = erp.info.device || {};
+      room_subdevice = [];
+      peripherals = [];
+      //defined the params
+      window.runtime = {};
+      window.runtime.appInfo = {};
+      window.runtime.appInfo = erp.settings[erp.appId];
+      window.runtime.appInfo.name = '';
+      window.frappe.user = {};
+      window.frappe.user.data = {};
+      window.frappe.user.data.username = users[users.current].usr;
+      window.frappe.user.data.currentUsername = users[users.current].usr;
+      //get local values
+      let hidden_list = [];
+      let chooseIndex = null;
+      let popups = null;
+      try {
+        let hidden_list_str = await db.get('hidden_peripherals');
+        if (hidden_list_str) {
+          hidden_list = JSON.parse(hidden_list_str);
+          hidden_list.forEach((item) => {
+            if (!isset(runtime.hidden_peripherals)) {
+              runtime.hidden_peripherals = {};
+              runtime.hidden_peripherals[item] = { 'hidden': true };
+            } else {
+              runtime.hidden_peripherals[item] = { 'hidden': true };
+            }
+          });
+        }
+      } catch (err) {
+        //ignore
+        console.log(err);
+      }
+      try {
+        //load the local device status
+        let local_device_list_str = await db.get('local_scanned_periperals');
+        if (local_device_list_str) {
+          window.local_scanned_periperals = {};
+          window.local_scanned_periperals = JSON.parse(local_device_list_str);
+          console.log('local_scanned_periperals', local_scanned_periperals);
+        }
+      } catch (err) {
+        //ignore
+        console.log(err);
+      }
+      //network_leader
+      //tidy the network_leader
+      let network_obj = {};
+      let network_leader = profile_device.reduce((result, device_item) => {
+        let existingItem = result.find((i) => i.network_id === device_item.network_id);
+        //console.log(existingItem);
+        if (existingItem) {
+          existingItem.list.push(device_item);
+        } else {
+          console.log('item.network_id', device_item.network_id);
+          result.push({ 'network_id': device_item.network_id, 'list': [device_item] });
+        }
+        return result;
+      }, []);
+      console.log('network_leader', network_leader);
+      network_leader.forEach((item) => {
+        if (item.network_id != 0) {
+          network_obj[item.network_id] = item.list[0];
+          item.list.forEach((kitme) => {
+            if (kitme.default_connect == 1) {
+              network_obj[item.network_id] = kitme.device;
+            }
+          });
+        }
+      });
+      //tidy the device button group
+      let this_button_group =  await tidyDeviceButtonGroup();
+      //console.log('network_obj', network_obj);
+      //init room list UI
+      roomList = erp.info.profile.profile_room;
+      profile_subdevice = erp.info.profile.profile_subdevice;
+      let device_models = erp.doctype.device_model;
+      let gateway_list = [];
+      profile_subdevice.forEach((item) => {
+        //update the physical setting
+        for (let i in physical_device) {
+          if (item.device == i) {
+            item.firmware = physical_device[i].firmware;
+          }
+        }
+        item.signal = 0;
+        item.bluetooth_status = 1;
+        item.ref = 0;
+        item.uuid = core_utils_get_mac_address_from_guid(item.device, false).toUpperCase();
+        //get local values
+        for (let z in window.local_scanned_periperals) {
+          if (item.uuid === z || window.local_scanned_periperals[z].guid === item.guid) {
+            //console.log(item.uuid);
+            //console.log(isset(window.local_scanned_periperals[z].manual));
+            if (isset(window.local_scanned_periperals) && isset(window.local_scanned_periperals[z].manual)) {
+              if (item.device_mode == 'On Off Switch' || item.device_mode == 'Multiway Switch') {
+                if (isset(window.local_scanned_periperals[z].manual[item.device_button_group.replace('ONOFF GANG', '')])) {
+                  item.ref = window.local_scanned_periperals[z].manual[item.device_button_group.replace('ONOFF GANG', '')].ref;
+                }
+                //console.log('peripheral.ref', item.ref);
+              } else if (item.device_mode == 'On Off IR') {
+                item.ref = window.local_scanned_periperals[z].manual['On Off IR'].ref;
+              } else if (item.device_mode == 'Curtain Motor' || item.device_mode == 'Curtain Motor Reverse' || item.device_mode == 'Curtain Motor Ac') {
+                item.ref = window.local_scanned_periperals[z].manual['1'].ref;
+              }
+            }
+          }
+        }
+        profile_device.forEach((kitem) => {
+          if (item.profile_device == kitem.name) {
+            item.mac_address = kitem.device_name;
+            item.subdevice_name = item.name;
+            item.password = kitem.password;
+            item.mobmob = isset(kitem.gateway) ? 1 : 0;
+            item.gateway = isset(kitem.gateway) ? kitem.gateway : '';
+            item.network_id = kitem.network_id;
+            item.network_position = kitem.network_position;
+            item.model = kitem.device_model;
+            item.default_connect = kitem.default_connect;
+            item.leader = network_obj[item.network_id];
+            item.button_group = item.device_button_group;
+            if (item.default_connect) {
+              item.leader = kitem.device;
+            }
+            //connect mobmob
+            if(isset(kitem.gateway) && kitem.gateway != ''){
+              let index = gateway_list.indexOf(kitem.gateway);
+              if(index == -1){
+                gateway_list.push(kitem.gateway);
+              }
+              
+            }
+            item.guid = kitem.device;
+            //item.firmware  = isset(kitem.firmware) ? kitem.firmware : '';
+            for (let i in device_models) {
+              if (item.model == device_models[i].model_code) {
+                item.img_url = device_models[i].image || 'https://my.yoswit.com/files/products/YO2086-1G.svg';
+              }
+            }
+          }
+        });
+      });
+      roomList.forEach((item) => {
+        item.profile_subdevice = [];
+        profile_subdevice.forEach((kitem, kindex) => {
+          if (kitem.config && kitem.device_mode == 'Multiway Switch') {
+            let data = JSON.parse(kitem.config);
+            kitem.pairing_guid = data.pairing_guid || '';
+            kitem.be_pairing = data.be_pairing || '';
+          }
+          if(kitem.device_mode == 'IR' || kitem.device_mode == 'On Off IR'){
+            if(isset(this_button_group[kitem.device_button_group])){
+              kitem.command = this_button_group[kitem.device_button_group].device_command.function
+            }
+          }
+          kitem.device_type = '';
+          let button_group = kitem.device_button_group;
+          if (button_group.startsWith('Air Conditioner-')) {
+            kitem.device_type = 'Air Conditioner';
+          } else if (button_group.startsWith('JOHNSON CONTROLS AIR CONDITIONER')) {
+            kitem.device_type = 'JOHNSON';
+          } else if (button_group.startsWith('Television-')) {
+            kitem.device_type = 'Television';
+          } else if (button_group.startsWith('Set-top')) {
+            kitem.device_type = 'SetTop';
+          } else if (button_group.startsWith('Audio-')) {
+            kitem.device_type = 'Audio';
+          } else if (button_group.startsWith('Projector-')) {
+            kitem.device_type = 'Projector';
+          } else if (button_group.startsWith('Fan-')) {
+            kitem.device_type = 'Fan';
+          } else if (button_group.startsWith('IPTV-')) {
+            kitem.device_type = 'IPTV';
+          } else if (button_group.startsWith('Air Purifier-')) {
+            kitem.device_type = 'Air Purifier';
+          } else if (button_group.startsWith('Camera-')) {
+            kitem.device_type = 'Camera';
+          } else if (button_group.startsWith('Dehumidifier-')) {
+            kitem.device_type = 'Dehumidifier';
+          } else if (button_group.startsWith('Robot Vacuum-')) {
+            kitem.device_type = 'Robot';
+          } else if (button_group.startsWith('OPEN_LOCK')) {
+            kitem.device_type = 'OPEN_LOCK';
+            kitem.device_model = 'Yale-Zigbee-Lock';
+          }
+          if (kitem.profile_room == item.name) {
+            //console.log('profile_subdevice', kitem);
+            item.profile_subdevice.push(kitem);
+            room_subdevice.push(kitem);
+            //init window.scanned_periperals
+            console.log(kitem.gateway);
+            if (kitem.gateway && kitem.gateway != 'None') {
+              //check is nor exist local status
+              if (isset(window.local_scanned_periperals) && isset(window.local_scanned_periperals[kitem.uuid])) {
+                if (!isset(window.scanned_periperals)) {
+                  window.scanned_periperals = {};
+                }
+                window.scanned_periperals[kitem.uuid] = window.local_scanned_periperals[kitem.uuid];
+              } else {
+                if (isset(window.scanned_periperals)) {
+                  window.scanned_periperals[kitem.uuid] = {
+                    guid: kitem.device,
+                    id: kitem.uuid,
+                    password: kitem.password,
+                  };
+                } else {
+                  window.scanned_periperals = {};
+                  window.scanned_periperals[kitem.uuid] = {
+                    guid: kitem.device,
+                    id: kitem.uuid,
+                    password: kitem.password,
+                  };
+                }
+              }
+            }
+          }
+        });
+      });
+      //console.log(roomList);
+      $update();
+    };
+    const tidyDeviceButtonGroup = async()=>{
+      //in order to get the device command from erp
+      let this_button_group = erp.info.device_button_group;
+      let this_button_group_command = erp.info.device_command;
+      for(let i in this_button_group){
+        this_button_group[i].device_command = {};
+        if(isset(this_button_group[i].button_group_sub_list[0])){
+          let command_name = this_button_group[i].button_group_sub_list[0].device_command;
+          this_button_group[i].device_command = this_button_group_command[command_name];
+        }
+        
+      }
+      return this_button_group;
+    };
+    const controller_home_switch_room_onclick = (index) => {
+      let item_id = `room-bar-title-${index}`;
+      let id = `room-${index}-div`;
+      console.log($('.media-list'));
+      $('.tab-link').removeClass('tab-link-active');
+      $(`#${item_id}`).addClass('tab-link-active');
+      if (index == 0) {
+        $('.media-list').show();
+      } else {
+        $('.media-list').hide();
+        $(`#${id}`).show();
+      }
+    };
+    const controller_common_home_collapse = (index) => {
+      const id = `room-${index}-div-title`;
+      const room_id = `room-${index}-div`;
+      let icon_name = $(`#${id}`).find('i').text();
+      if (icon_name == 'expand_more') {
+        $(`#${room_id} .room-item`).hide();
+        $(`#${id}`).find('i').text('chevron_right');
+        console.log(icon_name);
+      } else {
+        $(`#${room_id} .room-item`).show();
+        $(`#${id}`).find('i').text('expand_more');
+      }
+    };
+    //to link 
+    window.toScene = (device_item)=>{
+      console.log(device_item);
+      const {button_group,title,mac_address,model,device_mode,img_url,room_name,guid,gateway} = device_item;
+      if(model == 'YO780'){
+        mainView.router.navigate(`/mobile-app/scene-setting-rcu?mode=${device_mode}&gateway=${gateway}&model=${model}&guid=${guid}&button_group=${button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${img_url}&room_name=${tran(room_name)}`);
+      }else{
+        mainView.router.navigate(`/mobile-app/scene-setting?mode=${device_mode}&gateway=${gateway}&model=${model}&guid=${guid}&button_group=${button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${img_url}&room_name=${tran(room_name)}`);
+      }
+    }
+    //tool function
+    const changeListStatus = (
+      targetList,
+      compare_key1,
+      compare_value1,
+      compare_key2,
+      compare_value2,
+      change_key1,
+      change_value1,
+      change_key2,
+      change_value2,
+    ) => {
+      //key is the the targetList props
+      if (!compare_key2) {
+        targetList.forEach((item) => {
+          if (item[compare_key1] == compare_value1) {
+            item[change_key1] = change_value1;
+            if (change_key2) {
+              item[change_key2] = change_value2;
+            }
+          }
+        });
+      } else {
+        let index = targetList.findIndex((e) => e[compare_key1] === compare_value1 && e[compare_key2] === compare_value2);
+        if (index !== -1) {
+          targetList[index][change_key1] = change_value1;
+        }
+      }
+      $update();
+    };
+    $onMounted(() => {
+      //running defined fun
+      init();
+      scan();
+      if(title){
+        //$('.page-current .title').text(tran(title));
+      }
+      console.log('type',type);
+      if(type == 1){
+        setTimeout(()=>{
+          console.log($('.item-checkbox'))
+          $('.item-checkbox').hide();
+          $('.sliding .right').hide();
+        },100)
+      }
+      $update();
+    });
+    $onBeforeUnmount(() => {
+      stopScan();
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none;
+  }
+  .tabbar .tab-link-active,
+  .tabbar-labels .tab-link-active {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .room-box .device .swipeout-actions-right {
+    transform: translateX(200%);
+  }
+  .room-box .device .swipeout-actions-left { 
+    transform: translateX(-200%);
+  }
+  .ir-signal-cooker i {
+    display: none;
+  }
+  .room-box .ir-signal-cooker[ref='0'][mode='On Off IR'] {
+    display: inline-block;
+  }
+  .room-box .ir-signal-cooker[ref='1'] .radio-button-unchecked {
+    display: none;
+  }
+  .room-box .ir-signal-cooker[ref='0'][mode='On Off IR'] .radio-button-unchecked {
+    display: inline-block;
+  }
+  .room-box .ir-signal-cooker[ref='1'] .circles {
+    display: inline-block;
+    color: #3bb33b !important;
+  }
+  .device[bluetooth='0'][mobmob='0'] .control-panel-right .iaq-button-score-a {
+    display: none;
+  }
+  .device[bluetooth='1'] .control-panel-right .iaq-button-score-a,
+  .device[mobmob='1'] .control-panel-right .iaq-button-score-a {
+    display: inline-block;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='0'][mobmob='0'] .on_flag,
+  .control-panel-right[type-box='Dimming'][bluetooth='2'][mobmob='0'] .on_flag {
+    display: none;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='1'] a.iot-connect,
+  .control-panel-right[type-box='Dimming'][mesh='1'] a.iot-connect,
+  .control-panel-right[type-box='Dimming'][mobmob='1'] a.iot-connect,
+  .control-panel-right[type-box='Dimming'][bluetooth='2'] a.iot-connect {
+    display: none;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='1'] .on_flag,
+  .control-panel-right[type-box='Dimming'][mobmob='1'] .on_flag {
+    display: inline-block;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='0'][mobmob='0'] a.iot-connect {
+    display: inline-block;
+  }
+  .device[bluetooth='0'][mobmob='0'] .iaq-button-score-a {
+    display: none;
+  }
+  .device[bluetooth='1'] .iaq-button-score-a,
+  .iaq-button-score-a[mobmob='1'] .iaq-button-score-a {
+    display: inline-block;
+  }
+  .iaq-subdevice[bluetooth][mobmob='0'] {
+    display: none !important;
+  }
+  .iaq-subdevice[bluetooth='1'],
+  .iaq-subdevice[mobmob='1'] {
+    display: flex !important;
+  }
+  .device-none {
+    display: none !important;
+  }
+  .device-flex {
+    display: flex;
+  }
+  .dimming-subdevice[bluetooth='0'][mobmob='0'] {
+    opacity: 0.55 !important;
+    pointer-events: none !important;
+  }
+  .curtain-subdevice[bluetooth='0'][mobmob='0'] {
+    opacity: 0.55 !important;
+    pointer-events: none !important;
+  }
+  .device.curtain-subdevice[bluetooth='1'],
+  .device.curtain-subdevice[mobmob='1'],
+  .device.dimming-subdevice[bluetooth='1'],
+  .device.dimming-subdevice[mobmob='1'] {
+    display: flex;
+  }
+  .box-btn {
+    margin-bottom: 7.5px;
+    margin-top: 7.5px;
+  }
+  .box-left {
+    border-left: 1px solid var(--f7-list-item-border-color);
+  }
+  .unit {
+    font-size: 11px;
+  }
+  .title-btn {
+    width: 100%;
+    margin-left: 5px;
+  }
+  .iaq-title-big {
+    font-size: 12px;
+  }
+  .main-btn .box-btn-img {
+    background-color: #3bb33b;
+  }
+  .device[bluetooth='1'] .iot-connect {
+    display: none;
+  }
+  .device[mobmob='1'] .iot-connect {
+    display: none;
+  }
+  .device[bluetooth='0'][mobmob='0'] .iot-connect {
+    display: block;
+  }
+  .subdevice[bluetooth='0'][mobmob='0'] {
+    display: none;
+  }
+  .subdevice[bluetooth='1'],
+  .subdevice[mobmob='1'] {
+    display: block;
+  }
+  .home-signal-thermostat {
+    display: none;
+  }
+  .arrow-downward-button[ref='1'] .button,
+  .arrow-upward-button[ref='1'] .button {
+    background-color: var(--f7-theme-color);
+    color: #ffffff;
+    border-color: var(--f7-theme-color);
+  }
+  @keyframes refresh {
+    0% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  li.device .item-content .control-panel-right i.button-icons,
+  li.device .item-content .control-panel-right i {
+    line-height: 25px !important;
+  }
+  .tabbar .tab-link-highlight {
+    bottom: 0;
+    display: none;
+  }
+  .click-touch {
+    background: var(--f7-theme-color) !important;
+    color: #fff!important;
+  }
+  .operate-box:before{
+    display: none!important;
+  }
+  .operate-box:after{
+    display: none!important;
+  }
+</style>

@@ -1,0 +1,1092 @@
+<template>
+<div class="page">
+	<div class="navbar active">
+		<div class="navbar-bg"></div>
+		<div class="navbar-inner sliding">
+			<div class="left">
+				<a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+					<i class="icon icon-back"></i>
+					<span class="if-not-md">Back</span>
+				</a>
+			</div>
+			<div class="title">${title}</div>
+			<div class="right"></div>
+		</div>
+	</div>
+
+	<div class="page-content ptr-content" style="height: 100%" @ptr:refresh="${refresh}">
+		<div class="ptr-preloader"><div class="preloader"></div><div class="ptr-arrow"></div></div>
+		
+		
+		<div class="room-box">
+    		<!-- home scene banner -->
+    		<div class="banner-swiper-container swiper-container-auto swiper-container home-swiper" style="z-index: 5; position: fixed">
+    			<div class="swiper-wrapper">
+    			</div>
+    		</div>
+    		
+    		<!-- home room toolbar -->
+			<div
+				class="toolbar tabbar tabbar-scrollable toolbar-home-room"
+				style="
+					z-index: 5;
+					position: fixed;
+					${page_margin_top>100?'margin-top:104px;': ''}
+					${show_noroom?'display:none;':''}
+					${show_nosubdevice?'display:none;':''}
+				"
+			>
+				<div class="toolbar-inner">
+					<a
+						ref="0"
+						id="room-bar-title-0"
+						@click="${()=>show_room(0,1)}"
+						class="tab-link tab-link-active"
+					>
+						<i class="material-icons">home</i>
+					</a>
+					${rooms.map((item)=> $h`
+						${item.subdevices_count > 0? $h`
+        					<a
+        						ref="${item.idx}"
+        						id="room-bar-title-${item.name}"
+        						@click="${()=>show_room(item.name,item.subdevices_count)}"
+        						class="tab-link"
+        						key="${item.name}"
+        					>
+						        ${tran(item.title)}
+					        </a>
+						`: $h`
+						    <a></a>
+						`}
+					`)}
+				</div>
+				<div class="room-more-icon-box">
+					<a href="/frappe/list/Room/APP_Yoswit_Room_V5/Website Sidebar Item/null/1000000/" class="button">
+						<i class="material-icons">more_vert</i>
+					</a>
+				</div>
+			</div>
+			
+			<!-- for rooms switch -->
+			<div class="tabs" style="display: none">
+				<div id="tab-hidden-0" class="page-content tab tab-active"></div>
+				${rooms.map((item)=> $h`
+				<div id="tab-hidden-${item.idx}" class="page-content tab"></div>
+				`)}
+			</div>
+    		
+    		<!-- no room show -->
+    		<div style="${show_noroom?'':'display:none;'}${show_nosubdevice?'display:none;':''}">
+    			<div class="block" style="text-align: center;">
+    				<span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+    				<p>${_('You don\'t have any room, create one')}</p>
+    			</div>
+    			<div class="block block-strong">
+    				<p class="row">
+    					<a class="col button button-large" href="/frappe/form/${_('Create Room')}/APP_HA_Room_Form_V1/Profile Room/null/"
+    						>${ _('Create Room') }</a
+    					>
+    				</p>
+    			</div>
+			</div>
+			
+			<!-- no device show -->
+    		<div style="${show_noroom?'display:none;':''}${show_nosubdevice?'':'display:none;'}">
+    			<div class="block" style="text-align: center">
+    				<span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+    				<p>${_('You don\'t have any devices, create one')}</p>
+    			</div>
+    			<div class="block block-strong">
+    				<p class="row">
+    					<a class="col button button-large" href="/mobile-app/yoswit-device-type"
+    						>${ _('Create Device') }</a
+    					>
+    				</p>
+    			</div>
+			</div>
+			
+    		${subdevices.length > 0 && $h`
+			    <div style="height: ${page_margin_top}px;"></div>
+			`}
+			
+			<!-- rooms -->
+			${rooms.map((item)=> $h`
+    			${item.subdevices_count > 0? $h`
+        			<div id="room-${item.name}-div" key="${item.name}" class="list media-list no-margin">
+        				<ul>
+        					<li id="room-${item.name}-div-title" room="${tran(item.name)}" class="swipeout room" ref="${item.idx}">
+        						<div class="item-content swipeout-content">
+        							<div class="item-inner">
+        								<div class="item-title-row">
+        									<!-- title text -->
+        									<div
+        										class="item-title"
+        										lang="en"
+        										lang-packet="${item.title}"
+        										@click="${()=>collapse_room(item.name)}"
+        										ref="${item.name}"
+        									>
+        										<i class="room-collapse material-icons" id="collapse-${item.idx}"> expand_more </i>
+        										${ tran(item.title) }
+        									</div>
+        
+        									<!-- click to turn on all device in room -->
+        									<div class="item-after">
+        										<p class="segmented segmented-raised segmented-round" style="display: none">
+        											<button class="button button-round link" func="controller_common_home_click_room_onoff" ref="1">Off</button>
+        											<button class="button button-round link" func="controller_common_home_click_room_onoff" ref="0">On</button>
+        										</p>
+        									</div>
+        								</div>
+        							</div>
+        						</div>
+        						<div class="swipeout-actions-right">
+        							<a
+        								href="/frappe/form/Edit ${ tran(item.title) }/APP_HA_Room_Form_V5/Profile Room/${ item.name }/"
+        								class="link color-orange"
+        							>
+        								<i class="icon material-icons">settings</i>
+        							</a>
+        						</div>
+        					</li>
+        					<div class="room-item">
+							    ${subdevices.map((kitem)=> $h`
+							        ${kitem.profile_room === item.name && kitem.hidden == 0? $h`
+							            <li
+							                class="device home-scanned-peripheral swipeout swipeout-delete-manual"
+															guid="${kitem.device}"
+															bluetooth="${kitem.bluetooth}"
+            								@swipeout:deleted="${()=>onDeleted(kitem)}"
+            							>
+            								<div class="item-content swipeout-content">
+            									<a class="item-link item-content no-chevron no-ripple no-active-state">
+            										<div
+            											class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center"
+            											style="
+            												background-position: center;
+            												background-size: contain;
+            												position: relative;
+            												background-image: url('${kitem.thumb}');
+            											"
+            											@click="${()=>testFun(kitem)}"
+            										>
+                										<!--<i class="prioritysss icon material-icons text-color-red device-none" style="font-size: 35px;">priority_high</i>-->
+                										<!--<i class="priorityss icon material-icons text-color-orange ${kitem.mac_error_status?'':'device-none'}" style="font-size: 35px;">priority_high</i>-->
+                										<!--<i class="prioritys icon material-icons text-color-yellow ${kitem.guid_status?'device-none':''}" style="font-size: 35px;">priority_high</i>-->
+                										<!--<i class="priority icon material-icons text-color-red device-none" style="font-size: 35px;">priority_high</i>-->
+                									</div>
+            										<div class="item-inner">
+            											<div class="item-title-row">
+            												<div class="item-title ellipsis" lang="en" style="width: 180px" title="${kitem.title}">${tran(kitem.title)}</div>
+            											</div>
+            											<div class="item-subtitle">${ kitem.device_model }-${ kitem.device_name }</div>
+            											<div class="signal-panel item-text height-21" style="width: 120%">
+            											    <${renderSignalItem} kitem="${kitem}" />
+            											</div>
+            										</div>
+            									</a>
+            									<${renderSwipeLeftPanel} kitem="${kitem}" />
+            									<${renderSwipeRightPanel} kitem="${kitem}" />
+            									<${renderMainButton} kitem="${kitem}" />
+            								</div>
+            							</li>
+													<${renderBottomButton} kitem="${kitem}" />
+                                    `  : $h`
+                                        <a></a>
+                                    `}
+							    `)}
+                            </div>
+                        </ul>
+                    </div>
+				` : $h`
+				    <div id="room-${item.name}-div" class="room-device-null"></div>
+				`}
+            `)}
+    	</div>
+        
+    	<div id="room-0-div" class="list media-list no-margin ${show_unassigned?'':'device-none'}">
+    		<ul>
+    			<li class="room">
+    				<div class="item-content">
+    					<div class="item-inner">
+    						<div class="item-title-row">
+    							<div class="item-title" lang="en" lang-packet="Unassigned" func="controller_common_home_collapse" ref="0">
+    								<i class="room-collapse material-icons" id="collapse-0"> expand_more </i>
+    								{{ _('Unassigned') }}
+    							</div>
+    						</div>
+    					</div>
+    				</div>
+    			</li>
+    			<div class="unassigned-box">
+            		${unassigned_subdevices.map((kitem)=> $h`
+						<li 
+							class="device home-scanned-peripheral swipeout swipeout-delete-manual"
+							style="${kitem.disappear?'display:none;':''}"
+						>
+							<div class="item-content swipeout-content">
+								<a class="item-link item-content no-chevron no-ripple no-active-state" func="ble_load_to_device_form">
+									<div
+										class="device-thumb item-media"
+										style="
+											background-position: center;
+											background-size: contain;
+											position: relative;
+            								background-image: url('${kitem.thumb}');
+										"
+									></div>
+									<div class="item-inner">
+										<div class="item-title-row">
+											<div class="item-title ellipsis" lang="en" style="width: 180px" title="${tran(kitem.name)}">
+												<i class="material-icons text-muted" style="position: relative; top: 5px">settings</i>
+												${tran(kitem.name.substring(0, 12))}
+											</div>
+										</div>
+										<div class="item-subtitle">${ tran(kitem.device_model) }-${ tran(kitem.device_name.substring(0, 12)) }</div>
+										<div class="signal-panel item-text height-21" style="width: 120%">
+										    <${renderSignalItem} kitem="${kitem}" />
+										</div>
+									</div>
+								</a>
+            					<${renderMainButton} kitem="${kitem}" />
+							</div>
+						</li>
+                    `)}
+    			</div>
+    		</ul>
+    	</div>
+	</div>
+</div>
+</template>
+
+<script>
+//defined components
+const renderSignalItem = (props, { $h }) => {
+	return () => $h`
+		<div signal="${props.kitem.rssilv}" bluetooth="${props.kitem.bluetooth}">
+		<div class="signal"></div>
+		<div class="bluetooth"></div>
+		<div class="mesh"></div>
+		<div class="mobmob"></div>
+		<div class="iostatus"></div>
+		</div>
+	`;
+};
+
+const renderSwipeLeftPanel = (props, { $h }) => {
+	const click_toggle_connect = (kitem) =>{
+		if(!isset(peripheral[kitem.device])){
+			// invalid guid
+		}
+		
+		let prop = peripheral[kitem.device].getProp();
+		if(prop.connected || prop.connecting){
+			peripheral[kitem.device].disconnect().then((rs)=>{
+			}, (error)=>{
+				alert(error);
+			});
+		}else{
+			peripheral[kitem.device].connect().then((rs)=>{
+			}, (error)=>{
+				alert(error);
+			});
+		}
+	};
+	
+	return () => $h`
+		<div class="swipeout-actions-left">
+			<a
+				href="/mobile-app/ha-device-setting-connections?guid=${props.kitem.device}&subdevice_name=${props.kitem.name}"
+				class="link color-orange"
+				><i class="icon material-icons">integration_instructions</i></a
+			>
+			<a @click="${()=>toScene(props.kitem)}" class="link color-cust-green"
+				><i class="icon material-icons">motion_photos_auto</i></a
+			>
+			<a
+				href="/frappe/list/Timer/APP_HA_Device_Timer_V3/Profile Subdevice Timer/null/16/profile_subdevice=${props.kitem.name}/"
+				class="link color-cust-blue"
+				><i class="icon material-icons">alarm</i></a
+			>
+			<a class="link color-cust-purple" @click="${()=>click_toggle_connect(props.kitem)}"
+				><i class="icon material-icons">settings_bluetooth</i></a
+			>
+		</div>
+	`;
+};
+
+
+const renderSwipeRightPanel = (props, { $h }) => {
+	const kitem = props.kitem;
+	
+	return () => $h`
+		<div class="swipeout-actions-right">
+			<a
+				href="/mobile-app/setting-page?title=Edit ${encodeURIComponent(tran(kitem.title))}&guid=${ kitem.guid }&name=${kitem.name}&profile_device_name=${kitem.profile_device}&device_mode=${kitem.device_mode}&slot_index=${kitem.config?kitem.config:''}"
+				class="link color-orange"
+				><i class="icon material-icons">settings</i></a
+			>
+			<a
+				class="link color-cust-green"
+				ref="${kitem.device}|${kitem.mac_address?kitem.mac_address.substring(0,12):''}|${kitem.device_mode}|${''}|${''}|${''}|${kitem.model}|${'YO0012'}|${kitem.profile_device}"
+				func="core_device_replace_search_device"
+				><i class="icon material-icons">download</i></a
+			>
+			<a
+				class="link color-cust-purple"
+				guid="${kitem.device}"
+				ref="${kitem.device}|${kitem.mac_address}|${kitem.device_model}|${''}|${''}|${''}|${kitem.device_model}|${'YO0012'}|${kitem.profile_device}"
+				func="iot_reset_password"
+				><i class="icon material-icons">restart_alt</i></a
+			>
+			<a
+				href="/mobile-app/device-control-log?subdevice_name=${kitem.name}/"
+				class="link color-cust-blue"
+				><i class="icon material-icons">content_paste_go</i></a
+			>
+			<!-- <a func="app_set_device_hidden" ref="${kitem.name}" class="link color-cust-green"
+				><i class="icon material-icons">visibility</i></a
+			>-->
+			<a href="#" data-confirm="Are you sure you want to delete this item?" class="link swipeout-delete"
+				><i class="icon material-icons">delete</i></a
+			>
+		</div>
+	`;
+};
+
+
+const renderMainButton = (props, { $h }) => {
+	const click_onoff = (kitem) => {
+	    if(props.kitem.device_status==1){
+            props.kitem.device_status = 0;
+	    }else{
+            props.kitem.device_status = 1;
+	    }
+	    
+    // 	peripheral[kitem.device].setControl(kitem.device_button_group, props.kitem.device_status);
+	    
+	    setTimeout(function(){
+    	    if(peripheral[kitem.device]){
+    	        console.log(peripheral[kitem.device].getProp());
+    	        peripheral[kitem.device].onoff([{gang:bleHelper.getGangId(kitem.device_button_group), on:props.kitem.device_status}]).then((rs)=>{
+                
+    	            
+    	        }).catch((error)=>{
+    	        
+                    
+                });
+    	    }
+	    }, 1);
+	};
+	const click_onoff_dimming = (dimmingItem) => {
+		console.log("dimmingItem",dimmingItem);
+		const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
+		let ref_value = props.kitem.device_status;
+		let set_value = `255`;
+		if(ref_value>0){
+			set_value = `00`;
+			props.kitem.device_status = 0;
+		}else{
+			//check if have the dimming record value
+			if(isset(window.dimmingRecord[dimmingItem.device]) && window.dimmingRecord[dimmingItem.device]['lastref']>0){
+				set_value = `${window.dimmingRecord[dimmingItem.device]['lastref']}`;
+				props.kitem.device_status = window.dimmingRecord[dimmingItem.device]['lastref'];
+			}else{
+				set_value = `255`;
+				props.kitem.device_status = 255;
+			}
+		}
+		iot_ble_set_ui_status_dimming(dimmingItem.device, 'bluetooth', dimmingItem.device_button_group, parseInt((dimmingItem.device_status / 255) * 100), now);
+		peripheral[dimmingItem.device].dimming([{gang:8, value:set_value}]).then((rs)=>{
+			
+		}).catch((error)=>{
+			
+		})
+
+	}
+	const click_onoff_start = (kitem)=>{
+		kitem.device_status = 1;
+		peripheral[kitem.device].onoff([{gang:bleHelper.getGangId(kitem.device_button_group), on:true}]).then((rs)=>{
+
+    }).catch((error)=>{
+
+		});
+	}
+	const click_onoff_end = (kitem)=>{
+		kitem.device_status = 0;
+		peripheral[kitem.device].onoff([{gang:bleHelper.getGangId(kitem.device_button_group), on:false}]).then((rs)=>{
+
+		}).catch((error)=>{
+
+		});
+	}
+	if(props.kitem.device_mode == 'Triac Dimming' || props.kitem.device_mode == '0-10v Dimming'){
+		return () => $h`
+			<div class="control-panel-right" style="">
+				<a class="on_flag off_flag" ref="${props.kitem.device_status>0?1:0}" @click="${() => click_onoff_dimming(props.kitem)}">
+					<div class="button button-raised button-big onoff"></div>
+				</a>
+			</div>
+		`;
+	}else if (props.kitem.device_mode === 'Access Controller') {
+			if (props.kitem.device_button_group == 'TOGGLE GANG1') {
+				return () => $h`
+				<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
+					<a class="iot-connect" func="home_ui_click_ble_connect">
+						<div class="button button-raised button-big circle">
+								<i class="material-icons">bluetooth_connected</i>
+						</div>
+					</a>
+					<a class="on_flag off_flag touch-button-group" ref="${props.kitem.device_status}" @touchstart="${() => click_onoff_start(props.kitem)}" @touchend="${() => click_onoff_end(props.kitem)}">
+							<div class="button button-raised button-big circle" style="border-radius:50%;">
+								<div class="" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-left:1px;margin-top:1px;">touch_app</i></div>
+							</div>
+					</a>
+				</div>
+				`;
+			}
+		}else{
+		return () => $h`
+			<div class="control-panel-right" style="">
+				<a class="on_flag off_flag" ref="${props.kitem.device_status}" @click="${() => click_onoff(props.kitem)}">
+					<div class="button button-raised button-big onoff"></div>
+				</a>
+			</div>
+		`;
+	}
+};
+
+
+//render the bottom button ex.air and the dimming bar
+const renderBottomButton = (props, { $h,$onMounted }) => {
+	let mode = props.kitem.device_mode;
+	let key = `dimer_slidebar_${props.kitem.device}`;
+	let guid = props.kitem.device || props.kitem.guid;
+	//thie function control the Dimming mode bar change 
+	const range_change_fun_dimming = (element)=>{
+		let parentElemt = $(element.el).parents('.device').prev();
+		let thisvalue = element.value;
+		const ref = parseInt((thisvalue / 100) * 255);
+		const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
+		let range_value = parseInt((thisvalue / 100) * 255).toString(16).pad('00');
+		if(isset(window.dimmingRecord[props.kitem.device])){
+			window.dimmingRecord[props.kitem.device] = {
+				lastref: ref
+			}
+		}else{
+			if(ref > 0){
+				window.dimmingRecord[props.kitem.device].lastref = ref;
+			}
+		}
+		iot_ble_set_ui_status_dimming(props.kitem.device, 'bluetooth', props.kitem.device_button_group, ref, now);
+		console.log("thisvalue",thisvalue);
+		window.peripheral[props.kitem.device].dimming([{gang:1, value:range_value}]);
+	}
+	$onMounted(() => {
+			let element = $(`.curtain-subdevice .range-slider[data-id="${key}"]`);
+			console.log('element', props);
+			console.log("func",range_change_fun_dimming);
+			setTimeout(()=>{
+				if (mode == 'Curtain Motor' || mode == 'Curtain Motor Reverse' || mode == 'Curtain Motor Ac') {
+				//console.log('props.kitem.ref', props.kitem.ref);
+					let range_silder = app.range.create({
+						el: `.range-slider[guid="${props.kitem.device}"]`,
+						value: props.kitem.device_status || 0,
+						min: 0,
+						max: 100,
+						draggableBar: false,
+						label: true,
+						step: 1,
+						scale: true,
+						scaleSteps: 5,
+						scaleSubSteps: 4,
+						on: {
+							changed: erp.script.range_change_fun_curtain,
+						},
+					});
+				} else if (mode === 'Triac Dimming' || mode === '0-10v Dimming') {
+					if(props.kitem.device_button_group.startsWith("RCU DIMMING")){
+						range_silder_list[`${props.kitem.device_button_group}`] = app.range.create({
+							el: `.range-slider[guid="${props.kitem.device}"][button_group="${props.kitem.device_button_group}"]`,
+							value: props.kitem.device_status || 0,
+							min: 0,
+							max: 100,
+							draggableBar: false,
+							label: true,
+							step: 1,
+							scale: true,
+							scaleSteps: 5,
+							scaleSubSteps: 4,
+							on: {
+								changed: range_change_fun_dimming,
+							},
+						});
+						//console.log('range_silder_list',range_silder_list)
+					}else{
+						let range_silder = app.range.create({
+							el: `.range-slider[guid="${props.kitem.device}"]`,
+							value: parseInt((props.kitem.device_status/255)* 100) || 0,
+							min: 0,
+							max: 100,
+							draggableBar: false,
+							label: true,
+							step: 1,
+							scale: true,
+							scaleSteps: 5,
+							scaleSubSteps: 4,
+							on: {
+								changed: range_change_fun_dimming,
+							},
+						});
+						console.log(range_silder)
+					}
+				}
+			},0)
+		});
+		if (mode === 'Triac Dimming' || mode === '0-10v Dimming') {
+			return () => $h`
+			<li class="device subdevice home-scanned-peripheral display-flex dimming-subdevice" style="height:67px!important;" guid="${
+				props.kitem.guid
+			}" gateway="${props.kitem.gateway}" config="${props.kitem.config}" button_group="${props.kitem.device_button_group}">
+					<div class="row padding-tb flex-direction-column justify-content-center ${
+						props.kitem.bluetooth_status == 0 && props.kitem.mobmob == 0 && props.kitem.mesh == 0 ? 'disabled' : ''
+					}">
+							<div class="col-100 medium-100 large-100">
+									<div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+											<div class="tip-title"><i class="icon material-icons" style="margin-right:8px;">brightness_low</i></div>
+											<div class="range-slider"
+											data-min="0"
+											data-max="100"
+											data-label="true"
+											data-step="10"
+											data-value="0"
+											data-scale-steps="5"
+											data-scale-sub-steps="4"
+											data-rangeWidth="15px"
+											data-id="dimer_slidebar_${props.kitem.device}"
+													id="dimer_slidebar_${props.kitem.device}"
+													ref="0"
+													button_group="${props.kitem.device_button_group}"
+													guid="${props.kitem.device}"
+													authfail="0"
+													mesh="0"
+													mobmob="0"
+													bluetooth="${props.kitem.bluetooth}"
+													password="${props.password}"
+													subdevice-name="${props.subdevice_name}"
+													config="${props.kitem.config}"
+											></div>
+											<div class="tip-title"><i class="icon material-icons" style="margin-left:8px;">brightness_high</i></div>
+									</div>
+									<div></div>
+							</div>
+					</div>
+			</li>
+			`;
+		}else{
+			return () => $h`<div></div>`;
+		}
+}
+
+
+
+export default async (props, ctx) => {
+	const $f7 = ctx.$f7,
+	$f7route = ctx.$f7route,
+	$update = ctx.$update,
+	$on = ctx.$on,
+	$onBeforeMount = ctx.$onBeforeMount,
+	$onMounted = ctx.$onMounted,
+	$onBeforeUpdate = ctx.$onBeforeUpdate,
+	$onUpdated = ctx.$onUpdated,
+	$onBeforeUnmount = ctx.$onBeforeUnmount,
+	$onUnmounted = ctx.$onUnmounted;
+	
+	// init variable
+	const title = $f7route.query.title?$f7route.query.title:_('Smart Office');
+	let page_margin_top = 48;
+	let rooms = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_room)) : [];
+	let subdevices = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_subdevice)) : [];
+	let show_unassigned = false;
+	let show_noroom = !rooms.length ? true : false;
+	let show_nosubdevice = (rooms.length && !subdevices && !Object.keys(peripheral).length) ? true : false;
+	let devices = erp.info.device ? JSON.parse(JSON.stringify(erp.info.device)) : [];
+	let device_models = erp.doctype.device_model ? JSON.parse(JSON.stringify(erp.doctype.device_model)) : {};
+	device_models = Object.values(device_models).reduce((acc, obj) => {
+		acc[obj.name] = obj;
+		return acc;
+	}, {});
+	let unassigned_subdevices = [];
+  
+	let profile_device = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_device)) : [];
+	profile_device = profile_device.reduce((acc, item) => {
+		acc[item.name] = item;
+		return acc;
+	}, {});
+  
+	rooms.forEach(item=>{
+		let count = 0;
+		subdevices.forEach(kitem=>{
+			if(kitem.profile_room === item.name){
+			count++;
+			}
+		})
+		item.subdevices_count = count;
+	});
+  
+	//ui functions
+	const refresh = async (e, done) => {
+		done();
+	};
+	
+	const render_ui = () => {
+		show_noroom = !rooms.length ? true : false;
+		show_nosubdevice = (rooms.length && !subdevices && !Object.keys(peripheral).length) ? true : false;
+		refresh_unassigned();
+		
+		$update();
+	};
+	
+	const refresh_unassigned = () => {
+		show_unassigned = true;
+		
+		let _unassigned_subdevices = JSON.parse(JSON.stringify(unassigned_subdevices));
+		for(let guid in peripheral){
+		    let p = peripheral[guid].getProp();
+		    
+		    if(p.disappear || !p.rssi){ // hide subdevice in unassigned
+                for(let i in _unassigned_subdevices){
+                    if(_unassigned_subdevices[i].device != guid) continue;
+                    unassigned_subdevices[i].disappear = true;
+                }
+                continue;
+		    }
+		    
+		    // reshow subdevice in unassigned
+            for(let i in _unassigned_subdevices){
+                if(_unassigned_subdevices[i].device != guid) continue;
+                unassigned_subdevices[i].disappear = false;
+            }
+            
+            if(erp.doctype.device_model[p.hexModel]){
+                for(let tp of erp.doctype.device_model[p.hexModel]['device_default_template']){
+                    if(!tp.display_in_unassigned) continue;
+                    if((p.device_mode && p.device_mode != tp.mode) || !p.device_mode && tp.mode!=erp.doctype.device_model[p.hexModel].mode) continue;
+                    // console.log(p);
+                    // console.log(tp);
+                    // console.log(p.device_mode);
+                    // console.log(tp.mode);
+                    
+                    let cont = false;
+                    for(let subdevice of subdevices){
+                        if(subdevice.device != guid) continue;
+                        if(subdevice.device_button_group == tp.device_button_group){
+                            cont = true;
+                            break;
+                        }
+                    }
+                    if(cont) continue;
+                    
+                    for(let u_subdevice of _unassigned_subdevices){
+                        if(u_subdevice.device != guid) continue;
+                        if(u_subdevice.device_button_group == tp.device_button_group){
+                            cont = true;
+                            break;
+                        }
+                    }
+                    if(cont) continue;
+                    
+                    const u_subdevice = {
+                        lastDiscoverDate: p.lastDiscoverDate,
+                        rssilv: p.rssilv || 0,
+                        bluetooth: p.connected ? 1 : (p.connecting ? 2 : 0),
+                        connected: p.connected,
+                        connecting: p.connecting,
+                        device: p.guid,
+                        device_button_group:tp.device_button_group,
+                        device_mode:tp.mode,
+                        device_model:erp.doctype.device_model[p.hexModel].name,
+                        device_name:p.name,
+                        name:tp.device_button_group,
+                        password:p.password,
+                        thumb:erp.doctype.device_model[p.hexModel].image,
+                        device_status:peripheral[guid].getGangStatus(tp.device_button_group)
+                    };
+                    
+                    // console.log(u_subdevice);
+                    unassigned_subdevices.push(u_subdevice);
+                }
+            }
+		}
+	};
+  
+	const collapse_room = (index) => {
+		const id = `room-${index}-div-title`;
+		const room_id = `room-${index}-div`;
+		let icon_name = $(`#${id}`).find('i').text();
+		if (icon_name == 'expand_more') {
+			$(`#${room_id} .room-item`).hide();
+			$(`#${id}`).find('i').text('chevron_right');
+		} else {
+			$(`#${room_id} .room-item`).show();
+			$(`#${id}`).find('i').text('expand_more');
+		}
+	};
+  
+	const show_room = (index,count) => {
+		let item_id = `room-bar-title-${index}`;
+		let id = `room-${index}-div`;
+		//console.log($('.media-list'));
+		$('.tab-link').removeClass('tab-link-active');
+		$(`#${item_id}`).addClass('tab-link-active');
+		if (index == 0) {
+			$('.room-null').addClass('device-none');
+			$('.media-list').show();
+		} else {
+			$('.media-list').hide();
+			$(`#${id}`).show();
+			console.log('count',count)
+			if(count == 0){
+				$('.room-null').addClass('device-none');
+				let html = `
+					<div class="block room-null" style="text-align: center">
+					<span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+					<p>${_('You don\'t have any devices, create one')}</p>
+					</div>
+					<div class="block block-strong room-null">
+					<p class="row">
+						<a class="col button button-large" href="/mobile-app/yoswit-device-type"
+						>${ _('Create Device') }</a
+						>
+					</p>
+					</div>
+				`;
+				$(`#${id}`).html(html);
+			}else{
+				console.log(count)
+				$('.room-null').addClass('device-none');
+			}
+		}
+	};
+	
+	const testFun = (kitem) => {
+	    console.log(kitem);
+	    console.log(peripheral[kitem.device].getProp().status);
+	    console.log(peripheral[kitem.device].getProp());
+	};
+  
+	//bluetooth functions
+	const on_peripheral_changed = (p) => {setTimeout(()=>{
+	    //console.log(p);
+		for(let i in subdevices){
+			if(subdevices[i].device == p.guid){
+				update_subdevice_by_peripheral(subdevices[i], p);
+			}
+		}
+		for(let i in unassigned_subdevices){
+			if(unassigned_subdevices[i].device == p.guid){
+				update_subdevice_by_peripheral(unassigned_subdevices[i], p);
+			}
+		}
+	  
+		render_ui();
+	},10);};
+	emitter.off('on_peripheral_changed');
+	emitter.on('on_peripheral_changed', on_peripheral_changed);
+  
+	const on_discovery = (p) => {setTimeout(()=>{
+		delete p.password;
+		delete p.connected;
+		delete p.connecting;
+		if(!isset(peripheral[p.guid])){
+			peripheral[p.guid] = new Peripheral(p);
+		}else{
+			peripheral[p.guid].update(p);
+		}
+		
+		render_ui();
+	},10);};
+  
+	const scan = async () => {
+		await bleManager.stopScan();
+		await bleManager.wait(200);
+		
+		bleManager.scan(on_discovery, async ()=>{
+			await bleManager.wait(5000);
+			scan();
+		});
+	};
+	
+	// helper function
+    const update_subdevice_by_peripheral = (s, p) => {
+    	s['rssilv'] = p.rssilv || 0;
+    	s['bluetooth'] = p.connected ? 1 : (p.connecting ? 2 : 0);
+    	s['connecting'] = p.connecting;
+    	s['connected'] = p.connected;
+    	
+    	if(p.guid){
+    	    s['device_status'] = peripheral[p.guid].getGangStatus(s.device_button_group);
+    	}else{
+    	    s['device_status'] = 0;
+    	}
+    };
+    
+    const update_subdevice_by_device = (s, p) => {
+    };
+    
+    const update_subdevice_by_profile_device = (s, p) => {
+    	s['password'] = p.password;
+    	s['device_model'] = p.device_model;
+    	s['device_name'] = p.device_name;
+    };
+    
+    const update_subdevice_by_device_model = (s, p) => {
+    	s['thumb'] = p.image;
+    };
+    
+    // init page data, start flow calculation
+    subdevices.forEach(subdevice => {
+        const vp = {};
+        vp['guid'] = subdevice.device;
+        vp['gangs'] = [0,0,0,0,0,0,0,0];
+        vp['hexModel'] = subdevice.device.slice(-6, -2).toUpperCase();
+        vp['hexBatch'] = subdevice.device.slice(-2).toUpperCase();
+        vp['device_mode'] = subdevice.device_mode || 'Unknown';
+        
+        if (devices[subdevice.device]) {
+            vp['device_mode'] = vp['device_mode'] == 'Unknown' ? (devices[subdevice.device].device_mode|| devices[subdevice.device]) : vp['device_mode'];
+            update_subdevice_by_device(subdevice, devices[subdevice.device]);
+        }
+        if (profile_device[subdevice.profile_device]) {
+            vp['name'] = profile_device[subdevice.profile_device].device_name;
+            vp['password'] = profile_device[subdevice.profile_device].password;
+            vp['gateway'] = profile_device[subdevice.profile_device].gateway;
+            vp['default_connect'] = profile_device[subdevice.profile_device].default_connect;
+            update_subdevice_by_profile_device(subdevice, profile_device[subdevice.profile_device]);
+    
+            if (device_models[profile_device[subdevice.profile_device].device_model]) {
+                update_subdevice_by_device_model(subdevice, device_models[profile_device[subdevice.profile_device].device_model]);
+            }
+        }
+    
+        update_subdevice_by_peripheral(
+            subdevice,
+            peripheral[subdevice.device]?.getProp() || {}
+        );
+        
+        //alert(vp['device_mode']);
+        if(!isset(peripheral[vp.guid])){
+            peripheral[vp.guid] = new Peripheral(vp);
+        }else{
+            peripheral[vp.guid].update(vp);
+        }
+    });
+
+    
+    
+    
+
+
+	//events
+	$onBeforeMount(() => {
+	    
+	});
+	$onMounted(() => {
+		
+		scan();
+	});
+	$onBeforeUnmount(() => {
+		emitter.off('on_peripheral_changed');
+		bleManager.clear();
+	});
+	return $render;
+};
+</script>
+
+<style>
+  .device-hidden {
+    display: none;
+  }
+  .tabbar .tab-link-active,
+  .tabbar-labels .tab-link-active {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .room-box .device .swipeout-actions-right {
+    transform: translateX(200%);
+  }
+  .room-box .device .swipeout-actions-left {
+    transform: translateX(-200%);
+  }
+  .ir-signal-cooker i {
+    display: none;
+  }
+  .room-box .ir-signal-cooker[ref='0'][mode='On Off IR'],
+  .room-box .ir-signal-cooker[ref='0'][mode='Multiway Switch'] {
+    display: inline-block;
+  }
+  .room-box .ir-signal-cooker[ref='1'] .radio-button-unchecked {
+    display: none;
+  }
+  .room-box .ir-signal-cooker[ref='0'][mode='On Off IR'] .radio-button-unchecked,
+  .room-box .ir-signal-cooker[ref='0'][mode='Multiway Switch'] .radio-button-unchecked {
+    display: inline-block;
+  }
+  .room-box .ir-signal-cooker[ref='1'] .circles {
+    display: inline-block;
+    color: #3bb33b !important;
+  }
+  .device[bluetooth='0'][mobmob='0'] .control-panel-right .iaq-button-score-a {
+    display: none;
+  }
+  .device[bluetooth='1'] .control-panel-right .iaq-button-score-a,
+  .device[mobmob='1'] .control-panel-right .iaq-button-score-a {
+    display: inline-block;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='0'][mobmob='0'] .on_flag,
+  .control-panel-right[type-box='Dimming'][bluetooth='2'][mobmob='0'] .on_flag {
+    display: none;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='1'] a.iot-connect,
+  .control-panel-right[type-box='Dimming'][mesh='1'] a.iot-connect,
+  .control-panel-right[type-box='Dimming'][mobmob='1'] a.iot-connect{
+    display: none !important;
+  }
+  .device .control-panel-right[type-box='Dimming'][bluetooth='1'] .on_flag,
+  .device .control-panel-right[type-box='Dimming'][mobmob='1'] .on_flag,
+  .device .control-panel-right[type-box='Dimming'][mesh='1'] .on_flag
+   {
+    display: inline-block;
+  }
+  .control-panel-right[type-box='Dimming'][bluetooth='0'][mobmob='0'][mesh='0'] a.iot-connect {
+    display: inline-block;
+  }
+  .device[bluetooth='0'][mobmob='0'] .iaq-button-score-a {
+    display: none;
+  }
+  .device[bluetooth='1'] .iaq-button-score-a,
+  .iaq-button-score-a[mobmob='1'] .iaq-button-score-a {
+    display: inline-block;
+  }
+  .iaq-subdevice[bluetooth='0'][mobmob='0'] {
+    display: none !important;
+  }
+  .iaq-subdevice[bluetooth='1'],
+  .iaq-subdevice[mobmob='1'] {
+    display: flex !important;
+  }
+  .device-none {
+    display: none !important;
+  }
+  .device-flex {
+    display: flex;
+  }
+  .dimming-subdevice[bluetooth='0'][mobmob='0'] {
+    opacity: 0.55 !important;
+    pointer-events: none !important;
+  }
+  .curtain-subdevice[bluetooth='0'][mobmob='0'] {
+    opacity: 0.55 !important;
+    pointer-events: none !important;
+  }
+  .device.curtain-subdevice[bluetooth='1'],
+  .device.curtain-subdevice[mobmob='1'],
+  .device.dimming-subdevice[bluetooth='1'],
+  .device.dimming-subdevice[mobmob='1'] {
+    display: flex;
+  }
+  .box-btn {
+    margin-bottom: 7.5px;
+    margin-top: 7.5px;
+  }
+  .box-left {
+    border-left: 1px solid var(--f7-list-item-border-color);
+  }
+  .unit {
+    font-size: 11px;
+  }
+  .title-btn {
+    width: 100%;
+    margin-left: 5px;
+  }
+  .iaq-title-big {
+    font-size: 12px;
+  }
+  .main-btn .box-btn-img {
+    background-color: #3bb33b;
+  }
+  .device[bluetooth='1'] .iot-connect {
+    display: none !important;
+  }
+  .device[mobmob='1'] .iot-connect {
+    display: none !important;
+  }
+  .device[mesh='1'] .iot-connect {
+    display: none !important;
+  }
+  .device[bluetooth='0'][mobmob='0'][mesh='0'] .iot-connect {
+    display: block !important;
+  }
+  .subdevice[bluetooth='0'][mobmob='0'] {
+    display: none;
+  }
+  .subdevice[bluetooth='1'],
+  .subdevice[mobmob='1'] {
+    display: block;
+  }
+  .home-signal-thermostat {
+    display: none;
+  }
+  .arrow-downward-button[ref='1'] .button,
+  .arrow-upward-button[ref='1'] .button {
+    background-color: var(--f7-theme-color);
+    color: #ffffff;
+    border-color: var(--f7-theme-color);
+  }
+  @keyframes refresh {
+    0% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  li.device .item-content .control-panel-right i.button-icons,
+  li.device .item-content .control-panel-right i {
+    line-height: 25px !important;
+  }
+  .tabbar .tab-link-highlight {
+    bottom: 0;
+    display: none;
+  }
+	.touch-button-group[ref="1"] .button{
+		background-color : var(--f7-theme-color);
+	}
+	.touch-button-group[ref="0"] .button{
+		background-color : #fff;
+	}
+  .pair-box-connect {
+    position: absolute;
+    margin-top: -95px;
+    margin-left: 35px;
+    transform: rotate(90deg);
+    color: var(--f7-theme-color);
+  }
+  .circle-password {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background-color: var(--f7-theme-color); /* 设置圆圈颜色为蓝色 */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 10px;
+    }
+</style>

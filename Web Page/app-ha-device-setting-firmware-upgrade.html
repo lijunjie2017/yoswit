@@ -1,0 +1,685 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Firmware Upgrade') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="card">
+        <div class="card-content card-content-padding">
+          <div style="height: 30px"></div>
+          <div class="display-flex align-items-center justify-content-center">
+            <!-- normal -->
+            ${status === 'Normal' && $h`
+            <i class="state-normal f7-icons text-color-primary" style="font-size: 90px">arrow_up_circle</i>
+            `}
+
+            <!-- upgrading -->
+            ${status === 'Upgrading' && $h`
+            <div class="state-upgrading text-color-primary position-relative" style="height: 180px; width: 180px">
+              <div class="loader"></div>
+              <div class="display-flex flex-direction-column align-items-center justify-content-center" style="width: 100%; height: 100%">
+                <span class="position-relative" style="font-size: 90px; font-weight: 200; line-height: 1; vertical-align: baseline">
+                  <span class="current-progress" style="transition: all 0.5s ease-out">${ percent }</span>
+                  <span style="font-size: 20px; position: absolute; bottom: 14px; right: -20px">%</span>
+                </span>
+                <div style="height: 10px"></div>
+                <div class="current-step" style="font-size: 16px"></div>
+              </div>
+            </div>
+            `}
+
+            <!-- success -->
+            ${status === 'Success' && $h`
+            <div class="state-success">
+              <div class="display-flex flex-direction-column align-items-center">
+                <i class="f7-icons text-color-green" style="font-size: 90px">checkmark_alt_circle</i>
+                <div style="height: 10px"></div>
+                <div class="text-color-green" style="font-size: 16px">{{ _("Update Successfully") }}</div>
+              </div>
+            </div>
+            `}
+
+            <!-- fail -->
+            ${status === 'Fail' && $h`
+            <div class="state-fail">
+              <div class="display-flex flex-direction-column align-items-center">
+                <i class="f7-icons text-color-red" style="font-size: 90px">exclamationmark_circle</i>
+                <div style="height: 10px"></div>
+                <div class="text-color-red" style="font-size: 16px">{{ _("Update Fail") }}: ${ fail_code }</div>
+              </div>
+            </div>
+            `}
+          </div>
+
+          <div style="height: 20px"></div>
+
+          ${(!latest_firmware || (latest_firmware === current_firmware)) ? $h`
+          <div class="text-align-center mb-1 is-latest" style="font-size: 16px; font-weight: bold">
+            {{ _("This is the latest version") }}
+          </div>
+          ` : $h`
+          <div class="text-align-center mb-1 latest-version" style="font-size: 16px; font-weight: bold">
+            {{ _("Latest Version") }}: <span>${ latest_firmware }</span>
+          </div>
+          `}
+          <div class="text-align-center text-muted current-version" style="font-size: 12px">
+            {{ _("Current Version") }}: <span>${ current_firmware }</span>
+          </div>
+          {######################################################################################################################################################}
+          ${isUpgrading && $h`
+          <div class="text-align-center text-color-primary mt-4" style="font-size: 18px">Upgrading...</div>
+          `}
+
+          <div style="height: 20px"></div>
+        </div>
+      </div>
+
+      ${(latest_firmware && (latest_firmware !== current_firmware || isDeveloper) && !isUpgrading) && $h`
+      <div class="row mt-4">
+        <div class="col-100">
+          <a href="#" class="upgrade-action button button-fill color-theme button-raised" @click="${() => startUpdateFirmware()}">
+            <span class="size-16">{{ _('Update Now') }}</span>
+          </a>
+        </div>
+      </div>
+      `}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    const extractVersion = (version) => {
+      const v = version.match(/[0-9.]+/)[0];
+      // apple store semantic format support
+      const semanticVersion = v.replace(/(\d+)\.(\d)(\d+)/, '$1.$2.$3');
+      try {
+        return semanticVersion
+          .split('.')
+          .map((e) => parseInt(e))
+          .join('.');
+      } catch (err) {
+        return semanticVersion;
+      }
+    };
+
+    const promisifyWrite = (device_id, service_uuid, characteristic_uuid, data) => {
+      return new Promise((resolve, reject) => {
+        ble.write(
+          device_id,
+          service_uuid,
+          characteristic_uuid,
+          data.convertToBytes(),
+          () => {
+            resolve();
+          },
+          (error) => {
+            if (data === '810e') {
+              resolve();
+            } else {
+              reject(error);
+            }
+          }
+        );
+      });
+    };
+
+    const promisifyConnect = (device_id) => {
+      let isConnect = false;
+
+      return new Promise((resolve, reject) => {
+        ble.connect(
+          device_id,
+          () => {
+            isConnect = true;
+            resolve();
+          },
+          (error) => {
+            if (!isConnect) {
+              reject(error);
+            }
+          }
+        );
+
+        setTimeout(() => {
+          if (isConnect) return;
+
+          // promisifyDisconnect(device_id).catch(() => {});
+          reject(new Error('Connect timeout'));
+        }, 6000);
+      });
+    };
+
+    const promisifyDisconnect = (device_id) => {
+      return new Promise((resolve, reject) => {
+        ble.disconnect(
+          device_id,
+          () => {
+            resolve();
+          },
+          (error) => {
+            reject(error);
+          }
+        );
+      });
+    };
+
+    const promisifyRead = (device_id, service_uuid, characteristic_uuid) => {
+      return new Promise((resolve, reject) => {
+        ble.read(
+          device_id,
+          service_uuid,
+          characteristic_uuid,
+          (res) => {
+            resolve(res);
+          },
+          (error) => {
+            reject(error);
+          }
+        );
+      });
+    };
+
+    const sleep = (time = 1000) => {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve();
+        }, time);
+      });
+    };
+
+    const profile_subdevice_name = $f7route.query.subdevice;
+    const profile_subdevice = erp.info.profile.profile_subdevice.find((e) => e.name === profile_subdevice_name);
+
+    const profile_device = erp.info.profile.profile_device.find((e) => e.name === profile_subdevice.profile_device);
+    const guid = profile_device.device;
+
+    const device_model_name = profile_device.device_model;
+
+    const hexid = guid.substring(guid.length - 6, guid.length - 2);
+    const device_model = erp.doctype.device_model[hexid.toUpperCase()];
+
+    const mode_type = device_model.mode_type;
+
+    let isLogged = !!users.current && users.current !== 'Guest';
+    let isDeveloper = false;
+
+    let latest_firmware = '';
+    let current_firmware = '--';
+    let percent = 0;
+    let fail_code = -1;
+    let isUpgrading = false;
+    let status = 'Normal'; // Normal / Upgrading / Success / Fail
+
+    const fake_progress = core_utils_fake_progress({
+      timeConstant: 8000 + (Math.floor(Math.random() * (3000 - 0 + 1)) + 0),
+      autoStart: false,
+    });
+
+    const updatePercent = () => {
+      percent = parseInt(fake_progress.progress * 100);
+      $update();
+    };
+
+    const updateStatus = (state) => {
+      status = state;
+
+      if (status === 'Upgrading') {
+        isUpgrading = true;
+      } else {
+        isUpgrading = false;
+      }
+
+      $update();
+    };
+
+    const getUUID = () => {
+      const key = Object.keys(window.scanned_periperals).find((k) => window.scanned_periperals[k].guid === guid);
+      if (!key) {
+        app.dialog.alert('Device not here!');
+        return '';
+      }
+
+      return window.scanned_periperals[key].id;
+    };
+
+    const readFirmware = async (uuid) => {
+      const mac = await promisifyRead(uuid, '180a', '2a26');
+      console.log('readFirmware: ' + mac);
+      return extractVersion(mac.convertToAscii());
+    };
+
+    async function init() {
+      try {
+        if (device_model.latest_firmware) {
+          latest_firmware = extractVersion(device_model.latest_firmware);
+        }
+        if (isLogged) {
+          isDeveloper = erp.info.user.roles.some((e) => e.role.includes('Developer'));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      const uuid = getUUID();
+      if (!uuid) return;
+
+      try {
+        app.preloader.show();
+        await promisifyConnect(uuid);
+        current_firmware = await readFirmware(uuid);
+
+        $update();
+
+        app.preloader.hide();
+      } catch (err) {
+        console.log(err);
+
+        app.preloader.hide();
+
+        if (erp.info.device[guid]) {
+          current_firmware = erp.info.device[guid].firmware;
+        }
+
+        $update();
+      }
+    }
+
+    async function destory() {
+      Capacitor.Plugins.NordicDFU.abortDFU();
+      Capacitor.Plugins.NordicDFU.removeAllListeners();
+    }
+
+    async function uploadFirmwareToServer() {
+      try {
+        await http.request(encodeURI('/api/resource/Device/' + guid), {
+          method: 'PUT',
+          responseType: 'json',
+          serializer: 'json',
+          data: {
+            firmware: current_firmware,
+          },
+        });
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    // init
+    init();
+
+    function startUpdateFirmware() {
+      percent = 0;
+      fail_code = -1;
+
+      if (mode_type === 'Wifi') {
+        updateWifiFirmware();
+      } else if (mode_type === 'Bluetooth') {
+        updateBleFirmware();
+      }
+    }
+
+    /**
+     * Wifi Action
+     */
+    async function updateWifiFirmware() {
+      const uuid = getUUID();
+      if (!uuid) return;
+
+      const version = parseInt(current_firmware.split('.')[0]);
+
+      let full_firmware_name = device_model_name + '-' + device_model.latest_firmware;
+      // IAQ / YO105
+      if ((device_model_name === 'YO105' || device_model_name === 'YO161') && version < 10) {
+        full_firmware_name = full_firmware_name + 'D';
+      }
+      full_firmware_name = full_firmware_name + '.bin';
+
+      updateStatus('Upgrading');
+
+      // send command
+      const command = '93300000' + full_firmware_name.length.toString(16).pad('00') + full_firmware_name.convertToHex();
+      console.log('Upgrade Firmware: ' + full_firmware_name);
+      console.log('Upgrade Command: ' + command);
+      try {
+        // await promisifyWrite(uuid, 'ff80', 'ff81', command);
+        await promisifyConnect(uuid);
+
+        fake_progress.setProgress(0.1);
+        updatePercent();
+
+        try {
+          await promisifyWrite(uuid, 'ff80', 'ff81', command);
+        } catch (err) {
+          console.error('[promisifyWrite] upgrade command error: ', err);
+        }
+
+        fake_progress.setProgress(0.15);
+        updatePercent();
+
+        await sleep(5000);
+
+        await retryConnect(uuid);
+        console.log('retry connect success');
+
+        fake_progress.setProgress(0.25);
+        updatePercent();
+
+        // sdk connect
+        window.scanned_periperals[uuid].reconnect = false;
+        window.scanned_periperals[uuid].connected = false;
+        window.scanned_periperals[uuid].connecting = false;
+        await ha_process_periperal_cmd(uuid, [{ action: 'connect' }], true);
+        fake_progress.setProgress(0.3);
+        updatePercent();
+
+        console.log('receive upgrading notify');
+        await receiveUpgradingPercentNotify(uuid);
+
+        await sleep(5000);
+
+        fake_progress.setProgress(0.85);
+        updatePercent();
+
+        await retryConnect(uuid);
+
+        await sleep(8000);
+
+        const firmware = await readFirmware(uuid);
+        current_firmware = firmware;
+
+        fake_progress.setProgress(0.9);
+        updatePercent();
+
+        await uploadFirmwareToServer();
+
+        updateStatus('Success');
+      } catch (err) {
+        // device maybe restart
+        console.error('upgrade fail: ' + err);
+
+        updateStatus('Fail');
+      }
+    }
+
+    /**
+     * BLE Action (Nordic DFU)
+     */
+    async function updateBleFirmware() {
+      const uuid = getUUID();
+      if (!uuid) return;
+
+      try {
+        updateStatus('Upgrading');
+
+        const firmwareResponse = await http.request(`/api/resource/Device Firmware/${device_model.latest_firmware}`, {
+          method: 'GET',
+          responseType: 'json',
+          serializer: 'json',
+        });
+
+        const download_link = firmwareResponse.data.data.download_link;
+
+        if (!download_link) {
+          throw new Error('Unset Download Link');
+        }
+
+        fake_progress.setProgress(0.1);
+        updatePercent();
+
+        // Download file
+        const downloaded_path = await downloadOTAFile(download_link);
+        console.log(downloaded_path);
+
+        fake_progress.setProgress(0.3);
+        updatePercent();
+
+        await startDFU(downloaded_path, uuid);
+
+        await sleep(3000);
+
+        await retryConnect(uuid);
+
+        const firmware = await readFirmware(uuid);
+        current_firmware = firmware;
+
+        fake_progress.setProgress(0.9);
+        updatePercent();
+
+        await uploadFirmwareToServer();
+
+        updateStatus('Success');
+      } catch (err) {
+        console.error(err);
+
+        updateStatus('Fail');
+      }
+    }
+
+    function retryConnect(uuid) {
+      return new Promise(async (resolve, reject) => {
+        let isStop = false;
+        let count = 0;
+
+        // timeout connect
+        setTimeout(() => {
+          isStop = true;
+
+          reject(new Error('Connect timeout'));
+        }, 20000);
+
+        while (true) {
+          if (isStop) {
+            break;
+          }
+
+          try {
+            await promisifyDisconnect(uuid);
+          } catch (err) {
+            // ignore
+          }
+          await sleep(1000);
+
+          console.log('retry connect');
+
+          try {
+            await promisifyConnect(uuid);
+            count++;
+
+            if (count > 1) {
+              isStop = true;
+            }
+          } catch (err) {
+            // ignore
+          }
+        }
+
+        resolve();
+      });
+    }
+
+    async function receiveUpgradingPercentNotify(uuid) {
+      let isHandling = false;
+      let timeoutId = null;
+
+      return new Promise((resolve, reject) => {
+        const subProgress = fake_progress.createSubProgress({ timeConstant: 5000, end: 0.8, autoStart: false });
+        const startFailTimeout = () => {
+          clearTimeout(timeoutId);
+
+          timeoutId = setTimeout(() => {
+            fail_code = -10;
+            reject(new Error('Download fail'));
+          }, 1000 * 30);
+        };
+
+        ble.startNotification(
+          uuid,
+          'ff80',
+          'ff82',
+          (rs) => {
+            console.log('receiveUpgradingPercentNotify: ' + rs);
+            // 933000 v10
+            // 932200 v3
+            if (rs.startsWith('933000') || rs.startsWith('932200')) {
+              isHandling = true;
+
+              const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
+              console.log('upgrading: ' + rs + ', percent: ' + command);
+              clearTimeout(timeoutId);
+
+              if (command > 100) {
+                fail_code = command;
+                reject(new Error('Device fail'));
+              } else {
+                subProgress.setProgress(command / 100);
+                updatePercent();
+                if (command === 100) {
+                  resolve();
+                } else {
+                  startFailTimeout();
+                }
+              }
+            }
+          },
+          (error) => {
+            clearTimeout(timeoutId);
+            fail_code = -2;
+            reject(error);
+          }
+        );
+
+        startFailTimeout();
+      });
+    }
+
+    async function downloadOTAFile(download_link) {
+      const blob = await http.request(download_link, {
+        method: 'GET',
+        responseType: 'blob',
+      });
+
+      return new Promise((resolve, reject) => {
+        // blob to arraybuffer
+        const reader = new FileReader();
+        reader.onload = function () {
+          // fake_progress.stop();
+          // fake_progress.setProgress(1);
+          // progress_el.html(parseInt(fake_progress.progress * 100));
+          const tmp = download_link.split('/');
+          const path = 'firmware/' + tmp[tmp.length - 1];
+
+          Capacitor.Plugins.Filesystem.writeFile({
+            path: path,
+            data: reader.result,
+            directory: 'DATA',
+            recursive: true,
+          })
+            .then(() => {
+              return Capacitor.Plugins.Filesystem.getUri({
+                path: path,
+                directory: 'DATA',
+              });
+            })
+            .then((rs) => {
+              resolve(rs.uri);
+            })
+            .catch((err) => {
+              reject(err);
+            });
+        };
+
+        reader.onerror = function (err) {
+          reject(err);
+        };
+
+        reader.readAsDataURL(blob.data);
+      });
+    }
+
+    function startDFU(downloaded_path, uuid) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const subProgress = fake_progress.createSubProgress({ timeConstant: 5000, end: 0.8, autoStart: false });
+
+          Capacitor.Plugins.NordicDFU.addListener('dfuStateDidChange', (event) => {
+            console.log('dfuStateDidChange', event);
+
+            // if (event && event.state === 'Starting') {
+            //   step_el.html(_('Installing...'));
+            // }
+          });
+
+          Capacitor.Plugins.NordicDFU.addListener('dfuProgressDidChange', (event) => {
+            console.log('dfuProgressDidChange', event);
+
+            if (event) {
+              subProgress.setProgress(event.percent / 100);
+              updatePercent();
+            }
+          });
+
+          await Capacitor.Plugins.NordicDFU.startDFU({
+            filePath: downloaded_path,
+            deviceAddress: uuid,
+            // enableUnsafeExperimentalButtonlessServiceInSecureDfu: true,
+            // forceScanningForNewAddressInLegacyDfu: true,
+            // forceDfu: true,
+          });
+
+          resolve(downloaded_path);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    $onUnmounted(() => {
+      destory();
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  /* HTML: <div class="loader"></div> */
+  .loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(farthest-side, #ffa516 94%, #0000) top/8px 8px no-repeat, conic-gradient(#0000 30%, #ffa516);
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
+    mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
+    animation: l13 1s infinite linear;
+  }
+  @keyframes l13 {
+    100% {
+      transform: rotate(1turn);
+    }
+  }
+</style>
