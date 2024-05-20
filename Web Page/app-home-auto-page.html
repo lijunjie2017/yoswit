@@ -738,7 +738,13 @@ export default async (props, ctx) => {
 	$onUpdated = ctx.$onUpdated,
 	$onBeforeUnmount = ctx.$onBeforeUnmount,
 	$onUnmounted = ctx.$onUnmounted;
-	
+	emitter.off('refresh');
+	emitter.on('refresh',async(data)=>{
+		//mainView.router.refreshPage();
+		setTimeout(()=>{
+			mainView.router.refreshPage();
+		},500)
+	});
 	// init variable
 	const title = $f7route.query.title?$f7route.query.title:_('Smart Office');
 	let page_margin_top = 48;
@@ -795,7 +801,61 @@ export default async (props, ctx) => {
 		
 		$update();
 	};
-	
+	const onDeleted = async (sudevice_item) => {
+		console.log('kitem', sudevice_item);
+		$(`.curtain-subdevice[guid="${sudevice_item.guid}"]`).remove();
+		$(`.subdevice[guid="${sudevice_item.guid}"]`).remove();
+		$(`.iaq-subdevice[guid="${sudevice_item.guid}"]`).remove();
+		let this_list = erp.info.profile.profile_subdevice;
+		let profile_device = erp.info.profile ? erp.info.profile.profile_device : [];
+		//have case:more sudevice mapping 1 profile device
+		let count_list = this_list.filter((zitem) => zitem.profile_device === sudevice_item.profile_device);
+		let del_record = [];
+		let filteredList = this_list.filter(kitem=>{
+			if (sudevice_item.name == kitem.name) {
+				del_record.push(sudevice_item);
+				return false;
+			}
+			return true;
+		})
+		this_list = filteredList;
+		erp.info.profile.profile_subdevice = filteredList;
+		if (count_list.length == 1) {
+			let profile_device_index = profile_device.findIndex((z) => z.name === sudevice_item.profile_device);
+			profile_device.splice(profile_device_index, 1);
+		}
+		//update the filter of the profile_room_device list
+		subdevices.forEach((item,index)=>{
+			del_record.forEach((kitem,kindex)=>{
+				if(kitem.name == item.name){
+					subdevices.splice(index, 1);
+				}
+			})
+		})
+		//update profile
+		try {
+			let status = await http.request(encodeURI(`/api/resource/Profile/${erp.info.profile.name}`), {
+				method: 'PUT',
+				serializer: 'json',
+				responseType: 'json',
+				data: {
+					profile_device: profile_device,
+					profile_subdevice: this_list,
+				},
+			});
+		} catch (err) {
+			const toast = app.toast.create({
+				position: 'bottom',
+				closeTimeout: 3000,
+				text: err,
+			});
+
+			toast.open();
+		}
+		//init();
+		$update();
+		//check subdevice length is null,delete the profile device
+	};
 	const refresh_unassigned = () => {
 		let _unassigned_subdevices = JSON.parse(JSON.stringify(unassigned_subdevices));
 		for(let guid in peripheral){
@@ -1089,7 +1149,6 @@ export default async (props, ctx) => {
 			peripheral[guid].write(guidToWrite[guid]);
 		}
     };
-    
     // init page data, start flow calculation
     subdevices.forEach(subdevice => {
         const vp = {};
