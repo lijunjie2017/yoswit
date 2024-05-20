@@ -227,7 +227,7 @@
 							display-name="${tran(kitem.name.substring(0, 12))}"
 						>
 							<div class="item-content swipeout-content">
-								<a class="item-link item-content no-chevron no-ripple no-active-state" func="ble_load_to_device_form">
+								<a class="item-link item-content no-chevron no-ripple no-active-state" func="ble_load_to_device_form_auto">
 									<div
 										class="device-thumb item-media"
 										style="
@@ -266,7 +266,7 @@
 //defined components
 const renderSignalItem = (props, { $h }) => {
 	return () => $h`
-		<div signal="${props.kitem.rssilv}" bluetooth="${props.kitem.bluetooth}">
+		<div signal="${props.kitem.rssilv}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}">
 		<div class="signal"></div>
 		<div class="bluetooth"></div>
 		<div class="mesh"></div>
@@ -518,7 +518,7 @@ const renderMainButton = (props, { $h }) => {
 	}else{
     	return () => $h`
 			<div class="control-panel-right" style="">
-				<a href="#" func="ble_load_to_device_form" class="right" >
+				<a href="#" func="ble_load_to_device_form_auto" class="right" >
 					<div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">settings</i></div></div>
 				</a>
 			</div>
@@ -535,9 +535,6 @@ const renderBottomButton = (props, { $h,$onMounted }) => {
 	let mode = props.kitem.device_mode;
 	let key = `dimer_slidebar_${props.kitem.device}`;
 	let guid = props.kitem.device || props.kitem.guid;
-	let mode_str = '';//thermostat mode
-	let speed_vaule = '';//thermostat speed
-	let temperature = 26;
 	//thie function control the Dimming mode bar change 
 	const range_change_fun_dimming = (element)=>{
 		let parentElemt = $(element.el).parents('.device').prev();
@@ -563,6 +560,15 @@ const renderBottomButton = (props, { $h,$onMounted }) => {
 		}catch(error){
 			app.dialog.alert(error);
 		}
+	}
+	//this is the thermostat click function
+	const click_thermostat_change = (kitem,click_type)=>{
+		console.log(kitem);
+		console.log(click_type);
+		let value_list = kitem.device_attachment_status;
+		let mode_value =  value_list[1];
+		let speed_vaule = value_list[2];//thermostat speed
+		let temperature = value_list[3]; //temperature
 	}
 	$onMounted(() => {
 			let element = $(`.curtain-subdevice .range-slider[data-id="${key}"]`);
@@ -666,27 +672,47 @@ const renderBottomButton = (props, { $h,$onMounted }) => {
 			</li>
 			`;
 		}else if(mode === 'Thermostat'){
+			let mode_value = props.kitem.device_attachment_status[1];//thermostat mode
+			let speed_vaule = props.kitem.device_attachment_status[2];//thermostat speed
+			let temperature = props.kitem.device_attachment_status[3]; //temperature
+			let room_temperature = props.kitem.device_attachment_status[4]; //room_temperature
+			let humidity = props.kitem.device_attachment_status[5]; //humidity
+			let mode_str = 4;
+			let mode_ref = 0;
+			if(mode_value == 1){
+				mode_ref = 1;
+				mode_str = 5;
+			}else if(mode_value == 2){
+        mode_ref = 2;
+        mode_str = 2;
+      }
+			if(speed_vaule == 0){
+				speed_vaule = 1;
+			}
+			if(!temperature){
+				temperature = 26
+			}
 			//render the mode、fan、temperature
 			return () => $h`
 			<li class="device subdevice home-scanned-peripheral display-flex thermostat-subdevice" style="height:80px;" ref="${props.kitem.device_status}" guid="${
 				props.kitem.guid
-			}" gateway="${props.kitem.gateway}" config="${props.kitem.config}" button_group="${props.kitem.device_button_group}">
-				<div class="item-content" style="width:100%;">
+			}" config="${props.kitem.config}" button_group="${props.kitem.device_button_group}" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
+				<div class="item-content" style="width:100%;" list="${props.kitem.device_attachment_status}">
 					<div class="item-inner">
 						<div class="display-flex justify-content-space-between align-content-center align-items-center" style="--f7-grid-gap:3px;">
-							<a href="#" class="col" func="home_ui_click_thermostat" command-type="mode" guid="${props.kitem.device}" ref="">
-								<div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="style/img/air_condition/icon-mode-${mode_str?mode_str:1}.png" /></div>
+							<a href="#" class="col" @click="${()=>click_thermostat_change(props.kitem,'mode')}" command-type="mode" guid="${props.kitem.device}" ref="${mode_ref}">
+								<div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="style/img/air_condition/icon-mode-${mode_str}.png" /></div>
 							</a>
-							<a href="#" class="col" func="home_ui_click_thermostat" command-type="fan" guid="${props.kitem.device}" ref="">
-								<div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="style/img/air_condition/icon-speed-${speed_vaule?speed_vaule:1}.png" /></div>
+							<a href="#" class="col" @click="${()=>click_thermostat_change(props.kitem,'fan')}" command-type="fan" guid="${props.kitem.device}" ref="${speed_vaule}">
+								<div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="style/img/air_condition/icon-speed-${speed_vaule?speed_vaule:0}.png" /></div>
 							</a>
-							<a href="#" class="col" func="home_ui_click_thermostat" command-type="reduce" guid="${props.kitem.device}" ref="${temperature}">
+							<a href="#" class="col" @click="${()=>click_thermostat_change(props.kitem,'reduce')}" command-type="reduce" guid="${props.kitem.device}" ref="${temperature}">
 								<div class="button button-raised button-big stop" style="width:70px;font-size:25px;">-</div>
 							</a>
 							<a href="#" class="col set-temp" style="line-height:60px;margin-top:8px;text-align:center;" button-signal="5">
 								<span>${temperature}</span>℃
 							</a>
-							<a href="#" class="col" func="home_ui_click_thermostat" command-type="add" guid="${props.kitem.device}" ref="${temperature}">
+							<a href="#" class="col" @click="${()=>click_thermostat_change(props.kitem,'add')}" command-type="add" guid="${props.kitem.device}" ref="${temperature}">
 								<div class="button button-raised button-big stop" style="width:70px;font-size:25px;">+</div>
 							</a>
 						</div>
@@ -835,7 +861,8 @@ export default async (props, ctx) => {
                         name:tp.device_button_group,
                         password:p.password,
                         thumb:erp.doctype.device_model[p.hexModel].image,
-                        device_status:peripheral[guid].getGangStatus(tp.device_button_group)
+                        device_status:peripheral[guid].getGangStatus(tp.device_button_group),
+												device_attachment_status:peripheral[guid].getAttachmentStatus(tp.device_button_group)
                     };
                     
                     // console.log(u_subdevice);
@@ -954,6 +981,7 @@ export default async (props, ctx) => {
     const update_subdevice_by_peripheral = (s, p) => {
     	s['rssilv'] = p.rssilv || 0;
     	s['bluetooth'] = p.connected ? 1 : (p.connecting ? 2 : 0);
+    	s['mobmob'] = p.is_mobmob;
     	s['connecting'] = p.connecting;
     	s['connected'] = p.connected;
     	s['device_status'] = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
@@ -998,28 +1026,82 @@ export default async (props, ctx) => {
         s['network_position'] = p.network_position;
     };
     
+    // mqtt callback
+    const on_gateway_will_changed = (data) => {
+        let is_mobmob = 1;
+        if(data.message=="Offline"){
+            is_mobmob = 0;
+        }
+        
+        const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway().toLowerCase()));
+        for(let guid in peripheral){
+            let p = peripheral[guid].getProp();
+            if(!p.gateway){
+                peripheral[guid].update({'is_mobmob': 0});
+                continue;
+            }
+            if(p.gateway.trim()==""){
+                peripheral[guid].update({'is_mobmob': 0});
+                continue;
+            }
+            
+            const checkhash = `will/${md5(md5(p.gateway.toLowerCase()))}`
+            if(`will/${selfgatewayhash}` == checkhash){
+                peripheral[guid].update({'is_mobmob': 0});
+                continue;
+            }
+            
+            if(checkhash!=data.topic) continue;
+            peripheral[guid].update({'is_mobmob': is_mobmob});
+        }
+    };
+    
+    const on_gateway_device_changed = (data) => {
+        
+    };
+    
+    const on_gateway_commands_received = (data) => {
+        let message = JSON.parse(data.message);
+		if(message.data.command!='Control'){
+			return;
+		}
+		if(message.data.function!='bleHelper.perform'){
+			return;
+		}
+		console.log("message.data.params="+JSON.stringify(message.data.params));
+		// [{"action":"write","guid":"61343334663137396232663312015a10","mac_address":"a4:34:f1:79:b3:9d","service_id":"ff80","char_id":"ff81","value":"029db379f134a480001100"}]
+		
+		let guidToWrite = {};
+		for(let param of message.data.params){
+			if(param.action=='write'){
+				if(!isset(guidToWrite[param.guid])){
+					guidToWrite[param.guid] = [];
+				}
+				guidToWrite[param.guid].push({
+					service:param.service_id,
+					characteristic:param.char_id,
+					data:param.value,
+				})
+			}
+		}
+		for(let guid in guidToWrite){
+			if(!isset(peripheral[guid])) continue;
+			peripheral[guid].write(guidToWrite[guid]);
+		}
+    };
+    
     // init page data, start flow calculation
     subdevices.forEach(subdevice => {
         const vp = {};
         
-        // subdevice['device_button_group_type'] = subdevice['device_button_group'].split(/[-\s]/)[0];
         update_subdevice_by_device_button_group(subdevice, device_button_groups[subdevice['device_button_group']]);
         update_peripheral_by_subdevice(vp, subdevice);
         
-        
         if (devices[subdevice.device]) {
-            // vp['device_mode'] = vp['device_mode'] == 'Unknown' ? (devices[subdevice.device].device_mode|| devices[subdevice.device]) : vp['device_mode'];
-            // vp['mac_address'] = devices[subdevice.device].mac_address;
             update_peripheral_by_device(vp, devices[subdevice.device])
             update_subdevice_by_device(subdevice, devices[subdevice.device]);
         }
         if (profile_device[subdevice.profile_device]) {
-            // vp['name'] = profile_device[subdevice.profile_device].device_name;
-            // vp['password'] = profile_device[subdevice.profile_device].password;
-            // vp['gateway'] = profile_device[subdevice.profile_device].gateway;
-            // vp['default_connect'] = profile_device[subdevice.profile_device].default_connect;
-            // vp['network_id'] = profile_device[subdevice.profile_device].network_id;
-            // vp['network_position'] = profile_device[subdevice.profile_device].network_position;
             update_peripheral_by_profile_device(vp, profile_device[subdevice.profile_device]);
             update_subdevice_by_profile_device(subdevice, profile_device[subdevice.profile_device]);
     
@@ -1039,10 +1121,48 @@ export default async (props, ctx) => {
             peripheral[vp.guid].update(vp);
         }
     });
-
     
-    
-    
+    // init gateway list
+    const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway().toLowerCase()));
+    for(let i in profile_device){
+        if(!profile_device[i].gateway || profile_device[i].gateway.trim() == "") continue;
+        
+        const gatewayhash = md5(md5(profile_device[i].gateway.toLowerCase()));
+        if(selfgatewayhash==gatewayhash){ // self gateway, need to listen to cmd
+            
+            const cmd_topic = `cmd/${gatewayhash}`;
+            core_mqtt_subscribe(cmd_topic, 0, false);
+            emitter.off(cmd_topic);
+            emitter.on(cmd_topic, on_gateway_commands_received);
+            
+        }else{ // other gateway, need to listen to status and will
+        
+            //check if gateway is online / offline
+            const will_topic = `will/${gatewayhash}`;
+            core_mqtt_subscribe(will_topic, 1, false);
+            emitter.off(will_topic);
+            emitter.on(will_topic, on_gateway_will_changed);
+            
+            //get the devices' status from gateway
+            const status_topic = `status/${gatewayhash}`;
+            core_mqtt_subscribe(status_topic, 1, false);
+            emitter.off(status_topic);
+            emitter.on(status_topic, on_gateway_device_changed);
+            
+            //refresh gateway
+            setTimeout(()=>{
+                core_mqtt_publish(`cmd/${gatewayhash}`, {
+                    "command":"Pubmsg",
+                    "function":"bleHelper.pubmsg",
+                    "params":"",
+                    "callback":"",
+                    "raw":""
+                }, 0, false, false, false).then(() => {
+                    
+                }).catch(reject=>{});
+            },3000)
+        }
+    }
 
 
 	//events
@@ -1125,8 +1245,15 @@ export default async (props, ctx) => {
 	.thermostat-subdevice[ref="0"]{
 		display: none !important;
 	}
-	.thermostat-subdevice[ref="1"]{
-		display: block !important;
+	.thermostat-subdevice[bluetooth="0"][mobmob='0'][mesh='0']
+	{
+		display: none !important;
+	}
+	.thermostat-subdevice[bluetooth='1'][ref="1"],
+	.thermostat-subdevice[mobmob='1'][ref="1"],
+	.thermostat-subdevice[mesh='1'][ref="1"]
+	{
+		display: flex !important;
 	}
   .device[bluetooth='1'] .iaq-button-score-a,
   .iaq-button-score-a[mobmob='1'] .iaq-button-score-a {

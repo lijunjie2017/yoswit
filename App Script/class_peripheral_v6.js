@@ -9,22 +9,22 @@ window.Peripheral = (function() {
     	this.default_connect_used = false;
         this.prop = {
             password:'000000',
-            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10
+            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
             status:{
                 bluetooth:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
                     '1970-01-01 00:00:00'
                 ],
                 control:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
                     '1970-01-01 00:00:00'
                 ],
                 mobmob:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
                     '1970-01-01 00:00:00'
                 ],
                 mesh:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
                     '1970-01-01 00:00:00'
                 ],
                 mqtt:[
@@ -107,7 +107,7 @@ window.Peripheral = (function() {
         	if(isset(p.is_mesh)) self.prop.is_mesh = p.is_mesh;
         	if(isset(p.manufactureData) && (!isset(self.prop.manufactureData) || self.prop.manufactureData != p.manufactureData)){
     	        self.prop.manufactureData = p.manufactureData;
-        	    if (self.prop.manufactureData.length === 18) {
+        	    if (self.prop.manufactureData.length === 18 || self.prop.manufactureData.length == 44) {
                     self.prop.mnSize = parseInt(self.prop.manufactureData.substring(0, 2), 16);
                     self.prop.connectedSize = parseInt(self.prop.manufactureData.substring(3, 4), 16);
                     self.prop.pvi_flag = parseInt(self.prop.manufactureData.substring(14, 16), 16);
@@ -161,8 +161,23 @@ window.Peripheral = (function() {
                     // pwm status
                     let dimmingIo = parseInt(self.prop.manufactureData.substring(4, 6), 16);
 					self.prop.status.bluetooth[0][8] = dimmingIo
-                    
-                    
+                    //thermostat status
+										let thermostat = {
+											power: parseInt(self.prop.manufactureData.substring(4,6), 16),
+											model: parseInt(self.prop.manufactureData.substring(6,8), 16),
+											fan: parseInt(self.prop.manufactureData.substring(8, 10), 16),
+											temp: parseInt(self.prop.manufactureData.substring(10, 12), 16),
+                      room_temp: parseInt(self.prop.manufactureData.substring(12,14), 16)
+										}
+										if(thermostat.power){
+											console.log(thermostat);
+											console.log(self.prop.manufactureData)
+										}
+                    self.prop.status.bluetooth[0][42] = thermostat.power;
+										self.prop.status.bluetooth[0][43] = thermostat.model;
+										self.prop.status.bluetooth[0][44] = thermostat.fan;
+										self.prop.status.bluetooth[0][45] = thermostat.temp;
+										self.prop.status.bluetooth[0][46] = thermostat.room_temp;
                     self.prop.status.bluetooth[1] = DateFormatter.format((new Date()), "Y-m-d H:i:s");
                     if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
@@ -282,6 +297,10 @@ window.Peripheral = (function() {
         		    }
         		    if(p.getProp().connected){
         		        message.Device[guid]['rssi'] = p.getProp().rssi;
+        		    }else{
+        		        if(p.getProp().default_connect){
+        		            message.Device[guid]['rssi'] = 0;
+        		        }
         		    }
                 }
     
@@ -1699,6 +1718,21 @@ window.Peripheral = (function() {
             return 0;
         }
     };
+		Peripheral.prototype.getAttachmentStatus = function(button_group){
+			let gangs = this.getLatestStatus();
+			let gang_id = bleHelper.getGangId(button_group);
+			let status_list = [];
+			if(gang_id ==42){ //theromasta
+				if(isset(gangs[0][gang_id])){
+					for(let i=42;i<48;i++){
+						status_list.push(gangs[0][i])
+					}
+					return status_list;
+				}else{
+					return [0,0,0,0,0,0];
+				}
+			}
+		};
     Peripheral.prototype.getFirmwareNo = function(firmware){
         try{
             if(firmware.trim() == "3.0.0"){
