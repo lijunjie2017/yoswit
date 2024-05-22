@@ -28,7 +28,7 @@ window.Peripheral = (function() {
                     '1970-01-01 00:00:00'
                 ],
                 mqtt:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
                     '1970-01-01 00:00:00'
                 ]
             },
@@ -161,23 +161,25 @@ window.Peripheral = (function() {
                     // pwm status
                     let dimmingIo = parseInt(self.prop.manufactureData.substring(4, 6), 16);
 					self.prop.status.bluetooth[0][8] = dimmingIo
+					
                     //thermostat status
-										let thermostat = {
-											power: parseInt(self.prop.manufactureData.substring(4,6), 16),
-											model: parseInt(self.prop.manufactureData.substring(6,8), 16),
-											fan: parseInt(self.prop.manufactureData.substring(8, 10), 16),
-											temp: parseInt(self.prop.manufactureData.substring(10, 12), 16),
-                      room_temp: parseInt(self.prop.manufactureData.substring(12,14), 16)
-										}
-										if(thermostat.power){
-											console.log(thermostat);
-											console.log(self.prop.manufactureData)
-										}
+					let thermostat = {
+						power: parseInt(self.prop.manufactureData.substring(4,6), 16),
+						model: parseInt(self.prop.manufactureData.substring(6,8), 16),
+						fan: parseInt(self.prop.manufactureData.substring(8, 10), 16),
+						temp: parseInt(self.prop.manufactureData.substring(10, 12), 16),
+                        room_temp: parseInt(self.prop.manufactureData.substring(12,14), 16)
+					}
+					if(thermostat.power){
+						console.log(thermostat);
+						console.log(self.prop.manufactureData)
+					}
                     self.prop.status.bluetooth[0][42] = thermostat.power;
-										self.prop.status.bluetooth[0][43] = thermostat.model;
-										self.prop.status.bluetooth[0][44] = thermostat.fan;
-										self.prop.status.bluetooth[0][45] = thermostat.temp;
-										self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+					self.prop.status.bluetooth[0][43] = thermostat.model;
+					self.prop.status.bluetooth[0][44] = thermostat.fan;
+					self.prop.status.bluetooth[0][45] = thermostat.temp;
+					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+					
                     self.prop.status.bluetooth[1] = DateFormatter.format((new Date()), "Y-m-d H:i:s");
                     if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
@@ -311,6 +313,49 @@ window.Peripheral = (function() {
     			}
             }
 		}, 5000);
+    };
+    Peripheral.prototype.onCharNotified = function(char, data){
+        // alert("onCharRead char="+char);
+        // alert("onCharRead data="+data);
+        const self = this;
+        //alert(data)
+        if(data.startsWith("80")){
+            // io status    
+            let io = parseInt(data.substring(2, 4), 16);
+            for(let i=8; i>=0; i--){
+                let key = i.toString();
+                let value = "0";
+                if(io >= Math.pow(2, i)){
+                    value = "1";
+                    io -= Math.pow(2, i);
+                }
+                //self.prop.gangs[i] = parseInt(value);
+                self.prop.status.bluetooth[0][i] = parseInt(value);
+            }
+			
+            self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s");
+            self.onPropChanged();
+        }else if(data.startsWith("94110000")){
+			let thermostat = {
+				power: parseInt(data.substring(10,12), 16),
+				model: parseInt(data.substring(12,14), 16),
+				fan: parseInt(data.substring(14, 16), 16),
+				temp: parseInt(data.substring(16, 18), 16),
+                room_temp: parseInt(data.substring(18,20), 16)
+			}
+			if(thermostat.power){
+				console.log(thermostat);
+				console.log(data)
+			}
+            self.prop.status.bluetooth[0][42] = thermostat.power;
+			self.prop.status.bluetooth[0][43] = thermostat.model;
+			self.prop.status.bluetooth[0][44] = thermostat.fan;
+			self.prop.status.bluetooth[0][45] = thermostat.temp;
+			self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+			
+			self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s");
+			self.onPropChanged();
+        }
     };
 
     Peripheral.prototype.connect = function() {
@@ -1718,7 +1763,7 @@ window.Peripheral = (function() {
             return 0;
         }
     };
-		Peripheral.prototype.getAttachmentStatus = function(button_group){
+	Peripheral.prototype.getAttachmentStatus = function(button_group){
 			let gangs = this.getLatestStatus();
 			let gang_id = bleHelper.getGangId(button_group);
 			let status_list = [];
@@ -1731,6 +1776,8 @@ window.Peripheral = (function() {
 				}else{
 					return [0,0,0,0,0,0];
 				}
+			}else{
+			    return [0,0,0,0,0,0];
 			}
 		};
     Peripheral.prototype.getFirmwareNo = function(firmware){
@@ -2057,6 +2104,45 @@ window.Peripheral = (function() {
     		});
     	};
     	
+        const enableNotify = () => {
+    		return new Promise((resolve, reject) => {
+    		    const executeEnable = async () => {
+        		    if(self.prop.authed){
+        		        resolve(true);
+        		    }else{
+        		        const notifyList = [];
+            		    if(isset(self.prop.characteristics)){
+                		    for(let c of self.prop.characteristics){
+                                if(c.characteristic.toLowerCase() == "fff3" || c.characteristic.toLowerCase() == "ff82"){
+                                    notifyList.push({
+                                        service: c.service,
+                                        characteristic: c.characteristic
+                                    })
+                                }else if(c.characteristic.toLowerCase() == "ff85" && self.prop.firmwareNo >= 3 && self.prop.firmwareNo < 6){
+                                    notifyList.push({
+                                        service: c.service,
+                                        characteristic: c.characteristic
+                                    })
+                                }
+                		    }
+            		    }
+            		    
+            		    if(notifyList.length>0){
+                		    for(let i in notifyList){
+                		        await new Promise(resolve => setTimeout(resolve, 200));
+            					ble.startNotification(self.prop.id, notifyList[i].service, notifyList[i].characteristic, function(rs){
+                                    self.onCharNotified(notifyList[i].characteristic, rs)
+                                });
+                		    }
+            		    }
+            		    resolve(true);
+        		    }
+    		    };
+    		    executeEnable();
+    		    
+    		});
+    		    
+        }
     	return new Promise((resolve, reject) => {
     	    if(!isset(self.prop.rssi)){
     	        reject(6300); //BLE_PERIPHERAL_NOT_FOUND
@@ -2067,6 +2153,8 @@ window.Peripheral = (function() {
         	        return readMacaddress();
         	    }).then((mac_address) => {
         			return submitPassword();
+        	    }).then((result) => {
+        			return enableNotify();
         	    }).then((result) => {
     		        self.onConnectionChanged('connected');
         	        self.prop.authed = true;
