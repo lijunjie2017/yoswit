@@ -9,26 +9,26 @@ window.Peripheral = (function() {
     	this.default_connect_used = false;
         this.prop = {
             password:'000000',
-            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
+            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83
             status:{
                 bluetooth:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
                     '1970-01-01 00:00:00'
                 ],
                 control:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
                     '1970-01-01 00:00:00'
                 ],
                 mobmob:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
                     '1970-01-01 00:00:00'
                 ],
                 mesh:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
                     '1970-01-01 00:00:00'
                 ],
                 mqtt:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity)
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
                     '1970-01-01 00:00:00'
                 ]
             },
@@ -171,8 +171,8 @@ window.Peripheral = (function() {
                         room_temp: parseInt(self.prop.manufactureData.substring(12,14), 16)
 					}
 					if(thermostat.power){
-						console.log(thermostat);
-						console.log(self.prop.manufactureData)
+						//console.log(thermostat);
+						//console.log(self.prop.manufactureData)
 					}
                     self.prop.status.bluetooth[0][42] = thermostat.power;
 					self.prop.status.bluetooth[0][43] = thermostat.model;
@@ -586,8 +586,10 @@ window.Peripheral = (function() {
 
 		const doMOBMOBOnoff = (gangs) => {
     		return new Promise((resolve, reject) => {
-				const findGuid = self.findDefaultConnect();
-
+				let findGuid = self.findDefaultConnect();
+				if(!isset(findGuid)){
+					findGuid = self.prop.guid;
+				}
 				let data = [0,0,0,0,0,0,0,0];
 				let service = "ff80", characteristic = "ff81";
 				if(self.prop.firmwareNo < 6){
@@ -832,7 +834,10 @@ window.Peripheral = (function() {
 
 		const doMOBMOB = (gangs) => {
     		return new Promise((resolve, reject) => {
-				const findGuid = self.findDefaultConnect();
+				let findGuid = self.findDefaultConnect();
+				if(!isset(findGuid)){
+					findGuid = self.prop.guid;
+				}
 				let service = "ff80", characteristic = "ff81";
 				let data = [0,0,0,0,0,0,0,0];
 				let controls = {};
@@ -945,6 +950,183 @@ window.Peripheral = (function() {
     		});
     	});
     };
+		Peripheral.prototype.rcuOutput = function(gangs) {
+			const self = this;
+		return new Promise((resolve, reject) => {
+			const action = {
+					func:'rcuOutput',
+					args:[
+							gangs
+					],
+					callback: {
+							resolve:resolve,
+							reject:reject
+					}
+			}
+			self.queue.push(action);
+			if (!self.isExecuting) {
+				self.isExecuting = true;
+				self.execute();
+			}
+		});
+	};
+	Peripheral.prototype._rcuOutput = function(gangs) {
+		const self = this;
+		let currentRoute = '';
+
+	const doBLE = (gangs) => {
+		return new Promise((resolve, reject) => {
+		let service = "ff80", characteristic = "ff81";
+		let commands = [];
+		
+			for(let g of gangs){
+					if(g.gang<49 || g.gang>85) continue;
+					
+					self.prop.status.control[0][g.gang] = g.value;
+					data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${(g.gang-49).toString(16).pad("00")}0${g.value}`;
+				commands.push({
+					service: service,
+					characteristic: characteristic,
+					data: data,
+				});
+			}
+			
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		
+						self.doMultipleWrite(commands).then((rs)=>{
+								resolve();
+						}).catch((error)=>{
+								reject(error);
+						});
+		});
+	};
+
+const doMESH = (gangs) => {
+		return new Promise((resolve, reject) => {
+		const findGuid = self.findLead();
+
+		let service = "ff80", characteristic = "ff81";
+		let commands = [];
+		
+			for(let g of gangs){
+				if(g.gang<49 || g.gang>85) continue;
+					
+				self.prop.status.control[0][g.gang] = g.value;
+				data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${(g.gang-49).toString(16).pad("00")}0${g.value}`;
+				commands.push({
+					service: service,
+					characteristic: characteristic,
+					data: data,
+				});
+			}
+			
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		
+		peripheral[findGuid].write(commands).then((rs)=>{
+			resolve();
+		}).catch((error)=>{
+			reject(error);
+		});
+	});
+};
+
+
+const doMOBMOB = (gangs) => {
+		return new Promise((resolve, reject) => {
+		let findGuid = self.findDefaultConnect();
+		if(!isset(findGuid)){
+			findGuid = self.prop.guid;
+		}
+		let service = "ff80", characteristic = "ff81";
+		let commands = [];
+		
+			for(let g of gangs){
+				if(g.gang<49 || g.gang>85) continue;
+					
+				self.prop.status.control[0][g.gang] = g.value;
+				data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${(g.gang-49).toString(16).pad("00")}0${g.value}`;
+				commands.push({
+				action: "write",
+				guid: findGuid,
+				mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+				service_id: service,
+				char_id: characteristic,
+				value: data.toLowerCase()
+			});
+			}
+			
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+
+		core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+			command:"Control",
+			function:"bleHelper.perform",
+			params:commands,
+			callback:"",
+			raw:""
+		}, 0, false, false, false).then(() => {
+			resolve();
+		}).catch(reject);
+	});
+};
+	
+
+	return new Promise((resolve, reject) => {
+		Promise.race([
+			self.findRoute(),
+			self.timeout(10000).then(() => {
+					self.disconnect();
+				throw 7001;
+			})
+		])
+		.then((result) => {
+				currentRoute = result;
+						switch (currentRoute) {
+							case self.route.BLUETOOTH:
+									if(self.prop.connected){
+											return Promise.resolve();
+									}else{
+											return self.doConnect();
+									}
+									break;
+							case self.route.MOBMOB:
+									return Promise.resolve();
+									break;
+							case self.route.MESH:
+									return Promise.resolve();
+									break;
+							case self.route.NA:
+						throw new Error('Device is not here');
+									break;
+						}
+		})
+		.then(() => {
+						switch (currentRoute) {
+							case self.route.BLUETOOTH:
+				return doBLE(gangs);
+									break;
+							case self.route.MOBMOB:
+				return doMOBMOB(gangs);
+									break;
+							case self.route.MESH:
+				return doMESH(gangs);
+									break;
+							case self.route.NA:
+						throw new Error('Device is not here');
+									break;
+						}
+		})
+		.then((result) => {
+			resolve(result);
+		})
+		.catch((error) => {
+			reject(error);
+		})
+		.then(() => {
+			// Clean up resources
+			clearTimeout(self.timeout_timer);
+		});
+	});
+};
 	Peripheral.prototype.dimming = function(gangs) {
 		const self = this;
 		return new Promise((resolve, reject) => {
@@ -1002,8 +1184,10 @@ window.Peripheral = (function() {
 		
 		const doMOBMOBDimming = (gangs) => {
 			return new Promise((resolve, reject) => {
-				const findGuid = self.findDefaultConnect();
-				
+				let findGuid = self.findDefaultConnect();
+				if(!isset(findGuid)){
+					findGuid = self.prop.guid;
+				}
 				let service = "ff80", characteristic = "ff81";
 				let data = `00`;
 				
@@ -1236,8 +1420,10 @@ window.Peripheral = (function() {
 
 		const doMOBMOB = (gangs) => {
     		return new Promise((resolve, reject) => {
-				const findGuid = self.findDefaultConnect();
-
+				let findGuid = self.findDefaultConnect();
+				if(!isset(findGuid)){
+					findGuid = self.prop.guid;
+				}
 				let service = "ff80", characteristic = "ff81";
 				let commands = [];
 				
@@ -1332,6 +1518,360 @@ window.Peripheral = (function() {
     		});
     	});
     };
+		Peripheral.prototype.thermostat = function(gangs) {
+			const self = this;
+		return new Promise((resolve, reject) => {
+			const action = {
+					func:'thermostat',
+					args:[
+							gangs
+					],
+					callback: {
+							resolve:resolve,
+							reject:reject
+					}
+			}
+			self.queue.push(action);
+			if (!self.isExecuting) {
+				self.isExecuting = true;
+				self.execute();
+			}
+		});
+	};
+	Peripheral.prototype._thermostat = function(gangs) {
+			const self = this;
+			let currentRoute = '';
+
+		const doBLE = (gangs) => {
+			return new Promise((resolve, reject) => {
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			
+				for(let g of gangs){
+						if(g.gang<41 || g.gang>47) continue;
+						
+						self.prop.status.control[0][g.gang] = g.value;
+						data = g.command;
+					commands.push({
+						service: service,
+						characteristic: characteristic,
+						data: data,
+					});
+				}
+				
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			
+							self.doMultipleWrite(commands).then((rs)=>{
+									resolve();
+							}).catch((error)=>{
+									reject(error);
+							});
+			});
+		};
+
+	const doMESH = (gangs) => {
+			return new Promise((resolve, reject) => {
+			const findGuid = self.findLead();
+
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			
+				for(let g of gangs){
+					if(g.gang<41 || g.gang>47) continue;
+						
+					self.prop.status.control[0][g.gang] = g.value;
+					data = `02${self.prop.mac_reverse_key}${g.command}`;
+					commands.push({
+						service: service,
+						characteristic: characteristic,
+						data: data,
+					});
+				}
+				
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			
+			peripheral[findGuid].write(commands).then((rs)=>{
+				resolve();
+			}).catch((error)=>{
+				reject(error);
+			});
+		});
+	};
+
+
+	const doMOBMOB = (gangs) => {
+			return new Promise((resolve, reject) => {
+			let findGuid = self.findDefaultConnect();
+			if(!isset(findGuid)){
+				findGuid = self.prop.guid;
+			}
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			
+				for(let g of gangs){
+					if(g.gang<41 || g.gang>47) continue;
+						
+					self.prop.status.control[0][g.gang] = g.value;
+					data = `02${self.prop.mac_reverse_key}${g.command}`;
+					commands.push({
+					action: "write",
+					guid: findGuid,
+					mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+					service_id: service,
+					char_id: characteristic,
+					value: data.toLowerCase()
+				});
+				}
+				
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+
+			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+				command:"Control",
+				function:"bleHelper.perform",
+				params:commands,
+				callback:"",
+				raw:""
+			}, 0, false, false, false).then(() => {
+				resolve();
+			}).catch(reject);
+		});
+	};
+		
+	
+		return new Promise((resolve, reject) => {
+			Promise.race([
+				self.findRoute(),
+				self.timeout(10000).then(() => {
+						self.disconnect();
+					throw 7001;
+				})
+			])
+			.then((result) => {
+					currentRoute = result;
+							switch (currentRoute) {
+								case self.route.BLUETOOTH:
+										if(self.prop.connected){
+												return Promise.resolve();
+										}else{
+												return self.doConnect();
+										}
+										break;
+								case self.route.MOBMOB:
+										return Promise.resolve();
+										break;
+								case self.route.MESH:
+										return Promise.resolve();
+										break;
+								case self.route.NA:
+							throw new Error('Device is not here');
+										break;
+							}
+			})
+			.then(() => {
+							switch (currentRoute) {
+								case self.route.BLUETOOTH:
+					return doBLE(gangs);
+										break;
+								case self.route.MOBMOB:
+					return doMOBMOB(gangs);
+										break;
+								case self.route.MESH:
+					return doMESH(gangs);
+										break;
+								case self.route.NA:
+							throw new Error('Device is not here');
+										break;
+							}
+			})
+			.then((result) => {
+				resolve(result);
+			})
+			.catch((error) => {
+				reject(error);
+			})
+			.then(() => {
+				// Clean up resources
+				clearTimeout(self.timeout_timer);
+			});
+		});
+	};
+	Peripheral.prototype.curtainmotor = function(gangs) {
+		const self = this;
+		return new Promise((resolve, reject) => {
+			const action = {
+					func:'curtainmotor',
+					args:[
+							gangs
+					],
+					callback: {
+							resolve:resolve,
+							reject:reject
+					}
+			}
+			self.queue.push(action);
+			if (!self.isExecuting) {
+				self.isExecuting = true;
+				self.execute();
+			}
+		});
+	};
+	Peripheral.prototype._curtainmotor = function(gangs) {
+			const self = this;
+			let currentRoute = '';
+
+		const doBLE = (gangs) => {
+			return new Promise((resolve, reject) => {
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			
+				for(let g of gangs){
+						if(g.gang<47) continue;
+						
+						self.prop.status.control[0][g.gang] = g.value;
+						data = g.command;
+					commands.push({
+						service: service,
+						characteristic: characteristic,
+						data: data,
+					});
+				}
+				
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			
+							self.doMultipleWrite(commands).then((rs)=>{
+									resolve();
+							}).catch((error)=>{
+									reject(error);
+							});
+			});
+		};
+
+	const doMESH = (gangs) => {
+			return new Promise((resolve, reject) => {
+			const findGuid = self.findLead();
+
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			
+				for(let g of gangs){
+					if(g.gang<47) continue;
+						
+					self.prop.status.control[0][g.gang] = g.value;
+					data = `02${self.prop.mac_reverse_key}${g.command}`;
+					commands.push({
+						service: service,
+						characteristic: characteristic,
+						data: data,
+					});
+				}
+				
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			
+			peripheral[findGuid].write(commands).then((rs)=>{
+				resolve();
+			}).catch((error)=>{
+				reject(error);
+			});
+		});
+	};
+
+
+	const doMOBMOB = (gangs) => {
+			return new Promise((resolve, reject) => {
+			let findGuid = self.findDefaultConnect();
+			if(!isset(findGuid)){
+				findGuid = self.prop.guid;
+			}
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			
+				for(let g of gangs){
+					if(g.gang<47) continue;
+						
+					self.prop.status.control[0][g.gang] = g.value;
+					data = `02${self.prop.mac_reverse_key}${g.command}`;
+					commands.push({
+					action: "write",
+					guid: findGuid,
+					mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+					service_id: service,
+					char_id: characteristic,
+					value: data.toLowerCase()
+				});
+				}
+				
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+
+			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+				command:"Control",
+				function:"bleHelper.perform",
+				params:commands,
+				callback:"",
+				raw:""
+			}, 0, false, false, false).then(() => {
+				resolve();
+			}).catch(reject);
+		});
+	};
+		
+
+		return new Promise((resolve, reject) => {
+			Promise.race([
+				self.findRoute(),
+				self.timeout(10000).then(() => {
+						self.disconnect();
+					throw 7001;
+				})
+			])
+			.then((result) => {
+					currentRoute = result;
+							switch (currentRoute) {
+								case self.route.BLUETOOTH:
+										if(self.prop.connected){
+												return Promise.resolve();
+										}else{
+												return self.doConnect();
+										}
+										break;
+								case self.route.MOBMOB:
+										return Promise.resolve();
+										break;
+								case self.route.MESH:
+										return Promise.resolve();
+										break;
+								case self.route.NA:
+							throw new Error('Device is not here');
+										break;
+							}
+			})
+			.then(() => {
+							switch (currentRoute) {
+								case self.route.BLUETOOTH:
+					return doBLE(gangs);
+										break;
+								case self.route.MOBMOB:
+					return doMOBMOB(gangs);
+										break;
+								case self.route.MESH:
+					return doMESH(gangs);
+										break;
+								case self.route.NA:
+							throw new Error('Device is not here');
+										break;
+							}
+			})
+			.then((result) => {
+				resolve(result);
+			})
+			.catch((error) => {
+				reject(error);
+			})
+			.then(() => {
+				// Clean up resources
+				clearTimeout(self.timeout_timer);
+			});
+		});
+	};
     Peripheral.prototype.sendIR = function(data) {
         const self = this;
     	return new Promise((resolve, reject) => {
@@ -1679,7 +2219,19 @@ window.Peripheral = (function() {
     	    }).then(()=>{
     	        
     	    })
-    	}else if(action.func=="rcuDimming"){
+    	}else if(action.func=="rcuOutput"){
+				this._rcuOutput(action.args[0]).then((rs) => {
+						action.callback.resolve(rs);
+						this.execute();
+				}).catch((error) => {
+						alert(error);
+						action.callback.reject(error);
+						this.queue = [];
+						this.isExecuting = false;
+				}).then(()=>{
+						
+				})
+		}else if(action.func=="rcuDimming"){
     	    this._rcuDimming(action.args[0]).then((rs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
@@ -1691,7 +2243,31 @@ window.Peripheral = (function() {
     	    }).then(()=>{
     	        
     	    })
-    	}else if(action.func=="dimming"){
+    	}else if(action.func=="thermostat"){
+				this._thermostat(action.args[0]).then((rs) => {
+						action.callback.resolve(rs);
+						this.execute();
+				}).catch((error) => {
+						alert(error);
+						action.callback.reject(error);
+						this.queue = [];
+						this.isExecuting = false;
+				}).then(()=>{
+						
+				})
+		}else if(action.func=="curtainmotor"){
+			this._curtainmotor(action.args[0]).then((rs) => {
+					action.callback.resolve(rs);
+					this.execute();
+			}).catch((error) => {
+					alert(error);
+					action.callback.reject(error);
+					this.queue = [];
+					this.isExecuting = false;
+			}).then(()=>{
+					
+			})
+	}else if(action.func=="dimming"){
 			this._dimming(action.args[0]).then((rs) => {
 				action.callback.resolve(rs);
 				this.execute();
@@ -2174,7 +2750,7 @@ window.Peripheral = (function() {
                 //nothing to do, instead, need notify
                 resolve(rs);
             }, function(rs){
-                reject(`Failed to write service ${service} with characteristic ${characteristic} (Error message: ${rs})`);
+                reject(`Failed to write data ${data} to service ${service} with characteristic ${characteristic} (Error message: ${rs})`);
             });
         });
     };
