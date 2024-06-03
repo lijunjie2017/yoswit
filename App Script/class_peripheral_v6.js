@@ -78,6 +78,8 @@ window.Peripheral = (function() {
                     else self.prop.rssilv = 1;
                 }
         	}
+        	if(isset(p.status)) self.prop.status = p.status;
+        // 	if(!isset(self.prop.status.control)) self.prop.status['control'] = self.prop.status['bluetooth'];
         	if(isset(p.characteristics)) self.prop.characteristics = p.characteristics;
         	if(isset(p.services)) self.prop.services = p.services;
         	if(isset(p.firmware)) p.firmware+="";
@@ -180,6 +182,42 @@ window.Peripheral = (function() {
 					self.prop.status.bluetooth[0][45] = thermostat.temp;
 					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
 					
+					//RCU scan
+					let i = 4;
+					let RcuData = [];
+					let str = self.prop.manufactureData;
+					while (i < str.length) {
+						let index = str.substring(i, i + 2);
+						let type = str.substring(i + 2, i + 4);
+						let dataLength = type === '01' ? 2 : type === '02' ? 4 : 0;
+						let data = str.substring(i + 4, i + 4 + dataLength);
+	
+						RcuData.push({ index, type, data });
+	
+						if (index === '05') break;
+	
+						i += 4 + dataLength;
+					}
+					if(RcuData.length == 5){
+						RcuData.forEach(kitem=>{
+							if(kitem.index == '01'){
+								self.prop.status.bluetooth[0][32] = parseInt(kitem.data.substring(0,2),16);
+								self.prop.status.bluetooth[0][33] = parseInt(kitem.data.substring(2,4),16);
+							}else if(kitem.index == '02'){
+								self.prop.status.bluetooth[0][34] = parseInt(kitem.data.substring(0,2),16);
+								self.prop.status.bluetooth[0][35] = parseInt(kitem.data.substring(2,4),16);
+							}else if(kitem.index == '03'){
+								self.prop.status.bluetooth[0][36] = parseInt(kitem.data.substring(0,2),16);
+								self.prop.status.bluetooth[0][37] = parseInt(kitem.data.substring(2,4),16);
+							}else if(kitem.index == '04'){
+								self.prop.status.bluetooth[0][38] = parseInt(kitem.data.substring(0,2),16);
+								self.prop.status.bluetooth[0][39] = parseInt(kitem.data.substring(2,4),16);
+							}else if(kitem.index == '05'){
+								self.prop.status.bluetooth[0][40] = parseInt(kitem.data.substring(0,2),16);
+								self.prop.status.bluetooth[0][41] = parseInt(kitem.data.substring(2,4),16);
+							}
+						})
+					}
                     self.prop.status.bluetooth[1] = DateFormatter.format((new Date()), "Y-m-d H:i:s");
                     if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
@@ -190,6 +228,7 @@ window.Peripheral = (function() {
         	//checking if prop except rssi and lastdiscoverdate are changed
         	const prop = JSON.parse(JSON.stringify(self.prop));
         	delete prop.rssi;
+            delete prop.rssilv;
         	delete prop.lastDiscoverDate;
         	delete prop.services;
         	delete prop.characteristics;
@@ -231,13 +270,49 @@ window.Peripheral = (function() {
         this.onPropChanged();
     };
     Peripheral.prototype.onPropChanged = function(){
+        const self = this;
         let emitProp = JSON.parse(JSON.stringify(this.prop));
         delete emitProp.rssi;
         delete emitProp.rssilv;
         delete emitProp.lastDiscoverDate;
-        delete emitProp.status.control;
         delete emitProp.services;
         delete emitProp.characteristics;
+        
+        let storechecksum = md5(JSON.stringify(emitProp));
+        if(!self.lastStorechecksum || self.lastStorechecksum!=storechecksum){
+            self.lastStorechecksum = storechecksum;
+            
+            setTimeout(function(){
+                db.get('peripheral').then((data)=>{
+                    let storedPeripheral = {};
+                    if(data){
+                        try{
+                            storedPeripheral = JSON.parse(data);
+                        }catch(e){
+                            
+                        }
+                    }else{
+                    }
+                    let storeProp = JSON.parse(JSON.stringify(self.getProp()));
+                    delete storeProp.rssi;
+                    delete storeProp.rssilv;
+                    delete storeProp.lastDiscoverDate;
+                    delete storeProp.services;
+                    delete storeProp.characteristics;
+                    delete storeProp.connecting;
+                    delete storeProp.is_mobmob;
+                    delete storeProp.is_mesh;
+                    delete storeProp.manufactureData;
+                    delete storeProp.connected;
+                    
+                    
+                    storedPeripheral[self.prop.guid] = storeProp;
+                    db.set('peripheral', JSON.stringify(storedPeripheral));
+                });
+            }, 10);
+        }
+        
+        delete emitProp.status.control;
         
         let emitchecksum = md5(JSON.stringify(emitProp));
         if(!this.lastEmitchecksum || this.lastEmitchecksum!=emitchecksum){
@@ -251,8 +326,6 @@ window.Peripheral = (function() {
         }
         
         
-		const self = this;
-		
         if(
             isset(self.prop.default_connect) 
             && self.prop.default_connect==1 
@@ -527,6 +600,7 @@ window.Peripheral = (function() {
 					data = `8000${data}00`;
     		}
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
                 self.doMultipleWrite([{
 					service: service,
@@ -570,6 +644,7 @@ window.Peripheral = (function() {
 					data = `02${self.prop.mac_reverse_key}8000${data}00`;
 				}
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
 				peripheral[findGuid].write([{
 					service: "ff80",
@@ -629,6 +704,7 @@ window.Peripheral = (function() {
 					}
 				}
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 
 				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 					command:"Control",
@@ -771,6 +847,7 @@ window.Peripheral = (function() {
 			    }
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
                 self.doMultipleWrite(commands).then((rs)=>{
                     resolve();
@@ -822,6 +899,7 @@ window.Peripheral = (function() {
 			    }
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
 				peripheral[findGuid].write(commands).then((rs)=>{
 					resolve();
@@ -879,6 +957,7 @@ window.Peripheral = (function() {
 			    }
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 
 				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 					command:"Control",
@@ -980,10 +1059,15 @@ window.Peripheral = (function() {
 		let commands = [];
 		
 			for(let g of gangs){
-					if(g.gang<49 || g.gang>85) continue;
+					if(g.gang<49 || g.gang>82) continue;
 					
 					self.prop.status.control[0][g.gang] = g.value;
-					data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${(g.gang-49).toString(16).pad("00")}0${g.value}`;
+					let output_gang = g.gang-49;
+					if(output_gang == 33){
+						output_gang = 98;
+					}
+					data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${output_gang.toString(16).pad("00")}0${g.value}`;
+					
 				commands.push({
 					service: service,
 					characteristic: characteristic,
@@ -992,6 +1076,7 @@ window.Peripheral = (function() {
 			}
 			
 		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		self.onPropChanged();
 		
 						self.doMultipleWrite(commands).then((rs)=>{
 								resolve();
@@ -1009,10 +1094,14 @@ const doMESH = (gangs) => {
 		let commands = [];
 		
 			for(let g of gangs){
-				if(g.gang<49 || g.gang>85) continue;
+				if(g.gang<49 || g.gang>82) continue;
 					
 				self.prop.status.control[0][g.gang] = g.value;
-				data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${(g.gang-49).toString(16).pad("00")}0${g.value}`;
+				let output_gang = g.gang-49;
+					if(output_gang == 33){
+						output_gang = 98;
+					}
+				data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${output_gang.toString(16).pad("00")}0${g.value}`;
 				commands.push({
 					service: service,
 					characteristic: characteristic,
@@ -1021,6 +1110,7 @@ const doMESH = (gangs) => {
 			}
 			
 		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		self.onPropChanged();
 		
 		peripheral[findGuid].write(commands).then((rs)=>{
 			resolve();
@@ -1041,10 +1131,14 @@ const doMOBMOB = (gangs) => {
 		let commands = [];
 		
 			for(let g of gangs){
-				if(g.gang<49 || g.gang>85) continue;
+				if(g.gang<49 || g.gang>82) continue;
 					
 				self.prop.status.control[0][g.gang] = g.value;
-				data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${(g.gang-49).toString(16).pad("00")}0${g.value}`;
+				let output_gang = g.gang-49;
+					if(output_gang == 33){
+						output_gang = 98;
+					}
+				data = `02${self.prop.mac_reverse_key.toLowerCase()}972101${output_gang.toString(16).pad("00")}0${g.value}`;
 				commands.push({
 				action: "write",
 				guid: findGuid,
@@ -1056,6 +1150,7 @@ const doMOBMOB = (gangs) => {
 			}
 			
 		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		self.onPropChanged();
 
 		core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 			command:"Control",
@@ -1169,6 +1264,7 @@ const doMOBMOB = (gangs) => {
     			}
     			
     			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+    			self.onPropChanged();
     			
     			self.doMultipleWrite([{
     				service: service,
@@ -1215,6 +1311,7 @@ const doMOBMOB = (gangs) => {
     			}
 				
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
 				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 					command:"Control",
@@ -1257,6 +1354,7 @@ const doMOBMOB = (gangs) => {
     			}
 				
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
 				peripheral[findGuid].write([{
 					service: "ff80",
@@ -1375,6 +1473,7 @@ const doMOBMOB = (gangs) => {
 			    }
 			    
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
                 self.doMultipleWrite(commands).then((rs)=>{
                     resolve();
@@ -1408,6 +1507,7 @@ const doMOBMOB = (gangs) => {
 			    }
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 				
 				peripheral[findGuid].write(commands).then((rs)=>{
 					resolve();
@@ -1447,6 +1547,7 @@ const doMOBMOB = (gangs) => {
 			    }
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+				self.onPropChanged();
 
 				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 					command:"Control",
@@ -1560,6 +1661,7 @@ const doMOBMOB = (gangs) => {
 				}
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			self.onPropChanged();
 			
 							self.doMultipleWrite(commands).then((rs)=>{
 									resolve();
@@ -1589,6 +1691,7 @@ const doMOBMOB = (gangs) => {
 				}
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			self.onPropChanged();
 			
 			peripheral[findGuid].write(commands).then((rs)=>{
 				resolve();
@@ -1624,6 +1727,7 @@ const doMOBMOB = (gangs) => {
 				}
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			self.onPropChanged();
 
 			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 				command:"Control",
@@ -1737,6 +1841,7 @@ const doMOBMOB = (gangs) => {
 				}
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			self.onPropChanged();
 			
 							self.doMultipleWrite(commands).then((rs)=>{
 									resolve();
@@ -1766,6 +1871,7 @@ const doMOBMOB = (gangs) => {
 				}
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			self.onPropChanged();
 			
 			peripheral[findGuid].write(commands).then((rs)=>{
 				resolve();
@@ -1801,6 +1907,7 @@ const doMOBMOB = (gangs) => {
 				}
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+			self.onPropChanged();
 
 			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
 				command:"Control",
