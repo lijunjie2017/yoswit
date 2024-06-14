@@ -774,6 +774,23 @@ const renderMainButton = (props, {
 		];
 		return futureTimeArray;
 	}
+	const iot_music_player_change_source = async(kitem)=>{
+		let subdevice_name = kitem.name;
+		app.dialog.preloader();
+		try{
+			let data = `9807`;
+			await window.peripheral[kitem.device].write([{
+				service: 'ff80',
+				characteristic: 'ff81',
+				data: data,
+			}])
+			app.dialog.close();
+			app.dialog.alert(`Audio Source Switched Successfully`);
+		}catch(error){
+			app.dialog.close();
+			app.dialog.alert(error);
+		}
+	}
 	if (
 		props.kitem.device_button_group.startsWith('OPENCLOSE GANG') ||
 		props.kitem.device_button_group.startsWith('RCU OPENCLOSE GANG')
@@ -799,9 +816,12 @@ const renderMainButton = (props, {
 	) {
 		if (props.kitem.device_model == 'YO790DC') {
 			return () => $h`
-					<a class="control-panel-right" @click="${()=>iot_get_music_player_password(props.kitem)}">
-						<div class="button button-raised button-big circle">
+					<a class="control-panel-right">
+						<div class="left button button-raised button-big circle"  @click="${()=>iot_get_music_player_password(props.kitem)}">
 								<i class="material-icons">key</i>
+						</div>
+						<div class="left button button-raised button-big circle"  @click="${()=>iot_music_player_change_source(props.kitem)}">
+								<i class="material-icons" style="font-size:30px!important;line-height:30px!important;">swap_horiz</i>
 						</div>
 					</a>
 					`;
@@ -1476,31 +1496,48 @@ export default async (props, ctx) => {
 	let unassigned_subdevices = [];
 
 	let profile_device = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_device)) : [];
-	
-	// please move these line to the very beginning if flow / page is changed.
-    db.get('peripheral').then((data)=>{
-        if(data){
-            try{
-                // alert(data);
-                const storedPeripheral = JSON.parse(data);
-                for(let guid in storedPeripheral){
-                    // alert("1"+JSON.stringify(storedPeripheral[guid]));
-        			if (!isset(peripheral[guid])) {
-        				peripheral[guid] = new Peripheral(storedPeripheral[guid]);
-        			} else {
-								if(guid == '6630356563646662363330641201501d'){
-									console.log("storedPeripheral[guid]",storedPeripheral[guid])
-								}
-        				peripheral[guid].update(storedPeripheral[guid]);
-        			}
-                }
-            }catch(e){
-                
+
+	const initPage = async () => {
+	    
+        let res = (await db.get('peripheral')) || null;
+        if (isset(res)) {
+            const storedPeripheral = JSON.parse(res);
+            for(let guid in storedPeripheral){
+                // alert("1"+JSON.stringify(storedPeripheral[guid]));
+    			if (!isset(peripheral[guid])) {
+    				peripheral[guid] = new Peripheral(storedPeripheral[guid]);
+    			} else {
+					if(guid == '6630356563646662363330641201501d'){
+						console.log("storedPeripheral[guid]",storedPeripheral[guid])
+					}
+    				peripheral[guid].update(storedPeripheral[guid]);
+    			}
             }
         }
-    });
-
-	const initPage = () => {
+	
+        // 	// please move these line to the very beginning if flow / page is changed.
+        //     db.get('peripheral').then((data)=>{
+        //         if(data){
+        //             try{
+        //                 // alert(data);
+        //                 const storedPeripheral = JSON.parse(data);
+        //                 for(let guid in storedPeripheral){
+        //                     // alert("1"+JSON.stringify(storedPeripheral[guid]));
+        //         			if (!isset(peripheral[guid])) {
+        //         				peripheral[guid] = new Peripheral(storedPeripheral[guid]);
+        //         			} else {
+        // 						if(guid == '6630356563646662363330641201501d'){
+        // 							console.log("storedPeripheral[guid]",storedPeripheral[guid])
+        // 						}
+        //         				peripheral[guid].update(storedPeripheral[guid]);
+        //         			}
+        //                 }
+        //             }catch(e){
+                        
+        //             }
+        //         }
+        //     });
+	    
 		rooms = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_room)) : [];
 		subdevices = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_subdevice)) : [];
 		profile_device = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_device)) : [];
@@ -1550,6 +1587,7 @@ export default async (props, ctx) => {
 				peripheral[vp.guid].update(vp);
 			}
 		});
+		
 		// init gateway list
 		const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway().toLowerCase()));
 		for (let i in profile_device) {
@@ -1590,6 +1628,37 @@ export default async (props, ctx) => {
 					}).catch(reject => {});
 				}, 3000)
 			}
+		}
+		
+		// init profile topic
+		if(isset(erp.info.profile)){
+    		const profilehash = md5(md5(erp.info.profile.name));
+    
+    		const cmd_topic = `status/${profilehash}`;
+    		core_mqtt_subscribe(cmd_topic, 0, false);
+    		emitter.off(cmd_topic);
+    		emitter.on(cmd_topic, function(data){
+    		    console.log("Receive2 = "+JSON.stringify(data));
+        		let message = data.message;
+        		if (isset(message) && message) {
+        			let deviceObj = JSON.parse(message);
+        			
+        			for(let guid in deviceObj.Device){
+        			    let p = {
+        				    guid:guid,
+        				    mac_address:deviceObj.Device[guid].mac_address,
+        				    status:{
+        				        mqtt: deviceObj.Device[guid].status,
+        				    }
+        				};
+            			if (!isset(peripheral[guid])) {
+            				peripheral[guid] = new Peripheral(p);
+            			} else {
+            				peripheral[guid].update(p);
+            			}
+        			}
+        		}
+    		});
 		}
 	}
 	//ui functions
@@ -1886,6 +1955,7 @@ export default async (props, ctx) => {
 			//console.log(s)
 			console.log(device_status)
 		}
+		console.log("element.value=device_status="+device_status);
 		if(p.guid == "6163346431363439343236391201301d"){
 			console.log(s['click_status'])
 			console.log("s.device_button_group",s.device_button_group)
@@ -1903,6 +1973,7 @@ export default async (props, ctx) => {
 		if(!s['click_status']){
 			s['device_status'] = device_status;
 		}
+		console.log("element.value=device_status2="+device_status);
 		//s['device_status'] = device_status;
 		//console.log('p',p);
 		let hexModel = p.hexModel;
@@ -1918,22 +1989,22 @@ export default async (props, ctx) => {
 			if(isset(range_silder_list[s.name])){
     			const v = Math.ceil((device_status*1.0 / 255.0) * 100.0) || 0;
     			console.log("range_silder_list[s.name].getValue()="+range_silder_list[s.name].getValue());
-    			console.log("v="+v);
+    			console.log("element.value=2="+v);
             	if(range_silder_list[s.name].getValue()!=v){
-					$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${device_button_group}"]`)
+					$(`.page-current .range-slider-home-auto[guid="${p.guid}"][button_group="${s.device_button_group}"]`)
                 		.find('.range-bar-active')
                 		.css({
                 			width: v + '%',
                 		});
-                	$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${device_button_group}"]`)
+                	$(`.page-current .range-slider-home-auto[guid="${p.guid}"][button_group="${s.device_button_group}"]`)
                 		.find('.range-knob-wrap')
                 		.css({
                 			left: v + '%',
                 		});
                 	if (v > 1) {
-                		$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${device_button_group}"]`).removeClass('range-slider-min');
+                		$(`.page-current .range-slider-home-auto[guid="${p.guid}"][button_group="${s.device_button_group}"]`).removeClass('range-slider-min');
                 	} else {
-                		$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${device_button_group}"]`).addClass('range-slider-min');
+                		$(`.page-current .range-slider-home-auto[guid="${p.guid}"][button_group="${s.device_button_group}"]`).addClass('range-slider-min');
                 	}
                 }
 			}
@@ -1964,13 +2035,7 @@ export default async (props, ctx) => {
 		s['device_command'] = p.device_command;
 	};
 
-	const sleep = (time) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, time);
-    });
-  };
+
 	const update_peripheral_by_subdevice = (s, p) => {
 		s['gangs'] = [0, 0, 0, 0, 0, 0, 0, 0];
 		if(isset(p.device) && p.device!=""){
@@ -2158,13 +2223,13 @@ export default async (props, ctx) => {
 	});
 	$onBeforeUnmount(() => {
 		emitter.off('on_peripheral_changed');
-		try{
-			for(let i in range_silder_list){
-					range_silder_list[i].destroy();
-			}
-		}catch(error){
-			console.log(error);
-		}
+// 		try{
+// 			for(let i in range_silder_list){
+// 				range_silder_list[i].destroy();
+// 			}
+// 		}catch(error){
+// 			console.log(error);
+// 		}
 		bleManager.clear();
 	});
 	return $render;
