@@ -30,8 +30,14 @@ window.Peripheral = (function() {
                 mqtt:[
                     [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
                     '1970-01-01 00:00:00'
+                ],
+                last:[
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    '1970-01-01 00:00:00'
                 ]
             },
+						virtual:[0 ,0,0,0,0,0,0,0,0,0,0 ,0 ,0,0,0,0],//dimming bar 0,rcu dimming 1-10 ,curtain bar 11,ir 12-15
+						config:{},//{${subdeviceName}:'ir|0|25,1,2,1,0,1'}
             connected:false,
             connecting:false
         };
@@ -107,6 +113,10 @@ window.Peripheral = (function() {
         	if(isset(p.is_mobmob)) self.prop.is_mobmob = p.is_mobmob;
         	
         	if(isset(p.is_mesh)) self.prop.is_mesh = p.is_mesh;
+					if(isset(p) && isset(p.config)){
+						self.prop.config = p.config;
+					} 
+					if(isset(p) && isset(p.virtual)) self.prop.virtual = p.virtual;
         	if(isset(p.manufactureData) && (!isset(self.prop.manufactureData) || self.prop.manufactureData != p.manufactureData)){
     	        self.prop.manufactureData = p.manufactureData;
         	    if (self.prop.manufactureData.length === 18 || self.prop.manufactureData.length == 44) {
@@ -159,10 +169,15 @@ window.Peripheral = (function() {
                         //self.prop.gangs[i] = parseInt(value);
                         self.prop.status.bluetooth[0][i] = parseInt(value);
                     }
-                    
+                    //curtain motor
+										let curtain_io  = parseInt(self.prop.manufactureData.substring(4, 6),16);
+										self.prop.status.bluetooth[0][48] = curtain_io
                     // pwm status
                     let dimmingIo = parseInt(self.prop.manufactureData.substring(4, 6), 16);
 					self.prop.status.bluetooth[0][8] = dimmingIo
+					//console.log("self.prop.manufactureData="+self.prop.manufactureData);
+					//console.log("dimmingIo="+dimmingIo);
+					//console.log("self.prop.status="+JSON.stringify(self.prop.status));
 					
                     //thermostat status
 					let thermostat = {
@@ -218,7 +233,7 @@ window.Peripheral = (function() {
 							}
 						})
 					}
-                    self.prop.status.bluetooth[1] = DateFormatter.format((new Date()), "Y-m-d H:i:s");
+                    self.prop.status.bluetooth[1] =DateFormatter.format((new Date(new Date().getTime() - 10000)), "Y-m-d H:i:s");
                     if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
                     }
@@ -307,6 +322,9 @@ window.Peripheral = (function() {
                     
                     
                     storedPeripheral[self.prop.guid] = storeProp;
+										if(storeProp.guid == '6630356563646662363330641201501d'){
+											console.log("storedPeripheral",storedPeripheral);
+										}
                     db.set('peripheral', JSON.stringify(storedPeripheral));
                 });
             }, 10);
@@ -317,11 +335,6 @@ window.Peripheral = (function() {
         let emitchecksum = md5(JSON.stringify(emitProp));
         if(!this.lastEmitchecksum || this.lastEmitchecksum!=emitchecksum){
             this.lastEmitchecksum = emitchecksum;
-            // console.log("lastEmitProp: ");
-            // console.log(this.lastEmitProp);
-            // console.log("emitProp: ");
-            // console.log(JSON.stringify(emitProp))
-            this.lastEmitProp = JSON.stringify(emitProp);
             emitter.emit('on_peripheral_changed', this.prop);
         }
         
@@ -403,9 +416,11 @@ window.Peripheral = (function() {
                     io -= Math.pow(2, i);
                 }
                 //self.prop.gangs[i] = parseInt(value);
-                self.prop.status.bluetooth[0][i] = parseInt(value);
+                self.prop.status.bluetooth[0][i+1] = parseInt(value);
             }
-			
+						//if dimming
+						let dimmingIo = parseInt(io, 16);
+						self.prop.status.bluetooth[0][8] = dimmingIo
             self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s");
             self.onPropChanged();
         }else if(data.startsWith("94110000")){
@@ -430,7 +445,106 @@ window.Peripheral = (function() {
 			self.onPropChanged();
         }
     };
+	Peripheral.prototype.onChangeGateway = function(p){
+		const self = this;
+		let data = p.manufacturing_data;
+		if(isset(p.raw_data)){
+			data = p.raw_data;
+		}
+		if(!isset(data) || !data)return;
+		if(typeof data != 'string')return;
+		//console.log("data",data);
+		let io = 0;
+		//Thermostat
+		if(data.startsWith("94110000")){
+			let thermostat = {
+				power: parseInt(data.substring(10,12), 16),
+				model: parseInt(data.substring(12,14), 16),
+				fan: parseInt(data.substring(14, 16), 16),
+				temp: parseInt(data.substring(16, 18), 16),
+				room_temp: parseInt(data.substring(18,20), 16)
+			}
+			self.prop.status.mobmob[0][42] = thermostat.power;
+			self.prop.status.mobmob[0][43] = thermostat.model;
+			self.prop.status.mobmob[0][44] = thermostat.fan;
+			self.prop.status.mobmob[0][45] = thermostat.temp;
+			self.prop.status.mobmob[0][46] = thermostat.room_temp;
+			self.refreshCtrolStatus();
+		}else if(data.startsWith("80")){
+			io = parseInt(data.substring(2, 4), 16);
+		}else if(data.startsWith("8b")){
+			io = parseInt(data.substring(2, 4), 16);
+		}else if(data.startsWith("85")){
+			if(data.length ==26){
+				io = parseInt(data.substring(data.length-8,data-6),16);
+			}else{
+				io = parseInt(data.substring(data.length-4, data-2),16);
+			}
+		}else if(data.startsWith("9380")){
+			let rsList = window.iot_ble_iaq_change_list(data);
+			for(let i in rsList){
+				const str = rsList[i].hex;
+				const type = rsList[i].type;
+				const index = rsList[i].index;
+				let value = core_utils_ieee_float_convert(str);
+				const iaqData = iaq_evaluate_rule(type);
+				console.log("value",value);
+				if(isset(iaqData)){
+						$("li.iaq-subdevice[guid='"+p.guid+"']").find(`.${type} .box-btn-img`).css({'background-color':iaqData.bgcolor})
+				}
+				if(type == 'PRESSURE'){
+						value = parseInt(value/1000);
+				}
+				if(type == 'LUX'){
+						console.log("LUX value:"+value);
+						value = parseInt(value*2.5);
+						}
+				if(type == 'CO2'){
+						let str1 = str.substring(0,2);
+						let str2 = str.substring(2,4);
+						let newstr = parseInt(str2,16)*255 + parseInt(str1,16)*1
+						value = newstr
+				}
+				$("li.iaq-subdevice[guid='"+p.guid+"']").find(`.${type} .iaq-title-big`).text(value)
+			}
+			$("li.iaq-subdevice[guid='"+p.guid+"'] .main-btn").forEach((ele)=>{
+				let this_value = $(ele).find(".iaq-title-big").text();
+				if(this_value == '--'){
+						$(ele).hide()
+				}
+				if(this_value != '--'){
+						$(ele).show()
+				}
+			})
+			const score = data.substring(10,12);
+			let score_data = window.iaq_evaluate_rule('score',score);
+			$("li.iaq-subdevice[guid='"+p.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
+			$("li.iaq-subdevice[guid='"+p.guid+"']").find(".score .iaq-title-big").text(parseInt(score,16));
+		}
+		let default_connect = self.prop.default_connect;
+		let temp = default_connect?1:0;
+		for(let i=8; i>=0; i--){
+			let key = i.toString();
+			let value = "0";
+			if(io >= Math.pow(2, i)){
+					value = "1";
+					io -= Math.pow(2, i);
+			}
+			//self.prop.gangs[i] = parseInt(value);
+			self.prop.status.mobmob[0][i+temp] = parseInt(value);
+		}
+		//randar status
+		let sensor_ref = io & 0x10;
+		self.prop.status.mobmob[0][49] = sensor_ref;
+		self.prop.status.mobmob[0][8] = io;
+		//iaq
 
+		//console.log("p.date",p.date)
+		self.prop.status.mobmob[1] = p.date;
+		if(p.date >= self.prop.status.control[1] && p.date >= self.prop.status.bluetooth[1]){
+			self.onPropChanged();
+		}
+	}
     Peripheral.prototype.connect = function() {
         const self = this;
         self.queue = [];
@@ -549,6 +663,26 @@ window.Peripheral = (function() {
     };
     Peripheral.prototype.onoff = function(gangs) {
         const self = this;
+        // set manual control first
+		if(!isset(self.prop.firmwareNo) || self.prop.firmwareNo < 6){
+		    let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+		    for(let g of gangs){
+				data[0][g.gang] = g.on ? 1 : 0;
+		    } 
+			self.prop.status.control[0] = data[0];
+		}else{
+		    for(let g of gangs){
+		        if(g.gang<1 || g.gang>4) continue;
+		        if(g.on){
+					self.prop.status.control[0][g.gang] = 1;
+				}else{
+					self.prop.status.control[0][g.gang] = 0;
+				}
+		    }
+	    }
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+        
+        
     	return new Promise((resolve, reject) => {
     		const action = {
     		    func:'onoff',
@@ -785,6 +919,17 @@ window.Peripheral = (function() {
     };
     Peripheral.prototype.rcuOnoff = function(gangs) {
         const self = this;
+        
+	    for(let g of gangs){
+	        if(g.gang<12 || g.gang>31) continue;
+	        if(g.on){
+				self.prop.status.control[0][g.gang] = 1;
+			}else{
+				self.prop.status.control[0][g.gang] = 0;
+			}
+	    }
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+        
     	return new Promise((resolve, reject) => {
     		const action = {
     		    func:'rcuOnoff',
@@ -1029,8 +1174,15 @@ window.Peripheral = (function() {
     		});
     	});
     };
-		Peripheral.prototype.rcuOutput = function(gangs) {
-			const self = this;
+	Peripheral.prototype.rcuOutput = function(gangs) {
+		const self = this;
+		
+		for(let g of gangs){
+			if(g.gang<49 || g.gang>82) continue;
+			self.prop.status.control[0][g.gang] = g.value;
+		}
+	    self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+	    
 		return new Promise((resolve, reject) => {
 			const action = {
 					func:'rcuOutput',
@@ -1224,6 +1376,16 @@ const doMOBMOB = (gangs) => {
 };
 	Peripheral.prototype.dimming = function(gangs) {
 		const self = this;
+		
+		for(let g of gangs){
+			if(g.gang!=8) continue;
+			self.prop.status.control[0][g.gang] = g.value;
+			if(g.value > 0){
+			    self.prop.status.last[0][g.gang] = g.value;
+			}
+		}
+    	self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		
 		return new Promise((resolve, reject) => {
 			const action = {
 					func:'dimming',
@@ -1245,6 +1407,7 @@ const doMOBMOB = (gangs) => {
 	Peripheral.prototype._dimming = function(gangs) {
 		const self = this;
 		let currentRoute = '';
+		
 		const doBLEDimming = (gangs) => {
 			return new Promise((resolve, reject) => {
     			let service = "ff80", characteristic = "ff81";
@@ -1429,6 +1592,16 @@ const doMOBMOB = (gangs) => {
 	};
     Peripheral.prototype.rcuDimming = function(gangs) {
         const self = this;
+        
+	    for(let g of gangs){
+	        if(g.gang<32 || g.gang>41) continue;
+	        self.prop.status.control[0][g.gang] = g.value;
+			if(g.value > 0){
+			    self.prop.status.last[0][g.gang] = g.value;
+			}
+	    }
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		
     	return new Promise((resolve, reject) => {
     		const action = {
     		    func:'rcuDimming',
@@ -1619,25 +1792,32 @@ const doMOBMOB = (gangs) => {
     		});
     	});
     };
-		Peripheral.prototype.thermostat = function(gangs) {
-			const self = this;
-		return new Promise((resolve, reject) => {
-			const action = {
-					func:'thermostat',
-					args:[
-							gangs
-					],
-					callback: {
-							resolve:resolve,
-							reject:reject
-					}
-			}
-			self.queue.push(action);
-			if (!self.isExecuting) {
-				self.isExecuting = true;
-				self.execute();
-			}
-		});
+	Peripheral.prototype.thermostat = function(gangs) {
+		const self = this;
+		
+		for(let g of gangs){
+			if(g.gang<41 || g.gang>47) continue;
+			self.prop.status.control[0][g.gang] = g.value;
+		}
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		
+    	return new Promise((resolve, reject) => {
+    		const action = {
+				func:'thermostat',
+				args:[
+					gangs
+				],
+				callback: {
+					resolve:resolve,
+					reject:reject
+				}
+    		}
+    		self.queue.push(action);
+    		if (!self.isExecuting) {
+    			self.isExecuting = true;
+    			self.execute();
+    		}
+    	});
 	};
 	Peripheral.prototype._thermostat = function(gangs) {
 			const self = this;
@@ -1801,6 +1981,13 @@ const doMOBMOB = (gangs) => {
 	};
 	Peripheral.prototype.curtainmotor = function(gangs) {
 		const self = this;
+		
+		for(let g of gangs){
+			if(g.gang<47) continue;
+			self.prop.status.control[0][g.gang] = g.value;
+		}
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s");
+		
 		return new Promise((resolve, reject) => {
 			const action = {
 					func:'curtainmotor',
@@ -2422,6 +2609,21 @@ const doMOBMOB = (gangs) => {
     Peripheral.prototype.getProp = function(){
         return this.prop;
     };
+	Peripheral.prototype.refreshCtrolStatus = function(){
+		let latestDate = '';
+    	let latestElement = null;
+    
+    	for (let key in this.prop.status) {
+			let elementDate = this.prop.status[key][1];
+			if (elementDate > latestDate) {
+				latestDate = elementDate;
+				latestElement = this.prop.status[key];
+			}
+    	}
+		for (let key in this.prop.status) {
+			this.prop.status[key] = latestElement
+    	}
+	}
     Peripheral.prototype.getLatestStatus = function(){
     	let latestDate = '';
     	let latestElement = null;
@@ -2436,6 +2638,15 @@ const doMOBMOB = (gangs) => {
     
     	return latestElement;
     };
+    Peripheral.prototype.getLastOnStatus = function(button_group){
+        let gang_id = bleHelper.getGangId(button_group);
+        
+        if(isset(this.prop.status) && isset(this.prop.status.last) && isset(this.prop.status.last[0][gang_id])){
+            return this.prop.status.last[0][gang_id];
+        }else{
+            return [8,9,10,11].includes(gang_id) ? 255 : 1;
+        }
+    }
     Peripheral.prototype.getGangStatus = function(button_group){
         let gangs = this.getLatestStatus();
         let gang_id = bleHelper.getGangId(button_group);
@@ -2465,7 +2676,7 @@ const doMOBMOB = (gangs) => {
 		};
     Peripheral.prototype.getFirmwareNo = function(firmware){
         try{
-            if(firmware.trim() == "3.0.0"){
+            if(firmware.trim() == "3.0.0" || firmware.trim() == "1.0.0"){
                 firmware = `6.0`;
             }
         }catch(e){}
