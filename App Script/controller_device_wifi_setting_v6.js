@@ -9,8 +9,8 @@ window.device_wifi_setting_component = {
           <i class="icon material-icons text-color-primary text-color-green" v-if="wifiStatus == 1" style="font-size: 50px;">wifi</i>
           <i class="icon material-icons text-color-primary text-color-red" v-if="wifiStatus == 2" style="font-size: 50px;">wifi_off</i>
         </div>
-        <div class="wifi-title text-color-green" v-if="wifiStatus == 1">Connected</div>
-        <div class="wifi-title text-color-red" v-if="wifiStatus == 2">Not Connected</div>
+        <div class="wifi-title text-color-green" v-if="wifiStatus == 1">{{_("Connected")}}</div>
+        <div class="wifi-title text-color-red" v-if="wifiStatus == 2">{{_("Not Connected")}}</div>
       </div>
       <div class="card-content card-content-padding" style="padding-top: 0">
         <div>
@@ -18,7 +18,7 @@ window.device_wifi_setting_component = {
             <ul>
               <li class="item-content item-input no-padding-left">
                 <div class="item-inner no-padding-right">
-                  <div class="item-title item-label" lang="en" style="font-size: 16px;">Ssid <span class="text-color-red" style="font-size: 16px;">({{wifi_tip}})</span></div>
+                  <div class="item-title item-label" lang="en" style="font-size: 16px;">{{_("Ssid")}} <span class="text-color-red" style="font-size: 16px;">({{wifi_tip}})</span></div>
                   <div class="item-input-wrap">
                     <input type="text" name="ssid" v-model="setting.ssid" :placeholder="ssid" required validate v-on:focus="showWifiInfo"/>
                     <div class="wifi-box" v-if="wifiShowStatus">
@@ -39,7 +39,7 @@ window.device_wifi_setting_component = {
               </li>
               <li class="item-content item-input no-padding-left">
                 <div class="item-inner no-padding-right">
-                  <div class="item-title item-label" lang="en" style="font-size: 16px;">Password</div>
+                  <div class="item-title item-label" lang="en" style="font-size: 16px;">{{_("Password")}}</div>
                   <div class="item-input-wrap">
                     <input
                       type="password"
@@ -56,7 +56,7 @@ window.device_wifi_setting_component = {
               </li>
               <li class="item-content item-input no-padding-left" style="display: none">
                 <div class="item-inner no-padding-right">
-                  <div class="item-title item-label">{{email}}</div>
+                  <div class="item-title item-label">{{_("email")}}</div>
                   <div class="item-input-wrap">
                     <input type="email" name="email" v-model="setting.email" :placeholder="email" required validate />
                   </div>
@@ -76,7 +76,7 @@ window.device_wifi_setting_component = {
             </div>
           </div>
           <div class="col align-self-center no-padding-left">
-            <h5 class="no-margin-bottom">{{tran('WiFi Infomation')}}</h5>
+            <h5 class="no-margin-bottom">{{_('WiFi Infomation')}}</h5>
           </div>
           <div class="col-auto"></div>
         </div>
@@ -86,7 +86,7 @@ window.device_wifi_setting_component = {
               <li>
                 <a class="item-content" style="padding-left: 0px">
                   <div class="item-inner" style="padding-right: 0px">
-                    <div class="item-title">{{tran('IPv4 address')}}</div>
+                    <div class="item-title">{{_('IPv4 address')}}</div>
                     <div class="item-after" name="ipaddress">{{wifiInfo.ipaddress}}</div>
                   </div>
                 </a>
@@ -94,7 +94,7 @@ window.device_wifi_setting_component = {
               <li>
                 <a class="item-content" style="padding-left: 0px">
                   <div class="item-inner" style="padding-right: 0px">
-                    <div class="item-title">{{tran('Wifi Mac Address')}}</div>
+                    <div class="item-title">{{_('Wifi Mac Address')}}</div>
                     <div class="item-after" name="wifimacaddress">{{wifiInfo.wifimacaddress}}</div>
                   </div>
                 </a>
@@ -102,7 +102,7 @@ window.device_wifi_setting_component = {
               <li>
                 <a class="item-content" style="padding-left: 0px">
                   <div class="item-inner" style="padding-right: 0px">
-                    <div class="item-title">{{tran('Ipv6')}}</div>
+                    <div class="item-title">{{_('Ipv6')}}</div>
                     <div class="item-after" name="ipv6">{{wifiInfo.ipv6}}</div>
                   </div>
                 </a>
@@ -110,7 +110,7 @@ window.device_wifi_setting_component = {
               <li>
                 <a class="item-content" style="padding-left: 0px">
                   <div class="item-inner" style="padding-right: 0px">
-                    <div class="item-title">{{tran('Bssid')}}</div>
+                    <div class="item-title">{{_('Bssid')}}</div>
                     <div class="item-after" name="bssid">{{wifiInfo.bssid}}</div>
                   </div>
                 </a>
@@ -118,7 +118,7 @@ window.device_wifi_setting_component = {
               <li>
                 <a class="item-content" style="padding-left: 0px">
                   <div class="item-inner" style="padding-right: 0px">
-                    <div class="item-title">{{tran('Rssi')}}</div>
+                    <div class="item-title">{{_('Rssi')}}</div>
                     <div class="item-after" name="rssi">{{wifiInfo.rssi}}</div>
                   </div>
                 </a>
@@ -131,23 +131,25 @@ window.device_wifi_setting_component = {
   </div>
   </div>
   `,
-  props: ['gateway', 'guid', 'type','device_name'],
+  props: ['gateway', 'guid', 'type', 'device_name'],
   data: () => {
     return {
       // data
-      localWifiList : [],
-      settingStatus:false,
-      wifiStatus : 2,
-      wifiShowStatus : false,
-      wifi_tip: tran('2.4 GHz Wi-Fi Only'),
-      ssid: tran('SSID'),
-      password_name: tran('Password'),
-      email: tran('Email'),
+      localWifiList: [],
+      settingStatus: false,
+      wifiStatus: 2,
+      wifiShowStatus: false,
+      wifi_tip: _('2.4 GHz Wi-Fi Only'),
+      ssid: _('SSID'),
+      password_name: _('Password'),
+      email: _('Email'),
+      mqttTimer:null,
+      connectTemp : 0,
       setting: {
         ssid: '',
         ssid_password: '',
         email: users[users.current].usr,
-        server_url: "mqtt://" + erp.settings[erp.appId].mqtt_server,
+        server_url: 'mqtt://' + erp.settings[erp.appId].mqtt_server,
         port: erp.settings[erp.appId].mqtt_port,
         username: '',
         server_password: '',
@@ -165,10 +167,14 @@ window.device_wifi_setting_component = {
     this.init();
     this.checkIfOnline();
   },
-  beforeDestroy() {},
+  beforeDestroy() {
+    clearTimeout(this.mqttTimer);
+    emitter.off(this.$wifiTopic,this.$wifiTopicFun);
+  },
   methods: {
     // methods
     async init() {
+      console.log("commings")
       this.settingStatus = false; //this is for wifi setting status
       try {
         console.log(this.guid);
@@ -188,10 +194,10 @@ window.device_wifi_setting_component = {
           this.getJsonData();
         } else {
           this.wifiStatus = 2;
-          let thisJson = await db.get("wifiList");
-          if(thisJson){
+          let thisJson = await db.get('wifiList');
+          if (thisJson) {
             this.localWifiList = JSON.parse(thisJson);
-            console.log('this.localWifiList',this.localWifiList);
+            console.log('this.localWifiList', this.localWifiList);
           }
           WifiWizard2.getConnectedSSID()
             .then((res) => {
@@ -205,218 +211,288 @@ window.device_wifi_setting_component = {
         console.log(err);
       }
     },
-    checkIfOnline(){
+    checkIfOnline() {
       let guid = this.guid;
       let mac = core_utils_get_mac_address_from_guid(guid, false);
       let topic_self = '';
       let devices = cloneDeep(erp.info.profile.profile_device);
-      devices.forEach(item=>{
-        if(item.device == guid && item.gateway){
+      devices.forEach((item) => {
+        if (item.device == guid && item.gateway) {
           topic_self = item.gateway;
         }
-      })
-      if(!topic_self){
-        topic_self = `${mac.toLowerCase()}-${frappe.user.data.currentUsername}`;
+      });
+      if (!topic_self) {
+        topic_self = `${mac.toLowerCase()}-${users[users.current].usr}`;
       }
       window.topic_self = topic_self;
       //check if online
       let will_topic = `will/${md5(md5(topic_self.toLowerCase()))}`;
-      core_mqtt_subscribe(will_topic, 1, false);
+      mqtt.subscribe(will_topic);
       setTimeout(()=>{
+        mqtt.subscribe(will_topic);
+      },15*1000)
+      setTimeout(() => {
         app.preloader.hide();
-      },1000*60*2)
-      emitter.off(will_topic);
-      emitter.on(will_topic, (res) => {
-        console.log("res",res);
+      }, 1000 * 60 * 2);
+      //emitter.off(will_topic);
+      if(this.$wifiTopicFun){
+        emitter.off(will_topic,this.$wifiTopicFun);
+      }
+      this.$wifiTopicFun = async(res)=>{
+        console.log('component res', res);
         let message = res.message;
+        debugger
         if (message == 'Online') {
+          clearTimeout(this.mqttTimer);
+          this.connectTemp = 3;//control the mqtt connect count;
           //check the state of the connect status
           app.preloader.hide();
           this.wifiStatus = 1;
-          if(this.settingStatus){
-            emitter.emit('wifi/set',{code : 1});
+          console.log('component', this.settingStatus);
+          if (this.settingStatus) {
+            emitter.emit('wifi/set', { code: 1 });
           }
-        }else{
+        } else {
+          //this.checkIfOnline();
+          this.connectTemp++;
+          if(this.connectTemp<3){
+            // this.mqttTimer = setTimeout(()=>{
+            //   this.checkIfOnline();
+            // },10*1000);
+          }
           this.wifiStatus = 2;
-          emitter.emit('wifi/set',{code : 0});
+          emitter.emit('wifi/set', { code: 0 });
         }
-      });
+      }
+      this.$wifiTopic = will_topic;
+      emitter.on(will_topic,this.$wifiTopicFun);
     },
-    showWifiInfo(){
-      if(this.localWifiList.length !== 0){
+    showWifiInfo() {
+      if (this.localWifiList.length !== 0) {
         this.wifiShowStatus = true;
       }
     },
-    hideWifiInfo(){
+    hideWifiInfo() {
       this.wifiShowStatus = false;
     },
-    clickWifiBox(ssid){
+    clickWifiBox(ssid) {
       this.wifiShowStatus = false;
-      this.localWifiList.forEach(item=>{
-        if(ssid === item.ssid){
+      this.localWifiList.forEach((item) => {
+        if (ssid === item.ssid) {
           this.setting.ssid = item.ssid;
           this.setting.ssid_password = item.ssid_password;
         }
-      })
+      });
     },
-    async saveLocalWifi(){
+    async saveLocalWifi() {
       let wifiList = [];
       //get the local wifi setting
-      let json = await  db.get('wifiList');
+      let json = await db.get('wifiList');
       let list = [];
       let addStatus = true;
-      if(json){
+      if (json) {
         list = JSON.parse(json);
-        list.forEach(item=>{
-          if(item.ssid === this.setting.ssid){
+        list.forEach((item) => {
+          if (item.ssid === this.setting.ssid) {
             item.ssid_password = this.setting.ssid_password;
-            addStatus  = false;
+            addStatus = false;
           }
-        })
-        if(addStatus){
+        });
+        if (addStatus) {
           list.push({
-            ssid : this.setting.ssid,
-            ssid_password : this.setting.ssid_password
+            ssid: this.setting.ssid,
+            ssid_password: this.setting.ssid_password,
           });
         }
-        db.set('wifiList',JSON.stringify(list));
-      }else{
+        db.set('wifiList', JSON.stringify(list));
+      } else {
         list.push({
-          ssid : this.setting.ssid,
-          ssid_password : this.setting.ssid_password
+          ssid: this.setting.ssid,
+          ssid_password: this.setting.ssid_password,
         });
-        db.set('wifiList',JSON.stringify(list));
+        db.set('wifiList', JSON.stringify(list));
       }
     },
     iot_device_wifi_form_save() {
       //save the wifi data
       let guid = this.guid;
+      console.log('guid', guid);
+
       app.preloader.show();
+      let this_timer = setTimeout(()=>{
+        app.preloader.hide();
+        app.dialog.alert('Timeout, please try again.')
+      },20*1000)
       this.saveLocalWifi();
       //check the input data
-      if((this.setting.ssid === '' || this.setting.ssid_password === '')){
+      if (this.setting.ssid === '' || this.setting.ssid_password === '') {
         app.preloader.hide();
-        app.dialog.alert('Please fill in the SSID and Password.', runtime.appInfo.name);
-        emitter.emit('wifi/set',{code:0});
+        app.dialog.alert('Please fill in the SSID and Password.');
+        emitter.emit('wifi/set', { code: 0 });
         return;
       }
-      debugger
+
+      // if (!this.setting.email) {
+      //   this.setting.email = users[users.current].usr;
+      // }
+      console.log('!!!', this.setting.email);
+
       iot_ble_check_enable()
         .then(() => {
-          return iot_ble_do_pre_action(guid);
+          return window.peripheral[guid].connect();
         })
-        .catch((error)=>{
+        .catch((error) => {
+          debugger
+          console.log(error);
           app.preloader.hide();
-          app.dialog.alert(`Device is not here`, runtime.appInfo.name);
-          if(this.type == 2){
-            emitter.emit('wifi/set',{code:0});
+          app.dialog.alert(`Connect Failed`);
+          if (this.type == 2) {
+            emitter.emit('wifi/set', { code: 0 });
           }
         })
         .then(() => {
           // ssid
           const data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
 
-          return iot_ble_write(guid, 'ff80', 'ff81', data, false);
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
         })
         .then(() => {
-          const data =
-            '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
+          const data = '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
 
-          return iot_ble_write(guid, 'ff80', 'ff81', data, false);
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
         })
-        .then(()=>{
-          const data = "932200" + (this.setting.email.length.toString(16).pad("0000")) + this.setting.email.convertToHex();
-          return iot_ble_write(guid, 'ff80', 'ff81', data, false);
+        .then(() => {
+          const data = '932200' + this.setting.email.length.toString(16).pad('0000') + this.setting.email.convertToHex();
+
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
         })
-        .then(()=>{
-          let mac = core_utils_get_mac_address_from_guid(guid,false);
+        .then(() => {
+          let mac = core_utils_get_mac_address_from_guid(guid, false);
           let url = `/api/resource/Profile%20Device/${this.device_name}`;
-          let method = "PUT";
+          let method = 'PUT';
           let data = {
-              parenttype:'Profile',
-              parent:erp.info.profile.name,
-              parentfield:'profile_device',
-              gateway : `${mac.toLowerCase()}-${this.setting.email}`
-          }
-          return http.request(url,{
-              method: method,
-              dataType: 'json',
-              serializer: "json",
-              data:data,
-              contentType:'application/json',
+            parenttype: 'Profile',
+            parent: erp.info.profile.name,
+            parentfield: 'profile_device',
+            gateway: `${mac.toLowerCase()}-${this.setting.email}`,
+          };
+          return http.request(url, {
+            method: method,
+            dataType: 'json',
+            serializer: 'json',
+            data: data,
+            contentType: 'application/json',
           });
         })
-        .then(()=>{
-          //update the erp data 
+        .then(() => {
+          //update the erp data
           let profile_device = erp.info.profile.profile_device;
-          let mac = core_utils_get_mac_address_from_guid(guid,false);
-          profile_device.forEach((item)=>{
-            if(item.name == this.device_name){
+          let mac = core_utils_get_mac_address_from_guid(guid, false);
+          profile_device.forEach((item) => {
+            if (item.name == this.device_name) {
               item.gateway = `${mac.toLowerCase()}-${this.setting.email}`;
             }
           });
-          const data = "9301000002" + (this.setting.port * 1).toString(16).pad("0000");
-          return iot_ble_write(guid, 'ff80', 'ff81', data, false);
+          const data = '9301000002' + (this.setting.port * 1).toString(16).pad('0000');
+
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
         })
-        .then(()=>{
-          const data = "930000" + (this.setting.server_url.length.toString(16).pad("0000")) + this.setting.server_url.convertToHex();
-          return iot_ble_write(guid, 'ff80', 'ff81', data, false);
+        .then(() => {
+          const data = '930000' + this.setting.server_url.length.toString(16).pad('0000') + this.setting.server_url.convertToHex();
+
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
         })
-        .then(()=>{
-          return iot_ble_write(guid, "ff80", "ff81", "810E");
-        })
-        .then(()=>{
-          
-          return iot_ble_do_pre_action(guid);
+        .then(() => {
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: '810E',
+          }]);
+          // return iot_ble_write(guid, 'ff80', 'ff81', '810E');
         })
         .then(() => {
           //this.iot_device_ipv4_address_get(2);
           return iot_device_setting_sync_server(guid, null, null, true, {
             'Wifi SSID': this.setting.ssid,
             'Wifi Password': this.setting.ssid_password,
-            'Email Address' : this.setting.email || "null",
-            'Server Port' : this.setting.port || "null",
-            'Server URI' : this.setting.server_url || "null",
+            'Email Address': this.setting.email || 'null',
+            'Server Port': this.setting.port || 'null',
+            'Server URI': this.setting.server_url || 'null',
           });
         })
-        .then(()=>{
-          let mac = core_utils_get_mac_address_from_guid(guid,false);
-          return http.request(`/api/method/appv6.checkDeviceGateways`,{
+        .then(() => {
+          let mac = core_utils_get_mac_address_from_guid(guid, false);
+          return http.request(`/api/method/appv6.checkDeviceGateways`, {
             method: 'POST',
             dataType: 'json',
-            serializer: "json",
-            data:{
-              guid:guid,
-              platform : 'YO105',
-              title : mac.toUpperCase(),
+            serializer: 'json',
+            data: {
+              guid: guid,
+              platform: 'YO105',
+              title: mac.toUpperCase(),
             },
-            contentType:'application/json',
+            contentType: 'application/json',
           });
         })
         .catch((err) => {
-          app.preloader.hide();
+          debugger
+          console.log(err);
+          clearTimeout(this_timer);
+          //app.preloader.hide();
           return new Promise((resolve, reject) => {
             resolve();
+          });
+        })
+        .then(()=>{
+          debugger
+          return new Promise((resolve, reject)=>{
+            setTimeout(() => {
+              resolve();
+            }, 10*1000);
           })
         })
         .then(() => {
-          emitter.emit('refresh',{});
-          if(this.type == 2){
+          clearTimeout(this_timer);
+          emitter.emit('refresh', {});
+          if (this.type == 2) {
             app.preloader.show();
-            this.checkIfOnline()
-          }else{
+            this.checkIfOnline();
+          } else {
             mainView.router.back();
           }
           //app.preloader.hide();
           this.settingStatus = true;
         })
         .catch((err) => {
+          debugger
+          console.error(err);
+          clearTimeout(this_timer);
           app.preloader.hide();
-          if(this.type == 2){
-            emitter.emit('wifi/set',{code:0});
+          if (this.type == 2) {
+            emitter.emit('wifi/set', { code: 0 });
           }
           if (!iot_ble_exception_message(err, false) && !core_server_exception_message(err)) {
-            app.dialog.alert(err, runtime.appInfo.name);
+            app.dialog.alert(err);
           }
         });
     },
@@ -478,8 +554,9 @@ window.device_wifi_setting_component = {
     async getJsonData() {
       let guid = this.guid;
       const p = Object.values(scanned_periperals).find((item) => item.guid == guid && item.advertising);
-      let cmd = [{"action" : "connect"}];
-      await ha_process_periperal_cmd(p.id, cmd,true);
+      // let cmd = [{ 'action': 'connect' }];
+      await peripheral[guid].connect();
+      // await ha_process_periperal_cmd(p.id, cmd, true);
       ble.startNotification(
         p.id,
         'ff80',
@@ -491,9 +568,9 @@ window.device_wifi_setting_component = {
             //check is nor wifi setting
             let wifi_length = rs.substring(8, 10);
             if (wifi_length == '00') {
-              app.preloader.hide();
+              //app.preloader.hide();
               if (type == 2) {
-                app.dialog.alert('Wifi is not set or connection error.', runtime.appInfo.name);
+                app.dialog.alert('Wifi is not set or connection error.');
               }
               return;
             }
@@ -517,7 +594,7 @@ window.device_wifi_setting_component = {
           //reject(err);
         }
       );
-      iot_ble_write(guid, 'ff80', 'ff81', '9329', false).catch();
+      iot_ble_write(guid, 'ff80', 'ff81', '9329', false).catch(() => {});
     },
   },
 };

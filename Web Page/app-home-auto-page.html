@@ -3,6 +3,33 @@
 		<div class="navbar active">
 			<div class="navbar-bg"></div>
 			<div class="navbar-inner sliding">
+				${isHomePage ? $h`
+				<div class="left">
+					<a href="#" class="button button-fill text-color-theme bg-color-white button-44 panel-open" data-panel="left">
+						<i class="icon material-icons">menu</i>
+					</a>
+				</div>
+				<div class="title sliding">
+					<div class="logo-small">
+						<img src="{{ frappe.get_url(nav_app_logo_image) if nav_app_logo_image else appSetting.iconImageUri }}" />
+						<a href="/mobile-app/profile-list" class="link">
+							${erp.info.profile ? $h`
+							<font class="profile_title" style="text-overflow: ellipsis; max-width: 110px; overflow: hidden">
+								${ erp.info.profile.flat ? tran(erp.info.profile.flat) + '-' : '' }${ tran(erp.info.profile.profile_name) }
+							</font>
+							` : $h`
+							<font class="profile_title" style="text-overflow: ellipsis; max-width: 110px; overflow: hidden"> ${ tran('Default') } </font>
+							`}
+							<div class="home-title-profile-popover" style="margin-left: 5px">
+								<i class="icon f7-icons" style="font-size: 14px">chevron_down</i>
+							</div>
+						</a>
+					</div>
+				</div>
+				<a class="button button-fill text-color-theme bg-color-white button-44" href="#" func="open_accounts">
+					<i class="icon material-icons">settings</i>
+				</a>
+				` : $h`
 				<div class="left">
 					<a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
 						<i class="icon icon-back"></i>
@@ -10,7 +37,7 @@
 					</a>
 				</div>
 				<div class="title">${title}</div>
-				<div class="right"></div>
+				`}
 			</div>
 		</div>
 	
@@ -26,6 +53,7 @@
 					</div>
 					
 					<!-- home room toolbar -->
+				${subdevices.length > 0 && $h`
 				<div
 					class="toolbar tabbar tabbar-scrollable toolbar-home-room"
 					style="
@@ -67,7 +95,7 @@
 						</a>
 					</div>
 				</div>
-				
+				`}
 				<!-- for rooms switch -->
 				<div class="tabs" style="display: none">
 					<div id="tab-hidden-0" class="page-content tab tab-active"></div>
@@ -92,7 +120,7 @@
 				</div>
 				
 				<!-- no device show -->
-					<div style="${show_noroom?'display:none;':''}${show_nosubdevice?'':'display:none;'}">
+					<div style="${show_nosubdevice?'':'display:none;'}">
 						<div class="block" style="text-align: center">
 							<span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
 							<p>${_('You don\'t have any devices, create one')}</p>
@@ -104,7 +132,7 @@
 								>
 							</p>
 						</div>
-				</div>
+					</div>
 				
 					${subdevices.length > 0 && $h`
 						<div style="height: ${page_margin_top}px;"></div>
@@ -189,7 +217,7 @@
 																<${renderMainButton} kitem="${kitem}" key="${md5(JSON.stringify(kitem))}"/>
 															</div>
 														</li>
-														<${renderBottomButton} kitem="${kitem}" key="${md5(kitem.device_attachment_status)}${md5(kitem.config?kitem.config:'')}"/>
+														<${renderBottomButton} kitem="${kitem}" key="${md5(kitem.device_attachment_status)}${md5(kitem.config?kitem.config:'')}${md5(kitem.device_config?kitem.device_config:'')}"/>
 																			`  : $h`
 																					<a></a>
 																			`}
@@ -224,7 +252,7 @@
 								style="${kitem.disappear?'display:none;':''}"
 								guid="${kitem.device}"
 								button_group="${kitem.device_button_group}"
-								display-name="${tran(kitem.name.substring(0, 12))}"
+								display-name="${tran(kitem.name.substring(0, 16))}"
 							>
 								<div class="item-content swipeout-content">
 									<a class="item-link item-content no-chevron no-ripple no-active-state" func="ble_load_to_device_form_auto">
@@ -241,7 +269,7 @@
 											<div class="item-title-row">
 												<div class="item-title ellipsis" lang="en" style="width: 180px" title="${tran(kitem.name)}">
 													<i class="material-icons text-muted" style="position: relative; top: 5px">settings</i>
-													${tran(kitem.name.substring(0, 12))}
+													${tran(kitem.name.substring(0, 16))}
 												</div>
 											</div>
 											<div class="item-subtitle">${ tran(kitem.device_model) }-${ tran(kitem.device_name.substring(0, 12)) }</div>
@@ -315,7 +343,8 @@ const renderSwipeLeftPanel = (props, {
 		}
 		//console.log(item)
 		//console.log(encodeURIComponent(JSON.stringify(item)));
-		mainView.router.navigate(`/mobile-app/scene-list?sceneitem=${encodeURIComponent(JSON.stringify(item))}`);
+		//mainView.router.navigate(`/mobile-app/scene-list?sceneitem=${encodeURIComponent(JSON.stringify(item))}`);
+		mainView.router.navigate(`/mobile-app/scene-guid-list?subdevice_name=${item.name}`)
 	};
 	return () => $h`
 			<div class="swipeout-actions-left">
@@ -399,6 +428,14 @@ const renderMainButton = (props, {
 	};
 	const click_curtain_motor = (kitem, type) => {
 		console.log(kitem);
+		kitem['click_status'] = true;
+		kitem['timeout'] = null;
+		if(kitem['timeout']){
+			clearTimeout(kitem['timeout']);
+		}
+		kitem['timeout'] = setTimeout(()=>{
+			kitem['click_status'] = null;
+		},10000)
 		let reverse = kitem.device_button_group.startsWith('OPENCLOSE UART REVERSE') ? true : false;
 		let bar_value = 0;
 		let data = ``;
@@ -406,20 +443,21 @@ const renderMainButton = (props, {
 			data = "55AA050101036DDC";
 		} else {
 			if (kitem.device_status == 0) {
-				props.kitem.device_status = 1;
-				if (isset(window.dimmingRecord[props.kitem.name]) && window.dimmingRecord[props.kitem.name]['lastref'] > 0) {
-					bar_value = window.dimmingRecord[props.kitem.name]['lastref'];
-				} else {
-					bar_value = 100;
-				}
+				//props.kitem.device_status = 1;
+				props.kitem.device_status = peripheral[kitem.device].getLastOnStatus(kitem.device_button_group);
+				// if (isset(window.dimmingRecord[props.kitem.name]) && window.dimmingRecord[props.kitem.name]['lastref'] > 0) {
+				// 	bar_value = window.dimmingRecord[props.kitem.name]['lastref'];
+				// } else {
+				// 	bar_value = 100;
+				// }
 			} else {
 				props.kitem.device_status = 0;
 			}
 			$(`.range-slider[guid="${kitem.device}"]`).find(".range-bar-active").css({
-				width: bar_value + '%'
+				width: props.kitem.device_status + '%'
 			})
 			$(`.range-slider[guid="${kitem.device}"]`).find(".range-knob-wrap").css({
-				left: bar_value + '%'
+				left: props.kitem.device_status + '%'
 			})
 			if (bar_value > 1) {
 				$(`.range-slider[guid="${kitem.device}"]`).removeClass('range-slider-min')
@@ -427,9 +465,9 @@ const renderMainButton = (props, {
 				$(`.range-slider[guid="${kitem.device}"]`).addClass('range-slider-min')
 			}
 			if (reverse) {
-				data = `55AA060102${(100-bar_value).toString(16).pad("00")}FF`;
+				data = `55AA060102${(100-props.kitem.device_status*1).toString(16).pad("00")}FF`;
 			} else {
-				data = `55AA060102${bar_value.toString(16).pad("00")}FF`;
+				data = `55AA060102${props.kitem.device_status.toString(16).pad("00")}FF`;
 			}
 
 		}
@@ -437,7 +475,7 @@ const renderMainButton = (props, {
 		let command = "8602" + data.toLowerCase();
 		window.peripheral[props.kitem.device].curtainmotor([{
 			gang: bleHelper.getGangId(kitem.device_button_group),
-			value: bar_value,
+			value: props.kitem.device_status,
 			command: command
 		}]);
 		$update();
@@ -462,8 +500,15 @@ const renderMainButton = (props, {
 		})
 		$update();
 	}
-	const click_onoff = (kitem) => {
+	const click_onoff = async(kitem) => {
 		console.log("kitem.device_status",kitem.device_status);
+		let oldStatus = kitem.device_status;
+		// try{
+		// 	await iot_ble_check_enable();
+		// }catch(error){
+		// 	app.dialog.alert(error);
+		// 	return;
+		// }
 		kitem['click_status'] = true;
 		kitem['timeout'] = null;
 		if(kitem['timeout']){
@@ -477,12 +522,6 @@ const renderMainButton = (props, {
 				kitem.device_button_group.startsWith('RCU DIMMING') ||
 				kitem.device_button_group.startsWith('DIMMING')
 			) {
-				// console.log(peripheral[props.kitem.device].prop.virtual[0]);
-				// if(peripheral[props.kitem.device].prop.virtual[0] > 0){
-				// 	props.kitem.device_status = peripheral[props.kitem.device].prop.virtual[0]
-				// }else{
-				// 	props.kitem.device_status = 255;
-				// }
 				console.log("peripheral[kitem.device].getLastOnStatus(kitem.device_button_group)="+peripheral[props.kitem.device].getLastOnStatus(kitem.device_button_group));
 				props.kitem.device_status = peripheral[kitem.device].getLastOnStatus(kitem.device_button_group);
 			} else {
@@ -515,15 +554,67 @@ const renderMainButton = (props, {
 						on: props.kitem.device_status
 					}]).then((rs) => {
 
-
 					}).catch((error) => {
-
-
+						//if error change the old status
+						props.kitem.device_status = oldStatus;
+						$update();
 					});
 				}
 			}
 		}, 1);
 	};
+	const iot_rcu_output_change = (kitem,type)=>{
+		kitem['click_status'] = true;
+		kitem['timeout'] = null;
+		if(kitem['timeout']){
+			clearTimeout(kitem['timeout']);
+		}
+		//console.log(JSON.parse(kitem.config));
+		let config = kitem.config?JSON.parse(kitem.config):{};
+		let {dnd,clear} = config;
+		let dnd_virtual_button_group = `RCU OUTPUT${dnd}`;
+		let clear_virtual_button_group = `RCU OUTPUT${clear}`;
+		let dndOldStatus = isset(kitem.dnd)?kitem.dnd:0;
+		let clearOldStatus = isset(kitem.clear)?kitem.clear:0;
+		if(type == 'dnd'){
+			if(kitem.dnd == 0 || !isset(kitem.dnd)){
+				props.kitem.dnd = 1;
+				//if click this status,change other status
+				props.kitem.clear = 0;
+			}else{
+				props.kitem.dnd = 0;
+			}
+		}else if(type == 'clear'){
+			if(kitem.clear == 0 || !isset(kitem.dnd)){
+				props.kitem.clear = 1;
+				props.kitem.dnd = 0;
+			}else{
+				props.kitem.clear = 0;
+			}
+		}
+		peripheral[kitem.device].rcuOutput([{
+			gang: bleHelper.getGangId(dnd_virtual_button_group),
+			value: props.kitem.dnd
+		}]).then((rs) => {
+
+		}).catch((error) => {
+			props.kitem.dnd = dndOldStatus;
+			props.kitem.clear = clearOldStatus;
+			$update();
+		});
+		peripheral[kitem.device].rcuOutput([{
+			gang: bleHelper.getGangId(clear_virtual_button_group),
+			value: props.kitem.clear
+		}]).then((rs) => {
+
+		}).catch((error) => {
+			//app.dialog.alert(error)
+			//props.kitem.dnd = dndOldStatus;
+			props.kitem.clear = clearOldStatus;
+			$update();
+		});
+		$update();
+	}
 	const click_onoff_start = (kitem) => {
 		console.log(kitem);
 		console.log(props);
@@ -539,7 +630,7 @@ const renderMainButton = (props, {
 			}]).then((rs) => {
 
 			}).catch((error) => {
-				app.dialog.alert(error)
+				//app.dialog.alert(error)
 			});
 		} else {
 			kitem.device_status = 1;
@@ -549,7 +640,7 @@ const renderMainButton = (props, {
 			}]).then((rs) => {
 
 			}).catch((error) => {
-				app.dialog.alert(error)
+				//app.dialog.alert(error)
 			});
 		}
 	}
@@ -562,7 +653,7 @@ const renderMainButton = (props, {
 			}]).then((rs) => {
 
 			}).catch((error) => {
-				app.dialog.alert(error)
+				//app.dialog.alert(error)
 			});
 		} else {
 			peripheral[kitem.device].onoff([{
@@ -571,17 +662,18 @@ const renderMainButton = (props, {
 			}]).then((rs) => {
 
 			}).catch((error) => {
-				app.dialog.alert(error)
+				//app.dialog.alert(error)
 			});
 		}
 	}
 	const click_ir = (kitem)=>{
 		//let { device_button_group, guid, id, device_command, password, name, network_id,device } = kitem;
-		let irConfig = peripheral[kitem.device].prop.config;//{}
-		let configStr = 'ir|0|25,1,2,1,0,1'; //ir|0|tem,speed,direction,swing,onoff,mode
-		if(isset(irConfig[kitem.name])){
-			configStr = irConfig[kitem.name]
-		}
+// 		let irConfig = peripheral[kitem.device].prop.config;//{}
+// 		let configStr = 'ir|0|25,1,2,1,0,1'; //ir|0|tem,speed,direction,swing,onoff,mode
+// 		if(isset(irConfig[kitem.name])){
+// 			configStr = irConfig[kitem.name]
+// 		}
+		let configStr = kitem.device_config;
 		let this_config = configStr.split("|");
 		let airconfig = isset(this_config[2]) && this_config[2] != ',,,,NaN' ? this_config[2].split(',') : '25,1,2,1,0,1'.split(',');
 		kitem['click_status'] = true;
@@ -594,9 +686,12 @@ const renderMainButton = (props, {
 		}
 		console.log("onoffRef",onoffRef)
 		configStr =`${configStr.substring(0,14)}${onoffRef}${configStr.substring(15,configStr.length)}`;
-		peripheral[kitem.device].prop.config[kitem.name] = configStr;
-		kitem.device_status = onoffRef;
-		kitem.config = configStr;
+// 		peripheral[kitem.device].prop.config[kitem.name] = configStr;
+		peripheral[kitem.device].setLocalGangConfig(kitem.name, configStr);
+		props.kitem.device_status = onoffRef;
+		props.kitem.device_config = configStr;
+		props.kitem.config = configStr;
+		
 		
 		let command = kitem.device_command['function'];
 		console.log("command",command);
@@ -796,20 +891,20 @@ const renderMainButton = (props, {
 		props.kitem.device_button_group.startsWith('RCU OPENCLOSE GANG')
 	) {
 		return () => $h`
-					<div class="control-panel-right"  bluetooth="${props.kitem.bluetooth}">
-						<a class="iot-connect non-connect" @click="${()=>click_connect(props.kitem)}">
-							<div class="button button-raised button-big circle">
-								<i class="material-icons">bluetooth_connected</i>
-							</div>
-						</a>
-						<a class="left off_flag" @touchstart="${()=>press_openclose(props.kitem, 'close', true)}"  @touchend="${()=>press_openclose(props.kitem, 'close', false)}">
-							<div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
-						</a>
-						<a class="left on_flag" @touchstart="${()=>press_openclose(props.kitem, 'open', true)}"  @touchend="${()=>press_openclose(props.kitem, 'open', false)}">
-							<div class="button button-raised button-big openclose op" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_more</i></div></div>
-						</a>
+			<div class="control-panel-right"  bluetooth="${props.kitem.bluetooth}">
+				<a class="iot-connect non-connect" @click="${()=>click_connect(props.kitem)}">
+					<div class="button button-raised button-big circle">
+						<i class="material-icons">bluetooth_connected</i>
 					</div>
-			`;
+				</a>
+				<a class="left off_flag" @touchstart="${()=>press_openclose(props.kitem, 'close', true)}"  @touchend="${()=>press_openclose(props.kitem, 'close', false)}">
+					<div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
+				</a>
+				<a class="left on_flag" @touchstart="${()=>press_openclose(props.kitem, 'open', true)}"  @touchend="${()=>press_openclose(props.kitem, 'open', false)}">
+					<div class="button button-raised button-big openclose op" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_more</i></div></div>
+				</a>
+			</div>
+		`;
 	} else if (
 		props.kitem.device_button_group.startsWith('RCU ONOFF GANG') ||
 		props.kitem.device_button_group.startsWith('ONOFF GANG')
@@ -825,6 +920,14 @@ const renderMainButton = (props, {
 						</div>
 					</a>
 					`;
+		}else if(props.kitem.device_model == 'YO780-Scene-6G' || props.kitem.device_model == 'YO780-Scene-12G'){
+			return () => $h`
+				<div class="control-panel-right" style="">
+					<a href="/mobile-app/setting-page?title=Edit ${encodeURIComponent(tran(props.kitem.title))}&guid=${ props.kitem.device }&name=${props.kitem.name}&profile_device_name=${props.kitem.profile_device}&device_mode=${props.kitem.device_mode}&slot_index=${props.kitem.config?props.kitem.config:''}" class="right" >
+						<div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">settings</i></div></div>
+					</a>
+				</div>
+				`;
 		} else if (props.kitem.device_mode == 'RCU Controller' && props.kitem.device_model == 'YO780') {
 			return () => $h`
         <div class="control-panel-right">
@@ -842,6 +945,17 @@ const renderMainButton = (props, {
 					</div>
 				`;
 		}
+	}else if(props.kitem.device_button_group.startsWith('DOOR SIGN')){
+		return () => $h`
+					<a class="control-panel-right">
+						<div class="left button button-raised button-big circle rcu-output" ref="${isset(props.kitem.dnd)?props.kitem.dnd:0}"  @click="${()=>iot_rcu_output_change(props.kitem,'dnd')}">
+								<i class="material-icons">notifications_off</i>
+						</div>
+						<div class="left button button-raised button-big circle rcu-output" ref="${isset(props.kitem.clear)?props.kitem.clear:0}"  @click="${()=>iot_rcu_output_change(props.kitem,'clear')}">
+								<i class="material-icons">cleaning_services</i>
+						</div>
+					</a>
+					`;
 	} else if (props.kitem.device_button_group.startsWith('RCU DIMMING') || props.kitem.device_button_group.startsWith('DIMMING')) {
 		return () => $h`
 					<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
@@ -926,17 +1040,17 @@ const renderMainButton = (props, {
       `;
 	}else if(props.kitem.device_button_group_type == 'Air Conditioner'){
 		return () => $h`
-      <div class="control-panel-right">
-          <a class="right" @click="${() =>
-            click_ir(props.kitem)}" button-signal="ARC_ON_OFF" command="${
-          props.kitem.device_command
-        }">
-              <div class="button button-raised button-big circle">
-                  <i class="material-icons">power_settings_new</i>
-              </div>
-          </a>
-      </div>
-      `;
+    		<div class="control-panel-right"  bluetooth="${props.kitem.bluetooth}">
+                <a class="right" @click="${() =>
+                    click_ir(props.kitem)}" button-signal="ARC_ON_OFF" command="${
+                        props.kitem.device_command
+                    }">
+                    <div class="button button-raised button-big circle">
+                        <i class="material-icons">power_settings_new</i>
+                    </div>
+                </a>
+    		</div>
+        `;
 	} else if (
 		props.kitem.device_button_group_type == 'Television' ||
 		props.kitem.device_button_group_type == 'SetTop' ||
@@ -1032,23 +1146,12 @@ const renderBottomButton = (props, {
 	const range_change_fun_curtain = (element) => {
 		let parentElemt = $(element.el).parents('.device').prev();
 		let thisvalue = element.value;
-		const ref = parseInt((thisvalue / 100) * 255);
 		const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
 		let reverse = props.kitem.device_button_group.startsWith('OPENCLOSE UART REVERSE') ? true : false;
 		if (thisvalue > 0) {
-			props.kitem.device_status = 1;
+			props.kitem.device_status = thisvalue;
 		} else {
 			props.kitem.device_status = 0;
-		}
-		if (isset(window.dimmingRecord[props.kitem.name])) {
-			window.dimmingRecord[props.kitem.name] = {
-				lastref: thisvalue
-			}
-		} else {
-			if (ref > 0) {
-				window.dimmingRecord[props.kitem.name] = {};
-				window.dimmingRecord[props.kitem.name].lastref = thisvalue;
-			}
 		}
 		if (reverse) {
 			data = `55AA060102${(100-thisvalue).toString(16).pad("00")}FF`;
@@ -1165,14 +1268,16 @@ const renderBottomButton = (props, {
 		$update();
 	}
 	const click_ir_change = (kitem, click_type)=>{
-		let configStr = peripheral[kitem.device].prop.config[kitem.name];
+// 		let configStr = peripheral[kitem.device].prop.config[kitem.name];
+		let configStr = kitem.device_config;
 		if(!isset(configStr)){
 			app.dialog.alert('error');
 			return
 		}
+		
 		let config = configStr.split('|');
 		let airconfig = isset(config[2]) && config[2] != ',,,,NaN'?config[2].split(','):'25,1,2,1,0,1'.split(',')
-		let mode_value = airconfig[5]; //thermostat mode
+		let mode_value = airconfig[5]>=0 ? airconfig[5] : 1; //thermostat mode
 		let speed_vaule = airconfig[1]; //thermostat speed
 		let swing_value = airconfig[3];
 		let direction_value = airconfig[2];
@@ -1182,7 +1287,7 @@ const renderBottomButton = (props, {
 				if (mode_value == 1) {
 					mode_value = 0
 				} else if (mode_value == 2) {
-						mode_value = 1
+					mode_value = 1
 				} else if (mode_value == 0) {
 					mode_value = 2;
 				}
@@ -1212,10 +1317,14 @@ const renderBottomButton = (props, {
 				break;
 		}
 		//ir|0|tem,speed,direction,swing,onoff,mode
-		peripheral[kitem.device].prop.config[kitem.name] = `ir|0|${temperature},${speed_vaule},${direction_value},${swing_value},1,${mode_value}`;
-		kitem.config = `ir|0|${temperature},${speed_vaule},${direction_value},${swing_value},1,${mode_value}`;
+		const newConfigStr = `ir|0|${temperature},${speed_vaule},${direction_value},${swing_value},1,${mode_value}`;
+// 		peripheral[kitem.device].prop.config[kitem.name] = newConfigStr;
+		peripheral[kitem.device].setLocalGangConfig(kitem.name, newConfigStr);
+		props.kitem.device_status = 1;
+		props.kitem.device_config = newConfigStr;
+		props.kitem.config = newConfigStr;
+		
 		let command = kitem.device_command['function'];
-		console.log("command",command);
 		let ref_command = iot_ble_generate_ir_code(command,click_type,`${temperature},${speed_vaule},${direction_value},${swing_value},1,${mode_value}`);
 		peripheral[kitem.device].sendIR(ref_command);
 		debugger
@@ -1379,14 +1488,11 @@ const renderBottomButton = (props, {
 				</li>
 				`;
 	}else if(props.kitem.device_button_group_type == 'Air Conditioner'){
-		let configStr = peripheral[props.kitem.device].prop.config[props.kitem.name];
-		if(!isset(configStr)){
-			configStr = `ir|0|25,1,2,1,0,1`;
-		}
+		let configStr = props.kitem.device_config;
 		let config = configStr.split('|');
 		let airconfig = isset(config[2]) && config[2] != ',,,,NaN'?config[2].split(','):'25,1,2,1,0,1'.split(',')
 		
-		let mode_value = airconfig[5]; //thermostat mode
+		let mode_value = airconfig[5]>=0 ? airconfig[5] : 1; //thermostat mode
 		let speed_vaule = airconfig[1]; //thermostat speed
 		let swing_value = airconfig[3];
 		let direction_value = airconfig[2];
@@ -1395,7 +1501,6 @@ const renderBottomButton = (props, {
 		let mode_str = 4;
 		let mode_ref = 0;
 		props.kitem.device_status = airconfig[4];
-		debugger
 		if (mode_value == 1) {
 			mode_ref = 1;
 			mode_str = 5;
@@ -1412,7 +1517,7 @@ const renderBottomButton = (props, {
 		return () => $h`
 				<li class="device subdevice home-scanned-peripheral display-flex thermostat-subdevice" style="height:80px;" ref="${airconfig[4]}" guid="${
 					props.kitem.device
-				}" config="${props.kitem.config}" button_group="${props.kitem.device_button_group}" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}" mesh="${props.kitem.mesh || 0}">
+				}" config="${props.kitem.config}" device_config="${props.kitem.device_config}" button_group="${props.kitem.device_button_group}" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}" mesh="${props.kitem.mesh || 0}">
 					<div class="item-content" style="width:100%;" list="${props.kitem.device_attachment_status}">
 						<div class="item-inner">
 							<div class="display-flex justify-content-space-between align-content-center align-items-center">
@@ -1462,12 +1567,16 @@ export default async (props, ctx) => {
 		//mainView.router.refreshPage();
 		$update();
 		setTimeout(() => {
-			mainView.router.refreshPage();
+			if(isset(data.page) && data.page == 'save_subdevice'){
+        mainView.router.refreshPage();
+      }
 			initPage();
 		}, 500)
 	});
 	// init variable
 	const title = $f7route.query.title ? $f7route.query.title : _('Smart Office');
+	const isHomePage = !!$f7route.query.is_home_page;
+
 	window.scanned_periperals = {};
 	let page_margin_top = 48;
 	let rooms = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_room)) : [];
@@ -1502,8 +1611,21 @@ export default async (props, ctx) => {
         let res = (await db.get('peripheral')) || null;
         if (isset(res)) {
             const storedPeripheral = JSON.parse(res);
+            const newStoredPeripheral = {};
             for(let guid in storedPeripheral){
+                
+                let exist = false;
+                for(let i in profile_device){
+                    if(profile_device[i].device == guid){
+                        exist = true;
+                    }
+                }
+                if(!exist) continue;
+                
                 // alert("1"+JSON.stringify(storedPeripheral[guid]));
+                newStoredPeripheral[guid] = storedPeripheral[guid];
+                
+                
     			if (!isset(peripheral[guid])) {
     				peripheral[guid] = new Peripheral(storedPeripheral[guid]);
     			} else {
@@ -1513,6 +1635,7 @@ export default async (props, ctx) => {
     				peripheral[guid].update(storedPeripheral[guid]);
     			}
             }
+            await db.set('peripheral', JSON.stringify(storedPeripheral));
         }
 	
         // 	// please move these line to the very beginning if flow / page is changed.
@@ -1631,6 +1754,7 @@ export default async (props, ctx) => {
 		}
 		
 		// init profile topic
+		if(!isset(erp['checksum'])) erp['checksum'] = {};
 		if(isset(erp.info.profile)){
     		const profilehash = md5(md5(erp.info.profile.name));
     
@@ -1638,10 +1762,17 @@ export default async (props, ctx) => {
     		core_mqtt_subscribe(cmd_topic, 0, false);
     		emitter.off(cmd_topic);
     		emitter.on(cmd_topic, function(data){
-    		    console.log("Receive2 = "+JSON.stringify(data));
+    		  //  alert("Receive2 = "+JSON.stringify(data));
+						
         		let message = data.message;
+        		
         		if (isset(message) && message) {
+        		    
         			let deviceObj = JSON.parse(message);
+        		    if(isset(erp.checksum['profile_mqtt']) && erp.checksum['profile_mqtt']==md5(JSON.stringify(deviceObj))){
+        		        return;
+        		    }
+        		    erp.checksum['profile_mqtt'] = md5(JSON.stringify(deviceObj));
         			
         			for(let guid in deviceObj.Device){
         			    let p = {
@@ -1654,8 +1785,38 @@ export default async (props, ctx) => {
             			if (!isset(peripheral[guid])) {
             				peripheral[guid] = new Peripheral(p);
             			} else {
-            				peripheral[guid].update(p);
+            				if(peripheral[guid].getProp().status.mqtt[1] < p.status.mqtt[1]){
+											console.log("PP",p)
+            				    peripheral[guid].update(p);
+            				}
             			}
+        			}
+        			
+        			for(let subdevice_name in deviceObj.Virtual){
+        			    let guid = deviceObj.Virtual[subdevice_name].guid;
+        				
+        			    if (!isset(peripheral[guid])) {
+        			    	continue;
+            			}
+            			
+            			if(!isset(peripheral[guid].getProp().config[subdevice_name]) || !isset(peripheral[guid].getProp().config[subdevice_name].mqtt)){
+            			    peripheral[guid].setMqttGangConfig(subdevice_name, deviceObj.Virtual[subdevice_name].config);
+        				    continue;
+            			}
+            			
+        				if(peripheral[guid].getProp().config[subdevice_name].mqtt[1] >= deviceObj.Virtual[subdevice_name].config[1]){
+        			        continue;
+        				}
+        				
+        				peripheral[guid].setMqttGangConfig(subdevice_name, deviceObj.Virtual[subdevice_name].config);
+        				
+        			 //   alert("deviceObj.Virtual[subdevice_name].config="+JSON.stringify(deviceObj.Virtual[subdevice_name].config));
+        				// subdevices.forEach(subdevice => {
+        				//     if(subdevice.name == subdevice_name){
+        				//         subdevice.config = peripheral[guid].getGangConfig(subdevice_name);
+        				//         alert(subdevice.config);
+        				//     }
+        				// });
         			}
         		}
     		});
@@ -1663,6 +1824,47 @@ export default async (props, ctx) => {
 	}
 	//ui functions
 	const refresh = async (e, done) => {
+		// init gateway list
+		const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway().toLowerCase()));
+		for (let i in profile_device) {
+			if (!profile_device[i].gateway || profile_device[i].gateway.trim() == "") continue;
+
+			const gatewayhash = md5(md5(profile_device[i].gateway.toLowerCase()));
+			if (selfgatewayhash == gatewayhash) { // self gateway, need to listen to cmd
+
+				const cmd_topic = `cmd/${gatewayhash}`;
+				core_mqtt_subscribe(cmd_topic, 0, false);
+				emitter.off(cmd_topic);
+				emitter.on(cmd_topic, on_gateway_commands_received);
+
+			} else { // other gateway, need to listen to status and will
+
+				//check if gateway is online / offline
+				const will_topic = `will/${gatewayhash}`;
+				core_mqtt_subscribe(will_topic, 1, false);
+				emitter.off(will_topic);
+				emitter.on(will_topic, on_gateway_will_changed);
+
+				//get the devices' status from gateway
+				const status_topic = `status/${gatewayhash}`;
+				core_mqtt_subscribe(status_topic, 1, false);
+				emitter.off(status_topic);
+				emitter.on(status_topic, on_gateway_device_changed);
+
+				//refresh gateway
+				setTimeout(() => {
+					core_mqtt_publish(`cmd/${gatewayhash}`, {
+						"command": "Pubmsg",
+						"function": "bleHelper.pubmsg",
+						"params": "",
+						"callback": "",
+						"raw": ""
+					}, 0, false, false, false).then(() => {
+
+					}).catch(reject => {});
+				}, 3000)
+			}
+		}
 		done();
 	};
 
@@ -1778,7 +1980,20 @@ export default async (props, ctx) => {
 						}
 					}
 					if (cont) continue;
-
+					let this_gang = 1;
+					if(tp.device_button_group.startsWith("ONOFF GANG")){
+						this_gang = tp.device_button_group.replace("ONOFF GANG","");
+					}else if(tp.device_button_group.startsWith("IR Setup")){
+						this_gang = "IR Setup";
+					}else if(tp.device_button_group.startsWith("OPENCLOSE GANG")){
+						this_gang = tp.device_button_group.replace("OPENCLOSE GANG","");
+					}else if(tp.device_button_group.startsWith("Thermostat")){
+						this_gang = "";
+					}
+					let title = `${erp.doctype.device_model[p.hexModel].name} ${this_gang}`;
+					if(tp.device_button_group.startsWith("IR Setup")){
+						title = `${this_gang}`;
+					}
 					const u_subdevice = {
 						lastDiscoverDate: p.lastDiscoverDate,
 						rssilv: p.rssilv || 0,
@@ -1790,10 +2005,11 @@ export default async (props, ctx) => {
 						device_mode: tp.mode,
 						device_model: erp.doctype.device_model[p.hexModel].name,
 						device_name: p.name,
-						name: tp.device_button_group,
+						name: title, //name is means device model and sort
 						password: p.password,
 						thumb: erp.doctype.device_model[p.hexModel].image,
 						device_status: peripheral[guid].getGangStatus(tp.device_button_group),
+						device_config: peripheral[guid].getGangConfig(tp.device_button_group),
 						device_attachment_status: peripheral[guid].getAttachmentStatus(tp.device_button_group).join(',')
 					};
 
@@ -1867,22 +2083,6 @@ export default async (props, ctx) => {
 		// console.log(peripheral[kitem.device].getProp());
 	};
 	const changeRangeBarUi = (guid, device_button_group, present_value) => {
-		//get the subdevice name
-		let subdevice_name = $(`.device.swipeout[guid="${guid}"][button_group="${device_button_group}"]`).attr('subdevice_name');
-		if (subdevice_name) {
-			if (present_value > 1) {
-				if (!isset(window.dimmingRecord[subdevice_name])) {
-
-					window.dimmingRecord[subdevice_name] = {}
-				} else {
-					window.dimmingRecord[subdevice_name]['lastref'] = present_value;
-				}
-			}
-		}
-		
-		if(device_button_group.startsWith("DIMMING") || device_button_group.startsWith("RCU DIMMING")){
-			present_value = parseInt((present_value / 255) * 100);
-		}
 		console.log($(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${device_button_group}"]`));
 		$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${device_button_group}"]`)
 			.find('.range-bar-active')
@@ -1950,13 +2150,15 @@ export default async (props, ctx) => {
 	// helper function
 	const update_subdevice_by_peripheral = async(s, p) => {
 		let device_status = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
+		let device_config = p.guid ? peripheral[p.guid].getGangConfig(s.name) : 'ir|0|25,1,2,1,0,1'; //ir|0|25,1,2,1,0,1
+// 		alert(s.name+"="+device_config);
 		if (p.id == 'AC:4D:16:49:46:12') {
 			//console.log(p)
 			//console.log(s)
 			console.log(device_status)
 		}
 		console.log("element.value=device_status="+device_status);
-		if(p.guid == "6163346431363439343236391201301d"){
+		if(p.guid == "3038336138643136666237611203491d"){
 			console.log(s['click_status'])
 			console.log("s.device_button_group",s.device_button_group)
 			console.log("update_device_status",device_status);
@@ -1964,6 +2166,7 @@ export default async (props, ctx) => {
 		}
 		//console.log(s.device_button_group);  
 		//console.log("device_status",device_status);
+		s['device_config'] = device_config;
 		s['rssilv'] = p.rssilv || 0;
 		s['bluetooth'] = p.connected ? 1 : (p.connecting ? 2 : 0);
 		s['mobmob'] = p.is_mobmob;
@@ -1988,9 +2191,9 @@ export default async (props, ctx) => {
 			//dimming
 			if(isset(range_silder_list[s.name])){
     			const v = Math.ceil((device_status*1.0 / 255.0) * 100.0) || 0;
-    			console.log("range_silder_list[s.name].getValue()="+range_silder_list[s.name].getValue());
-    			console.log("element.value=2="+v);
-            	if(range_silder_list[s.name].getValue()!=v){
+    			// console.log("range_silder_list[s.name].getValue()="+range_silder_list[s.name].getValue());
+    			// console.log("element.value=2="+v);
+            	if($(`.page-current .range-slider-home-auto[guid="${p.guid}"][button_group="${s.device_button_group}"]`).length){
 					$(`.page-current .range-slider-home-auto[guid="${p.guid}"][button_group="${s.device_button_group}"]`)
                 		.find('.range-bar-active')
                 		.css({
@@ -2010,10 +2213,20 @@ export default async (props, ctx) => {
 			}
 		}else if(s.device_button_group.startsWith("OPENCLOSE UART")){
 			//openclose uart
-			console.log("device_status",device_status);
+			console.log("device_status curtain",device_status);
 			setTimeout(()=>{
 				changeRangeBarUi(p.guid, s.device_button_group, device_status);
 			},200)
+		}else if(s.device_button_group.startsWith("4in1 Sensor")){
+			//4in1 sensor
+			console.log("randar device_status",device_status);
+			if (device_status > 0) {
+          //have people;
+          $("li.device[guid='" + p.guid + "'] .rf-sensor i").html('directions_walk');
+        } else {
+          $("li.device[guid='" + p.guid + "'] .rf-sensor i").html('block');
+        }
+			//console.log("randar device_status",device_status);
 		}
 	};
 	const update_subdevice_by_device = (s, p) => {};
@@ -2097,7 +2310,7 @@ export default async (props, ctx) => {
 	};
 
 	const on_gateway_device_changed = (data) => {
-		//console.log("data",data);
+		console.log("data",data);
 		let message = data.message;
 		if (isset(message) && message) {
 			let deviceObj = JSON.parse(message);
@@ -2109,8 +2322,16 @@ export default async (props, ctx) => {
 				let manufacturing_data = deviceInfo.manufacturing_data;
 				if (isset(manufacturing_data) && manufacturing_data) {
 					let hexModel = deviceItem.hexModel;
-					//RCU
-					if (hexModel == '0346') {
+					
+					if(hexModel == '0351'){
+						//curtain motor
+						debugger
+						if(isset(peripheral[guid])){
+							peripheral[guid].onChangeGateway(deviceInfo)
+						}
+					}else if (hexModel == '0346') {
+						//RCU
+						//return
 						let rcuDataList = tindyRcuData(manufacturing_data);
 						rcuDataList.forEach(item => {
 							subdevices.forEach(kitem => {
@@ -2126,8 +2347,30 @@ export default async (props, ctx) => {
 									deviceItem.status['mobmob'][0][gangs] = this_ref;
 									deviceItem.status['mobmob'][1] = deviceInfo.date;
 									let device_status = window.peripheral[guid].getGangStatus(button_group);
-									console.log("this_ref", device_status)
-									changeRangeBarUi(guid, button_group, device_status);
+									// $update();
+									if($(`.home-scanned-peripheral[guid="${guid}"][button_group="${button_group}"]`).length){
+										$(`.home-scanned-peripheral[guid="${guid}"][button_group="${button_group}"]`).find(".on_flag").attr("ref",device_status>0?1:0)
+									}
+									console.log("this_ref", device_status);
+									if($(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${button_group}"]`).length){
+										const v = Math.ceil((device_status*1.0 / 255.0) * 100.0) || 0;
+										$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${button_group}"]`)
+										.find('.range-bar-active')
+                		.css({
+                			width: v + '%',
+                		});
+										$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${button_group}"]`)
+										.find('.range-knob-wrap')
+                		.css({
+                			left: v + '%',
+                		});
+										if(v>0){
+											$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${button_group}"]`).removeClass('range-slider-min');
+										}else{
+											$(`.page-current .range-slider-home-auto[guid="${guid}"][button_group="${button_group}"]`).addClass('range-slider-min');
+										}
+									}
+									//changeRangeBarUi(guid, button_group, device_status);
 									//emitter.emit('on_peripheral_changed', deviceItem);
 								}
 							})
@@ -2141,17 +2384,17 @@ export default async (props, ctx) => {
 					//console.log("mobmobDevices",mobmobDevices)
 					for(let thisGuid in mobmobDevices){
 						if(isset(peripheral[thisGuid])){
+							//get the default connect
+							let profile_devices = cloneDeep(erp.info.profile.profile_device);
+							profile_devices.forEach((item)=>{
+								if(item.device == thisGuid){
+									mobmobDevices[thisGuid].default_connect = item.default_connect
+								}
+							})
 							let deviceItme = peripheral[thisGuid].prop;
 							let manufacturing_data = deviceItme.manufacturing_data;
 							console.log("deviceItme",mobmobDevices[thisGuid]);
 							peripheral[thisGuid].onChangeGateway(mobmobDevices[thisGuid])
-							//get default connect
-							// let defaultConnect = deviceItme.default_connect;
-							// if(typeof manufacturing_data == 'string'){
-							// 	let io = '00';
-
-							// }
-							// console.log("deviceItme",deviceItme);
 						}
 					}
 				}
@@ -2245,6 +2488,15 @@ export default async (props, ctx) => {
 			background-color: var(--f7-theme-color);
 			color: #fff;
 		}
+		.page-content .rcu-output[ref='1']{
+			background-color: var(--f7-theme-color);
+    	color: #fff;
+		}
+		.page-content .rcu-output[ref='0']{
+			background-color: var(--f7-block-strong-bg-color);
+    	color: #8e8d93;
+    	border-color: #8e8d93;
+		}
 		.room-box .device .swipeout-actions-right {
 			transform: translateX(200%);
 		}
@@ -2300,10 +2552,10 @@ export default async (props, ctx) => {
 		.thermostat-subdevice[ref="0"]{
 			display: none !important;
 		}
-		.thermostat-subdevice[bluetooth="0"][mobmob='0'][mesh='0']
-		{
-			display: none !important;
-		}
+		/*.thermostat-subdevice[bluetooth="0"][mobmob='0'][mesh='0']*/
+		/*{*/
+		/*	display: none !important;*/
+		/*}*/
 		.thermostat-subdevice[bluetooth='1'][ref="1"],
 		.thermostat-subdevice[mobmob='1'][ref="1"],
 		.thermostat-subdevice[mesh='1'][ref="1"]

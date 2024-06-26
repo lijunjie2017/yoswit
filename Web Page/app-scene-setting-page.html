@@ -1,0 +1,426 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Scenc Trigger Setting') }}</div>
+        <div class="right">
+          <a class="link icon-only" @click="${()=>saveTrigger()}">
+            <i class="icon material-icons md-only">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="list list-strong-ios list-outline-ios list-dividers-ios on-off-list device-hidden">
+        <ul>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="1" checked />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">ON</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="0" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">OFF</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="2" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">CLICK</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="4" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">SECOND CLICK</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card" style="display: none;">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="3" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">RELEASE</div>
+              </div>
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="list list-strong-ios list-outline-ios list-dividers-ios dimming-list device-hidden">
+        <ul>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="1" checked />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">ON</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="0" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">OFF</div>
+              </div>
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="list list-strong-ios list-outline-ios list-dividers-ios door-list device-hidden">
+        <ul>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="1" checked />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">OPEN</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="0" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">CLOSE</div>
+              </div>
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="list list-strong-ios list-outline-ios list-dividers-ios randar-list device-hidden">
+        <ul>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="1" checked />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">Occupied</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-end" value="0" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">Unoccupied</div>
+              </div>
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="list list-strong-ios list-outline-ios list-dividers-ios thermostat-list device-hidden">
+        <ul>
+          <li class="radio-box card">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Temperature</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center" @click="${()=>showTimeBox(1)}">
+                <label class="item-checkbox item-checkbox-icon-start item-content">
+                  <input type="checkbox" name="demo-checkbox" value="0" />
+                  <i class="icon icon-checkbox"></i>
+                </label>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box choose-time-box card temperature-box device-hidden">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Greater than</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <input
+                  class="text-color-gray"
+                  type="text"
+                  name="temperature"
+                  value=""
+                  placeholder=""
+                  readonly="readonly"
+                  id="device-timer-time-picker"
+                  style="width: 25%; text-align: center"
+                />
+                <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box choose-time-box card temperature-box device-hidden">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Less than</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <input
+                  class="text-color-gray"
+                  type="text"
+                  name="temperature-less"
+                  value=""
+                  placeholder=""
+                  readonly="readonly"
+                  id="device-timer-time-picker-less-than"
+                  style="width: 25%; text-align: center"
+                />
+                <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box card">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Humidity</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center" @click="${()=>showTimeBox(2)}">
+                <label class="item-checkbox item-checkbox-icon-start item-content">
+                  <input type="checkbox" name="demo-checkbox-hum" value="0" />
+                  <i class="icon icon-checkbox"></i>
+                </label>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box humidity-box card device-hidden">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Greater than</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <input
+                  class="text-color-gray"
+                  type="text"
+                  name="humidity"
+                  value=""
+                  placeholder=""
+                  readonly="readonly"
+                  id="device-timer-time-picker-one"
+                  style="width: 25%; text-align: center"
+                />
+                <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box humidity-box card device-hidden">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Less than</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <input
+                  class="text-color-gray"
+                  type="text"
+                  name="humidity-less"
+                  value=""
+                  placeholder=""
+                  readonly="readonly"
+                  id="device-timer-time-picker-one-less-than"
+                  style="width: 25%; text-align: center"
+                />
+                <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    const { button_group, display_name, mac_address, model, mode, img_url, room_name, guid, gateway ,config} = $f7route.query;
+    console.log($f7route.query);
+    const showTimeBox = (index)=>{
+      if(index == 1){
+        let length = $(`input[name="demo-checkbox"]:checked`).length;
+        if(length){
+          $('.temperature-box').removeClass("device-hidden");
+        }else{
+          $('.temperature-box').addClass("device-hidden");
+        }
+      }else{
+        let length = $(`input[name="demo-checkbox-hum"]:checked`).length;
+        if(length){
+          $('.humidity-box').removeClass("device-hidden");
+        }else{
+          $('.humidity-box').addClass("device-hidden");
+        }
+      }
+    }
+    const saveTrigger = () => {
+      if (mode == 'Thermostat') {
+        let temp = $(`input[name="temperature"]`).val();
+        let hum = $(`input[name="humidity"]`).val();
+        let temp_less = $(`input[name="temperature-less"]`).val();
+        let hum_less = $(`input[name="humidity-less"]`).val();
+        let temp_length = $(`input[name="demo-checkbox"]:checked`).length;
+        let hum_length = $(`input[name="demo-checkbox-hum"]:checked`).length;
+        let data = {
+          mode: mode,
+          guid: guid,
+          button_group: button_group,
+          display_name: display_name,
+          mac_address: mac_address,
+          model: model,
+          img_url: img_url,
+          room_name: room_name,
+          temp: temp,
+          temp_less : temp_less,
+          hum: hum,
+          hum_less : hum_less,
+          gateway: gateway,
+        }
+        if(!temp_length){
+          delete data.temp;
+          delete data.temp_less;
+        }
+        if(!hum_length){
+          delete data.hum;
+          delete data.hum_less;
+        }
+        emitter.emit('trigger_save',data);
+      }else{
+        console.log($(`input[name="demo-radio-end"]:checked`).val());
+        let value = $(`input[name="demo-radio-end"]:checked`).val() * 1;
+        emitter.emit('trigger_save', {
+          mode: mode,
+          guid: guid,
+          button_group: button_group,
+          display_name: display_name,
+          mac_address: mac_address,
+          model: model,
+          img_url: img_url,
+          room_name: room_name,
+          value: value,
+          gateway: gateway,
+          config : config
+        });
+      }
+      mainView.router.back(mainView.history[mainView.history.length - 3], { force: true });
+    };
+    const init = () => {
+      let timer1 = app.picker.create({
+        inputEl: '#device-timer-time-picker',
+        cols: [
+          //
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = -10; i <= 33; i++) {
+                arr.push(i);
+              }
+              return arr;
+            })(),
+          },
+        ],
+      });
+      let timer1_less = app.picker.create({
+        inputEl: '#device-timer-time-picker-less-than',
+        cols: [
+          //
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = -10; i <= 33; i++) {
+                arr.push(i);
+              }
+              return arr;
+            })(),
+          },
+        ],
+      });
+      let timer2 = app.picker.create({
+        inputEl: '#device-timer-time-picker-one',
+        cols: [
+          //
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = 0; i <= 100; i++) {
+                arr.push(i);
+              }
+              return arr;
+            })(),
+          },
+        ],
+      });
+      let timer2_less = app.picker.create({
+        inputEl: '#device-timer-time-picker-one-less-than',
+        cols: [
+          //
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = 0; i <= 100; i++) {
+                arr.push(i);
+              }
+              return arr;
+            })(),
+          },
+        ],
+      });
+      // console.log(timer1);
+      // let col = timer1.cols[0];
+      // col.setValue(26)
+    };
+    $onMounted(() => {
+      if (mode == 'On Off Switch') {
+        $('.on-off-list').removeClass('device-hidden');
+      }else if(mode == 'RCU Controller' && button_group == 'SCENE MUTIWAY ONOFF GANG1'){
+        $('.dimming-list').removeClass('device-hidden');
+      } else if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
+        $('.randar-list').removeClass('device-hidden');
+      } else if (mode == 'Thermostat') {
+        $('.thermostat-list').removeClass('device-hidden');
+      }else if (mode == 'Triac Dimming' ||  mode == '0-10v Dimming') {
+        $('.dimming-list').removeClass('device-hidden');
+      }else if (mode == 'Door Sensor') {
+        $('.door-list').removeClass('device-hidden');
+      }
+      init();
+      $update();
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none;
+  }
+  .radio-box {
+    height: 75px;
+    background-color: #fff;
+    margin-bottom: 10px;
+  }
+  .item-radio {
+    height: 100%;
+  }
+  .timer-item {
+    height: 100%;
+    padding-right: 10px;
+  }
+  .list ul::before,.list ul::after{
+    content: none;
+  }
+</style>

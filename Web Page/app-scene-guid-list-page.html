@@ -10,12 +10,85 @@
           </a>
         </div>
         <div class="title">{{ _('Scene List') }}</div>
+        <div class="right scene-list-right device-hidden">
+          <a class="link icon-only" @click="${()=>downloadBle()}">
+            <i class="icon material-icons md-only">download</i>
+          </a>
+          <a class="link icon-only" @click="${()=>delAllScene()}">
+            <i class="icon material-icons md-only">restart_alt</i>
+          </a>
+        </div>
       </div>
     </div>
 
-    <div class="page-content">
+    <div class="page-content ptr-content" style="height: 100%" @ptr:refresh="${refresh}">
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
       {% raw %}
-      <div id="vue-app" v-cloak></div>
+      <div id="vue-app" v-cloak>
+        <div class="list ha-guide-list">
+          <ul>
+            <li class="swipeout scene swipeout-delete-manual" v-for="(item,index) in sceneList" :key="item.name">
+              <div class="card swipeout-content no-shadow no-border bg-color-gray margin-bottom overflow-hidden text-color-white h-110">
+                <div class="overlay"></div>
+                <div
+                  class="coverimg width-100 position-absolute lazy lazy-fade-in"
+                  :style="{'height': '100%','background-size': 'cover','background-image': 'url('+frappe_get_url(item.image)+')'}"
+                ></div>
+                <div class="card-content card-content-padding">
+                  <div class="template-info" style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey">
+                    {{_(item.scene_template)}}
+                  </div>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div
+                        class="h5 d-block text-color-white margin-bottom-half"
+                        style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey"
+                      >
+                        {{_(item.title)}}
+                      </div>
+                    </div>
+                    <div class="item-after">
+                      <a
+                        class="button button-small button-round button-fill icon-button"
+                        v-on:click="toDetail(item)"
+                        style="width: 40px; height: 40px; border-radius: 50%"
+                      >
+                        <i class="f7-icons" style="font-size: 18px">doc_text_search</i>
+                      </a>
+                      <a
+                        class="button button-small button-round button-fill icon-button"
+                        style="background-color: red; margin-left: 10px; width: 40px; height: 40px; border-radius: 50%"
+                        v-on:click="onDeleted(item)"
+                      >
+                        <i class="icon material-icons" style="font-size: 20px">delete</i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="device-null" v-if="sceneList.length == 0">
+          <div class="block" style="text-align: center">
+            <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+            <p>${_('You don\'t have any scene, create one')}</p>
+          </div>
+          <div class="block block-strong">
+            <p class="row">
+              <a class="col button button-large" v-on:click="toScene()">{{ _('Create Scene') }}</a>
+            </p>
+          </div>
+        </div>
+        <div class="fab fab-right-bottom">
+          <a style="text-align: center" v-on:click="toScene()">
+            <i class="icon material-icons">add</i>
+          </a>
+        </div>
+      </div>
       {% endraw %}
     </div>
   </div>
@@ -29,20 +102,330 @@
       $on = ctx.$on;
 
     let vueApp = null;
-    let {guid,subdevice_name} = $f7route.query;
+    let { guid, subdevice_name } = $f7route.query;
+    const refresh = async (e, done) => {
+      await ha_profile_ready();
+      vueApp.$init();
+      done();
+    };
+    const downloadBle = async () => {
+      vueApp.$download();
+    };
+    const delAllScene = async () => {
+      let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+      let guid = '';
+      profile_subdevices.forEach((item) => {
+        if (item.name == subdevice_name) {
+          guid = item.device;
+        }
+      });
+      let triggerCommand = `8f210000ff`;
+      let actionCommand = `8f1100ff`;
+      app.dialog.confirm(
+        `Confirm Deletion?`,
+        () => {
+          window.peripheral[guid]
+            .write([
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: triggerCommand,
+              },
+            ])
+            .then(() => {
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: actionCommand,
+                },
+              ]);
+            })
+            .catch((error) => {
+              app.dialog.alert(error);
+            })
+            .then(() => {
+              app.dialog.alert('BLE Clear Successfully');
+            });
+        },
+        () => {}
+      );
+    };
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
-        data:{},
-        computed:{},
-        mounted(){
-          this.init();
+        data: {
+          sceneList: [],
+          localTrigerSceneList: [],
+          localActionSceneList: [],
+          sheetMap: {},
         },
-        methods:{
-          async init(){
+        computed: {},
+        mounted() {
+          Vue.prototype.$init = this.init;
+          Vue.prototype.$download = this.download;
+          this.scan();
+          this.init();
+          emitter.on('refresh', (data) => {
+            this.init();
+          });
+        },
+        methods: {
+          async onDeleted(item) {
+            app.dialog.confirm(
+              `${_('Confirm Deletion?')}`,
+              async () => {
+                //get the sceneId
+                app.dialog.preloader();
+                setTimeout(() => {
+                  app.dialog.close();
+                }, 15 * 1000);
+                let scenes = cloneDeep(erp.info.scene);
+                let list = [];
+                for (let i in scenes) {
+                  if (item.name == scenes[i].name) {
+                    list = scenes[i].scene_device_location;
+                  }
+                }
+                try {
+                  for (let i in list) {
+                    let delActionCommand = `8F1100${parseInt(list[i].storage_id).toString(16).pad('00')}`;
+                    let delTriggerCommand = `8F210000${parseInt(list[i].storage_id).toString(16).pad('00')}`;
+                    console.log('device', list[i].device);
+                    console.log('delActionCommand', delActionCommand);
+                    console.log('delTriggerCommand', delTriggerCommand);
+                    await window.peripheral[list[i].device].write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: delActionCommand,
+                      },
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: delTriggerCommand,
+                      },
+                    ]);
+                  }
+                  let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
+                    method: 'DELETE',
+                    serializer: 'json',
+                    responseType: 'json',
+                    data: {},
+                  });
+                  app.dialog.close();
+                  await ha_profile_ready();
+                  this.init();
+                  app.dialog.alert(_('Deletion successful'));
+                } catch (error) {
+                  app.dialog.close();
+                  console.log(error);
+                  app.dialog.alert(_('No Permission'));
+                }
+              },
+              () => {}
+            );
+          },
+          async download() {
+            app.dialog.preloader();
+            setTimeout(() => {
+              app.dialog.close();
+            }, 15 * 1000);
+            //load the scene ble data
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let guid = '';
+            profile_subdevices.forEach((item) => {
+              if (item.name == subdevice_name) {
+                guid = item.device;
+              }
+            });
+            try {
+              await peripheral[guid].connect();
+              let device_id = peripheral[guid].prop.id;
+              await ble.startNotification(
+                device_id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log('rs', rs);
+                  if (rs.startsWith('8f22') && rs.length > 8) {
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    const foundIndex = this.localTrigerSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
+                    if (foundIndex === -1) {
+                      this.localTrigerSceneList.push({
+                        scene_id: rs.slice(6, 8),
+                        command: rs,
+                      });
+                    }
+                  } else if (rs.startsWith('8f12') && rs.length > 8) {
+                    //this means command is action
+                    if (rs.slice(6, 8) == '00') {
+                      return;
+                    }
+                    const foundIndex = this.localActionSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
+                    if (foundIndex === -1) {
+                      this.localActionSceneList.push({
+                        scene_id: rs.slice(6, 8),
+                        command: rs,
+                      });
+                    }
+                  } else if (rs.startsWith('8f1200ff')) {
+                    app.dialog.close();
+                    debugger;
+                    this.loadBleScene();
+                    //compareLocalAndErpData();
+                  }
+                },
+                (err) => {
+                  app.dialog.close();
+                  app.dialog.alert(err);
+                }
+              );
+              let read_action_command = '8F1200FF';
+              let read_trriger_command = `8F220000FF`;
+              await peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_trriger_command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_action_command,
+                },
+              ]);
+            } catch (error) {
+              app.dialog.close();
+              const toast = app.toast.create({
+                position: 'bottom',
+                closeTimeout: 3000,
+                text: error,
+              });
 
-          }
-        }
+              toast.open();
+              //app.dialog.alert(error);
+            }
+          },
+          async loadBleScene() {
+            try {
+              this.sheetMap = app.sheet.create({
+                content: `
+              <div class="sheet-modal my-sheet-swipe-to-step" style="height:auto; --f7-sheet-bg-color: #fff;">
+                <div class="toolbar" style="background-color: #fff;">
+                  <div class="toolbar-inner">
+                    <div class="left">
+                      <div class="block-title block-title-medium py-2">${_('BLE SCENE')}</div>  
+                    </div>
+                    <div class="title"></div>
+                    <div class="right"></div>
+                  </div>
+                </div>
+                <div class="block-title">Trigger List</div>
+                <div class="list ha-guide-list list-outline-ios list-strong-ios list-dividers-ios">
+                  <ul>
+                    ${this.localTrigerSceneList
+                      .map(
+                        (kitem) => `
+                    <li v-for="(kitem,kindex) in localTrigerSceneList" :key="kitem.scene_id" style="background: #fff;">
+                      <div class="item-content">
+                        <div class="item-media">${kitem.scene_id}</div>
+                        <div class="item-inner">
+                          <div style="word-wrap:break-word;word-break:break-all;">${kitem.command}</div>
+                        </div>
+                      </div>
+                    </li>
+                    `
+                      )
+                      .join('')}
+                  </ul>
+                </div>
+                <div class="block-title">Action List</div>
+                <div class="list ha-guide-list list-outline-ios list-strong-ios list-dividers-ios">
+                  <ul>
+                    ${this.localActionSceneList
+                      .map(
+                        (kitem) => `
+                    <li style="background: #fff;">
+                      <div class="item-content">
+                        <div class="item-media">${kitem.scene_id}</div>
+                        <div class="item-inner">
+                          <div style="word-wrap:break-word;word-break:break-all;">${kitem.command}</div>
+                        </div>
+                      </div>
+                    </li>
+                    `
+                      )
+                      .join('')}
+                  </ul>
+                </div>
+              </div>
+              `,
+                on: {
+                  open: (sheet) => {},
+                },
+                swipeToClose: true,
+                backdrop: true,
+              });
+              this.sheetMap.open();
+            } catch (error) {
+              this.loadBleScene();
+              console.log(error);
+            }
+          },
+          async init() {
+            this.sceneList = [];
+            console.log(subdevice_name);
+            if (isset(subdevice_name) && subdevice_name) {
+              $('.scene-list-right').removeClass('device-hidden');
+            } else {
+              console.log($('.scene-list-right'));
+              $('.scene-list-right').addClass('device-hidden');
+            }
+            let scenes = cloneDeep(erp.info.scene);
+            for (let i in scenes) {
+              if (!isset(scenes[i].image) || !scenes[i].image) {
+                scenes[i].image = `https://dev.mob-mob.com/files/scene.jpg`;
+              }
+              if (isset(subdevice_name) && subdevice_name) {
+                if (subdevice_name == scenes[i].profile_subdevice) {
+                  this.sceneList.push(scenes[i]);
+                }
+              } else {
+                this.sceneList.push(scenes[i]);
+              }
+            }
+          },
+          async scan() {
+            await bleManager.stopScan();
+            await bleManager.wait(200);
+            bleManager.scan(this.onDiscovery, async () => {
+              await bleManager.wait(5000);
+              this.scan();
+            });
+          },
+          async onDiscovery(p) {
+            setTimeout(() => {
+              delete p.password;
+              delete p.connected;
+              delete p.connecting;
+              if (!isset(peripheral[p.guid])) {
+                peripheral[p.guid] = new Peripheral(p);
+              } else {
+                peripheral[p.guid].update(p);
+              }
+            }, 10);
+          },
+          toScene() {
+            mainView.router.navigate(`/mobile-app/scene-guid-operate-page`);
+          },
+          toDetail(item) {
+            mainView.router.navigate(`/mobile-app/scene-guid-operate-page?name=${item.name}`);
+          },
+        },
       });
     });
 
@@ -57,3 +440,33 @@
     return $render;
   };
 </script>
+
+<style>
+  .device-hidden {
+    display: none !important;
+  }
+  .template-info {
+    font-size: 12px;
+    text-align: right;
+    margin-bottom: 10px;
+  }
+  .radio-box {
+    height: 75px;
+    background-color: #fff;
+    margin-bottom: 10px;
+  }
+  .item-radio {
+    height: 100%;
+  }
+  .timer-item {
+    height: 100%;
+    padding-right: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .fab-right-bottom {
+    position: fixed;
+  }
+</style>

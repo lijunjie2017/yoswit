@@ -1,0 +1,370 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('SpotCam List') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only" @click="${()=>batch_save()}">
+            <i class="icon material-icons">logout</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app">
+        <div class="card" v-for="item in spotcamList" :key="item.sn">
+          <div class="card-header display-flex align-content-space-between">
+            <div class="title">{{item.cname}}</div>
+            <div>
+              <a link icon-only
+                ><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px" v-on:click="toSetting(item)">settings</i></a
+              >
+            </div>
+          </div>
+          <div class="card-content" style="padding-bottom: 15px"  v-on:click="toPlay(item)">
+            <img :src="item.img" alt="" />
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let vueApp = null;
+    let { guid, device_name } = $f7route.query;
+    const batch_save = () => {
+      vueApp.$batchSave();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          spotcamList: [],
+          username: '',
+          username: '',
+          playerUrl : '',
+          plat : '',
+        },
+        computed: {},
+        mounted() {
+          Vue.prototype.$batchSave = this.logout;
+          this.init();
+        },
+        methods: {
+          sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          async logout(){
+            await db.set('spotcam_username','');
+            await db.set('spotcam_password','');
+            app.dialog.alert('Logout Success');
+            mainView.router.back();
+          },
+          async init() {
+            this.plat = window.device.platform.toLowerCase();
+            this.openVerticalButtons();
+          },
+          toSetting(item) {
+            mainView.router.navigate(`/mobile-app/app-spotcam-settiing`);
+          },
+          async toPlay(item) {
+            console.log(item);
+            console.log(this.playerUrl);
+            await this.getLiveStream(item.cid);
+            let hasDark = $('html').hasClass('theme-dark');
+            const result = await Capacitor.Plugins.SpotCam.play({ 'camera': JSON.stringify(item)});
+            // window.VideoPlayerVLC.play(
+            //   [
+            //     this.playerUrl,
+            //     'RTMP Player',
+            //     hasDark ? '#ffffff' : '#000000',
+            //     hasDark ? '#202020' : '#f7f7f7',
+            //     '0',
+            //     erp.setting.primary_color,
+            //     hasDark ? '#000000' : '#ffffff',
+            //   ],
+            //   (done) => {},
+            //   (error) => {}
+            // );
+          },
+          async getUid() {
+            //check if ios or android
+            try {
+              let url = `https://www.myspotcam.com/camera_status/get_uid`;
+              let postStatus = null;
+              if (this.plat === 'ios') {
+                postStatus = await http.request(encodeURI(url), {
+                  method: 'POST',
+                  responseType: 'json',
+                  debug : true,
+                  data: {},
+                });
+              } else {
+                postStatus = await Capacitor.Plugins.CapacitorHttp.request({
+                  url: encodeURI(url),
+                  method: 'POST',
+                  responseType: 'json',
+                  data: {},
+                });
+              }
+              console.log('postStatus', postStatus);
+              if(postStatus.data.res == 0){
+                app.dialog.alert('Get Device Uid Error.');
+                return
+              }else{
+                let userid = postStatus.data.userid;
+                this.userid = userid;
+                this.getCameraList(userid);
+              }
+            } catch (err) {}
+          },
+          async getCameraList() {
+            try {
+              let url = `https://www.myspotcam.com/myspotcam/myspotcam_json`;
+              let postStatus = null;
+              if (this.plat === 'ios') {
+                postStatus = await http.request(encodeURI(url), {
+                  method: 'POST',
+                  responseType: 'json',
+                  data: {
+                    'uid': this.userid,
+                  },
+                });
+              } else {
+                postStatus = await Capacitor.Plugins.CapacitorHttp.request({
+                  url: encodeURI(url),
+                  method: 'POST',
+                  responseType: 'json',
+                  data: {
+                    'uid': this.userid,
+                  },
+                });
+              }
+              console.log('postStatus', postStatus);
+              let list = postStatus.data || [];
+              this.spotcamList = list;
+              // for (let i in list) {
+              //   await this.getLiveStream(list[i].cid);
+              // }
+            } catch (err) {
+              console.log(err);
+            }
+          },
+          async getLiveStream(cid, repeat) {
+            try {
+              let url = `https://www.myspotcam.com//command_sending/stream_info_json_lib/livesn/${cid}`;
+              let postStatus = null;
+              if (this.plat === 'ios') {
+                postStatus = await http.request(encodeURI(url), {
+                  method: 'GET',
+                  responseType: 'json',
+                  data: {
+                    'uid': this.userid,
+                  },
+                });
+              } else {
+                postStatus = await Capacitor.Plugins.CapacitorHttp.request({
+                  url: encodeURI(url),
+                  method: 'POST',
+                  responseType: 'json',
+                  data: {
+                    'uid': this.userid,
+                  },
+                });
+              }
+              console.log('postStatus', postStatus);
+              //error handle
+              if (postStatus.data.res == -2) {
+                app.dialog.alert(postStatus.data.stat);
+              } else if (postStatus.data.res == 1) {
+                this.playerUrl = postStatus.data.url + postStatus.data.name;
+                //create the player
+                //const player = videojs('my-video');
+                console.log(this.playerUrl);
+                if (repeat) {
+                  this.timers = setTimeout(() => {
+                    this.getLiveStream(cid, true);
+                  }, 1000 * 30);
+                } else {
+                  this.getLiveStream(cid, true);
+                }
+              }
+            } catch (err) {
+              console.log(err);
+              app.dialog.alert(err);
+            }
+          },
+          async openVerticalButtons() {
+            console.log('openVerticalButtons');
+            //logout
+            try {
+              let url = `https://www.myspotcam.com/account/logout_mobile`;
+              let logoutStatus = await http.request(encodeURI(url), {
+                method: 'GET',
+                serializer: 'json',
+                responseType: 'json',
+                data: {},
+              });
+              console.log(logoutStatus);
+            } catch (e) {
+              console.log(e);
+            }
+            setTimeout(() => {
+              $(`input[name="dialog-username"]`).val('mobohua@gmail.com');
+              $(`input[name="dialog-password"]`).val('Qq123456');
+            }, 500);
+            //check if have login account
+            try {
+              this.username = await db.get('spotcam_username');
+              this.password = await db.get('spotcam_password');
+              if (this.username && this.password) {
+                let url = `https://www.myspotcam.com/account/login_mobile_v2`;
+                let formData = new FormData();
+                formData.append('email', this.username);
+                formData.append('password', this.password);
+                formData.append('mac', '02:00:00:00:00:00');
+                formData.append('build_serial',null);
+                formData.append(
+                  'token',
+                  'cA_yiwlKmTk:APA91bGOxTkugz0GKPEqjiCTcqLVPe3dQRi4efjEuHAe2xzAVuNdroBHpAWgwxzeL_CECgbyzSuzm7uDnT_plbaQI2iPw2FkGBK9Yl2YhT8LyJ9-vmwczyndyqtgEV3RCNnvh3C7OUlg'
+                );
+                formData.append('ostype', 2);
+                formData.append('lang', 'zh');
+                formData.append('time', Math.floor(Date.now() / 1000));
+                console.log(formData);
+                try {
+                  let postStatus = await http.request(encodeURI(url), {
+                    method: 'POST',
+                    serializer: 'multipart',
+                    responseType: 'json',
+                    data: formData,
+                  });
+                  let data = postStatus.data;
+                  if (data.result == 1) {
+                    let { atok, camera_time_zone_utc, hash, version } = data;
+                    //get uid for the spotcam
+                    setTimeout(() => {
+                      this.getUid();
+                    }, 1000);
+                  } else if (data.result == 0) {
+                    switch (data.errcode) {
+                      case 1:
+                        app.dialog.alert('Email or password is wrong!');
+                        break;
+                      case 2:
+                        app.dialog.alert('This email has not been verified!');
+                        break;
+                      case 6:
+                        app.dialog.alert('Login fail over 20 times!');
+                        break;
+                      case 5:
+                        app.dialog.alert('Wrong parameters!');
+                        break;
+                      default:
+                        app.dialog.alert('Unknown error!');
+                    }
+                  }
+                  console.log('postStatus', postStatus);
+                } catch (e) {
+                  console.log(e);
+                }
+              } else {
+                app.dialog.login('Enter your username and password', async (username, password) => {
+                  //save in the local account
+                  db.set('spotcam_username', username);
+                  db.set('spotcam_password', password);
+                  //get the password and the username to spotcam
+                  let url = `https://www.myspotcam.com/account/login_mobile_v2`;
+                  let formData = new FormData();
+                  formData.append('email', username);
+                  formData.append('password', password);
+                  formData.append('mac', '02:00:00:00:00:00');
+                  formData.append('build_serial', '');
+                  formData.append(
+                    'token',
+                    'cA_yiwlKmTk:APA91bGOxTkugz0GKPEqjiCTcqLVPe3dQRi4efjEuHAe2xzAVuNdroBHpAWgwxzeL_CECgbyzSuzm7uDnT_plbaQI2iPw2FkGBK9Yl2YhT8LyJ9-vmwczyndyqtgEV3RCNnvh3C7OUlg'
+                  );
+                  formData.append('ostype', 2);
+                  formData.append('lang', 'zh');
+                  formData.append('time', Math.floor(Date.now() / 1000));
+                  console.log(formData);
+                  try {
+                    let postStatus = await http.request(encodeURI(url), {
+                      method: 'POST',
+                      serializer: 'multipart',
+                      responseType: 'json',
+                      data: formData,
+                    });
+                    let data = postStatus.data;
+                    if (data.result == 1) {
+                      let { atok, camera_time_zone_utc, hash, version } = data;
+                      //get uid for the spotcam
+                      setTimeout(() => {
+                        this.getUid();
+                      }, 1000);
+                    } else if (data.result == 0) {
+                      switch (data.errcode) {
+                        case 1:
+                          app.dialog.alert('Email or password is wrong!');
+                          break;
+                        case 2:
+                          app.dialog.alert('This email has not been verified!');
+                          break;
+                        case 6:
+                          app.dialog.alert('Login fail over 20 times!');
+                          break;
+                        case 5:
+                          app.dialog.alert('Wrong parameters!');
+                          break;
+                        default:
+                          app.dialog.alert('Unknown error!');
+                      }
+                    }
+                    console.log('postStatus', postStatus);
+                  } catch (e) {
+                    console.log(e);
+                  }
+                  //app.dialog.alert(e);
+                });
+              }
+            } catch (error) {}
+          },
+        },
+      });
+    });
+    $on('pageBeforeUnmount', (e, page) => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .smart-select .item-after {
+    max-width: 100%;
+  }
+</style>

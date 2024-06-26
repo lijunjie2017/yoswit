@@ -1,0 +1,73 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('SpotCam') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <button @click="${() => echo()}">echo</button>
+      |
+      <button @click="${() => play()}">play</button>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    async function echo() {
+      try {
+        const result = await Capacitor.Plugins.SpotCam.echo({ 'value': 'SpotCam' });
+        console.log(result);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function play() {
+      try {
+        // const camera =
+        //   '{"sn":"SWM000cN6Gr5","uid":"Q3xfrFiP","cid":"36VN5t","cname":"My SpotCam","cdescription":"1 day cloud video recording","alive":"1","published":0,"unlist":0,"img":"https:\/\/hk-vs01-Tha5phoi.myspotcam.com:5429\/resource\/jpg\/SWM000cN6Gr5\/preview.jpg?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemF0aW9uIjoiN2IyMThmN2RjZjdjMWNhOGVjODAwZWVhMDU0NmYwMTcyY2Y0NThlYyIsInNuIjoiU1dNMDAwY042R3I1IiwidWlkIjoiUTN4ZnJGaVAifQ.IIFiQN-5aT4m7Bu3NYD2q49PWUd3Kdyy6IKXFP64XXg","pbdays":"1","alertuser":0,"version":"0.0085","sharemail":"","blockemail":"","latest_version":0.0085,"playback_enable":1,"two_way_audio_enable":1,"export_enable":1,"pt_enable":1,"camid_enable":1,"vca":[],"schedule_on":"0","alert_on":"0","power_on":"1","sub":"0","vmd":"0","ad":"0","gwsn":"","p2pchannel":"0","islocalised":"1","tid":46,"finished":1,"is_face_cover_active":0,"free_trial_used":"0","camid_sel":"0","p2p":"1","itoken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemF0aW9uIjoiN2IyMThmN2RjZjdjMWNhOGVjODAwZWVhMDU0NmYwMTcyY2Y0NThlYyIsInNuIjoiU1dNMDAwY042R3I1IiwidWlkIjoiUTN4ZnJGaVAifQ.IIFiQN-5aT4m7Bu3NYD2q49PWUd3Kdyy6IKXFP64XXg","vshost":"hk-vs01-Tha5phoi.myspotcam.com","power":-1,"sdcard":-2,"sdcard_inform":"1","wifi":200,"lullaby":[],"tutk_uid":""}';
+
+        // const result = await Capacitor.Plugins.SpotCam.play({ 'camera': camera });
+        // console.log(result);
+        window.VideoPlayerVLC.play(
+          [
+            'rtsp://tgt:tgt12345@113.212.236.185:7005/0e8adb10-5025-c841-9b6a-aae1fbfbc4d4?stream=0',
+            'RTMP Player',
+            hasDark ? '#ffffff' : '#000000',
+            hasDark ? '#202020' : '#f7f7f7',
+            '0',
+            erp.setting.primary_color,
+            hasDark ? '#000000' : '#ffffff',
+          ],
+          (done) => {},
+          (error) => {}
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    return $render;
+  };
+</script>

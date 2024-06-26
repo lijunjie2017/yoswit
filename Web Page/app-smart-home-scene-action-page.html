@@ -1,0 +1,405 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title" id="add-title">{{ _('Add Action') }}</div>
+      </div>
+    </div>
+    <style>
+      .add-box {
+        height: 70px;
+        padding: 0px 15px;
+        color: var(--f7-theme-color);
+      }
+      .card-footer .row{
+        padding-bottom: 30px;
+      }
+      .dialog-buttons .dialog-button{
+        width: 100% !important;
+      }
+    </style>
+    <div class="page-content">
+      {% raw %}
+      <div id="app" style="height: 100%" v-cloak>
+        <div class="list no-hairlines-md">
+          <ul>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div
+                  class="item-title item-label"
+                  style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                >
+                  {{ _("Action Name") }}
+                </div>
+                <div class="item-input-wrap">
+                  <input class="init-input" name="title" type="text" :placeholder="_('Action Name')" required v-model="sceneName" />
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="block-title">Adjust the device to</div>
+        <div class="action-box card">
+          <div class="action-list list media-list no-margin">
+            <ul>
+              <li class="device" v-for="(item,index) in actionList" :key="item.name">
+                <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                  <div
+                    class="device-thumb item-media"
+                    :style="{
+                    'background-position': 'center',
+                    'background-size': 'contain',
+                    'position': 'relative',
+                    'background-image': 'url('+item.imgUrl+')'}
+                  "
+                  ></div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title ellipsis" lang="en" style="width: 180px">{{item.title}}</div>
+                    </div>
+                    <div class="item-subtitle">{{ item.device_model }}-{{ item.mac_address }}</div>
+                    <div class="signal-panel item-text height-21" style="">
+                      {{tran(item.room_name)}}/
+                      <span class="text-color-theme">{{dealwithRef(item)}}</span>
+                    </div>
+                  </div>
+                  <div class="margin-right" style="" v-on:click="deleteActionItem(item.name)">
+                    <i class="material-icons text-color-gray">delete</i>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div
+            class="add-box add-action display-flex justify-content-flex-start align-items-center"
+            v-on:click="toRoomList('Choose Action Device','2')"
+          >
+            <i class="material-icons">add_circle</i>
+            <div class="trigger-text margin-left">Add Devices</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="row" style="padding-bottom: 30px;">
+            <div class="col" v-on:click="saveScene">
+              <div class="button button-fill">Create</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    const { title, item ,checkval ,subdevice_name,guid,action_id} = $f7route.query;
+    console.log(subdevice_name)
+    let scene_config = {};
+    let sceneObj = {};
+    if (item) {
+      sceneObj = JSON.parse(item);
+      scene_config = JSON.parse(sceneObj.scene_config);
+      console.log(sceneObj);
+      console.log(JSON.parse(sceneObj.scene_config));
+    }
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      //const store = app.form.convertToData($(page.el).find('#basic-form'));
+
+      vueApp = new Vue({
+        el: page.el.querySelector('#app'),
+        data: {
+          popupSwipeHandler: null,
+          sceneName: '',
+          trigger: [],
+          actionList: [],
+          gateway_mac: '',
+          gateway: '',
+          gateway_guid: '',
+          timercommand: '',
+          sceneId: '',
+          thisId: '', //erp save id
+          device_checked : false,
+          gateway_checked : true,
+          triggerCondition : 2,
+          rcuMacAddress : ``,
+          rcuGuid : '',
+          post_guid : '',
+          erpActionList : [],
+          deviceScene : [],   //all scene
+        },
+        mounted() {
+          this.actionId = action_id;
+          this.initActionData();
+          let devices = erp.info.device;
+          for(let i in devices){
+            if(devices[i].device_model == 'YO780' || devices[i] == 'YO780-Mira'){
+              this.rcuMacAddress = core_utils_get_mac_address_from_guid(devices[i].guid, true);
+              this.rcuGuid = devices[i].guid
+            }
+          }
+          emitter.on('save_action', (data) => {
+            console.log(data);
+            let list = JSON.parse(data.data);
+            //console.log(list);
+            list.forEach((element) => {
+              this.actionList.push(element);
+            });
+            console.log(this.actionList);
+          });
+        },
+        computed: {
+          dealwithRef() {
+            return function (item) {
+              let mode = item.mode || item.device_mode;
+              let ref = item.ref;
+              let status = '';
+              let device_button_group = item.device_button_group;
+              if (mode == 'On Off Switch') {
+                if (ref == 1) {
+                  status = 'ON';
+                } else {
+                  status = 'OFF';
+                }
+              }else if(mode == 'RCU Controller'){
+                if (ref == 1) {
+                  status = 'ON';
+                }else if(ref == 2){
+                  status = 'TOGGLE';
+                } else {
+                  status = 'OFF';
+                }
+              } else if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
+                if (ref == 1) {
+                  status = 'Occupied';
+                } else {
+                  status = 'Unoccupied';
+                }
+              } else if (mode == 'Triac Dimming' || mode == '0-10v Dimming') {
+                if(item.turnlight == 4){
+                  status = 'ON/100%';
+                  if(ref > 1){
+                    status = `On/${parseInt(ref/255*100)}%`;
+                  }
+                }else if(item.turnlight == 5){
+                  status = 'Off';
+                }else if(item.turnlight == 2){
+                  status = 'Toggle'
+                }else if(item.turnlight == 3){
+                  status = 'Brighten'
+                }else if(item.turnlight == 1){
+                  status = 'Dim'
+                }
+              } else if (device_button_group.startsWith("OPENCLOSE UART")) {
+                if (ref > 1) {
+                  status = 'OPEN';
+                } else {
+                  status = 'CLOSE';
+                }
+              }else if(mode == 'Thermostat'){
+                if(item.temperature){
+                  console.log(item.ref == "0");
+                  let mode_text = item.modeStr == 2?'COOL':item.modeStr == 1?'HOT':item.modeStr == 0?'AUTO':'UNSET';
+                  let fan_text = item.speedVaule == 4?'3 SPEED':item.speedVaule == 3?'2 SPEED':item.speedVaule == 2?'1 SPEED':'AUTO'
+                  status = `${item.ref == "0"?'Off':'On'}/${item.temperature}℃`;
+                }
+                
+              }else if(mode == 'IR' || mode == 'On Off IR'){
+                if(item.ir_temp){
+                  console.log(item.ref == "0");
+                  status = `${item.ir_ref == "0"?'Off':'On'}/${item.ir_mode_text}/${item.ir_fan_text}/${item.ir_swing_text}/${item.ir_temp_text}℃`;
+                }
+                
+              }
+              return status;
+            };
+          },
+        },
+        methods: {
+          deleteActionItem(name) {
+            console.log(this.actionList)
+            console.log(name)
+            const index = this.actionList.findIndex((item) => item.name === name);
+            if (index >= 0) {
+                this.actionList.splice(index, 1);
+            }
+          },
+          initActionData(){
+            let device = cloneDeep(erp.info.device[guid]);
+            let deviceScene = device.device_scene;
+            let actionObj = null;
+            deviceScene.forEach(item=>{
+              if(item.scene_title === 'Action Config'){
+                actionObj = JSON.parse(item.scene_config);
+                this.thisId = item.name;
+                this.erpActionList = actionObj;
+              }
+            })
+            this.erpActionList.forEach(item=>{
+              if(item.action_id == this.actionId){
+                this.actionList = item.action;
+                this.sceneName = item.action_name;
+              }
+            })
+          },
+          updateActionId(){
+            if(!guid)return;
+            if(this.actionId)return;
+            let device = cloneDeep(erp.info.device[guid]);
+            let deviceScene = device.device_scene;
+            let actionObj = null;
+            let idList = [];
+            deviceScene.forEach(item=>{
+              if(item.scene_title === 'Action Config'){
+                actionObj = JSON.parse(item.scene_config);
+              }
+            })
+            if(isset(actionObj)){
+              actionObj.forEach(item=>{
+                idList.push(parseInt(item.action_id))
+              })
+            }
+            this.actionId = this.findMissingNumber(idList);
+          },
+          //tindy the scene ID
+          formatNumber(num){
+            return num < 10 ? '0' + num : num.toString();
+          },
+          findMissingNumber(arr){
+            if (arr.length === 0) {
+                return '01';
+            }
+            arr.sort((a, b) => a - b);
+            for (let i = 0; i < arr.length - 1; i++) {
+              if (arr[i + 1] - arr[i] > 1) {
+                  return this.formatNumber(arr[i] + 1);
+              }
+            }
+            return this.formatNumber(arr[arr.length - 1] + 1);
+          },
+          toRoomList(title, type) {
+            let that = this;
+            if(type == 2){
+                let dialogBox = app.dialog.create({
+                  title: 'Choose Action Type',
+                  buttons : [
+                    {text : 'RCU'},
+                    {text : 'MOB'},
+                    {text : 'BLE'},
+                  ],
+                  onClick:(dialog,index)=>{
+                    if(index == 0){
+                      //RCU 
+                      let devices = erp.info.device;
+                      for(let i in devices){
+                        if(devices[i].device_model == 'YO780' || devices[i] == 'YO780-Mira'){
+                          this.rcuMacAddress = core_utils_get_mac_address_from_guid(devices[i].guid, true);
+                        }
+                      }
+                      //this.rcuMacAddress = `0e137e0cdadc`;
+                    }else{
+                      this.rcuMacAddress = ``;
+                    }
+                    mainView.router.navigate(`/mobile-app/scene-room-device?type=${type}&target_guid=${guid}`);
+                  },
+                });
+                dialogBox.open();
+              //choose the type of the action 
+              
+            }
+          },
+          async saveScene() {
+            //check if input the name
+            if(!this.sceneName){
+              app.dialog.alert(`${tran('Please input the active name.')}`)
+              return
+            }
+            //save action on rcu
+            app.preloader.show();
+            try{
+              this.updateActionId();
+              let method = 'POST';
+              let post_url = encodeURI(`/api/resource/Device Scene`);
+              if (this.thisId) {
+                method = 'PUT';
+                post_url = encodeURI(`/api/resource/Device Scene/${this.thisId}`);
+              }
+              
+              let list = this.erpActionList;
+              let updateStatus = false;
+              let obj = {};
+              list.forEach(item=>{
+                if(item.action_id == this.actionId){
+                  item.action_name = this.sceneName;
+                  item.action = this.actionList
+                }
+              })
+              if(!updateStatus){
+                obj = {
+                  "action_id":this.actionId,
+                  "action_name":this.sceneName,
+                  "action":this.actionList
+                }
+                list.push(obj)
+              }
+              let post_data = {
+                parenttype: 'Device',
+                parentfield: 'device_scene',
+                parent: guid,
+                scene_title: 'Action Config',
+                scene_config: JSON.stringify(list)
+              };
+              let device_status = await http.request(post_url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                data: post_data,
+              });
+              app.preloader.hide();
+              mainView.router.back();
+            }catch(error){
+              app.preloader.hide();
+              app.dialog.alert(_(error));
+            }
+          },
+        },
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeUnmount', (e, page) => {
+      vueApp & vueApp.$destroy();
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .card-footer .row{
+    padding-bottom: 30px;
+  }
+  .dialog-buttons .dialog-button{
+    width: 100% !important;
+  }
+</style>

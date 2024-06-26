@@ -1,0 +1,190 @@
+{%- from "templates/print_formats/custom_macros.html" import tran -%}
+
+{% set profile = frappe.get_doc("Profile", doc.profile_id) %}
+{% set profile_subdevice = None %}
+{% if doc.docname != "null" %}
+    {% set profile_subdevice = frappe.get_doc("Profile Subdevice", doc.docname) %}
+{% endif %}
+frappe-form-right
+<!-- equalto -->
+<a href="#" class="link icon-only" func="controller_frappe_form_reset">
+	<i class="icon material-icons">replay</i>
+</a>
+<a href="#" class="link icon-only" func="controller_frappe_form_device_save">
+	<i class="icon material-icons">check</i>
+</a>
+<!-- split -->
+<div class="card">
+    <div class="card-header">
+        <div class="row ">
+            <div class="col-100">
+                <h5>{{ _('Profile Settings') }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="list no-hairlines-md">
+            <input type="hidden" name="doctype" value="Profile%20Subdevice" />
+            <input type="hidden" name="parenttype"  value="Profile" />
+            <input type="hidden" name="parent"  value="{{ doc.profile_id }}" />
+            <input type="hidden" name="parentfield"  value="profile_subdevice" />
+            <input type="hidden" name="model"  value="{{doc.data.model}}" />
+            {% if profile_subdevice != None %}
+            <input type="hidden" name="url" value="/api/resource/Profile%20Subdevice/{{ profile_subdevice.name }}" />
+            <input type="hidden" name="method" value="PUT" />
+            <input type="hidden" name="name" value="{{ profile_subdevice.name }}" />
+            {% else %}
+            <input type="hidden" name="url" value="/api/resource/Profile%20Subdevice" />
+            <input type="hidden" name="method" value="POST" />
+            {% endif %}
+            <ul>
+                <li class="item-content item-input">
+                    <div class="item-media align-self-flex-start ">
+                        <i class="icon material-icons setting-list-icon p-1">bed</i>
+                    </div>
+                    <div class="item-inner">
+                        <div class="item-title item-label">{{ _('Room')}}</div>
+                        <div class="item-input-wrap input-dropdown-wrap">
+                            <select name="profile_room" placeholder="Please choose..." lang="en">
+                                {% for room in profile.profile_room %}
+                                    {% if profile_subdevice.profile_room == room.name %}
+                                        <option value="{{room.name}}" selected="selected">{{tran(room.title)}}</option>
+                                    {% else %}
+                                        <option value="{{room.name}}">{{tran(room.title)}}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </li>
+                <li class="item-content item-input">
+                    <div class="item-media align-self-flex-start">
+                        <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                    </div>
+                    <div class="item-inner">
+                        <div class="item-title item-label ">{{ _('Name')}}</div>
+                          <div class="item-input-wrap">
+                            <input class="init-input" name="title" value="{{ profile_subdevice.title if profile_subdevice != None else doc.data.device_button_group }}" type="text" placeholder="Device Name" />
+    				        <span class="input-clear-button"></span>
+                          </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-content card-content-padding" style="">
+        <div class="list" style="padding-left:var(--fimobile-padding);padding-right:var(--fimobile-padding);">
+            <ul>
+                <li class="item-content item-input">
+                    <div class="item-media align-self-flex-start" style="margin-top: 3px;">
+                        <label class="checkbox"><input type="checkbox" checked name="hide_device"/><i class="icon-checkbox" style="opacity: 100;"></i></label>
+                    </div>
+                    <div class="item-inner" style="margin-left: 0;">
+                        <div class="">{{ _('Hide IR Device') }}</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <div class="row ">
+            <div class="col-100">
+                <h5>{{ _('General Information') }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-content card-content-padding" style="">
+        <div class="list" style="padding-left:var(--fimobile-padding);padding-right:var(--fimobile-padding);">
+            <ul>
+                {% if doc.appId != "com.lincogn.wlab" %}
+                <li class="item-content item-input" style="display:none;">
+                    <div class="item-inner">
+                        <div class="item-title item-label" lang="en">Sort order</div>
+                        <div class="item-input-wrap">
+                            <input class="init-input" name="idx" value="{{ profile_subdevice.idx if profile_subdevice != None else 1 }}" type="number" placeholder="Sort Order" lang="en" />
+                            <span class="input-clear-button"></span>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <a href="#" class="item-content" style="padding-left: 0px;">
+                        <div class="item-inner" style="padding-right: 0px;">
+                            <div class="item-title">{{ _('GUID') }}</div>
+                            <div class="item-after">{{ doc.data.guid }}</div>
+                            <input class="init-input" name="guid" value="{{ doc.data.guid }}" type="hidden" placeholder="GUID" readonly="readonly" />
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="item-content" style="padding-left: 0px;">
+                        <div class="item-inner" style="padding-right: 0px;">
+                            <div class="item-title">{{ _('Device Button Group') }}</div>
+                            <div class="item-after">{{ profile_subdevice.device_button_group if profile_subdevice != None else doc.data.device_button_group }}</div>
+                            <input class="init-input" name="device_button_group" value="{{ profile_subdevice.device_button_group if profile_subdevice != None else doc.data.device_button_group }}" type="hidden" placeholder="Device Button Group" readonly="readonly" />
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% if doc.appId != "com.lincogn.wlab" %}
+<div class="block block-strong" style="display:none;">
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update All Sensors</a>
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update Sensor 1</a>-->
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware2" ref="{{ doc.data.guid }}">Update Sensor 2</a>-->
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update Sensor 3</a>-->
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update Sensor 4</a>-->
+	</p>
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware1" ref="{{ doc.data.guid }}">Update Sensor 1</a>
+	</p>
+	<p class="row">
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update All Sensors</a>-->
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update Sensor 1</a>-->
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware2" ref="{{ doc.data.guid }}">Update Sensor 2</a>
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update Sensor 3</a>-->
+		<!--<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware" ref="{{ doc.data.guid }}">Update Sensor 4</a>-->
+	</p>
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware3" ref="{{ doc.data.guid }}">Update Sensor 3</a>
+	</p>
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_firmware4" ref="{{ doc.data.guid }}">Update Sensor 4</a>
+	</p>
+	
+	
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_init_living_room" ref="{{ doc.data.guid }}">Init living room Sensor</a>
+	</p>
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_init_toilet" ref="{{ doc.data.guid }}">Init toilet Sensor</a>
+	</p>
+	<p class="row">
+		<a class="col button button-large button-round button-raised" func="controller_ble_upgrade_sensor_init_bathroom" ref="{{ doc.data.guid }}">Init bathroom Sensor</a>
+	</p>
+</div>
+{% endif %}
+<!--<div class="block-title" lang="en">{{ _("Device") }}</div>-->
+<!--<div class="list no-hairlines-md">-->
+<!--	<ul>-->
+<!--		<li class="item-content item-input">-->
+<!--			<div class="item-inner">-->
+<!--				<div class="item-title item-label" lang="en">Default Status</div>-->
+<!--				<div class="item-input-wrap input-dropdown-wrap">-->
+<!--					<select name="settings.default_status" placeholder="Please choose..." lang="en">-->
+<!--						<option value="810b0200" lang="en">Off</option>-->
+<!--						<option value="810b02" lang="en">On</option>-->
+<!--					</select>-->
+<!--				</div>-->
+<!--			</div>-->
+<!--		</li>-->
+<!--    </ul>-->
+<!--</div>-->

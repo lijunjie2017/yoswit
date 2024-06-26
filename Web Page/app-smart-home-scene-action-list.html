@@ -1,0 +1,146 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Action List') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="list media-list no-margin" v-if="actionList.lenght != 0">
+          <ul>
+            <li class="device swipeout" v-for="(item,index) in actionList" :key="item.action_id">
+              <div class="item-content swipeout-content">
+                <a class="item-link item-content no-chevron no-ripple no-active-state" style="width: 100%">
+                  <div
+                    class="device-thumb item-media"
+                    :style="{
+                          'background-image' : 'url('+'https://dev.mob-mob.com/files/syncAutos.svg'+')',
+                          'background-position' : 'center',
+                          'background-size' : 'contain',
+                          'position' : 'relative'
+                        }"
+                  ></div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title ellipsis" lang="en" style="width: 180px;font-size: 18px;">{{item.action_name}}</div>
+                    </div>
+                    <div class="item-subtitle">{{item.action.length}} devices</div>
+                    <div class="signal-panel item-text height-21" style="width: 120%">
+                      <div>
+                        <div class="status-info text-color-primary" style="font-size: 12px;">Action Id:{{item.action_id}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+                <div class="control-panel-right" style="">
+                  <a class="right">
+                    <div class="button button-raised button-big circle rf-sensor">
+                      <i class="material-icons" style="line-height: 20px !important">arrow_forward_ios</i>
+                    </div>
+                  </a>
+                </div>
+              </div>
+              <div class="swipeout-actions-right">
+                <a class="link color-orange" :href="'/mobile-app/app-smart-home-scene-active-page?guid='+guid+'&action_id='+item.action_id">
+                  <i class="icon material-icons">settings</i>
+                </a>
+                <a class="link color-red">
+                  <i class="icon material-icons">delete</i>
+                </a>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="device-null" v-if="actionList.length == 0">
+          <div class="block" style="text-align: center">
+            <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+            <p>${_('You don\'t have any action, create one')}</p>
+          </div>
+          <div class="block block-strong">
+            <p class="row">
+              <a class="col button button-large" href="/mobile-app/app-smart-home-scene-active-page?guid=${guid}"
+                >{{ _('Create Action') }}</a
+              >
+            </p>
+          </div>
+        </div>
+        <div class="fab fab-right-bottom" style="position: fixed">
+          <a href="/mobile-app/app-smart-home-scene-active-page?guid=${guid}" style="text-align: center">
+            <i class="icon material-icons">add</i>
+          </a>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    const { guid } = $f7route.query;
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          actionList: [],
+          guid : guid
+        },
+        mounted() {
+          this.initData();
+        },
+        computed: {},
+        methods: {
+          initData() {
+            let device = cloneDeep(erp.info.device[guid]);
+            let deviceScene = device.device_scene;
+            let actionObj = null;
+            deviceScene.forEach((item) => {
+              if (item.scene_title === 'Action Config') {
+                actionObj = JSON.parse(item.scene_config);
+                this.thisId = item.name;
+                this.actionList = actionObj;
+              }
+            });
+            if(this.actionList.length){
+              //count the devices status
+            }
+          },
+        },
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .empty-box + .list ul::before,
+  .empty-box + .list ul::after {
+    content: none;
+  }
+</style>

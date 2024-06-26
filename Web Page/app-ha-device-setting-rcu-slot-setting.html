@@ -1,0 +1,779 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Rcu Slot Setting') }}</div>
+        <div class="right">
+          <a link icon-only @click="${()=>cancelAll()}" style="margin-right: 15px;">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px;">replay</i>
+          </a>
+          <a link icon-only @click="${()=>batch_save()}">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px;">save</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app">
+        <div class="card data-table">
+          <table>
+            <thead>
+              <tr>
+                <th class="label-cell" style="text-align: center">Slot Position</th>
+                <th class="numeric-cell" style="text-align: center">Type</th>
+                <!-- <th class="numeric-cell" style="text-align: center">Operate</th>-->
+              </tr>
+            </thead>
+            <tr v-for="(item,index) in list" :key="index" style="height: 60px">
+              <td class="numeric-cell" style="text-align: center">{{item.index}}</td>
+              <td class="label-cell" style="text-align: center">
+                <a class="item-link smart-select smart-select-init" data-open-in="popover">
+                  <select class="slot-type" :name="'type'+item.index">
+                    <option value="01" :selected="item.type == '01'">On Off Switch</option>
+                    <option value="02" :selected="item.type == '02'">Dimming</option>
+                    <option value="04" :selected="item.type == '04'">0-10v Dimming</option>
+                    <option value="03" :selected="item.type == '03'">Curtain Switch</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title"></div>
+                      <div class="item-after"></div>
+                    </div>
+                  </div>
+                </a>
+              </td>
+              <!-- <td class="label-cell">
+                <a href="#" class="button button-fill text-color-theme button-44" v-on:click="save(item.index,item.type)">
+                  <i class="material-icons" style="color: #fff">save</i>
+                </a>
+              </td> !-->
+            </tr>
+          </table>
+        </div>
+        <div class="card data-table">
+          <table>
+            <thead>
+              <tr>
+                <th class="numeric-cell" style="text-align: center">Gpio</th>
+                <th class="numeric-cell" style="text-align: center">Led</th>
+                <th class="numeric-cell" style="text-align: center">Status</th>
+                <th class="numeric-cell" style="text-align: center">Operate</th>
+              </tr>
+            </thead>
+            <tr v-for="(item,index) in inputSetList" :key="index" style="height: 60px">
+              <td class="numeric-cell" style="text-align: center">
+                <a class="item-link smart-select smart-select-init" data-open-in="popover">
+                  <select :name="'gpio'+item.index" :value="item.gpio || '00'" :class="'gang'+item.index">
+                    <option value="00">00</option>
+                    <option v-for="s in 32" :value="s < 10 ? '0' + s : s" selected>{{proces(s)}}</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title"></div>
+                      <div class="item-after">{{item.gpio}}</div>
+                    </div>
+                  </div>
+                </a>
+              </td>
+              <td class="numeric-cell" style="text-align: center">
+                <a class="item-link smart-select smart-select-init" data-open-in="popover">
+                  <select :name="'led'+item.index" :value="item.led">
+                    <option value="00">00</option>
+                    <option v-for="s in 32" :value="s < 10 ? '0' + s : s">{{proces(s)}}</option>
+                    <option value="98">98</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title"></div>
+                      <div class="item-after">{{item.led}}</div>
+                    </div>
+                  </div>
+                </a>
+              </td>
+              <td class="numeric-cell" style="text-align: center">
+                <a class="item-link smart-select smart-select-init" data-open-in="popover">
+                  <select :name="'status'+item.index" :value="item.status">
+                    <option value="00">Off</option>
+                    <option value="01">On</option>
+                    <option value="02">Toggle</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title"></div>
+                      <div class="item-after">{{handleStatus(item.status)}}</div>
+                    </div>
+                  </div>
+                </a>
+              </td>
+              <td class="label-cell">
+                <a href="#" class="button button-fill text-color-theme button-44" v-on:click="saveNewForInput(item.index)">
+                  <i class="material-icons" style="color: #fff">save</i>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="button button-fill text-color-theme button-44" style="float: right;margin-right: 15px;margin-bottom: 15px;">
+          <a href="#" class="button button-fill text-color-theme button-44" v-on:click="addForInput()">
+            <i class="material-icons" style="color: #fff">add</i>
+          </a>
+        </div>
+        <div style="height: 75px;"></div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+      const batch_save = ()=>{
+        //console.log(123)
+        vueApp.$batchSave();
+      }
+      const cancelAll = ()=>{
+        vueApp.$reSet();
+      }
+      let vueApp = null;
+      let {guid,device_name} = $f7route.query;
+      $on('pageMounted',(e, page)=>{
+        vueApp = new Vue({
+          el: page.el.querySelector('#vue-app'),
+          data:{
+            list : [
+              {
+                index : '01',
+                type : '02',
+              },
+              {
+                index : '02',
+                type : '02',
+              },
+              {
+                index : '03',
+                type : '02',
+              },
+              {
+                index : '04',
+                type : '02',
+              },
+              {
+                index : '05',
+                type : '04',
+              }
+            ],
+            inputList : [],
+            inputSetList : [],
+          },
+          computed:{
+          },
+          mounted(){
+            this.init();
+            Vue.prototype.$batchSave = this.batchSave;
+            Vue.prototype.$reSet = this.reSet;
+          },
+          methods:{
+            sleep(ms){
+              return new Promise(resolve => setTimeout(resolve, ms));
+            },
+            async reSet(){
+              app.dialog.confirm(`Are you sure to reset?`,()=>{
+                let cmd = [{"action":"connect"}];
+                cmd.push({"action":"write","data":`8110`});
+                try{
+                  const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+                  ha_process_periperal_cmd(p.id, cmd,true).then(()=>{
+                    //dele the erp info
+                    http.request(encodeURI('/api/resource/Device/' + guid), {
+                        serializer: "json",
+                        responseType: "json",
+                        method: "PUT",
+                        data: {
+                          settings : []
+                        }
+                    }).then(()=>{
+                      app.dialog.alert("Reset successfully",runtime.appInfo.name);
+                      this.inputSetList = [];
+                    });
+                  });
+                }catch(error){
+                  app.dialog.alert(error);
+                }
+              },()=>{})
+            },
+            async batchSave(){
+              app.preloader.show();
+              console.log($(".slot-type"));
+              let commandList = [];
+              let erpObj = {};
+              let listDoms = $(".slot-type");
+              listDoms.forEach((thisDom,index)=>{
+                console.log($(thisDom).attr('name'));
+                console.log($(thisDom).val());
+                let this_val = $(thisDom).val();
+                console.log("this_val",this_val);
+                let index_str = `0${index+1}`;
+                let this_command = `9711${index_str}${this_val == '03'?'01':this_val == '04'?'02':this_val == '02'?'02':'01'}`;
+                erpObj[`0${index+1}`] = this_val;
+                commandList.push(this_command);
+                if(this_val == '02'){
+                  let this_data = `971f${index_str}89070101`;
+                  commandList.push(this_data);
+                }else if(this_val == '04'){
+                  let this_data = `971f${index_str}89070202`;
+                  commandList.push(this_data);
+                }else if(this_val == '03'){
+                  let this_data = `971f${index_str}810501`;
+                  commandList.push(this_data);
+                }else if(this_val == '01'){
+                  let this_data = `971f${index_str}810500`;
+                  commandList.push(this_data);
+                }
+              })
+              console.log("commandList",commandList);
+              //get the command of the input and the out put
+              let inputcommand = [];
+              let inputErp = {};
+              //save to erp 
+              console.log("erpObj",erpObj);
+              try{
+                for(let i in commandList){
+                  await window.peripheral[guid].write([{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: commandList[i],
+                  }]);
+                }
+                await iot_device_setting_sync_server(guid,null, null, true,erpObj);
+                await this.syncDataToErp('01,02,03,04,05');
+                app.preloader.hide();
+                app.dialog.alert('Save Success,Please restart!');
+                return;
+                //get the command of the input and the out put
+                // let inputList = this.inputSetList;
+                // for(let i in inputList){
+                //   let this_index = parseInt(inputList[i].index).toString(16).pad("00");
+                //   let val = parseInt($(`select[name="gpio${this_index}"]`).val()).toString(16).pad("00");
+                //   let val_led = parseInt($(`select[name="led${this_index}"]`).val()).toString(16).pad("00");
+                //   let status = $(`select[name="status${this_index}"]`).val();
+                //   if(val == 'aN' || val_led == 'aN'){
+                //     continue;
+                //   }
+                //   inputcommand.push({"action":'write',data:`972001${val}01`});
+                //   inputcommand.push({"action":'write',data:`972001${val_led}02`});
+                //   //await ha_process_periperal_cmd(p.id, cmd,true);
+                //   let typeIndex = `01`;
+                //   let opcode = '00'
+                //   let preCommand = `8F2000${this_index}${this_index}`;
+                //   let triggerCommand = ``;
+                //   let mac = core_utils_get_mac_address_from_guid(guid, true);
+                //   triggerCommand = `${opcode}${typeIndex}${mac}${val}00`;
+                //   triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                //   let triggerLastCommand = `${preCommand}${triggerCommand}`;
+                //   //action command
+                //   let actioncommand_pre = `8F1000${this_index}`;
+                //   let actiondata = `02${mac}972101${val_led}${status}`;
+                //   let actionCommand = `${(actiondata.length/2).toString(16).pad('00')}${actiondata}`;
+                //   let actionLastCommand = `${actioncommand_pre}${actionCommand}`;
+                //   inputcommand.push({"action":'write', "data":triggerLastCommand});
+                //   inputcommand.push({"action":'write', "data":actionLastCommand});
+                //   //update local erp
+                //   let erpType = `gpio_${val}_led_${val_led}_index_${this_index.toString(10)}`;
+                //   inputErp[`${erpType}`] = status;
+                //   let device_setting = erp.info.device[guid]['settings'];
+                //   if(device_setting.length == 0){
+                //     device_setting.push({
+                //       setting_type : erpType,
+                //       setting : status
+                //     })
+                //   }
+                //   device_setting.forEach(item=>{
+                //     item.setting_type = erpType;
+                //     item.setting = status;
+                //   });
+                // }
+                await ha_process_periperal_cmd(p.id,inputcommand,true);
+                await iot_device_setting_sync_server(guid,null, null, true,inputErp);
+                await this.sleep(3000);
+                await ha_process_periperal_cmd(p.id,[{"action":"write","data":'810e'}] ,true);
+                await this.sleep(5000);
+                await ha_process_periperal_cmd(p.id,[{"action":"connect"}],true);
+                app.preloader.hide();
+                app.dialog.alert('Save Success!');
+              }catch(err){
+                app.preloader.hide();
+                app.dialog.alert(_(err));
+              }
+            },
+            async save(index){
+              let val = $(`select[name='type${index}']`).val();
+              console.log('val',val);
+              let data = `9711${index}${val == '03'?'01':val == '04'?'02':'01'}`;
+              console.log(data)
+              let cmd = [];
+              cmd.push({"action":'connect'});
+              cmd.push({"action":'write', "data":data});
+              if(val == '04'){
+                let this_data = `971f${index}890702`;
+                cmd.push({"action":'write', "data":this_data});
+              }else if(val == '02'){
+                let this_data = `971f${index}890702`;
+                cmd.push({"action":'write', "data":this_data});
+              }
+              const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+              if(!isset(p) || !isset(p.id)){
+                return;
+              }
+              try{
+                await ha_process_periperal_cmd(p.id, cmd,true);
+                app.dialog.alert('Save Success!');
+                await iot_ble_write(guid, "ff80", "ff81", "810E");
+                setTimeout(()=>{
+                  this.init();
+                },1000*5);
+                this.syncDataToErp(index,val);
+              }catch(error){
+                  app.dialog.alert(_(error));
+              }
+            },
+            async saveNewForInput(index){
+              //set the input and out put,new method
+              let val = parseInt($(`select[name="gpio${index}"]`).val()).toString(16).pad("00") ;
+              let val_led = parseInt($(`select[name="led${index}"]`).val()).toString(16).pad("00") ;
+              let status = $(`select[name="status${index}"]`).val();
+              if(val == 'aN' || val_led == 'aN'){
+                app.dialog.alert('Please select the gpio and led');
+                return;
+              }
+              console.log('val',val);
+              console.log('val_led',status);
+              try{
+                const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+                let cmd = [];
+                //set the input and out put
+                cmd.push({"action":'connect'});
+                cmd.push({"action":'write',data:`972001${val.toString(16).pad("00")}01`});
+                cmd.push({"action":'write',data:`972001${val_led.toString(16).pad("00")}02`});
+                await ha_process_periperal_cmd(p.id, cmd,true);
+                //must be create a new secen to ctrol the device
+                let typeIndex = `01`;
+                let opcode = '00' //that like or with and
+                let preCommand = `8F2000${parseInt(index).toString(16).pad("00")}${parseInt(index).toString(16).pad("00")}`;
+                let triggerCommand = ``;
+                let mac = core_utils_get_mac_address_from_guid(guid, true);
+                triggerCommand = `${opcode}${typeIndex}${mac}${val}00`;
+                triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                let triggerLastCommand = `${preCommand}${triggerCommand}`;
+                //action command
+                let actioncommand_pre = `8F1000${parseInt(index).toString(16).pad("00")}`;
+                let actiondata = `02${mac}972101${val_led}${status}`;
+                let actionCommand = `${(actiondata.length/2).toString(16).pad('00')}${actiondata}`;
+                let actionLastCommand = `${actioncommand_pre}${actionCommand}`;
+                let new_cmd = [{"action":'connect'}];
+                new_cmd.push({"action":'write', "data":triggerLastCommand});
+                new_cmd.push({"action":'write', "data":actionLastCommand});
+                console.log("new_cmd",new_cmd);
+                await ha_process_periperal_cmd(p.id, new_cmd,true);
+                //save data to erp
+                let erpType = `gpio_${val}_led_${val_led}_index_${index}`;
+                await iot_device_setting_sync_server(guid,erpType,status);
+                //update erp setting
+                let device_setting = erp.info.device[guid]['settings'];
+                if(device_setting.length == 0){
+                  device_setting.push({
+                    setting_type : erpType,
+                    setting : status
+                  })
+                }
+                device_setting.forEach(item=>{
+                  item.setting_type = erpType;
+                  item.setting = status;
+                });
+                app.dialog.alert('Save Success!');
+              }catch(error){
+                app.dialog.alert(_(error));
+              }
+            },
+            async saveForInput(index,gang){
+              let val = $(`select[name="gpio${index}-${gang}"]`).val();
+              let val_led = $(`select[name="led${index}-${gang}"]`).val();
+              let type = '01';
+              this.list.forEach(item=>{
+                if(item.index === index){
+                  type = item.type
+                }
+              })
+              console.log('val',val_led);
+              //let data = `9714${index}${gang}`;//can not use
+              let data = `972001${val}${val_led}`;
+              // if(type === '01'){
+              //   data += `${val}${val_led}`;
+              // }else if(type === '02'){
+              //   data += `${val}${val_led}`;
+              // }
+              console.log(data)
+              let cmd = [];
+              cmd.push({"action":'connect'});
+              cmd.push({"action":'write', "data":data});
+
+              const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+              if(!isset(p) || !isset(p.id)){
+                return;
+              }
+              try{
+                await ha_process_periperal_cmd(p.id, cmd,true);
+                app.dialog.alert('Save Success!');
+                await iot_ble_write(guid, "ff80", "ff81", "810E");
+                setTimeout(()=>{
+                  this.init();
+                },1000*5);
+
+              }catch(error){
+                  app.dialog.alert(_(error));
+              }
+            },
+            async addForInput(){
+              let thisIndex = this.inputSetList.length+1;
+              
+              app.dialog.prompt(`How many rows need to be generated?`,($length)=>{
+                let targetNum = parseInt($length)+this.inputSetList.length;
+                for(let i=thisIndex;i<=targetNum;i++){
+                  let newIndex = i > 9?i:`0${i}`
+                  this.inputSetList.push({
+                  index : newIndex,
+                  gpio : '~',
+                  led : '~',
+                  status : '02'
+                })
+                }
+              },()=>{
+
+              })
+              
+            },
+            async init(){
+              //notify
+              const device_setting = cloneDeep(erp.info.device[guid]['settings']);
+              let setting_obj = {};
+              device_setting.forEach(item=>{
+                setting_obj[item.setting_type] = item.setting;
+              })
+              console.log("setting_obj",setting_obj)
+              const typeMap = {
+                '01': { value: 'On Off Switch', text: 'On Off Switch' },
+                '02': { value: 'Dimming', text: 'Dimming' },
+                '03': { value: 'Curtain Switch', text: 'Curtain Switch' },
+                '04': { value: '0-10v Dimming', text: 'Dimming' },
+
+              }
+              let data = `9701`;
+              await peripheral[guid].connect();
+              //console.log(peripheral[guid]);
+              try{
+                ble.startNotification(
+                  peripheral[guid].prop.id,
+                  'ff80',
+                  'ff82',
+                  (rs) => {
+                    console.log(rs);
+                    if(rs.startsWith('9711')){
+                      let index_one = rs.substr(6,2);
+                      let index_two = rs.substr(10,2);
+                      let index_three = rs.substr(14,2);
+                      let index_four = rs.substr(18,2);
+                      let index_five = rs.substr(22,2);
+                      this.list.forEach(item=>{
+                        if(item.index === '01'){
+                          item.type = index_one;
+                          //compare the val of the erp
+                          let erp_val = setting_obj[`01`]?setting_obj[`01`]:'01';
+                          console.log(setting_obj);
+                          //check if wong
+                          if(item.type == '02' && erp_val != '01' && erp_val != '03'){
+                            item.type = erp_val;
+                          }else if(item.type == '01' && erp_val != '02' && erp_val != '04'){
+                            item.type = erp_val;
+                          }
+                          console.log(item.type)
+                          $(`select[name='type${item.index}']`).val(item.type);
+                          $(`select[name='type${item.index}']`).parent().find('.item-after').text(typeMap[item.type].value);
+                        }
+                        if(item.index === '02'){
+                          item.type = index_two;
+                          //compare the val of the erp
+                          let erp_val = setting_obj[`02`]?setting_obj[`02`]:'01';
+                          //check if wong
+                          if(item.type == '02' && erp_val != '01' && erp_val != '03'){
+                            item.type = erp_val;
+                          }else if(item.type == '01' && erp_val != '02' && erp_val != '04'){
+                            item.type = erp_val;
+                          }
+                          $(`select[name='type${item.index}']`).val(item.type);
+                          $(`select[name='type${item.index}']`).parent().find('.item-after').text(typeMap[item.type].value);
+                        }
+                        if(item.index === '03'){
+                          item.type = index_three;
+                         //compare the val of the erp
+                         let erp_val = setting_obj[`03`]?setting_obj[`03`]:'01';
+                          //check if wong
+                          if(item.type == '02' && erp_val != '01' && erp_val != '03'){
+                            item.type = erp_val;
+                          }else if(item.type == '01' && erp_val != '02' && erp_val != '04'){
+                            item.type = erp_val;
+                          }
+                          $(`select[name='type${item.index}']`).val(item.type);
+                          $(`select[name='type${item.index}']`).parent().find('.item-after').text(typeMap[item.type].value);
+                        }
+                        if(item.index === '04'){
+                          item.type = index_four;
+                          //compare the val of the erp
+                          let erp_val = setting_obj[`04`]?setting_obj[`04`]:'01';
+                          //check if wong
+                          console.log("04",index_four);
+                          if(item.type == '02' && erp_val != '01' && erp_val != '03'){
+                            item.type = erp_val;
+                          }else if(item.type == '01' && erp_val != '02' && erp_val != '04'){
+                            item.type = erp_val;
+                          }
+                          $(`select[name='type${item.index}']`).val(item.type);
+                          $(`select[name='type${item.index}']`).parent().find('.item-after').text(typeMap[item.type].value);
+                        }
+                        if(item.index === '05'){
+                          item.type = index_five;
+                          //compare the val of the erp
+                          let erp_val = setting_obj[`05`]?setting_obj[`05`]:'01';
+                          //check if wong
+                          if(item.type == '02' && erp_val != '01' && erp_val != '03'){
+                            item.type = erp_val;
+                          }else if(item.type == '01' && erp_val != '02' && erp_val != '04'){
+                            item.type = erp_val;
+                          }
+                          $(`select[name='type${item.index}']`).val(item.type);
+                          $(`select[name='type${item.index}']`).parent().find('.item-after').text(typeMap[item.type].value);
+                        }
+                      })
+                    }else if(rs.startsWith('9714')){
+                      let index_params = 4;
+                      let cell = 18;
+                      let indexList = [];
+                      for(let i = 0;i<5;i++){
+                        let index = rs.substr(index_params+cell*i,2);
+                        indexList.push(index);
+                      }
+                      indexList.forEach(item=>{
+                        let gangList = [];
+                        if(item === '01'){
+                          let cells = 6;
+                          for(let i=0;i<8;i++){
+                            gangList.push(rs.substr(cells+i*2,2));
+                          }
+                          console.log("gangList",gangList);
+                          this.changeGpioAndLed('01',gangList);
+                        }
+                      })
+                    }
+                  },
+                  (err) => {
+                    //reject(err);
+                  }
+                );
+                await window.peripheral[guid].write([{
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                }]);
+                await window.peripheral[guid].write([{
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `931F`,
+                }]);
+                this.initSetInputList();
+              }catch(error){
+                  app.dialog.alert(_(error));
+              }
+            },
+            async syncDataToErp(index,type){
+              if(type){
+                await iot_device_setting_sync_server(guid,index,type);
+              }
+              //post api 
+              try{
+                let url = '/api/method/save.rcuv6'
+                await await http.request(encodeURI(url), {
+                  method: 'POST',
+                  serializer: 'json',
+                  responseType: 'json',
+                  data: {
+                    parent : erp.info.profile.name,
+                    guid : guid,
+                    index : index,
+                    profile_device : device_name,
+                    profile_room : erp.info.profile.profile_room[0].name
+                  },
+                });
+                ha_profile_ready();
+              }catch(err){
+                app.dialog.alert(_(err));
+              }
+            },
+            changeGpioAndLed(index,list){
+              const gangMax = Math.max(...this.inputList.map(item => Number(item.gang)));
+              this.inputList.forEach((item, itemIndex) => {
+                if (item.index === index) {
+                  const gangIndex = itemIndex % gangMax;
+                  const [gpioProp, ledProp] = ['gpio', 'led'];
+                  const [gpioValue, ledValue] = list.slice(gangIndex * 2, gangIndex * 2 + 2);
+                  if (gpioValue !== 'ff') item[gpioProp] = gpioValue;
+                  if (ledValue !== 'ff') item[ledProp] = ledValue;
+                }
+              });
+              // this.inputList.forEach(item=>{
+              //   if(item.index === index){
+              //     list.forEach((kitem,kindex)=>{
+              //       if(kindex === 0 && item.gang === '01' && kitem != 'ff'){
+              //         item.gpio = kitem;
+              //       }
+              //       if(kindex === 1 && item.gang === '01' && kitem != 'ff'){
+              //         item.led = kitem;
+              //       }
+              //       if(kindex === 2 && item.gang === '02' && kitem != 'ff'){
+              //         item.gpio = kitem;
+              //       }
+              //       if(kindex === 3 && item.gang === '02' && kitem != 'ff'){
+              //         item.led = kitem;
+              //       }
+              //       if(kindex === 4 && item.gang === '03' && kitem != 'ff'){
+              //         item.gpio = kitem;
+              //       }
+              //       if(kindex === 5 && item.gang === '03' && kitem != 'ff'){
+              //         item.led = kitem;
+              //       }
+              //       if(kindex === 6 && item.gang === '04' && kitem != 'ff'){
+              //         item.gpio = kitem;
+              //       }
+              //       if(kindex === 7 && item.gang === '04' && kitem != 'ff'){
+              //         item.led = kitem;
+              //       }
+              //     })
+              //   }
+              // })
+            },
+            async initSetInputList(){
+              this.inputSetList = [];
+              const device_setting = cloneDeep(erp.info.device[guid]['settings']);
+              let setting_obj = {};
+              device_setting.forEach(item=>{
+                //tiny the setting data
+                let setting_str = item.setting_type;
+                if(setting_str.startsWith('gpio')){
+                  //get the gpio and led
+                  let list = setting_str.split('_');
+                  let this_gpio = list[1];
+                  let this_led = list[3];
+                  let this_index = list[5];
+                  let this_status = item.setting;
+                  this.inputSetList.push({
+                    index : this_index,
+                    gpio : this_gpio,
+                    led : this_led,
+                    status : this_status
+                  })
+                }
+              })
+              console.log("this.inputSetList",this.inputSetList);
+              if(this.inputSetList.length == 0){
+                this.inputSetList.push({
+                  index : '01',
+                  gpio : '~',
+                  led : '~',
+                  status : `02`
+                })
+              }
+              this.inputSetList.sort((a,b)=>{
+                return parseInt(a.index) - parseInt(b.index);
+              })
+            },
+            async initInputList(){
+              //must be sort by the list
+              let list = [];
+              let slotlist = cloneDeep(this.list);
+              slotlist.forEach(item=>{
+                switch(item.type){
+                  case '01':
+                    for(let i = 1;i<5;i++){
+                      list.push({
+                        index : item.index,
+                        gang : `${i < 10 ? '0' + i : i}`,
+                        gpio : '~',
+                        led : '~'
+                      });
+                      // setTimeout(()=>{
+                      //   console.log($(`.gang${item.index}-${i < 10 ? '0' + i : i}`));
+                      //   app.smartSelect.create({
+                      //     el : $(`.gang${item.index}-${i < 10 ? '0' + i : i}`),
+                      //     valueEl: null,
+                      //     openIn : 'popover'
+                      //   })
+                      //   $(`.gang${item.index}-${i < 10 ? '0' + i : i}`).val();
+                      // },500)
+                    }
+                    break;
+                  case '02':
+                    for(let i = 1;i<3;i++){
+                      list.push({
+                        index : item.index,
+                        gang : `${i < 10 ? '0' + i : i}`,
+                        gpio : '~',
+                        led : '~'
+                      });
+                    }
+                    break;
+                  default:
+                    break;
+                }
+              })
+              this.inputList = list;
+              console.log(list);
+            },
+            handleStatus(status){
+              return status === '02' ? _('Toggle') : status === '01' ? _('On') : _('Off');
+            },
+            proces(s){
+              return s < 10 ? '0' + s : s;
+            },
+          },
+        })
+      })
+      $on('pageBeforeUnmount', (e, page) => {
+        if (vueApp) {
+          vueApp.$destroy();
+        }
+      });
+    return $render;
+  };
+</script>
+
+<style>
+  .smart-select .item-after {
+    max-width: 100%;
+  }
+</style>

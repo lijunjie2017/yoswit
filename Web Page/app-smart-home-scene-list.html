@@ -1,0 +1,452 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Scene List') }}</div>
+        <div class="right">
+          <a class="link icon-only" @click="${()=>delAllScene()}">
+            <i class="icon material-icons md-only">restart_alt</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      ${deviceList.length >0 && $h`
+      <div class="list media-list no-chevron virtual-list searchbar-found search-list">
+        <ul class="">
+          ${deviceList.map((item)=> $h`
+          <li
+            class="swipeout scene swipeout-delete-manual active"
+            style="
+              margin: 5px;
+              overflow: hidden;
+              height: 80px;
+              background-size: cover;
+              background-position: center;
+              -webkit-border-radius: 5px;
+              -moz-border-radius: 5px;
+              border-radius: 5px;
+            "
+            key="${item.name}" sub_name="${item.name}">
+            <div class="background-filter"></div>
+            <div class="swipeout-content" style="height: 100%">
+              <a href="#" class="item-link item-content no-chevron" style="height: 100%">
+                <div @click="${()=>toScene(item)}" class="item-inner display-flex justify-content-space-between" style="padding-top: 0; padding-bottom: 0">
+                  <div class="item-title" style="text-shadow: 1px 2px 3px #000; color: #fff">${item.scene_title}</div>
+                </div>
+                <div class="item-info device-none" @click="${()=>errorInfoShow(item)}">
+                  <i class="icon material-icons text-color-red">priority_high</i>
+                </div>
+              </a>
+            </div>
+            <div class="swipeout-actions-right">
+              <a class="link color-orange" @click="${()=>toScene(item)}">
+                <i class="icon material-icons">settings</i>
+              </a>
+              <a href="#" data-confirm="Are you sure you want to delete this item?" class="link color-red" @click="${()=>onDeleted(item)}">
+                <i class="icon material-icons">delete</i>
+              </a>
+            </div>
+          </li>
+          `)}
+        </ul>
+      </div>
+      `}
+      <div class="device-null device-none">
+        <div class="block" style="text-align:center;">
+          <span class="material-icons" style="font-size:100px;color:#ddd;">meeting_room</span>
+          <p>${_('You don\'t have any scene, create one')}</p>
+        </div>
+        <div class="block block-strong">
+          <p class="row">
+            <a class="col button button-large" href="/mobile-app/app-smart-home-scene-page?checkval=${checkval}&subdevice_name=${subdeviceName}">{{ _('Create Scene') }}</a>
+          </p>
+        </div>
+      </div>
+      <div class="fab fab-right-bottom">
+        <a style="text-align: center" @click="${()=>toScene()}">
+          <i class="icon material-icons">add</i>
+        </a>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let deviceList = [];
+    let sceneObj = null;
+    let checkval = "Gateway";
+    let subdeviceName = '';
+    let localTrigerSceneList = [];
+    let localActionSceneList = [];
+    let localSceneIdList = [];
+    let erpSceneIdList = [];
+    const { title, sceneitem } = $f7route.query;
+    if(sceneitem && isset(sceneitem)){
+      sceneObj = JSON.parse(sceneitem);
+      subdeviceName = sceneObj.name;
+      if(sceneObj.device_mode != "Gateway"){
+        checkval = "Device";
+      }
+    }
+    const delAllScene = async()=>{
+      console.log(sceneObj);
+      let guid = sceneObj.device;
+      let triggerCommand = `8f210000ff`;
+      let actionCommand = `8f1100ff`;
+      app.dialog.confirm(`Confirm deletion?`,()=>{
+        window.peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: triggerCommand,
+        }]).then(()=>{
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: actionCommand,
+          }])
+        }).catch((error)=>{
+          app.dialog.alert(error)
+        })
+        .then(()=>{
+          app.dialog.alert('BLE Clear Successfully');
+        })
+      },()=>{
+
+      })
+    }
+    const init = () => {
+      deviceList = [];
+      erpSceneIdList = [];
+      let tempList = [];
+      let obj = erp.info.device;
+      console.log(subdeviceName)
+      for (let i in obj) {
+        if(isset(obj[i].device_scene) && sceneObj.device == i){
+          obj[i].device_scene.device_mode = obj[i].device_mode;
+          obj[i].guid = i;
+          tempList = tempList.concat(obj[i].device_scene);
+        }
+      }
+      tempList.forEach(item=>{
+        let obj = JSON.parse(item.scene_config);
+        console.log("obj",obj);
+        erpSceneIdList.push({
+          scene_id : obj.scene_id,
+          name : item.name,
+          title : item.scene_title
+        });
+        if(subdeviceName == obj.subdevice_name){
+          //push this scene to the local id list 
+          localSceneIdList.push({
+            scene_id : obj.scene_id,
+            name : item.name
+          });
+          deviceList.push(item);
+        }
+      })
+      //check have same scene_id
+      let array  = erpSceneIdList.map((kitem=>kitem.scene_id));
+      const duplicates = [...new Set(array.filter((item, index) => array.indexOf(item) !== index))];
+      console.log('duplicates',duplicates);
+      if(duplicates.length > 0){
+        let show_info = [];
+        duplicates.forEach(item=>{
+          erpSceneIdList.forEach(kitem=>{
+            console.log(kitem.scene_id);
+            if(item == kitem.scene_id){
+              show_info.push(kitem.title)
+            }
+          })
+        })
+        console.log("show_info",show_info);
+        app.dialog.alert(tran('Attention, Duplicate Settings Detected.Scene Info:')+`${show_info.join(",")}`);
+      }else{
+        //read the local scene
+        readBleScene();
+      }
+      //tindy the deviceList
+      console.log("deviceList",deviceList)
+      
+      if(deviceList.length == 0){
+        $(".device-null").removeClass('device-none');
+      }else{
+        $(".device-null").addClass('device-none');
+      }
+      $update();
+    };
+    const readBleScene = async()=>{
+      let guid = sceneObj.device;
+      app.dialog.preloader(`Bluetooth Configuration Loading`);
+      setTimeout(()=>{
+        app.dialog.close();
+      },15*1000)
+      try{
+        await peripheral[guid].connect();
+        let device_id = peripheral[guid].prop.id;
+        await ble.startNotification(
+          device_id,
+          'ff80',
+          'ff82',
+          (rs) => {
+            console.log("rs",rs);
+            if(rs.startsWith("8f22") && rs.length > 8){
+              let thisSceneId = rs.slice(6,8);
+              const foundIndex = localTrigerSceneList.findIndex(item=>item.scene_id == rs.slice(6,8));
+              if(foundIndex === -1){
+                localTrigerSceneList.push({
+                  scene_id : rs.slice(6,8),
+                  command : rs
+                })
+              }
+            }else if(rs.startsWith("8f12") && rs.length > 8){
+              //this means command is action
+              const foundIndex = localActionSceneList.findIndex(item=>item.scene_id == rs.slice(6,8));
+              if(foundIndex === -1){
+                localActionSceneList.push({
+                  scene_id : rs.slice(6,8),
+                  command : rs
+                })
+              }
+            }else if(rs.startsWith("8f1200ff")){
+              app.dialog.close();
+              compareLocalAndErpData();
+            }
+          },
+          (err) => {
+            app.dialog.close();
+            app.dialog.alert(err);
+          }
+        );
+        let read_action_command = '8F1200FF';
+        let read_trriger_command = `8F220000FF`;
+        await peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: read_trriger_command,
+        },{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: read_action_command,
+        }])
+      }catch(error){
+        app.dialog.close();
+        const toast = app.toast.create({
+          position: 'bottom',
+          closeTimeout: 3000,
+          text: error,
+        });
+
+        toast.open();
+        //app.dialog.alert(error);
+      }
+    }
+    const compareLocalAndErpData = ()=>{
+      console.log("localActionSceneList",localActionSceneList);
+      let idList = localActionSceneList.map(item=>item.scene_id);
+      deviceList.forEach(item=>{
+        let this_obj = JSON.parse(item.scene_config);
+        let this_scene_id = this_obj.scene_id;
+        if(idList.indexOf(this_scene_id) == -1){
+          //this scene is not in ble
+          console.log($(`.scene[sub_name="${item.name}"]`).find(".item-info"));
+          $(`.scene[sub_name="${item.name}"]`).find(".item-info").removeClass('device-none');
+          item.errorCode = -1;
+        }
+      })
+    }
+    const errorInfoShow = (item)=>{
+      if(item.errorCode == -1){
+        app.dialog.alert(tran(`This setting is not available on the device.`));
+      }
+    }
+    const onDeleted = async (item) => {
+      app.preloader.show();
+       //
+       let config = item.scene_config?JSON.parse(item.scene_config):{};
+       let id = config.scene_id?config.scene_id:'';
+       if(!id){
+          return
+        }
+      //delete
+      try {
+        await peripheral[item.parent].connect();
+        let device_status = await http.request(encodeURI(`/api/resource/Device Scene/${item.name}`), {
+          method: 'DELETE',
+          serializer: 'json',
+          responseType: 'json',
+          data: {
+            parenttype: 'Device',
+            parentfield: 'device_scene',
+            parent: item.parent
+          },
+        });
+        try {
+          await ha_profile_ready();
+          await deleteScene(item.parent,id,item.device_mode);
+          app.preloader.hide();
+          init();
+        } catch (err) {
+          app.preloader.hide();
+          app.dialog.alert(err);
+        }
+      } catch (err) {
+        app.preloader.hide();
+        app.dialog.alert(err);
+      }
+    };
+    const deleteScene = async(guid,id,device_mode)=>{
+      let mac = core_utils_get_mac_address_from_guid(guid, false);
+      //get gateway
+      let list = erp.info.profile.profile_device;
+      let gateway = '';
+      if(device_mode == "Gateway"){
+        gateway = list[list.findIndex(item=>item.device === guid)].gateway
+      }
+      let command = `8F1100${id.toString(16).pad('00')}`;
+      let trigerdelcommand = `8F210000${id.toString(16).pad('00')}`;
+      //let command = `8F1100ff`;
+      console.log(command);
+      if(gateway){
+          let this_data = {
+          action: 'write',
+          mac_address: mac,
+          service_id: 'ff80',
+          char_id: 'ff81',
+          value: command,
+        };
+        let triger_data = {
+          action: 'write',
+          mac_address: mac,
+          service_id: 'ff80',
+          char_id: 'ff81',
+          value: trigerdelcommand,
+        }
+        core_mqtt_publish(
+          'cmd/' + md5(md5(gateway.toLowerCase())),
+          {
+            command: 'Control',
+            function: 'bleHelper.perform',
+            params: [triger_data],
+            callback: '',
+            raw: '',
+          },
+          {
+            command: 'Control',
+            function: 'bleHelper.perform',
+            params: [this_data],
+            callback: '',
+            raw: '',
+          },
+          0,
+          false,
+          false,
+          false,
+        )
+      }else{
+        try{
+          await window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: command,
+          }]);
+          await window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: trigerdelcommand,
+          }]);
+          await ha_profile_ready();
+        }catch(e){
+          const toast = app.toast.create({
+            position: 'bottom',
+            closeTimeout: 3000,
+            text: e,
+          });
+          toast.open();
+        }
+      }
+    }
+    const toScene = (item) => {
+      if(isset(item)){
+        mainView.router.navigate(`/mobile-app/app-smart-home-scene-page?title=${'Edit '+item.scene_title}&item=${encodeURIComponent(JSON.stringify(item))}&checkval=${checkval}&subdevice_name=${subdeviceName}`);
+      }else{
+        mainView.router.navigate(`/mobile-app/app-smart-home-scene-page?checkval=${checkval}&subdevice_name=${subdeviceName}`);
+      }
+    };
+    $on('pageAfterIn', (e, page) => {
+      init();
+      $update();
+    });
+    $onMounted(() => {});
+    return $render;
+  };
+</script>
+
+<style>
+  li.scene div.background-filter {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  li.scene.active {
+    -webkit-box-shadow: 0px 0px 30px 2px rgba(255, 255, 196, 1);
+    -moz-box-shadow: 0px 0px 30px 2px rgba(255, 255, 196, 1);
+    box-shadow: 0px 0px 30px 2px rgba(255, 255, 196, 1);
+    -webkit-transition: all 1000ms linear;
+    -ms-transition: all 1000ms linear;
+    transition: all 1000ms linear;
+  }
+  li.scene.active div.background-filter {
+    background-color: rgba(0, 0, 0, 0.2);
+    -webkit-transition: all 1000ms linear;
+    -ms-transition: all 1000ms linear;
+    transition: all 1000ms linear;
+  }
+  li.scene .item-title {
+    color: #989e99;
+    padding-top: 40px;
+    font-weight: bold;
+  }
+  li.scene.active .item-title {
+    color: #ffffff;
+    -webkit-transition: all 1000ms linear;
+    -ms-transition: all 1000ms linear;
+    transition: all 1000ms linear;
+  }
+  .control-show {
+    display: none;
+  }
+  .device-none{
+    display: none;
+  }
+  .empty-box + .list ul::before,
+  .empty-box + .list ul::after {
+    content: none;
+  }
+  .item-info{
+    width: 50px;
+    text-align: center;
+  }
+</style>

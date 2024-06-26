@@ -1,0 +1,1162 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title" id="add-title">{{ _('Add Scene') }}</div>
+      </div>
+    </div>
+    <style>
+      .add-box {
+        height: 70px;
+        padding: 0px 15px;
+        color: var(--f7-theme-color);
+      }
+      .card-footer .row{
+        padding-bottom: 30px;
+      }
+      .dialog-buttons .dialog-button{
+        width: 100% !important;
+      }
+    </style>
+    <div class="page-content">
+      {% raw %}
+      <div id="app" style="height: 100%" v-cloak>
+        <div class="list no-hairlines-md">
+          <ul>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div
+                  class="item-title item-label"
+                  style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                >
+                  {{ _("Name") }}
+                </div>
+                <div class="item-input-wrap">
+                  <input class="init-input" name="title" type="text" :placeholder="_('Name')" required v-model="sceneName" />
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <!-- <div class="block-title">Select the type you want to trigger</div>
+        <div class="card list list-strong-ios list-outline-ios list-dividers-ios">
+          <ul>
+            
+            <li>
+              <label class="item-radio item-radio-icon-start item-content">
+                <input type="radio" name="demo-radio-start" value="Device" :checked="device_checked"/>
+                <i class="icon icon-radio"></i>
+                <div class="item-inner">
+                  <div class="item-title">Device</div>
+                </div>
+              </label>
+            </li>
+            <li>
+              <label class="item-radio item-radio-icon-start item-content">
+                <input type="radio" name="demo-radio-start" value="Gateway" :checked="gateway_checked"/>
+                <i class="icon icon-radio"></i>
+                <div class="item-inner">
+                  <div class="item-title">Gateway</div>
+                </div>
+              </label>
+            </li>
+          </ul>
+        </div>-->
+        <div class="block-title">When the following situation occurs</div>
+        <div class="trigger-box card">
+          <div class="trigger-list list media-list no-margin">
+            <ul>
+              <li class="device" v-for="(item,index) in trigger" :key="index">
+                <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                  <div
+                    class="device-thumb item-media"
+                    :style="{
+                    'background-position': 'center',
+                    'background-size': 'contain',
+                    'position': 'relative',
+                    'background-image': 'url('+item.img_url+')'}
+                  "
+                  ></div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title ellipsis" lang="en" style="width: 180px">{{item.title}}</div>
+                    </div>
+                    <div class="item-subtitle">{{ item.model }}-{{ item.mac_address }}</div>
+                    <div class="signal-panel item-text height-21" style="">
+                      {{item.room_title}}/
+                      <span class="text-color-theme">{{item.status}}</span>
+                    </div>
+                  </div>
+                  <div class="margin-right" style="" v-on:click="deleteTriggerItem(item.name)">
+                    <i class="material-icons text-color-gray">delete</i>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div
+            class="add-box add-trigger display-flex justify-content-flex-start align-items-center"
+            v-on:click="toRoomList('Choose Trigger Device','1')"
+          >
+            <i class="material-icons">add_circle</i>
+            <div class="trigger-text margin-left">Add a trigger condition</div>
+          </div>
+        </div>
+        <div class="block-title">Adjust the device to</div>
+        <div class="action-box card">
+          <div class="action-list list media-list no-margin">
+            <ul>
+              <li class="device" v-for="(item,index) in actionList" :key="item.name">
+                <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                  <div
+                    class="device-thumb item-media"
+                    :style="{
+                    'background-position': 'center',
+                    'background-size': 'contain',
+                    'position': 'relative',
+                    'background-image': 'url('+item.imgUrl+')'}
+                  "
+                  ></div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title ellipsis" lang="en" style="width: 180px">{{item.title}}</div>
+                    </div>
+                    <div class="item-subtitle">{{ item.device_model }}-{{ item.mac_address }}</div>
+                    <div class="signal-panel item-text height-21" style="">
+                      {{tran(item.room_name)}}/
+                      <span class="text-color-theme">{{dealwithRef(item)}}</span>
+                    </div>
+                  </div>
+                  <div class="margin-right" style="" v-on:click="deleteActionItem(item.name)">
+                    <i class="material-icons text-color-gray">delete</i>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div
+            class="add-box add-action display-flex justify-content-flex-start align-items-center"
+            v-on:click="toRoomList('Choose Action Device','2')"
+          >
+            <i class="material-icons">add_circle</i>
+            <div class="trigger-text margin-left">Add an action</div>
+          </div>
+        </div>
+        <div class="action-box card">
+          <div class="action-list"></div>
+          <div
+            class="add-box add-action display-flex justify-content-space-between align-items-center"
+            v-on:click="toRoomList('Effective time period','3')"
+          >
+            <div class="trigger-text">Effective time period</div>
+            <div class="trigger-right display-flex justify-content-space-between align-items-cente">
+              <span class="left-info">All day</span>
+              <i class="material-icons">chevron_right</i>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="row" style="padding-bottom: 30px;">
+            <div class="col" v-on:click="saveScene">
+              <div class="button button-fill">Create</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    const { title, item ,checkval ,subdevice_name} = $f7route.query;
+    console.log(subdevice_name)
+    let scene_config = {};
+    let sceneObj = {};
+    if (item) {
+      sceneObj = JSON.parse(item);
+      scene_config = JSON.parse(sceneObj.scene_config);
+      console.log(sceneObj);
+      console.log(JSON.parse(sceneObj.scene_config));
+    }
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      //const store = app.form.convertToData($(page.el).find('#basic-form'));
+
+      vueApp = new Vue({
+        el: page.el.querySelector('#app'),
+        data: {
+          popupSwipeHandler: null,
+          sceneName: '',
+          trigger: [],
+          actionList: [],
+          gateway_mac: '',
+          gateway: '',
+          gateway_guid: '',
+          timercommand: '',
+          sceneId: '',
+          thisId: '', //erp save id
+          device_checked : false,
+          gateway_checked : true,
+          triggerCondition : 2,
+          rcuMacAddress : ``,
+          rcuGuid : '',
+          post_guid : '',
+          deviceScene : [],   //all scene
+        },
+        mounted() {
+          if (isset(sceneObj.scene_title)) {
+            $('#add-title').text(title);
+            this.sceneName = sceneObj.scene_title;
+            this.trigger = scene_config.trigger;
+            this.actionList = scene_config.action;
+            this.gateway = this.trigger[0].gateway;
+            let gateway_mac = this.gateway.split('-')[0];
+            this.gateway_mac = gateway_mac;
+            // if(sceneObj.device_mode == "Gateway"){
+            //   this.device_checked = false;
+            //   this.gateway_checked = true;
+            // }else{
+            //   this.device_checked = true;
+            //   this.gateway_checked = false;
+            // }
+            //get guid of the gateway
+            console.log(this.actionList)
+            let list = erp.info.device;
+            for (let i in list) {
+              if (list[i].mac_address === gateway_mac) {
+                this.gateway_guid = i;
+              }
+            }
+            if (isset(scene_config.timercommand)) {
+              this.timercommand = scene_config.timercommand;
+            }
+            this.sceneId = scene_config.scene_id?scene_config.scene_id:'';
+            this.thisId = sceneObj.name;
+          }
+          let devices = erp.info.device;
+          for(let i in devices){
+            if(devices[i].device_model == 'YO780' || devices[i] == 'YO780-Mira'){
+              this.rcuMacAddress = core_utils_get_mac_address_from_guid(devices[i].guid, true);
+              this.rcuGuid = devices[i].guid
+            }
+          }
+          emitter.on('trigger_save', (data) => {
+            console.log(data);
+            const { button_group, display_name, mac_address, model, mode, img_url, room_name, guid, gateway,config } = data;
+            let ref = data.value;
+            let temp = data.temp;
+            let hum = data.hum;
+            let temp_less = data.temp_less;
+            let hum_less = data.hum_less;
+            let status = '';
+            if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
+              if (ref == 1) {
+                status = 'Occupied';
+              } else {
+                status = 'Unoccupied';
+              }
+            } else if (mode == 'On Off Switch') {
+              if (ref == 1) {
+                status = 'ON';
+              }else if(ref == 2){
+                status = 'CLICK';
+              }else if(ref == 4){
+                status = 'SECOND CLICK';
+              }else if(ref == 3){
+                status = 'RELEASE';
+              } else {
+                status = 'OFF';
+              }
+            } else if (mode == 'Thermostat') {
+              if (temp) {
+                status = `>${temp}℃/`;
+              }
+              if (temp_less) {
+                status += `<${temp_less}℃/`;
+              }
+              if (hum) {
+                status += `>${hum}%/`;
+              }
+              if (hum_less) {
+                status += `<${hum_less}%/`;
+              }
+            }
+            if (gateway) {
+              this.gateway = gateway;
+
+              let gateway_mac = gateway.split('-')[0];
+              this.gateway_mac = gateway_mac;
+              //get guid of the gateway
+              let list = erp.info.device;
+              for (let i in list) {
+                if (list[i].mac_address === gateway_mac) {
+                  this.gateway_guid = i;
+                }
+              }
+            }
+            this.trigger.push({
+              title: display_name,
+              model: model,
+              mode: mode,
+              img_url: img_url,
+              mac_address: mac_address,
+              room_title: room_name,
+              guid: guid,
+              temp: temp,
+              hum: hum,
+              temp_less: temp_less,
+              hum_less: hum_less,
+              ref: ref,
+              status: status,
+              gateway: gateway,
+              button_group : button_group,
+              config : config
+            });
+            //get all scene
+            this.deviceScene = [];
+            let localDevice = cloneDeep(erp.info.device);
+            if(isset(localDevice[guid])){
+              let device_scene = localDevice[guid].device_scene;
+              device_scene.forEach(zitem=>{
+                if(isset(zitem.scene_config) && zitem.scene_config){
+                  let sceneConfig = JSON.parse(zitem.scene_config);
+                  let scene_id = parseInt(sceneConfig.scene_id,16);
+                  let actioncommand = sceneConfig.actioncommand;
+                  let triggercommand = sceneConfig.triggercommand;
+                  this.deviceScene.push({
+                    scene_id : scene_id,
+                    actioncommand : actioncommand,
+                    triggercommand : triggercommand
+                  });
+                }
+              })
+            }
+          });
+          emitter.on('save_action', (data) => {
+            console.log(data);
+            let list = JSON.parse(data.data);
+            //console.log(list);
+            list.forEach((element) => {
+              this.actionList.push(element);
+            });
+            console.log(this.actionList);
+          });
+          emitter.on('set_timmer', (data) => {
+            console.log(data);
+            this.timercommand = data.command;
+          });
+          // this.trigger.push({
+          //   title: '815 1',
+          //   room_title: 'Bedroom',
+          //   signal: 5,
+          //   model: 'YO815',
+          //   img_url: 'https://my.yoswit.com/files/products/YO2086-1G.svg',
+          //   mac_address: 'ac4d16493682',
+          // });
+        },
+        computed: {
+          dealwithRef() {
+            return function (item) {
+              let mode = item.mode || item.device_mode;
+              let ref = item.ref;
+              let status = '';
+              let device_button_group = item.device_button_group;
+              if (mode == 'On Off Switch') {
+                if (ref == 1) {
+                  status = 'ON';
+                } else {
+                  status = 'OFF';
+                }
+              }else if(mode == 'RCU Controller'){
+                if (ref == 1) {
+                  status = 'ON';
+                }else if(ref == 2){
+                  status = 'TOGGLE';
+                } else {
+                  status = 'OFF';
+                }
+              } else if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
+                if (ref == 1) {
+                  status = 'Occupied';
+                } else {
+                  status = 'Unoccupied';
+                }
+              } else if (mode == 'Triac Dimming' || mode == '0-10v Dimming') {
+                if(item.turnlight == 4){
+                  status = 'ON/100%';
+                  if(ref > 1){
+                    status = `On/${parseInt(ref/255*100)}%`;
+                  }
+                }else if(item.turnlight == 5){
+                  status = 'Off';
+                }else if(item.turnlight == 2){
+                  status = 'Toggle'
+                }else if(item.turnlight == 3){
+                  status = 'Brighten'
+                }else if(item.turnlight == 1){
+                  status = 'Dim'
+                }
+              } else if (device_button_group.startsWith("OPENCLOSE UART")) {
+                if (ref > 1 && ref!= 2) {
+                  status = 'OPEN';
+                }else if(ref == 2){
+                  status = 'PAUSE';
+                } else {
+                  status = 'CLOSE';
+                }
+              }else if(mode == 'Thermostat'){
+                if(item.temperature){
+                  console.log(item.ref == "0");
+                  let mode_text = item.modeStr == 2?'COOL':item.modeStr == 1?'HOT':item.modeStr == 0?'AUTO':'UNSET';
+                  let fan_text = item.speedVaule == 4?'3 SPEED':item.speedVaule == 3?'2 SPEED':item.speedVaule == 2?'1 SPEED':'AUTO'
+                  status = `${item.ref == "0"?'Off':'On'}/${item.temperature}℃`;
+                }
+                
+              }else if(mode == 'IR' || mode == 'On Off IR'){
+                if(item.ir_temp){
+                  console.log(item.ref == "0");
+                  status = `${item.ir_ref == "0"?'Off':'On'}/${item.ir_mode_text}/${item.ir_fan_text}/${item.ir_swing_text}/${item.ir_temp_text}℃`;
+                }
+                
+              }
+              return status;
+            };
+          },
+        },
+        methods: {
+          deleteActionItem(name) {
+            console.log(this.actionList)
+            console.log(name)
+            const index = this.actionList.findIndex((item) => item.name === name);
+            if (index >= 0) {
+                this.actionList.splice(index, 1);
+            }
+          },
+          deleteTriggerItem(name) {
+            this.trigger.splice(
+              this.trigger.findIndex((item) => item.name === name),
+              1,
+            );
+          },
+          //tindy the scene ID
+          formatNumber(num){
+            return num < 10 ? '0' + num : num.toString();
+          },
+          findMissingNumber(arr){
+            if (arr.length === 0) {
+                return '01';
+            }
+            arr.sort((a, b) => a - b);
+            for (let i = 0; i < arr.length - 1; i++) {
+              if (arr[i + 1] - arr[i] > 1) {
+                  return this.formatNumber(arr[i] + 1);
+              }
+            }
+            return this.formatNumber(arr[arr.length - 1] + 1);
+          },
+          toRoomList(title, type) {
+            let that = this;
+            console.log('this',this.trigger);
+            
+            if (type == 3) {
+              mainView.router.navigate(`/mobile-app/timer-picker-page?title=${tran(title)}&type=${type}`);
+            }else if(type == 2){
+              
+              if(!this.trigger.length){
+                app.dialog.alert('Please choose the trigger device first.');
+                return
+              }else{
+                let target_guid = this.trigger[0].guid;
+                let dialogBox = app.dialog.create({
+                  title: 'Choose Action Type',
+                  buttons : [
+                    {text : 'RCU'},
+                    {text : 'MOB'},
+                    {text : 'BLE'},
+                  ],
+                  onClick:(dialog,index)=>{
+                    if(index == 0){
+                      //RCU 
+                      let devices = erp.info.device;
+                      for(let i in devices){
+                        if(devices[i].device_model == 'YO780' || devices[i] == 'YO780-Mira'){
+                          this.rcuMacAddress = core_utils_get_mac_address_from_guid(devices[i].guid, true);
+                        }
+                      }
+                      //this.rcuMacAddress = `0e137e0cdadc`;
+                    }else{
+                      this.rcuMacAddress = ``;
+                    }
+                    mainView.router.navigate(`/mobile-app/scene-room-device?title=${tran(title)}&type=${type}&target_guid=${target_guid}`);
+                  },
+                });
+                dialogBox.open();
+              }
+              //choose the type of the action 
+              
+            } else {
+              //check if the trigger lenght >2,tip 'or' 'and'
+              if(this.trigger.length){
+                let dialogBox = app.dialog.create({
+                  title: 'Choose Condition',
+                  buttons : [
+                    {text : 'Or'},
+                    {text : 'And'},
+                  ],
+                  onClick:(dialog,index)=>{
+                    that.triggerCondition = index == 0?1:2;
+                    mainView.router.navigate(`/mobile-app/scene-room-device?title=${tran(title)}&type=${type}`);
+                  },
+                  verticalButtons : true
+                });
+                
+                dialogBox.open();
+
+                return;
+              }
+              mainView.router.navigate(`/mobile-app/scene-room-device?title=${tran(title)}&type=${type}`);
+            }
+          },
+          tidyCommand(scene_id, listIndex) {
+            let typeIndex = '02';
+            let triggerCommand = ``;
+            let pre_command = `8F2000${scene_id}${listIndex}`;
+            let total_command = ``;
+            this.trigger.forEach((item, index) => {
+              let guid = item.guid;
+              let mac = core_utils_get_mac_address_from_guid(guid, true);
+              let ref = item.ref;
+              let this_command = '';
+              //in that distinguish the value and the other value(temp,templess,hum,hum_less)
+              if (isset(ref)) {
+                let sensor_command = ``;
+                if (item.mode == 'RF Sensor' || item.mode == 'Radar Sensor') {
+                  if(checkval != 'Gateway'){
+                    typeIndex = `01`;
+                    let opcode = '00';
+                    if(this.triggerCondition == 1 && index!=this.trigger.length - 1){
+                      opcode = 'tt';
+                    }
+                    let rcu_mac = core_utils_get_mac_address_from_guid(this.rcuGuid,true);
+                    let gang = parseInt(item.config && item.config != 'undefined'?item.config:1);
+                    triggerCommand = `${opcode}${typeIndex}${rcu_mac}${parseInt(gang).toString(16).pad('00')}${ref.toString(16).pad("00")}`;
+                    triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                    total_command += triggerCommand;
+                  }else{
+                    typeIndex = `02`;
+                    let opcode = '00';
+                    if(this.triggerCondition == 1 && index!=this.trigger.length - 1){
+                      opcode = 'tt';
+                    }
+                    triggerCommand = `${opcode}${typeIndex}${mac}${parseInt(gang).toString(16).pad('00')}${ref.toString(16).pad("00")}`;
+                    triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                    total_command += triggerCommand;
+                  }
+                }
+                if(item.button_group.startsWith("ONOFF GANG")){
+                  let gang = item.button_group.replace("ONOFF GANG","")*1;
+                  typeIndex = `01`;
+                  let this_ref = '00';
+                  let runTime = '';
+                  if(ref){
+                    //this_ref = Math.pow(2, gang*1 - 1).toString(16).pad('00');
+                    if(ref == 1 || ref == 2){
+                      this_ref = '01';
+                    }else if(ref == 4){
+                      this_ref = '04';
+                      typeIndex = '21';
+                      runTime = '0f'
+                    }else{
+                      this_ref = '00';
+                    }
+                  }
+                  let opcode = '00';//this params used check "or" condition,must be set data length after it;
+                  if(this.triggerCondition == 1 && index!=this.trigger.length - 1){
+                    opcode = 'tt';
+                  }
+                  triggerCommand = `${opcode}${typeIndex}${mac}${parseInt(gang).toString(16).pad('00')}${this_ref}${runTime}`;
+                  triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                  total_command += triggerCommand;
+                }
+                if(item.button_group.startsWith("DIMMING")){
+                  typeIndex = `1a`;
+                  let this_ref = '00';
+                  if(ref){
+                    this_ref = `02`;
+                  }
+                  triggerCommand = `${typeIndex}${mac}${this_ref}00`;
+                  triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                  total_command += triggerCommand;
+                }
+                if(item.button_group.startsWith("Door Open")){
+                  typeIndex = `04`;
+                  let this_ref = '00';
+                  if(ref){
+                    this_ref = `01`;
+                  }
+                  triggerCommand = `${typeIndex}${mac}${this_ref}`;
+                  triggerCommand = `${(triggerCommand.length/2).toString(16).pad('00')}${triggerCommand}`;
+                  total_command += triggerCommand;
+                }
+              }
+              if (item.temp || item.temp_less) {
+                typeIndex = '05';
+                if (item.temp) {
+                  let temp_command = `${typeIndex}${mac}02${core_utils_float_ieee_convert(item.temp)}`;
+                  this_command = `${(temp_command.length / 2).toString(16).pad('00')}${temp_command}`;
+                  triggerCommand += this_command;
+                }
+                if (item.temp_less) {
+                  let temp_less_command = `${typeIndex}${mac}01${core_utils_float_ieee_convert(item.temp_less)}`;
+                  this_command = `${(temp_less_command.length / 2).toString(16).pad('00')}${temp_less_command}`;
+                  triggerCommand += this_command;
+                }
+                total_command += triggerCommand;
+              }
+              if (item.hum || item.hum_less) {
+                let hum_command = ``;
+                typeIndex = '06';
+                if (item.hum) {
+                  let this_hum_command = `${typeIndex}${mac}02${core_utils_float_ieee_convert(item.hum)}`;
+                  hum_command = `${(this_hum_command.length / 2).toString(16).pad('00')}${this_hum_command}`;
+                  triggerCommand += hum_command;
+                }
+                if (item.hum_less) {
+                  let this_hum_less_command = `${typeIndex}${mac}01${core_utils_float_ieee_convert(item.hum_less)}`;
+                  hum_command = `${(this_hum_less_command.length / 2).toString(16).pad('00')}${this_hum_less_command}`;
+                  triggerCommand += hum_command;
+                }
+                total_command += triggerCommand;
+              }
+            });
+            console.log("total_command",total_command)
+            return `${pre_command}${this.replaceTTWithLength(total_command)}`;
+          },
+          replaceTTWithLength(str){
+            let list = str.split('tt');
+            console.log('list',list);
+            if(list.length == 1){
+              return str
+            }
+            let command = ``;
+            let total = 0;
+            let $length = list.length-1;
+            for(let i =$length;i>=0;i--){
+              if(i == $length){
+                let index = (list[i].length/2).toString(16).pad('00');
+                command =  `${index}${list[i]}`;
+              }else if(i == 0){
+                command = `${list[i]}${command}`;
+              }else{
+                let index = ((list[i].length + command.length)/2).toString(16).pad('00');
+                command =  `${index}${list[i]}${command}`;
+              }
+              
+            }
+            return command;
+          },
+          async saveScene() {
+            //check if input the name
+            if(!this.sceneName){
+              app.dialog.alert(`${tran('Please input the scene name.')}`)
+              return
+            }
+            app.preloader.show();
+            //check if device scene and the gateway scene
+            //console.log(checkval);
+            let deviceObj = erp.info.device;
+            let typevalue = [];
+            if(checkval == 'Gateway') {
+              sceneList = deviceObj[this.gateway_guid].device_scene;
+            }else{
+              let this_guid = this.trigger[0].guid;
+              //if rcu
+              if(subdevice_name){
+                let list = cloneDeep(erp.info.profile.profile_subdevice); 
+                let this_obj = null;
+                list.forEach(zitem=>{
+                  if(zitem.name === subdevice_name){
+                    this_obj = zitem;
+                  }
+                })
+                if(this_obj.device_mode == 'RCU Controller'){
+                  this_guid = this_obj.device;
+                  this.post_guid = this_obj.device;
+                }
+              }
+              sceneList = deviceObj[this_guid].device_scene;
+              //check if the rcu setting use scene,but id can not repeat
+              let setting_list = erp.info.device[this_guid].settings;
+              let settings_scene = [];
+              // setting_list.forEach(item=>{
+              //   if(item.setting_type.startsWith('gpio_')){
+              //     settings_scene.push(item);
+              //   }
+              // })
+              // if(settings_scene.length > 0){
+              //   this.sceneId = settings_scene.length+sceneList.length+1;
+              // }
+            }
+            //check the id if repeat
+            let id_list = this.deviceScene.filter(item => item.scene_id && isset(item.scene_id)).map(item=>item.scene_id);
+            console.log("id_list",id_list);
+            let scene_id = this.sceneId ? this.sceneId : this.findMissingNumber(id_list);
+            let listIndex = this.sceneId ? this.sceneId : this.findMissingNumber(id_list);
+            console.log("scene_id",scene_id);
+            if(id_list.indexOf(scene_id) != -1){
+              app.dialog.alert('SceneId Repeat.Please Check.');
+              return;
+            }
+            //save trigger command
+            let typeList = [
+              'SCENE TYPE BUTTON',
+              'SCENE TYPE RADAR',
+              'SCENE TYPE SCHEDULE',
+              'SCENE TYPE DOOR SENSOR',
+              'SCENE TYPE TEMPERATURE',
+            ];
+            let typeIndex = '02';
+            let length = '08';
+
+            if (this.trigger.length > 1) {
+              length = (8 + (this.trigger.length - 1) * 6).toString(16).pad('00');
+            }
+            let command_pre = `8F2000${scene_id}${listIndex}${length}${typeIndex}`;
+            let command = ``;
+            console.log(this.trigger);
+            console.log(this.tidyCommand(scene_id, listIndex));
+            let last_command = ``;
+            if(this.timercommand.length){
+              last_command = `${this.tidyCommand(scene_id, listIndex)}${(this.timercommand.length/2).toString(16).pad('00')}${this.timercommand}`;
+            }else{
+              last_command = `${this.tidyCommand(scene_id, listIndex)}`;
+            }
+            if(checkval == 'Gateway'){
+              //mqtt command
+              setTimeout(() => {
+                let this_data = {
+                  action: 'write',
+                  mac_address: this.gateway_mac,
+                  service_id: 'ff80',
+                  char_id: 'ff81',
+                  value: last_command,
+                };
+                core_mqtt_publish(
+                  'cmd/' + md5(md5(this.gateway.toLowerCase())),
+                  {
+                    command: 'Control',
+                    function: 'bleHelper.perform',
+                    params: [this_data],
+                    callback: '',
+                    raw: '',
+                  },
+                  0,
+                  false,
+                  false,
+                  false,
+                )
+                  .then(() => {
+                    app.preloader.hide();
+                  })
+                  .catch((err) => {
+                    app.preloader.hide();
+                    app.dialog.alert(err)
+                    console.log(err);
+                  });
+              }, 1000 * 2);
+            }else{
+              let this_guid = this.trigger[0].guid;
+              this.post_guid = this.trigger[0].guid;
+              //if rcu
+              if(subdevice_name){
+                let list = cloneDeep(erp.info.profile.profile_subdevice); 
+                let this_obj = null;
+                list.forEach(zitem=>{
+                  if(zitem.name === subdevice_name){
+                    this_obj = zitem;
+                  }
+                })
+                if(this_obj.device_mode == 'RCU Controller'){
+                  this_guid = this_obj.device;
+                  this.post_guid = this_obj.device;
+                }
+              }
+              console.log("this_guid",this_guid);
+              try{
+                await window.peripheral[this_guid].write([{
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: last_command,
+                }]);
+              }catch(e){
+                app.preloader.hide();
+                const toast = app.toast.create({
+                  position: 'bottom',
+                  closeTimeout: 3000,
+                  text: e,
+                });
+                toast.open();
+                return
+              }
+              
+            }
+            let actioncommand_pre = `8F1000${scene_id}`;
+            let actioncommand_length = this.actionList.length;
+            let start_length = 0;
+            let actioncommand = ``;
+            this.actionList.forEach((item,index) => {
+              let guid = item.guid || item.device;
+              let mode = item.mode || item.device_mode;
+              let button_group = item.button_group || item.device_button_group;
+              let mac = core_utils_get_mac_address_from_guid(guid, true);
+              let ref = item.ref;
+              let data = ``;
+              // if(item.model == 'YO780' && item.command){
+              //   actioncommand += `${item.command}`
+              //   return
+              // }
+              if (mode == 'On Off Switch' || mode == 'Multiway Switch') {
+                if(button_group.startsWith("RCU")){
+                  let button_group_gang = parseInt(button_group.replace('RCU ONOFF GANG', '') * 1);
+                  let gang = button_group_gang - (4 * (parseInt(item.config) - 1));
+                  let this_data = `8f31${item.config}0${gang}${'01'}${ref == 1?'00':'01'}`;
+                  let this_length = this_data.length / 2;
+                  //check if have 13 string
+                  if(index == 0){
+                    data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
+                  }else{
+                    data = `${this_length.toString(16).pad('00')}${this_data}`
+                  }
+                }else{
+                  let gang = button_group.replace('ONOFF GANG', '') * 1;
+                  data = jinja2.render(window[(ref == '1' ? 'ON' : 'OFF') + gang].toString(), { mackey: mac }).toLowerCase();
+                  if(this.rcuMacAddress){
+                    let $command  = data.substring(2,data.length);
+                    let $ac_command = `15${mac}${($command.length/2).toString(16).pad("00")}${$command}`;
+                    //if the second ,have no 13
+                    if(index == 0){
+                      data = `13${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                    }else{
+                      data = `${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                    }
+                  }else{
+                    data = item.action_command;
+                  }
+                  
+                }
+              }else if(mode == 'RCU Controller'){
+                let val_led = button_group.replaceAll("RCU OUTPUT","")*1;
+                if(val_led == 33){
+                  val_led = 98
+                }
+                let ref = item.ref;
+                
+                //actioncommand += `${($command.length/2).toString(16).pad("00")}${$command}`;
+                if(index == 0){
+                  let this_data = `972101${val_led.toString(16).pad("00")}${ref == 0?'00':ref == 1?'01':'02'}`;
+                  let $command = `02${mac}13${(this_data.length/2).toString(16).pad("00")}${this_data}`;
+                  data = `${$command}`;
+                }else{
+                  let $command = `02${mac}972101${val_led.toString(16).pad("00")}${ref == 0?'00':ref == 1?'01':'02'}`;
+                  data = `${($command.length/2).toString(16).pad("00")}${$command}`
+                }
+                //return
+              } else if (mode == 'Triac Dimming' || mode == '0-10v Dimming') {
+                if(button_group.startsWith("RCU")){
+                  console.log(isset(item.pressStatus));
+                  let light = item.turnlight?parseInt(item.turnlight).toString(16).pad('00'):'02';
+                  let button_group_gang = parseInt(button_group.replace('RCU DIMMING', '') * 1);
+                  let gang = button_group_gang - (2 * (parseInt(item.config) - 1));
+                  //find the triger setting
+                  let triger_status = `01`;
+                  this.trigger.forEach((item,index)=>{
+                    if(index== 0){
+                      if(item.ref == 2){
+                        triger_status = `01`;
+                      }else if(item.ref == 3){
+                        triger_status = `00`;
+                      }
+                    }
+                  })
+                  console.log("item.turnlight",item.turnlight)
+                  if(item.turnlight != 4 && item.turnlight!=5){
+                    //4 on ,5 off ,2 toggle ,3 Brighten, 1 Dim
+                    let this_data = `8f31${item.config}0${gang}${light}${triger_status}`;
+                    let this_length = this_data.length / 2;
+                    if(index == 0){
+                      data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
+                    }else{
+                      data = `${this_length.toString(16).pad('00')}${this_data}`
+                    }
+                  }else if(item.turnlight == 4){
+                    //let range_value = ref.toString(16).pad('00');
+                    let range_value = `${parseInt(item.ref).toString(16).pad("00")}`;
+                    let this_data = `971f${item.config}892${gang ==1?0:1}${range_value}`;
+                    let this_length = this_data.length / 2;
+                    if(index == 0){
+                      data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
+                    }else{
+                      data = `${this_length.toString(16).pad('00')}${this_data}`
+                    }
+                  }else if(item.turnlight == 5){
+                    let this_data = `971f${item.config}892${gang ==1?0:1}${`00`}`;
+                    let this_length = this_data.length / 2;
+                    if(index == 0){
+                      data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
+                    }else{
+                      data = `${this_length.toString(16).pad('00')}${this_data}`
+                    }
+                  }
+                }else{
+                  let range_value = ref.toString(16).pad('00');
+                  data = jinja2.render(window.DIM.toString(), { mackey: mac, dim_value: range_value }).toLowerCase();
+                }
+              } else if (item.device_button_group.startsWith("OPENCLOSE UART")) {
+                if(this.rcuMacAddress){
+                  let $command  = item.action_command.substring(2,item.action_command.length);
+                  let $ac_command = `15${mac}${($command.length/2).toString(16).pad("00")}${$command}`;
+                  //if the second ,have no 13
+                  if(index == 0){
+                    data = `13${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                  }else{
+                    data = `${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                  }
+                }else{
+                  data = item.action_command;
+                }
+              }
+              if(data.length && !button_group.startsWith("RCU") && !this.rcuMacAddress){
+                start_length = data.length / 2;
+                actioncommand += `${start_length.toString(16).pad('00')}${data}`;
+              }else if(this.rcuMacAddress){
+                actioncommand += data;
+              }else if(button_group.startsWith("RCU")){
+                if(index == (actioncommand_length-1)){
+                  actioncommand += `${data}`;
+                  let this_lengths = actioncommand.length /2;
+                  actioncommand = `${this_lengths.toString(16).pad('00')}${actioncommand}`
+                }else{
+                  actioncommand += `${data}`;
+                } 
+              }
+              if(mode == 'Thermostat'){
+                if(item.action_command){
+                  if(this.rcuMacAddress){
+                    let $command  = item.action_command.substring(2,item.action_command.length);
+                    let $ac_command = `15${mac}${($command.length/2).toString(16).pad("00")}${$command}`;
+                    if(index == 0){
+                      actioncommand += `13${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                    }else{
+                      actioncommand += `${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                    }
+                  }else{
+                    actioncommand += `${(item.action_command.length/2).toString(16).pad("00")}${item.action_command}`;
+                  }
+                }
+                if(item.thermostat_fan){
+                  if(this.rcuMacAddress){
+                    let $command  = item.thermostat_fan.substring(2,item.thermostat_fan.length);
+                    let $ac_command = `15${mac}${($command.length/2).toString(16).pad("00")}${$command}`;
+                    actioncommand += `${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                  }else{
+                    actioncommand += `${(item.thermostat_fan.length/2).toString(16).pad("00")}${item.thermostat_fan}`;
+                  }
+                }
+                if(item.thermostat_mode){
+                  if(this.rcuMacAddress){
+                    let $command  = item.thermostat_mode.substring(2,item.thermostat_mode.length);
+                    let $ac_command = `15${mac}${($command.length/2).toString(16).pad("00")}${$command}`;
+                    actioncommand += `${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                  }else{
+                    actioncommand += `${(item.thermostat_mode.length/2).toString(16).pad("00")}${item.thermostat_mode}`;
+                  }
+                }
+                if(item.thermostat_temp){
+                  if(this.rcuMacAddress){
+                    let $command  = item.thermostat_temp.substring(2,item.thermostat_temp.length);
+                    let $ac_command = `15${mac}${($command.length/2).toString(16).pad("00")}${$command}`;
+                    actioncommand += `${($ac_command.length/2).toString(16).pad("00")}${$ac_command}`;
+                  }else{
+                    actioncommand += `${(item.thermostat_temp.length/2).toString(16).pad("00")}${item.thermostat_temp}`;
+                  }
+                }
+              }
+            });
+            debugger
+            if(this.rcuMacAddress){
+              let this_str = actioncommand.substring(0,14);
+              let $thisCommand = ``;
+              if(this_str == `02${this.rcuMacAddress}`){
+                $thisCommand = `${actioncommand}`;
+              }else{
+                $thisCommand = `02${this.rcuMacAddress}${actioncommand}`;
+              }
+              actioncommand = `${actioncommand_pre}${($thisCommand.length/2).toString(16).pad('00')}${$thisCommand.toLowerCase()}`; 
+            }else{
+              actioncommand = `${actioncommand_pre}${actioncommand}`; 
+            }
+            console.log('actioncommand', actioncommand);
+            console.log(this.gateway_mac);
+            let obj = {};
+            obj['trigger'] = this.trigger;
+            obj['rcuMacAddress'] = this.rcuMacAddress;
+            obj['triggercommand'] = last_command;
+            obj['action'] = this.actionList;
+            obj['timercommand'] = this.timercommand;
+            obj["scene_id"] = scene_id;
+            obj["subdevice_name"] = subdevice_name; 
+            obj["actioncommand"] = actioncommand;
+            let device_scene = [];
+            device_scene.push({
+              scene_title: this.sceneName,
+              scene_config: JSON.stringify(obj),
+            });
+            try {
+              let method = 'POST';
+              let post_url = encodeURI(`/api/resource/Device Scene`);
+              if (this.thisId) {
+                method = 'PUT';
+                post_url = encodeURI(`/api/resource/Device Scene/${this.thisId}`);
+              }
+              let post_data = {
+                parenttype: 'Device',
+                parentfield: 'device_scene',
+                parent: this.gateway_guid,
+                scene_title: this.sceneName,
+                scene_config: JSON.stringify(obj)
+              };
+              console.log("checkval",checkval);
+              if(checkval == 'Device' || checkval == '"Device"'){
+                post_data.parent = this.post_guid;
+              }
+              console.log("this.trigger",this.trigger)
+              console.log("post_data",post_data);
+              let device_status = await http.request(post_url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                data: post_data,
+              });
+              console.log(device_status);
+              console.log(window.scanned_periperals);
+            } catch (err) {
+              app.preloader.hide();
+              app.dialog.alert(err);
+              console.log(err);
+            }
+            if(checkval == 'Gateway'){
+              let this_data = {
+                action: 'write',
+                mac_address: this.gateway_mac,
+                service_id: 'ff80',
+                char_id: 'ff81',
+                value: actioncommand,
+              };
+              core_mqtt_publish(
+                'cmd/' + md5(md5(this.gateway.toLowerCase())),
+                {
+                  command: 'Control',
+                  function: 'bleHelper.perform',
+                  params: [this_data],
+                  callback: '',
+                  raw: '',
+                },
+                0,
+                false,
+                false,
+                false,
+              )
+                .then(() => {})
+                .catch((err) => {
+                  console.log(err);
+                });
+            }else{
+              let this_guid = this.post_guid;
+              console.log("action_guid",this_guid);
+              try{
+                //await ha_process_periperal_cmd(uuid, cmd,true);
+                await window.peripheral[this_guid].write([{
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: actioncommand,
+                }]);
+                app.preloader.hide();
+              }catch(e){
+                app.preloader.hide();
+                const toast = app.toast.create({
+                  position: 'bottom',
+                  closeTimeout: 3000,
+                  text: e,
+                });
+                toast.open();
+                return
+              }
+              
+            }
+            try {
+              await ha_profile_ready();
+              app.preloader.hide();
+              mainView.router.back(mainView.history[mainView.history.length - 2], { force: false });
+            } catch (err) {
+              app.preloader.hide();
+              app.dialog.alert(err);
+              console.log(err);
+            }
+            //send to bluetheet
+            // let cmd = [];
+            // cmd.push({ action: 'connect' });
+            // cmd.push({action:"write",data:data});
+            // try{
+            //   let status = ha_process_periperal_cmd(uuid,cmd);
+            // }catch(err){
+            //   const toast = app.toast.create({
+            //     position: 'bottom',
+            //     closeTimeout: 3000,
+            //     text: e,
+            //   });
+
+            //   toast.open();
+            // }
+          },
+        },
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeUnmount', (e, page) => {
+      vueApp & vueApp.$destroy();
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .card-footer .row{
+    padding-bottom: 30px;
+  }
+  .dialog-buttons .dialog-button{
+    width: 100% !important;
+  }
+</style>

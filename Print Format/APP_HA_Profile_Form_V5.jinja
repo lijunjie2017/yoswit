@@ -1,0 +1,265 @@
+{%- from "templates/print_formats/custom_macros.html" import tran -%}
+
+{######### get profile detail #####}
+{% set profile = None %}
+{% if doc.docname != "null" %}
+{% set profile = frappe.get_doc("Profile", doc.docname) %}
+{% endif %}
+
+{% set user_settings = None %}
+{% if frappe.db.exists('User Settings', doc.appId~'-'~frappe.session.user) %}
+    {% set user_settings = frappe.get_doc('User Settings', doc.appId~'-'~frappe.session.user) %}
+{% endif %}
+{% set guest_registration = None %}
+{% if user_settings.status == "Rejected" and user_settings.guest_registration != None %}
+    {% set guest_registration = frappe.get_doc('Guest Registration', user_settings.guest_registration) %}
+{% endif %}
+{% set sharelist = [] %}
+{% set sharenewlist = [] %}
+{% if profile !=  None %}
+{% set sharelist = frappe.get_all('DocShare',filters={'share_doctype':'Profile', 'share_name': profile.name}, fields=["*"]) | list %}
+{% set sharenewlist = frappe.get_all('DocShare',filters={'share_doctype':'Profile', 'share_name': profile.name}, fields=["*"]) | list %}
+{% endif %}
+
+{% set writestatus = {'status' : user_settings.owner == profile.owner or user_settings.owner == 'Administrator' or  profile is none} %} 
+{% if profile is not none  %}
+    {% if user_settings.owner != profile.owner and user_settings.owner != 'Administrator'  %}
+        
+    {% endif %}
+{% endif %}    
+
+{% for item in sharenewlist %}
+    {% if item.user == user_settings.owner and item.write != 1  %} 
+        
+    {% endif %}
+{% endfor %}
+<!-- split -->
+script
+<!-- equalto -->
+window.add_network_plug()
+window.core_document_delete = function(e){
+    let url = '/api/method/frappe.share.set_permission'
+    let name = $('.profile-share-del').attr('name')
+    let user = $('.profile-share-del').attr('user')
+    let data = {
+        doctype : 'Profile',
+        name : name,
+        user : user,
+        permission_to : 'read',
+        value : 0,
+        everyone : 0
+    }
+    http.request(url,{
+        method: 'POST',
+        dataType: 'json',
+        contentType:'application/json',
+        serializer : 'json',
+        data : data
+    }).then(res=>{
+        runtime.success = true;
+        app.ptr.refresh('.frappe-list-ptr-content');
+    }).catch(err=>{
+        window.app.dialog.alert(window.networkTip)
+    })
+}
+window.change_permission_func = (permissionstr='read',value=0,user='',name='')=>{
+    app.preloader.show();
+    let url = '/api/method/frappe.share.set_permission'
+    let data = {
+        doctype : 'Profile',
+        name : name,
+        user : user,
+        permission_to : permissionstr,
+        value : value,
+        everyone : 0
+    }
+    http.request(url,{
+        method: 'POST',
+        dataType: 'json',
+        contentType:'application/json',
+        serializer : 'json',
+        data : data
+    }).then(res=>{
+        runtime.success = true;
+        app.ptr.refresh('.frappe-list-ptr-content');
+        app.preloader.hide();
+    }).catch(err=>{
+        app.preloader.hide();
+        if(err.data.status == 417){
+            
+        }else{
+            window.app.dialog.alert(window.networkTip)
+        }
+    })
+}
+setTimeout(async()=>{
+    window.profile_template_picker_fun('#demo-picker-device')
+    <!-- loadding the profile template -->
+    <!-- get the value for API -->
+    <!-- loading create room funtion -->
+    let titleList = await window.profile_template_load()
+    console.log(titleList)
+    window.profile_form_init(titleList)
+    $('.control-opacity').removeClass('control-opacity')
+    $('input[name="demo-checkbox"]').on('change',function(e){
+        let label = $(this).attr('label').toLowerCase()
+        let name =  $(this).attr('corename')
+        let user = $(this).attr('user')
+        let checked = $(this).prop('checked')
+        let permission = $(this).attr('permission')
+        console.log(permission)
+        if(permission == 'False'){
+            window.app.dialog.alert('Sorry,no permission.')
+            $(this).prop('checked',!checked)
+            return false
+        }
+        $(this).attr('checked',!checked)
+        console.log(checked)
+        let value = checked?1:0
+        //http 
+        change_permission_func(label,value,user,name)
+    })
+},300)
+
+<!-- split -->
+frappe-form-right
+<!-- equalto -->
+<a href="#" class="link icon-only" func="controller_frappe_form_reset">
+	<i class="icon material-icons">replay</i>
+</a>
+<a href="#" class="link icon-only check-button sure-icon">
+	<i class="icon material-icons">check</i>
+</a>
+<!-- split -->
+<style>
+    .control-opacity{
+        opacity: 0;
+    }
+    .sharedwith-title{
+        padding : 15px;
+    }
+</style>
+<div class="network-block"></div>
+<div class="list no-hairlines-md">
+    <input type="hidden" name="doctype" value="Profile" />
+    <input type="hidden" name="created_from" value="{{doc.appId}}" class="created-from"/>
+    <input type="hidden" class="profile-language" value="{{doc.lang}}">
+    {% if profile != None %}
+        <input type="hidden" name="url" value="/api/resource/Profile/{{ profile.name }}" />
+        <input type="hidden" name="method" value="PUT" />
+        <input type="hidden" name="name" value="{{ profile.name }}"/>
+    {% else %}
+        <input type="hidden" name="url" value="/api/resource/Profile" />
+        <div class="hidden-box">
+
+        </div>
+        <input type="hidden" name="method" value="POST" />
+    {% endif %}
+	<ul>
+        <li class="item-content item-input">
+            <div class="item-inner">
+                <div class="item-title item-label" lang="en">{{ _("Name") }}</div>
+                <div class="item-input-wrap">
+                    <input name="profile_name" value="{{ profile.profile_name if profile != None else '['+doc.lang+'] [/'+doc.lang+']' }}" type="hidden"/>
+                    {% if writestatus.status == True %}
+                    <input class="init-input profile_name profile-name" name="multilang-profile_name-{{doc.lang}}" 
+                    value="{{ tran(profile.profile_name) if profile != None else (user_settings.flat if user_settings.flat != None   else '') }}" 
+                        type="text" placeholder="{{ _('Name') }}" required validate/>
+                    {% else %}
+                    <input class="init-input profile_name profile-name" name="multilang-profile_name-{{doc.lang}}" 
+                    value="{{ tran(profile.profile_name) if profile != None else (user_settings.flat if user_settings.flat != '' else '') }}" 
+                        type="text" placeholder="{{ _('Name') }}" readonly="readonly"/>
+                    {% endif %}
+                    <span class="input-clear-button"></span>
+                </div>
+            </div>
+        </li>
+        {% if user_settings.flat != None and user_settings.flat != '' %}
+        <li class="item-content item-input">
+            <div class="item-inner">
+                <div class="item-title item-label" lang="en">{{ _("Flat") }}</div>
+                <div class="item-input-wrap">
+                    <input class="init-input"
+                        type="text" readonly="readonly" value="{{ tran(user_settings.flat) }}"/>
+                </div>
+            </div>
+        </li>
+        {% endif %}
+        {% if profile == None %}
+        <li class="item-content item-input">
+            <div class="item-inner">
+                <div class="item-title item-label" lang="en">{{ _("Profile Template") }}</div>
+                <div class="item-input-wrap">
+                    <input type="text" placeholder="Your Profile Template" readonly="readonly" id="demo-picker-device" />
+                </div>
+            </div>
+        </li>
+        {% endif %}
+    </ul>
+</div>
+{% if sharelist|length > 0  %}
+<div class="list media-list no-chevron virtual-list control-opacity">
+    <div class="item-title sharedwith-title">Shared With</div>
+    <ul class="">
+        {% for share in  sharelist %}
+        <li class="device swipeout">
+            <div class="item-content swipeout-content">
+                <div class="item-media">
+                    {% set shareUserIcon = frappe.db.get_value('User', share.user, 'user_image') %}
+                    {% if shareUserIcon != None %}
+                        {% if shareUserIcon[:4] == 'http' %}
+                        <div src="{{ shareUserIcon }}" style="height:54px !important; width: 54px; !important; border-radius: 10px;background-image:url('view/default/style/img/noalbum.png');background-position:center;background-repeat:no-repeat;background-size:100%;" ></div>
+                        {% elif 'private' in shareUserIcon %}
+                        <div style="height:54px !important; width: 54px; !important; border-radius: 10px;background-image:url('view/default/style/img/noalbum.png');background-position:center;background-repeat:no-repeat;background-size:100%;" ></div>
+                        {% else %}
+                        <div src="" style="height:54px !important; width: 54px; !important; border-radius: 10px;background-image:url('{{frappe.get_url(shareUserIcon)}}');background-position:center;background-repeat:no-repeat;background-size:100%; "></div>
+                        {% endif %}
+                    {% else %}
+                    <!--style="height:46px !important; width: 46px; !important" class="ms-1 circle"-->
+                    <div style="height:54px !important; width: 54px; !important; border-radius: 10px;background-image:url('view/default/style/img/noalbum.png');background-position:center;background-repeat:no-repeat;background-size:100%; " ></div>
+                    {% endif %}
+                </div>
+                <div class="item-inner align-self-center">
+                    <div class="item-title-row">
+                       {{share.user}} 
+                    </div>
+                    <!--choose permission for shared with list-->
+                    <div class="row">
+                        <div class="col resizable">
+                            <label class="item-checkbox item-content justify-content-flex-start align-center">
+                                {% if share.write == 1 %}
+                                <input type="checkbox" name="demo-checkbox" value="1" checked  label="Write" corename="{{profile.name}}" user="{{share.user}}" permission="{{writestatus.status }}"/>
+                                {% else %}
+                                <input type="checkbox" name="demo-checkbox" value="0"  label="Write" corename="{{profile.name}}" user="{{share.user}}" permission="{{writestatus.status}}"/>
+                                {% endif %}
+                                <i class="icon icon-checkbox"></i>
+                                <span>Write</span>
+                              </label>
+                        </div>
+                        <div class="col resizable-fixed">
+                            <label class="item-checkbox item-content justify-content-flex-start align-center">
+                                {% if share.share == 1 %}
+                                <input type="checkbox" name="demo-checkbox" value="1" checked  label="Share" corename="{{profile.name}}" user="{{share.user}}" permission="{{writestatus.status}}"/>
+                                {% else %}
+                                <input type="checkbox" name="demo-checkbox" value="0" label="Share" corename="{{profile.name}}" user="{{share.user}}" permission="{{writestatus.status}}"/>
+                                {% endif %}
+                                <i class="icon icon-checkbox"></i>
+                                <span>Share</span>
+                              </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="swipeout-actions-right">
+                {% if writestatus.status == True %}
+                <a href="#" func="core_document_delete" class="link swipeout-delete profile-share-del" name="{{profile.name}}" user="{{share.user}}">
+                    <i class="icon material-icons">delete</i>
+                </a>
+                {% endif %}
+            </div>
+        </li>
+        {%- endfor -%}
+    </ul>
+    <!--<div class="title-tip margin-top" style="font-size: 14px;color:#999;text-align:center;">Shared With List.(Swipe left to delete.)</div>-->
+</div>
+{% endif %}

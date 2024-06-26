@@ -1,0 +1,390 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Scenc Trigger Setting') }}</div>
+        <div class="right">
+          <a link icon-only @click="${()=>batch_save()}">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px;">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app">
+        <div class="card data-table">
+          <table>
+            <thead>
+              <tr>
+                <th class="numeric-cell" style="text-align: center">Led</th>
+                <th class="numeric-cell" style="text-align: center">Status</th>
+              </tr>
+            </thead>
+            <tr v-for="(item,index) in inputSetList" :key="index" style="height: 60px">
+              <td class="numeric-cell" style="text-align: center">
+                <a class="item-link smart-select smart-select-init" data-open-in="popover">
+                  <select :name="'led'+item.index" :value="item.led">
+                    <option value="00">00</option>
+                    <option v-for="s in 32" :value="s < 10 ? '0' + s : s">{{proces(s)}}</option>
+                    <option value="98">98</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title"></div>
+                      <div class="item-after">{{item.led}}</div>
+                    </div>
+                  </div>
+                </a>
+              </td>
+              <td class="numeric-cell" style="text-align: center">
+                <a class="item-link smart-select smart-select-init" data-open-in="popover">
+                  <select :name="'status'+item.index" :value="item.status">
+                    <option value="00">Off</option>
+                    <option value="01">On</option>
+                    <option value="02">Toggle</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title"></div>
+                      <div class="item-after">{{handleStatus(item.status)}}</div>
+                    </div>
+                  </div>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="button button-fill text-color-theme button-44" style="float: right;margin-right: 15px;margin-bottom: 15px;">
+          <a href="#" class="button button-fill text-color-theme button-44" v-on:click="addForInput()">
+            <i class="material-icons" style="color: #fff">add</i>
+          </a>
+        </div>
+        <div style="height: 75px;"></div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+      const batch_save = ()=>{
+        vueApp.$batchSave();
+      }
+      const cancelAll = ()=>{
+        vueApp.$reSet();
+      }
+      let vueApp = null;
+      let {guid,model,device_mode,button_group,img_url,room_name,mac_address,local_ip,target_guid} = $f7route.query;
+      console.log("local_ip",local_ip)
+      $on('pageMounted',(e, page)=>{
+        vueApp = new Vue({
+          el: page.el.querySelector('#vue-app'),
+          data:{
+            list : [
+              {
+                index : '01',
+                type : '01',
+              },
+              {
+                index : '02',
+                type : '02',
+              },
+              {
+                index : '03',
+                type : '01',
+              },
+              {
+                index : '04',
+                type : '01',
+              },
+              {
+                index : '05',
+                type : '01',
+              }
+            ],
+            inputList : [],
+            inputSetList : [],
+          },
+          computed:{
+          },
+          mounted(){
+            this.init();
+            Vue.prototype.$batchSave = this.batchSave;
+            Vue.prototype.$reSet = this.reSet;
+          },
+          methods:{
+            sleep(ms){
+              return new Promise(resolve => setTimeout(resolve, ms));
+            },
+            async reSet(){
+              app.dialog.confirm(`Are you sure to reset?`,()=>{
+                let cmd = [{"action":"connect"}];
+                cmd.push({"action":"write","data":`8110`});
+                try{
+                  const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+                  ha_process_periperal_cmd(p.id, cmd,true).then(()=>{
+                    //dele the erp info
+                    http.request(encodeURI('/api/resource/Device/' + guid), {
+                        serializer: "json",
+                        responseType: "json",
+                        method: "PUT",
+                        data: {
+                          settings : []
+                        }
+                    }).then(()=>{
+                      app.dialog.alert("Reset successfully",runtime.appInfo.name);
+                      this.inputSetList = [];
+                    });
+                  });
+                }catch(error){
+                  app.dialog.alert(error);
+                }
+              },()=>{})
+            },
+            async batchSave(){
+              app.preloader.show();
+              //get the command of the input and the out put
+              let inputcommand = [];
+              let inputErp = {};
+              let mac = core_utils_get_mac_address_from_guid(guid, true);
+              try{
+                const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+                //get the command of the input and the out put
+                let updateCommand = ``;
+                let inputList = this.inputSetList;
+                let this_led = ``;
+                for(let i in inputList){
+                  let this_index = parseInt(inputList[i].index).toString(16).pad("00");
+                  let val = parseInt($(`select[name="gpio${this_index}"]`).val()).toString(16).pad("00");
+                  let val_led = parseInt($(`select[name="led${this_index}"]`).val()).toString(16).pad("00");
+                  let status = $(`select[name="status${this_index}"]`).val();
+                  this_led += `-${parseInt($(`select[name="led${this_index}"]`).val())}`;
+                  if(val_led == 'aN'){
+                    app.preloader.hide();
+                    app.dialog.alert('Please select the led');
+                    return;
+                  }
+                  inputcommand.push({"action":'write',data:`972001${val}01`});
+                  inputcommand.push({"action":'write',data:`972001${val_led}02`});
+                  //action command
+                  //let actioncommand_pre = `8F1000${this_index}`;
+                  let actiondata = `02${mac}972101${val_led}${status}`;
+                  if(local_ip && local_ip != 'undefined'){
+                    let this_list = local_ip.split('.');
+                    let new_list = [];
+                    this_list.forEach((kitem)=>{
+                      let str = parseInt(kitem).toString(16).pad("00");
+                      console.log("str",str)
+                      new_list.push(str);
+                    })
+                    let this_data = new_list.join('').toLowerCase();
+                    actiondata = `02${core_utils_get_mac_address_from_guid(target_guid,true)}14${this_data}972101${val_led}${status}`;
+                  }
+                  let actionCommand = `${(actiondata.length/2).toString(16).pad('00')}${actiondata}`;
+                  let actionLastCommand = `${actionCommand}`;
+                  updateCommand = actionLastCommand;
+                }
+                console.log("updateCommand",updateCommand);
+                app.preloader.hide();
+                //back to the action
+                let list = [];
+                list.push({
+                  guid : guid,
+                  model : model,
+                  device_mode : device_mode,
+                  button_group : button_group,
+                  command : updateCommand,
+                  img_url : img_url,
+                  mac_address : mac_address,
+                  room_name : room_name,
+                  title : `YO780-Led${this_led}`
+                });
+                emitter.emit('back_action',{});
+                //save the command
+                emitter.emit('save_action',{
+                  data : JSON.stringify(list)
+                })
+                console.log(mainView.history[mainView.history.length-3]);
+                mainView.router.back(-1);
+                //app.dialog.alert('Save Success!');
+              }catch(err){
+                app.preloader.hide();
+                app.dialog.alert(_(err));
+              }
+            },
+            async addForInput(){
+              let thisIndex = this.inputSetList.length+1;
+              
+              app.dialog.prompt(`How many rows need to be generated?`,($length)=>{
+                let targetNum = parseInt($length)+this.inputSetList.length;
+                for(let i=thisIndex;i<=targetNum;i++){
+                  let newIndex = i > 9?i:`0${i}`
+                  this.inputSetList.push({
+                  index : newIndex,
+                  gpio : '~',
+                  led : '~',
+                  status : '02'
+                })
+                }
+              },()=>{
+
+              })
+              
+            },
+            async init(){
+              //notify
+              const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+              this.inputSetList.push({
+                  index : '01',
+                  gpio : '~',
+                  led : '~',
+                  status : '02'
+                })
+            },
+            async syncDataToErp(index,type){
+              if(type){
+                await iot_device_setting_sync_server(guid,index,type);
+              }
+              //post api 
+              try{
+                let url = '/api/method/save.rcuv6'
+                await await http.request(encodeURI(url), {
+                  method: 'POST',
+                  serializer: 'json',
+                  responseType: 'json',
+                  data: {
+                    parent : erp.info.profile.name,
+                    guid : guid,
+                    index : index,
+                    profile_device : device_name,
+                    profile_room : erp.info.profile.profile_room[0].name
+                  },
+                });
+                ha_profile_ready();
+              }catch(err){
+                app.dialog.alert(_(err));
+              }
+            },
+            changeGpioAndLed(index,list){
+              const gangMax = Math.max(...this.inputList.map(item => Number(item.gang)));
+              this.inputList.forEach((item, itemIndex) => {
+                if (item.index === index) {
+                  const gangIndex = itemIndex % gangMax;
+                  const [gpioProp, ledProp] = ['gpio', 'led'];
+                  const [gpioValue, ledValue] = list.slice(gangIndex * 2, gangIndex * 2 + 2);
+                  if (gpioValue !== 'ff') item[gpioProp] = gpioValue;
+                  if (ledValue !== 'ff') item[ledProp] = ledValue;
+                }
+              });
+            },
+            async initSetInputList(){
+              this.inputSetList = [];
+              const device_setting = cloneDeep(erp.info.device[guid]['settings']);
+              let setting_obj = {};
+              device_setting.forEach(item=>{
+                //tiny the setting data
+                let setting_str = item.setting_type;
+                if(setting_str.startsWith('gpio')){
+                  //get the gpio and led
+                  let list = setting_str.split('_');
+                  let this_gpio = list[1];
+                  let this_led = list[3];
+                  let this_index = list[5];
+                  let this_status = item.setting;
+                  this.inputSetList.push({
+                    index : this_index,
+                    gpio : this_gpio,
+                    led : this_led,
+                    status : this_status
+                  })
+                }
+              })
+              console.log("this.inputSetList",this.inputSetList);
+              if(this.inputSetList.length == 0){
+                this.inputSetList.push({
+                  index : '01',
+                  gpio : '~',
+                  led : '~',
+                  status : `02`
+                })
+              }
+              this.inputSetList.sort((a,b)=>{
+                return parseInt(a.index) - parseInt(b.index);
+              })
+            },
+            async initInputList(){
+              //must be sort by the list
+              let list = [];
+              let slotlist = cloneDeep(this.list);
+              slotlist.forEach(item=>{
+                switch(item.type){
+                  case '01':
+                    for(let i = 1;i<5;i++){
+                      list.push({
+                        index : item.index,
+                        gang : `${i < 10 ? '0' + i : i}`,
+                        gpio : '~',
+                        led : '~'
+                      });
+                    }
+                    break;
+                  case '02':
+                    for(let i = 1;i<3;i++){
+                      list.push({
+                        index : item.index,
+                        gang : `${i < 10 ? '0' + i : i}`,
+                        gpio : '~',
+                        led : '~'
+                      });
+                    }
+                    break;
+                  default:
+                    break;
+                }
+              })
+              this.inputList = list;
+              console.log(list);
+            },
+            handleStatus(status){
+              return status === '02' ? _('Toggle') : status === '01' ? _('On') : _('Off');
+            },
+            proces(s){
+              return s < 10 ? '0' + s : s;
+            },
+          },
+        })
+      })
+      $on('pageBeforeUnmount', (e, page) => {
+        if (vueApp) {
+          vueApp.$destroy();
+        }
+      });
+    return $render;
+  };
+</script>
+
+<style>
+  .smart-select .item-after {
+    max-width: 100%;
+  }
+</style>

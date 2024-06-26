@@ -105,7 +105,7 @@
             <div class="room-item">
               ${item.profile_subdevice.map((kitem)=> $h`
               <li
-                class="device home-scanned-peripheral swipeout swipeout-delete-manual"
+                class="device home-scanned-peripheral swipeout swipeout-delete-manual scene-device"
                 signal="${kitem.signal}"
                 uuid="${kitem.uuid}"
                 display-name="${kitem.title}"
@@ -134,10 +134,10 @@
               >
                 <div class="item-content swipeout-content" >
                   ${type == 2 && $h`
-                  <label class="item-checkbox item-checkbox-icon-start item-content">
+                  <!--<label class="item-checkbox item-checkbox-icon-start item-content">
                     <input type="checkbox" name="demo-checkbox" value="${kitem.name}" />
                     <i class="icon icon-checkbox"></i>
-                  </label>
+                  </label>-->
                   `}
                   <a class="item-link item-content no-chevron no-ripple no-active-state" style="width: 100%;" @click="${()=>toScene(kitem)}">
                     <div
@@ -156,13 +156,21 @@
                           ${tran(kitem.title)}</div>
                       </div>
                       <div class="item-subtitle">${ kitem.model }-${ kitem.mac_address }</div>
-                      <div class="signal-panel item-text height-21" style="width: 120%"><${SignalItem}/></div>
+                      <div class="signal-panel item-text height-21" style="width: 120%"><${SignalItem} /></div>
                     </div>
                   </a>
                   <${OnoffButton} ref="0" gang="1" kitem="${kitem}" choose_type="${type}" />
                 </div>
+                <div class="swipeout-actions-right">
+                  <a
+                  @click="${()=>toLocalIp(kitem)}"
+                    class="link color-orange"
+                  >
+                    <i class="icon material-icons">settings</i>
+                  </a>
+                </div>
               </li>
-              <${SubdeviceButton} choose_type="${type}" signal="0" uuid="${kitem.uuid}" display_name="${kitem.title}" subdevice_name="${kitem.name}"
+              <${SubdeviceButton} local_ip="${kitem.local_ip}" choose_type="${type}" signal="0" uuid="${kitem.uuid}" display_name="${kitem.title}" subdevice_name="${kitem.name}"
               guid="${kitem.device}" lastDiscoverDate="" button_group="${kitem.device_button_group}" password="${kitem.password}"
               bluetooth="0" authfail="" ref="0" mobmob="${kitem.mobmob}" gateway="${kitem.gateway}" network-id="${kitem.network_id}"
               network-position="${kitem.network_position}" swipeout-delete-func="home_ui_delete_device" pairing-guid="${kitem.pairing_guid}"
@@ -191,27 +199,45 @@
               <div class="block block-strong-ios block-outline-ios" style="padding: 15px;">
                 <div class="list list-strong-ios list-dividers-ios">
                   <ul class="operate-box" style="margin-top: 15px;">
-                    <li class="radio-box card">
+                    <li class="radio-box card" style="opacity: 0;">
                       <label class="item-radio item-radio-icon-end item-content">
-                        <input type="radio" name="demo-radio-end" value="1" checked />
+                        <input type="radio" name="demo-radio-light" value="100" />
                         <i class="icon icon-radio"></i>
                         <div class="item-inner">
-                          <div class="item-title">Press</div>
+                          <div class="item-title">On</div>
                         </div>
                       </label>
                     </li>
                     <li class="radio-box card">
                       <label class="item-radio item-radio-icon-end item-content">
-                        <input type="radio" name="demo-radio-end" value="0" />
+                        <input type="radio" name="demo-radio-light" value="4" checked />
                         <i class="icon icon-radio"></i>
                         <div class="item-inner">
-                          <div class="item-title">Release</div>
+                          <div class="item-title">On</div>
                         </div>
                       </label>
                     </li>
                     <li class="radio-box card">
                       <label class="item-radio item-radio-icon-end item-content">
-                        <input type="radio" name="demo-radio-light" value="3" checked />
+                        <input type="radio" name="demo-radio-light" value="5" />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">Off</div>
+                        </div>
+                      </label>
+                    </li>
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-light" value="2" />
+                        <i class="icon icon-radio"></i>
+                        <div class="item-inner">
+                          <div class="item-title">Toggle</div>
+                        </div>
+                      </label>
+                    </li>
+                    <li class="radio-box card">
+                      <label class="item-radio item-radio-icon-end item-content">
+                        <input type="radio" name="demo-radio-light" value="3" />
                         <i class="icon icon-radio"></i>
                         <div class="item-inner">
                           <div class="item-title">Brighten</div>
@@ -224,15 +250,6 @@
                         <i class="icon icon-radio"></i>
                         <div class="item-inner">
                           <div class="item-title">Dim</div>
-                        </div>
-                      </label>
-                    </li>
-                    <li class="radio-box card">
-                      <label class="item-radio item-radio-icon-end item-content">
-                        <input type="radio" name="demo-radio-light" value="2" />
-                        <i class="icon icon-radio"></i>
-                        <div class="item-inner">
-                          <div class="item-title">On Off</div>
                         </div>
                       </label>
                     </li>
@@ -257,8 +274,7 @@
   const SignalItem = (props, { $h }) => {
     return () => $h`
     <div>
-        <div class="signal"></div>
-        <div class="mesh"></div>
+        <div class="status-info text-color-primary" subdevice-name="${props.subdevice_name}"></div>
     </div>
     `;
   };
@@ -279,71 +295,52 @@
           </a>
       </div>
       `;
-    }else if (mode === 'Curtain Motor' || mode ===  'Curtain Motor Ac') {
+    }else if (button_group.startsWith("OPENCLOSE UART")) {
       return () => $h`
       <div class="control-panel-right" style="">
-        <a class="iot-connect" func="home_ui_click_ble_connect">
-          <div class="button button-raised button-big circle">
-              <i class="material-icons">bluetooth_connected</i>
-          </div>
-        </a>
-        <a class="left on_flag" ref="0" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="" style="display:none;">
-            <div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
-        </a>
-        <a class="left on_flag" ref="2" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
-            <div class="button button-raised button-big openclose cl" style="width:57px"><div style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-top:6px;">pause</i></div></div>
-        </a>
-        <a class="left on_flag" ref="1" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
-            <div class="button button-raised button-big openclose op" style="width:57px"><div style="height:100%;width:100%;"><img src="${imgurl}" alt="" style="width:20px;height:20px;margin-top:5px;" /></div></div>
-        </a>
+        <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
       </div>
       `;
-    } else if (mode === 'Curtain Motor Reverse') {
-      return () => $h`
-      <div class="control-panel-right" style="">
-        <a class="iot-connect" func="home_ui_click_ble_connect">
-          <div class="button button-raised button-big circle">
-              <i class="material-icons">bluetooth_connected</i>
-          </div>
-        </a>
-        <a class="left on_flag" ref="0" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="" style="display:none;">
-            <div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
-        </a>
-        <a class="left on_flag" ref="2" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
-            <div class="button button-raised button-big openclose cl" style="width:57px"><div style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-top:6px;">pause</i></div></div>
-        </a>
-        <a class="left on_flag" ref="1" func="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
-            <div class="button button-raised button-big openclose op" style="width:57px"><div style="height:100%;width:100%;"><img src="${erp.setting.app_api_url}/files/open-curtain.svg" alt="" style="width:20px;height:20px;margin-top:5px;" /></div></div>
-        </a>
-      </div>
-      `;
-    } else if (mode === 'On Off Switch') {
+    }else if (mode === 'On Off Switch') {
       if(props.kitem.model == 'YO780' && (props.kitem.device_button_group === 'ONOFF GANG1')){
         return () => $h`
         <div class="control-panel-right" @click="${()=>toScene(props.kitem)}">
             <a class="right" >
-                <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:20px;">settings</i></div></div>
+              <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
             </a>
         </div>
         `;
-      }else if(props.kitem.model == 'YO780' && props.kitem.button_group == 'ONOFF GANG1' && props.kitem.device_button_group != 'ONOFF GANG1'){
-        return () => $h`
-        <div class="control-panel-right" style="">
-          <a class="on_flag off_flag" ref="${props.kitem.ref}" gang="${props.gang}" @touchend="${() => app_ha_click_onoff(props.kitem)}">
-            
-          </a>
-        </div>
-        `;
-
       }else{
         return () => $h`
         <div class="control-panel-right" style="">
-          <a class="on_flag off_flag" ref="${props.kitem.ref}" gang="${props.gang}" @click="${() => app_ha_click_onoff(props.kitem)}">
+          <a class="" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+            <div class="button button-raised button-big circle">
+              <div>
+                <i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i>
+              </div>
+            </div>
+          </a>
+          <a class="on_flag off_flag device-none" ref="${props.kitem.ref}" gang="${props.gang}" @click="${() => app_ha_click_onoff(props.kitem)}">
             <div class="button button-raised button-big onoff"></div>
           </a>
         </div>
         `;
       }
+    }else if(mode === 'RCU Controller'){
+      return () => $h`
+        <div class="control-panel-right" style="">
+          <a class="" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+            <div class="button button-raised button-big circle">
+              <div>
+                <i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i>
+              </div>
+            </div>
+          </a>
+          <a class="on_flag off_flag device-none" ref="${props.kitem.ref}" gang="${props.gang}" @click="${() => app_ha_click_onoff(props.kitem)}">
+            <div class="button button-raised button-big onoff"></div>
+          </a>
+        </div>
+        `;
     } else if (mode === 'Multiway Switch') {
       return () => $h`
       <div class="control-panel-right" style="">
@@ -354,28 +351,17 @@
       `;
     } else if (mode === 'Gateway') {
       return () => $h`
-      <div class="control-panel-right">
-          <a href="/frappe/detail/${tran('Gateway Configuration')}/APP_CORE_Gateway_Wifi_Config_V5/null/null/guid=${
-        props.kitem.guid
-      }&device_name=${props.kitem.profile_device}/" class="right" >
-              <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:20px;">wifi</i></div></div>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
           </a>
       </div>
       `;
     }else if(mode === 'IAQ Sensor'){
       return () => $h`
-      <div class="control-panel-right">
-          <a class="iot-connect" func="home_ui_click_ble_connect">
-              <div class="button button-raised button-big circle">
-                  <i class="material-icons">bluetooth_connected</i>
-              </div>
-          </a>
-          <a class="right iaq-button-score-a" func="" button-signal="ARC_ON_OFF">
-              <div class="button iaq-button-score button-raised button-big circle display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="background-color:green;line-height:18px;padding-top:10px;color:#fff;">
-
-                  <span class="score text-color-white" style="height:29px;font-size:23px;">96</span>
-                  <div class="score-desc text-color-white" style="font-size: 12px;height:29px;line-height:29px;">Good</div>
-              </div>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
           </a>
       </div>
       `;
@@ -411,73 +397,41 @@
       }
     } else if (mode === 'Thermostat') {
       return () => $h`
-      <div class="control-panel-right" type-box="Dimming" bluetooth="${props.kitem.bluetooth_status}" mobmob="${props.kitem.mobmob}">
-        <a href="#" class="on_flag off_flag" ref="${props.kitem.ref}" @click="${() => app_ha_click_onoff_thermostat_room(props.kitem)}">
-            <div class="button button-raised button-big onoff"></div>
-        </a>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
+          </a>
       </div>
       `;
     } else if (mode === 'Curtain Switch') {
       return () => $h`
-      <div class="control-panel-right" style="">
-        <a class="iot-connect" func="home_ui_click_ble_connect">
-          <div class="button button-raised button-big circle">
-              <i class="material-icons">bluetooth_connected</i>
-          </div>
-        </a>
-        <a class="left on_flag" ref="0" tapfunc="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
-            <div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
-        </a>
-        <a class="left on_flag" ref="1" tapfunc="home_ui_press_ha_device_v5" button-group="${button_group}" command-type="Bluetooth" command="">
-            <div class="button button-raised button-big openclose op" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_more</i></div></div>
-        </a>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
+          </a>
       </div>
       `;
     } else if (mode === 'Triac Dimming' || mode === '0-10v Dimming') {
-      if(button_group.startsWith("RCU DIMMING")){
-        return () => $h`
-        <div class="control-panel-right" type-box="Dimming" bluetooth="${props.kitem.bluetooth_status}" mobmob="${props.kitem.mobmob}">
-          <a href="#" class="on_flag off_flag touch-flag" guid="${props.kitem.guid}" ref="${props.kitem.ref}" lastRef="${props.kitem.ref}" button-group="${button_group}" command-type="Bluetooth" command="" data-popup=".demo-popup-swipe-handler" @click="${()=>home_ui_click_touch_app(props.kitem)}">
-            <div class="button button-raised button-big circle">
-                  <i class="material-icons">touch_app</i>
-              </div>
+      return () => $h`
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
           </a>
-          <a href="#" class="on_flag off_flag" ref="${props.kitem.ref}" lastRef="${props.kitem.ref}" func="app_ha_click_onoff_dimming" gang="dimming">
-              <div class="button button-raised button-big onoff"></div>
-          </a>
-        </div>
-        `;
-      }else{
-        return () => $h`
-        <div class="control-panel-right" type-box="Dimming" bluetooth="${props.kitem.bluetooth_status}" mobmob="${props.kitem.mobmob}">
-          <a class="iot-connect" func="home_ui_click_ble_connect">
-            <div class="button button-raised button-big circle">
-                <i class="material-icons">bluetooth_connected</i>
-            </div>
-          </a>
-          <a href="#" class="on_flag off_flag" ref="${props.kitem.ref}" lastRef="${props.kitem.ref}" func="app_ha_click_onoff_dimming" gang="dimming">
-              <div class="button button-raised button-big onoff"></div>
-          </a>
-        </div>
-        `;
-      }
+      </div>
+      `;
     } else if (mode == 'RF Sensor' || mode == '4in1 Sensor') {
       return () => $h`
-      <div class="control-panel-right">
-          <a class="right" button-signal="ARC_ON_OFF" command="033E19010201010001030000FF" command-type="Bluetooth">
-              <div class="button button-raised button-big circle rf-sensor">
-                  <i class="material-icons">block</i>
-              </div>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
           </a>
       </div>
       `;
     } else if (device_type == 'Air Conditioner') {
       return () => $h`
-      <div class="control-panel-right">
-          <a class="right" @click="${()=>home_ui_click_ir_room(props.kitem,'ARC_ON_OFF')}" button-signal="ARC_ON_OFF" command="${props.kitem.command}" command-type="Bluetooth">
-              <div class="button button-raised button-big circle">
-                  <i class="material-icons">power_settings_new</i>
-              </div>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
           </a>
       </div>
       `;
@@ -494,29 +448,23 @@
       device_type == 'Robot'
     ) {
       return () => $h`
-      <div class="control-panel-right" style="margin-right:-10px;">
-          <a class="right" func="controller_iot_device_ir_full_panel_click" guid="${props.guid}" button-signal="5"  command="0141BE02FD0DF209F603FC52AD53AC00FF10EF11EE13EC14EB15EA17E818E719E6FF001BE4FF000AF54AB547B849B64BB44DB248B720DF0000" command-type="Bluetooth">
-              <div class="button button-raised button-big circle">
-                  <i class="material-icons">power_settings_new</i>
-              </div>
-          </a>
-          <a class="right" func="iot_device_goto_ir_panel" button-signal="ARC_ON_OFF"  command="0141BE02FD0DF209F603FC52AD53AC00FF10EF11EE13EC14EB15EA17E818E719E6FF001BE4FF000AF54AB547B849B64BB44DB248B720DF0000" command-type="Bluetooth">
-              <div class="button button-raised button-big circle">
-                  <i class="material-icons">view_sidebar</i>
-              </div>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
           </a>
       </div>
       `;
     } else {
       return () => $h`
-      <div class="control-panel-right" style="">
-        <a href="#" func="ble_load_to_device_form" class="right" >
-            <div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">settings</i></div></div>
-        </a>
+      <div class="control-panel-right" @click="${()=>home_ui_click_touch_app(props.kitem)}">
+          <a class="right" >
+            <div class="button button-raised button-big circle"><div><i class="material-icons" style="line-height:70px!important;font-size:25px!important;">block</i></div></div>
+          </a>
       </div>
       `;
     }
   };
+  let range_silder_list_auto = {};
   const SubdeviceButton = (props, { $h, $onMounted }) => {
     let key = `dimer_slidebar_${props.guid}`;
     let devive_type = isset(props.devive_type) ? props.devive_type : '';
@@ -525,28 +473,13 @@
     $onMounted(() => {
       //let elementlength = $('.curtain-subdevice .range-slider');
       let element = $(`.curtain-subdevice .range-slider[data-id="${key}"]`);
+      
       //console.log('element', element);
-      if (mode == 'Curtain Motor' || mode == 'Curtain Motor Reverse' || mode == 'Curtain Motor Ac') {
-        let range_silder = app.range.create({
-          el: `.range-slider[guid="${props.guid}"]`,
-          value: props.kitem.ref || 0,
-          min: 0,
-          max: 100,
-          draggableBar: false,
-          label: true,
-          step: 1,
-          scale: true,
-          scaleSteps: 5,
-          scaleSubSteps: 4,
-          on: {
-            changed: erp.script.range_change_fun_curtain,
-          },
-        });
-      } else if (mode === 'Triac Dimming'|| mode === '0-10v Dimming') {
-        if(props.button_group.startsWith("RCU DIMMING")){
-          range_silder_list_device[`${props.button_group}`] = app.range.create({
-            el: `.range-slider-choose[guid="${props.guid}"][button-group="${props.button_group}"]`,
-            value: props.kitem.ref || 0,
+      setTimeout(()=>{
+        if (mode == 'Curtain Motor' || mode == 'Curtain Motor Reverse' || mode == 'Curtain Motor Ac' || mode == 'Curtain Motor Reverse Ac') {
+          range_silder_list_auto[props.guid] = app.range.create({
+            el: `.range-slider-room[guid="${props.guid}"]`,
+            value: 0,
             min: 0,
             max: 100,
             draggableBar: false,
@@ -556,27 +489,12 @@
             scaleSteps: 5,
             scaleSubSteps: 4,
             on: {
-              changed: erp.script.range_change_fun_curtain,
+              changed: erp.script.range_change_fun_curtain_room,
             },
           });
-          console.log('range_silder_list',range_silder_list_device)
-        }else{
-          let range_silder = app.range.create({
-            el: `.range-slider[guid="${props.guid}"]`,
-            min: 0,
-            max: 100,
-            draggableBar: false,
-            label: true,
-            step: 1,
-            scale: true,
-            scaleSteps: 5,
-            scaleSubSteps: 4,
-            on: {
-              changed: erp.script.range_change_fun_dimming,
-            },
-          });
+          console.log("range-slider___",range_silder);
         }
-      }
+      },50)
     });
     //check mode or model
     //console.log('props', props);
@@ -607,14 +525,14 @@
           </div>
       </li>
       `;
-    } else if (mode == 'Curtain Motor' || mode == 'Curtain Motor Ac') {
+    } else if (mode == 'Curtain Motor' || mode == 'Curtain Motor Reverse' || mode == 'Curtain Motor Ac') {
       return () => $h`
       <li class="device home-scanned-peripheral display-flex curtain-subdevice" direction="standard" style="height:67px!important;" bluetooth="${props.kitem.bluetooth_status}">
           <div class="row padding-tb flex-direction-column justify-content-center">
               <div class="col-100 medium-50 large-50">
                   <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
                       <div class="tip-title"><img src="${erp.setting.app_api_url}/files/close-curtain.svg" alt="" style="width:20px;height:20px;margin-right:8px;margin-top:5px;" /></div>
-                      <div class="range-slider range-slider-init"
+                      <div class="range-slider range-slider-room"
                       data-min="0"
                       data-max="100"
                       data-label="true"
@@ -638,6 +556,7 @@
                           leader="${props.leader}"
                           direction="standard"
                           subdevice-name="${props.subdevice_name}"
+                          local-ip="${props.local_ip}"
                       ></div>
                       <div class="tip-title"><img src="${erp.setting.app_api_url}/files/open-curtain.svg" alt="" style="width:20px;height:20px;margin-left:8px;margin-top:5px;" /></div>
                   </div>
@@ -677,6 +596,7 @@
                           leader="${props.leader}"
                           direction="standard"
                           subdevice-name="${props.subdevice_name}"
+                          local-ip="${props.local_ip}"
                       ></div>
                       <div class="tip-title"><img src="${erp.setting.app_api_url}/files/close-curtain.svg" alt="" style="width:20px;height:20px;margin-left:8px;margin-top:5px;" /></div>
                   </div>
@@ -687,12 +607,12 @@
       `;
     } else if (mode === 'Triac Dimming' || mode === '0-10v Dimming') {
       return () => $h`
-      <li class="device subdevice home-scanned-peripheral display-flex dimming-subdevice" style="height:67px!important;">
+      <li class="device subdevice home-scanned-peripheral display-flex dimming-subdevice device-none" style="height:67px!important;">
           <div class="row padding-tb flex-direction-column justify-content-center">
               <div class="col-100 medium-50 large-50">
                   <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
                       <div class="tip-title"><i class="icon material-icons" style="margin-right:8px;">brightness_low</i></div>
-                      <div class="range-slider range-slider-init range-slider-choose"
+                      <div class="range-slider range-slider-choose range-slider-room"
                       data-min="0"
                       data-max="100"
                       data-label="true"
@@ -715,6 +635,7 @@
                           password="${props.password}"
                           leader="${props.leader}"
                           subdevice-name="${props.subdevice_name}"
+                          local-ip="${props.local_ip}"
                       ></div>
                       <div class="tip-title"><i class="icon material-icons" style="margin-left:8px;">brightness_high</i></div>
                   </div>
@@ -791,43 +712,19 @@
     'leading': false,
   });
   //range init and change fun
-  erp.script.range_change_fun_curtain = (element) => {
+  erp.script.range_change_fun_curtain_room = (element) => {
     let parentElemt = $(element.el).parents('.device').prev();
     const this_uuid = parentElemt.attr('uuid');
-    if (!isset(window.scanned_periperals[this_uuid])) {
-      return;
-    }
     let value = element.value;
     const obj = $(element.el);
     const reverse = obj.attr('direction');
     const guid = obj.attr('guid');
+    const local_ip = obj.attr('local-ip');
     let thisvalue = 0;
     if (reverse == 'reverse') {
       thisvalue = 100 - value;
-      if (value == 0) {
-        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="1"]`).attr('ref', 0);
-        $(`li.swipeout-delete-manual[guid="${guid}"]`)
-          .find('.openclose img')
-          .attr('src', erp.setting.app_api_url + '/files/open-curtain.svg');
-      } else if (value > 0) {
-        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="0"]`).attr('ref', 1);
-        $(`li.swipeout-delete-manual[guid="${guid}"]`)
-          .find('.openclose img')
-          .attr('src', erp.setting.app_api_url + '/files/close-curtain.svg');
-      }
     } else {
       thisvalue = value;
-      if (thisvalue == 0) {
-        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="0"]`).attr('ref', 1);
-        $(`li.swipeout-delete-manual[guid="${guid}"]`)
-          .find('.openclose img')
-          .attr('src', erp.setting.app_api_url + '/files/close-curtain.svg');
-      } else if (thisvalue > 0) {
-        $(`li.swipeout-delete-manual[guid="${guid}"]`).find(`.on_flag[ref="1"]`).attr('ref', 0);
-        $(`li.swipeout-delete-manual[guid="${guid}"]`)
-          .find('.openclose img')
-          .attr('src', erp.setting.app_api_url + '/files/open-curtain.svg');
-      }
     }
     const bluetooth = parentElemt.attr('bluetooth') * 1;
     const button_group = obj.attr('button-group');
@@ -839,14 +736,20 @@
     let data = '55AA060102' + thisvalue.toString(16).pad('00') + '00';
     data += core_util_calculate_crc16_modbus_for_doa(data);
     uart_data = '8602' + data;
-    if (!isset(scanned_periperals[this_uuid]['manual'])) scanned_periperals[this_uuid]['manual'] = {};
-    let currentDate = new Date();
-    currentDate.setSeconds(currentDate.getSeconds() + 10);
-    scanned_periperals[this_uuid]['manual'][1] = {
-      date: DateFormatter.format(currentDate, 'Y-m-d H:i:s'),
-      ref: value,
-    };
-    let newRef = `02${mackey}${uart_data}`;
+    let newRef = ``;
+    if(local_ip){
+      let this_list = local_ip.split('.');
+      let new_list = [];
+      this_list.forEach((kitem)=>{
+        let str = parseInt(kitem).toString(16).pad("00");
+        console.log("str",str)
+        new_list.push(str);
+      })
+      let this_data = new_list.join('').toLowerCase();
+      newRef = `02${core_utils_get_mac_address_from_guid(target_guid,true)}14${this_data}${uart_data}`;
+    }else{
+      newRef = `02${mackey}${uart_data}`;
+    }
     //change status of the device list
     roomList.forEach(item=>{
       let list = item.profile_subdevice;
@@ -860,29 +763,26 @@
     //console.log(element);
   };
   //range init and change fun
-  erp.script.range_change_fun_dimming = (element) => {
+  erp.script.range_change_fun_dimming_room = (element) => {
     let parentElemt = $(element.el).parents('.device').prev();
-    const this_uuid = parentElemt.attr('uuid');
-    if (!isset(window.scanned_periperals[this_uuid])) {
-      return;
-    }
     let value = element.value;
     const obj = $(element.el);
     const reverse = obj.attr('direction');
     const guid = obj.attr('guid');
     let thisvalue = element.value;
     const bluetooth = parentElemt.attr('bluetooth') * 1;
-    const button_group = obj.attr('button_group');
+    const button_group = parentElemt.attr('button_group');
     const subdevice = obj.attr('subdevice-name');
     const mobmob = parentElemt.attr('mobmob') * 1;
     const network_id = parentElemt.attr('network-id') * 1;
     const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
     const mackey = core_utils_get_mac_address_from_guid(guid, true);
     const ref = parseInt((thisvalue / 100) * 255);
+
     let range_value = parseInt((thisvalue / 100) * 255)
       .toString(16)
       .pad('00');
-    iot_ble_set_ui_status_dimming(guid, 'bluetooth', button_group, ref, now);
+    //iot_ble_set_ui_status_dimming(guid, 'bluetooth', button_group, ref, now);
     //change status of the device list
     roomList.forEach(item=>{
       let list = item.profile_subdevice;
@@ -1071,7 +971,7 @@
       $onUnmounted = ctx.$onUnmounted;
     //check type of page
     console.log($f7route);
-    const {title,type} = $f7route.query;
+    const {title,type,target_guid} = $f7route.query;
     const loadMore = (e, done) => {
       init();
       scan();
@@ -1141,24 +1041,54 @@
     window.home_ui_click_touch_app_save = ()=>{
       let press_val = $(`input[name="demo-radio-end"]:checked`).val();
       let light_val = $(`input[name="demo-radio-light"]:checked`).val();
+      let show_info = $(`input[name="demo-radio-light"]:checked`).parent().find('.item-title').text();
       console.log(chooseIndex);
       roomList.forEach(item=>{
         item.profile_subdevice.forEach(kitem=>{
           if(kitem.name === chooseIndex){
-            kitem.pressStatus = press_val;
+            //kitem.pressStatus = press_val;
             kitem.turnlight = light_val;
+            $(`.scene-device[subdevice-name="${kitem.name}"]`).find(".status-info").text(show_info);
+            console.log(light_val)
+            if(light_val == 4){
+              //change the ref 
+              kitem.ref = 255;
+              console.log($(`.scene-device[subdevice-name="${kitem.name}"]`).next())
+              $(`.scene-device[subdevice-name="${kitem.name}"]`).next().removeClass("device-none");
+              let range_silder = app.range.create({
+                el: `.range-slider-room[guid="${kitem.device}"][button-group="${kitem.device_button_group}"]`,
+                value: 100,
+                min: 0,
+                max: 100,
+                draggableBar: false,
+                label: true,
+                step: 1,
+                scale: true,
+                scaleSteps: 5,
+                scaleSubSteps: 4,
+                on: {
+                  changed: erp.script.range_change_fun_dimming_room,
+                },
+              });
+            }else{
+              kitem.ref = 0;
+              $(`.scene-device[subdevice-name="${kitem.name}"]`).next().addClass("device-none");
+            }
           }
         })
       })
-      popups.close();
+      erp.popups.close();
+      // if(window.device.platform.toLowerCase()=='ios'){
+      //   erp.popups.destroy();
+      // }
     }
     window.home_ui_click_touch_app = (item)=>{
-      popups =  app.popup.create({
+      erp.popups =  app.popup.create({
         el: '.demo-popup-swipe-handler',
         swipeToClose: true,
-        push: true,
+        push: true
       })
-      popups.open();
+      erp.popups.open();
       chooseIndex = item.name;
       let doms = $(`.touch-flag[guid="${item.device}"][button-group="${item.device_button_group}"]`).find(".button");
       let leaveDom = $(`.leave-flag[guid="${item.device}"][button-group="${item.device_button_group}"]`).find(".button");
@@ -2054,12 +1984,29 @@
         $(`#${id}`).find('i').text('expand_more');
       }
     };
+    window.localIpObj = {};
+    window.toLocalIp = (device_item)=>{
+      let dialog = app.dialog.prompt('Please input the local ip(et.192.168.0.1)', (ip) => {
+        device_item.local_ip = ip;
+        localIpObj[device_item.guid] = ip
+        $update();
+      });
+    }
     //to link 
     window.toScene = (device_item)=>{
       console.log(device_item);
-      const {button_group,title,mac_address,model,device_mode,img_url,room_name,guid,gateway} = device_item;
+      let {button_group,title,mac_address,model,device_mode,img_url,room_name,guid,gateway,local_ip} = device_item;
+      if(!local_ip){
+        local_ip = localIpObj[guid];
+      }
+      console.log(local_ip);
       if(model == 'YO780'){
-        mainView.router.navigate(`/mobile-app/scene-setting-rcu?mode=${device_mode}&gateway=${gateway}&model=${model}&guid=${guid}&button_group=${button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${img_url}&room_name=${tran(room_name)}`);
+        mainView.router.navigate(`/mobile-app/scene-setting-rcu?mode=${device_mode}&local_ip=${local_ip}&target_guid=${target_guid}&gateway=${gateway}&model=${model}&guid=${guid}&button_group=${button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${img_url}&room_name=${tran(room_name)}`);
+      }else if(button_group.startsWith("OPENCLOSE UART")){
+        let dialog = app.dialog.prompt('Please input the local ip(et.192.168.0.1)', (ip) => {
+          device_item.local_ip = ip;
+          $update();
+        });
       }else{
         mainView.router.navigate(`/mobile-app/scene-setting?mode=${device_mode}&gateway=${gateway}&model=${model}&guid=${guid}&button_group=${button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${img_url}&room_name=${tran(room_name)}`);
       }
@@ -2128,7 +2075,7 @@
     color: #fff;
   }
   .room-box .device .swipeout-actions-right {
-    transform: translateX(200%);
+    transform: translateX(100%);
   }
   .room-box .device .swipeout-actions-left { 
     transform: translateX(-200%);

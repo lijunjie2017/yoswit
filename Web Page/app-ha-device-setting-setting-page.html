@@ -1,0 +1,62 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${_(title)}</div>
+        <div class="right">
+          <a href="#" class="link icon-only" ref="${guid}" func="iot_mode_setup_check_device_connection">
+            <i class="icon material-icons bluetooth-icons" ref="0">bluetooth</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div id="mode-setup-v5" class="px-3">
+        <div class="medium-50 large-50 device-setting-list">
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+      const {title,guid,name,profile_device_name,device_mode,slot_index} = $f7route.query;
+    
+      $onMounted(async()=>{
+        window.runtime = {};
+        window.runtime.appInfo = {};
+        window.runtime.appInfo = erp.settings[erp.appId];
+        window.runtime.appInfo.name = '';
+        if(profile_device_name == 'undefined'){
+          mainView.router.back();
+          app.dialog.alert(_('Please add the device to the room first'));
+          return
+        }
+        await initSettingTemplate();
+        await iot_device_setting_label_init(title,name,profile_device_name,guid,device_mode,slot_index);
+        await iot_mode_setup_layout_auto_init();
+        await iot_mode_setup_check_device_connection({ref : guid});
+      })
+    return $render;
+  };
+</script>

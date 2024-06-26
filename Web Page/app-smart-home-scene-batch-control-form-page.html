@@ -1,0 +1,50 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Scene') }}</div>
+        <div class="right frappe-detail-right"></div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="app" v-cloak></div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = erp.script.controller_scene_form(page.el.querySelector('#app'));
+    });
+
+    $onBeforeUnmount(() => {
+      vueApp & vueApp.$destroy();
+    });
+
+    return $render;
+  };
+</script>

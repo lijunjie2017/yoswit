@@ -1,0 +1,728 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Spotcam') }}</div>
+      </div>
+
+    </div>
+    <style>
+      .live-box{
+        height: calc(100% - var(--f7-toolbar-height));
+      }
+      .live-top {
+        padding: 15px;
+      }
+      .live-status {
+        width: 50px;
+        height: 30px;
+      }
+      .live-content {
+        height: 250px;
+        width: 100%;
+      }
+      .live-content img {
+        width: 100%;
+        height: 100%;
+      }
+      .live-operate {
+        padding: 10px 0;
+      }
+      .live-operate .operate-item {
+        width: 100%;
+        text-align: center;
+      }
+      .live-operate .operate-item i {
+        font-size: 32px;
+      }
+      .operate-icon-text {
+        font-size: 12px;
+      }
+      .timelinecontainer{
+        overflow-x: auto;
+      }
+      .toolbar .tab-link{
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        color: #9e9e9e;
+      }
+      .toolbar .tab-link-active{
+        color: var(--f7-theme-color);
+      }
+      .live-event{
+        height: calc(100% - var(--f7-toolbar-height));
+        overflow-y: auto;
+      }
+      .live-event-top{
+        padding: 10px 15px;
+      }
+      .live-event-centent{
+        background: #fff;
+        height: 1000px;
+      }
+      .live-event-centent-item{
+        height: 100px;
+        width: 200px;
+        position: relative;
+      }
+      .play-icon{
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: #000;
+        opacity: 0.8;
+        text-align: center;
+        line-height: 30px;
+        left: 50%;
+        top: 50%;
+        margin-left: -15px;
+        margin-top: -15px;
+        border-radius: 50%;
+        color: #fff;
+      }
+      .timeline-item-info{
+        margin-right: 8px;
+      }
+    </style>
+    <div class="page-content" style="height: 100%;">
+      {% raw %}
+      <div id="app" style="height: 100%;" v-cloak>
+        <div class="live-box tabs" v-if="tabIndex == 1">
+          <div class="live-top display-flex justify-content-space-between align-content-center align-items-center">
+            <button class="button button-small button-fill live-status">{{_('Live')}}</button>
+            <div class="live-date">{{today}}</div>
+            <i class="icon material-icons">fullscreen</i>
+          </div>
+          <div class="live-content">
+            <img src="https://dev.mob-mob.com/files/live.png" alt="" style="display: none;" />
+            <div id="J_prismPlayer"></div>
+          </div>
+          <div class="live-operate display-flex justify-content-center align-content-center align-items-center">
+            <div class="operate-item">
+              <div>
+                <i class="icon material-icons text-color-gray">volume_up</i>
+              </div>
+              <span class="operate-icon-text">Voice</span>
+            </div>
+            <div class="operate-item">
+              <div>
+                <i class="icon material-icons text-color-gray">photo_camera</i>
+              </div>
+              <span class="operate-icon-text">Photograph</span>
+            </div>
+            <div class="operate-item">
+              <div>
+                <i class="icon material-icons text-color-gray">search</i>
+              </div>
+              <span class="operate-icon-text">Search</span>
+            </div>
+            <div class="operate-item">
+              <div>
+                <i class="icon material-icons text-color-gray">replay_30</i>
+              </div>
+              <span class="operate-icon-text">PlayBack</span>
+            </div>
+            <div class="operate-item">
+              <div>
+                <i class="icon material-icons text-color-theme">more_horiz</i>
+              </div>
+            </div>
+          </div>
+          <div class="timelinecontainer" ref="timelinecontainer">
+            <canvas
+              ref="canvas"
+              id="canvas"
+              @mousemove="onMousemove"
+              @mousedown="onMousedown"
+              @mouseup="onMouseup"
+              @mouseout="onMouseout"
+            ></canvas>
+          </div>
+        </div>
+        <div class="live-event" v-if="tabIndex == 2">
+          <div class="live-event-top display-flex justify-content-space-between align-items-center">
+            <div class="left-icon">
+              <i class="icon material-icons text-color-theme">filter_alt</i>
+            </div>
+            <div class="currenttime">
+              <span>{{today}}</span>
+              <i class="icon material-icons text-color-theme">calendar_month</i>
+            </div>
+          </div>
+          <div class="live-event-centent">
+            <div class="page-content" style="padding: 0;">
+              <div class="block-title size-20" style="height: 35px;">Today</div>
+              <div class="timeline">
+                <div class="timeline-item" v-for="(item,index) in eventList" :key="index">
+                  <div class="timeline-item-type">
+                    <i class="icon material-icons text-color-theme size-32" v-if="item.type == 'voice'">hearing</i>
+                    <i class="icon material-icons text-color-theme size-32" v-if="item.type == 'move'">directions_run</i>
+                  </div>
+                  <div class="timeline-item-divider"></div>
+                  <div class="timeline-item-info">
+                    <div class="text-align">{{item.type}}</div>
+                    <div class="size-12">{{item.date}}</div>
+                  </div>
+                  <div class="timeline-item-content">
+                    <div class="timeline-item-inner">
+                      <div class="live-event-centent-item">
+                        <img :src="item.imgurl" alt="" style="width: 100%;height: 100%;object-fit: cover;">
+                        <span class="play-icon"><i class="icon material-icons text-color-theme">play_arrow</i></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar tabbar-icons toolbar-bottom">
+          <div class="toolbar-inner">
+            <a class="tab-link" :class="tabIndex == 1?'tab-link-active':''" @click="tab(1)">
+              <i class="icon material-icons md-only">live_tv</i>
+              <span class="tabbar-label">Live</span>
+            </a>
+            <a class="tab-link" :class="tabIndex == 2?'tab-link-active':''" @click="tab(2)">
+              <i class="icon material-icons md-only">event</i>
+              <span class="tabbar-label">Event</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  // window.core_load_css('https://cdn.bootcss.com/video.js/7.7.6/video-js.min.css');
+  // window.core_load_script('https://cdn.bootcss.com/video.js/7.7.6/video.min.js');
+  // window.core_load_script('https://cdn.bootcdn.net/ajax/libs/flv.js/1.6.0/flv.min.js');
+  // window.core_load_script('https://cdn.bootcss.com/videojs-flash/2.2.1/videojs-flash.min.js')
+  // window.core_load_css('https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/skins/default/aliplayer-min.css');
+  // window.core_load_script('https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/aliplayer-min.js');
+  // 创建一个新的 meta 元素
+  const metaElement = document.createElement('meta');
+
+  // 设置 http-equiv 和 content 属性
+  metaElement.httpEquiv = 'Content-Security-Policy';
+  metaElement.content = "default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: cdvfile: blob: rtmp:; connect-src * rtmp:";
+
+  // 将 meta 元素添加到 head 中
+  document.head.appendChild(metaElement);
+  erp.pageScript['mobile-app/cctv-page'] = {};
+
+  erp.pageScript['mobile-app/cctv-page'].pageMounted = async (e, page) => {
+    const ONE_HOUR_STAMP = 60 * 60 * 1000;
+    const ZOOM = [0.5, 1, 2, 6, 12, 24];
+    erp.pageScript['mobile-app/cctv-page'].vueApp = new Vue({
+      el: page.el.querySelector('#app'),
+      data: {
+        tabIndex : 1,
+        today: '2023/11/08 09:52:54',
+        timer: null,
+        currentZoomIndex: 0,
+        currentTime: new Date(dayjs().format('YYYY-MM-DD HH:mm:ss')).getTime(),
+        startTimestamp: new Date(dayjs().format('YYYY-MM-DD HH:mm:ss')).getTime() - 12 * ONE_HOUR_STAMP + 15 * 60 * 1000,
+        width: null,
+        height: null,
+        mousedown: false,
+        ctx: null,
+        mousedownX: null,
+        timeSegments: [
+          {
+            beginTime: new Date('2023-02-18 02:30:00').getTime(),
+            endTime: new Date('2023-02-18 11:20:00').getTime(),
+            style: {
+              background: '#5881CF',
+            },
+          },
+        ],
+        state : {
+          startx : 0,
+          starty : 0,
+        },
+        userid : '',//userid by api get
+        playerUrl : '',
+        plat : '',//phone plat
+        timers : null,
+        eventList : [
+          {
+            imgurl :'https://dev.mob-mob.com/files/event1.png',
+            date : '02:48:34',
+            type : 'voice'
+          },
+          {
+            imgurl :'https://dev.mob-mob.com/files/event2.png',
+            date : '08:59:43',
+            type : 'move'
+          },
+          {
+            imgurl :'https://dev.mob-mob.com/files/event3.png',
+            date : '10:34:23',
+            type : 'voice'
+          },
+          {
+            imgurl :'https://dev.mob-mob.com/files/event2.png',
+            date : '13:41:09',
+            type : 'move'
+          },
+          {
+            imgurl :'https://dev.mob-mob.com/files/event3.png',
+            date : '17:12:05',
+            type : 'voice'
+          },
+          {
+            imgurl :'https://dev.mob-mob.com/files/event1.png',
+            date : '20:32:51',
+            type : 'voice'
+          }]
+      },
+      mounted() {
+        this.init();
+        //add touchstart and the touchend event
+        document.getElementById('canvas').addEventListener(
+          'touchstart',
+          (e)=> {
+            this.state.startx = `${e.touches[0].pageX}`;
+            this.state.starty = `${e.touches[0].pageY}`;
+            //console.log(this.state.startx, this.state.starty);
+            e.stopPropagation();
+          },
+          false,
+        );
+      },
+      methods: {
+        init() {
+          //get today time
+          this.timer = setInterval(() => {
+            this.today = dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss');
+          }, 1000);
+          this.openVerticalButtons();
+          //get cavan
+          let { width, height } = this.$refs.timelinecontainer.getBoundingClientRect();
+          this.width = 1200;
+          this.height = height;
+          this.$refs.canvas.width = 1200;
+          this.$refs.canvas.height = height;
+          this.ctx = this.$refs.canvas.getContext('2d');
+          this.draw();
+          this.plat = window.device.platform.toLowerCase();
+          // if (flvjs.isSupported()) {
+          //     var videoElement = document.getElementById('my-video');
+          //     var flvPlayer = flvjs.createPlayer({
+          //         type: 'flv',
+          //         url: 'rtmp://hk-vs01-Tha5phoi.myspotcam.com:1936/live/SWM000cN6Gr5-1709002563' // 替换成你的 RTMP 流地址
+          //     });
+          //     flvPlayer.attachMediaElement(videoElement);
+          //     flvPlayer.load();
+          //     flvPlayer.play();
+          // } else {
+          //     console.error('FLV.js is not supported.');
+          // }
+        },
+        //open the login dialog
+        async openVerticalButtons(){
+          console.log("openVerticalButtons");
+          //logout 
+          try{
+            let url = `https://www.myspotcam.com/account/logout_mobile`;
+            let logoutStatus = await http.request(encodeURI(url), {
+                method: 'GET',
+                serializer: 'json',
+                responseType: 'json',
+                data: {},
+              });
+              console.log(logoutStatus);
+          }catch(e){
+            console.log(e);
+          }
+          setTimeout(()=>{
+            $(`input[name="dialog-username"]`).val('mobohua@gmail.com');
+            $(`input[name="dialog-password"]`).val('Qq123456');
+          },500)
+          app.dialog.login('Enter your username and password', async(username, password)=> {
+            //get the password and the username to spotcam
+            let url = `https://www.myspotcam.com/account/login_mobile_v2`;
+            let formData = new FormData();
+            formData.append("email",username);
+            formData.append("password",password);
+            formData.append("mac",'02:00:00:00:00:00');
+            formData.append("build_serial",'');
+            formData.append("token",'cA_yiwlKmTk:APA91bGOxTkugz0GKPEqjiCTcqLVPe3dQRi4efjEuHAe2xzAVuNdroBHpAWgwxzeL_CECgbyzSuzm7uDnT_plbaQI2iPw2FkGBK9Yl2YhT8LyJ9-vmwczyndyqtgEV3RCNnvh3C7OUlg');
+            formData.append("ostype",2);
+            formData.append("lang",'zh');
+            formData.append("time",Math.floor(Date.now() / 1000));
+            console.log(formData)
+            try{
+              let postStatus = await http.request(encodeURI(url), {
+                method: 'POST',
+                serializer: 'multipart',
+                responseType: 'json',
+                data: formData,
+              });
+              let data = postStatus.data;
+              if(data.result == 1){
+                let {atok,camera_time_zone_utc,hash,version} = data;
+                //get uid for the spotcam
+                setTimeout(()=>{
+                  this.getUid();
+                },1000)
+              }else if(data.result == 0){
+                switch(data.errcode){
+                  case 1:
+                    app.dialog.alert('Email or password is wrong!');
+                    break;
+                  case 2:
+                    app.dialog.alert('This email has not been verified!');
+                    break;
+                  case 6:
+                    app.dialog.alert('Login fail over 20 times!');
+                    break;
+                  case 5:
+                    app.dialog.alert('Wrong parameters!');
+                    break;
+                  default:
+                    app.dialog.alert('Unknown error!');
+                }
+              }
+              console.log('postStatus',postStatus);
+            }catch(e){console.log(e)}
+              //app.dialog.alert(e);
+          });
+        },
+        async getUid(){
+          //check if ios or android
+          try{
+            let url = `https://www.myspotcam.com/camera_status/get_uid`;
+            let postStatus = null;
+            if(this.plat === 'ios'){
+              postStatus = await http.request( encodeURI(url),{
+                method: 'POST',
+                responseType: 'json',
+                data : {}
+              });
+            }else{
+              postStatus = await Capacitor.Plugins.CapacitorHttp.request({
+                url : encodeURI(url),
+                method: 'POST',
+                responseType: 'json',
+                data : {}
+              });
+            }
+            console.log('postStatus',postStatus);
+            let userid = postStatus.data.userid;
+            this.userid = userid;
+            this.getCameraList(userid);
+          }catch(err){
+            
+          }
+        },
+        async getCameraList(){
+          try{
+            let url = `https://www.myspotcam.com/myspotcam/myspotcam_json`;
+            let postStatus = null;
+            if(this.plat === 'ios'){
+              postStatus = await http.request( encodeURI(url),{
+                method: 'POST',
+                responseType: 'json',
+                data : {
+                  "uid": this.userid
+                }
+              });
+            }else{
+              postStatus = await Capacitor.Plugins.CapacitorHttp.request({
+                url : encodeURI(url),
+                method: 'POST',
+                responseType: 'json',
+                data : {
+                  "uid": this.userid
+                }
+              });
+            }
+            console.log('postStatus',postStatus);
+            let list = postStatus.data || [];
+            for(let i in list){
+              await this.getLiveStream(list[i].cid);
+            }
+          }catch(err){
+            console.log(err)
+          }
+        },
+        async getLiveStream(cid,repeat){
+          try{
+            let url = `https://www.myspotcam.com//command_sending/stream_info_json_lib/livesn/${cid}`;
+            let postStatus = null;
+            if(this.plat === 'ios'){
+              postStatus = await http.request( encodeURI(url),{
+                method: 'GET',
+                responseType: 'json',
+                data : {
+                  "uid": this.userid
+                }
+              });
+            }else{
+              postStatus = await Capacitor.Plugins.CapacitorHttp.request({
+                url : encodeURI(url),
+                method: 'POST',
+                responseType: 'json',
+                data : {
+                  "uid": this.userid
+                }
+              });
+            }
+            console.log('postStatus',postStatus);
+            //error handle
+            if(postStatus.data.res == -2){
+              app.dialog.alert(postStatus.data.stat);
+            }else if(postStatus.data.res == 1){
+              this.playerUrl = postStatus.data.url+postStatus.data.name;
+              //create the player
+              //const player = videojs('my-video');
+              console.log(this.playerUrl);
+              if(repeat){
+                this.timers = setTimeout(()=>{
+                  this.getLiveStream(cid,true);
+                },1000*30);
+              }else{
+                this.openVedioPlayer();
+                this.getLiveStream(cid,true);
+              }
+              // const player = new Aliplayer({
+              //   "id": "J_prismPlayer",
+              //   "source" : this.playerUrl,
+              //   "width": "100%",
+              //   "isLive": true,
+              //   "useH5Prism": true
+              // },function(player){
+              //   player.play();
+              // })
+              // let that = this;
+              // const video = videojs('myvideo',{},function (){
+              //   console.log(this)
+              //   this.src({
+              //     src: that.playerUrl,
+              //     type:'rtmp/flv'
+              //   });
+              //   this.play();
+              // })
+            }
+          }catch(err){
+            console.log(err);
+            app.dialog.alert(err);
+          }
+        },
+        openVedioPlayer(){
+          let hasDark = $('html').hasClass('theme-dark');
+          window.VideoPlayerVLC.play(
+            [ 
+              this.playerUrl,
+              "RTMP Player",
+              (hasDark ? "#ffffff" : "#000000"),
+              (hasDark ? '#202020' : '#f7f7f7'),
+              '0',
+              erp.setting.primary_color,
+              (hasDark ? "#000000" : "#ffffff")
+            ],
+            done => {},
+            error => {}
+          );
+        },
+        draw() {
+          this.drawScaleLine();
+          //this.drawTimeSegments();
+          this.drawMiddleLine();
+        },
+        drawMiddleLine() {
+          let lineWidth = 2;
+          let x = this.width / 2;
+          this.drawLine(x, 0, x, this.height, lineWidth, '#fff');
+        },
+        drawLine(x1, y1, x2, y2, lineWidth, color) {
+          // 开始一段新路径
+          this.ctx.beginPath();
+          // 设置线段颜色
+          this.ctx.strokeStyle = color || '#fff';
+          // 设置线段宽度
+          this.ctx.lineWidth = lineWidth || 1;
+          // 将路径起点移到x1,y1
+          this.ctx.moveTo(x1, y1);
+          // 将路径移动到x2,y2
+          this.ctx.lineTo(x2, y2);
+          // 把路径画出来
+          this.ctx.stroke();
+        },
+        drawScaleLine() {
+          const ZOOM_HOUR_GRID = [1 / 60, 1 / 60, 2 / 60, 1 / 6, 0.25, 0.5];
+
+          // 一共可以绘制的格数，时间轴的时间范围小时数除以每格代表的小时数，24/0.5=48
+          let gridNum = ZOOM[this.currentZoomIndex] / ZOOM_HOUR_GRID[this.currentZoomIndex];
+
+          // 一格多少毫秒，将每格代表的小时数转成毫秒数就可以了  ;
+          let msPerGrid = ZOOM_HOUR_GRID[this.currentZoomIndex] * ONE_HOUR_STAMP;
+
+          // 每格宽度，时间轴的宽度除以总格数
+          let pxPerGrid = this.width / gridNum;
+
+          // 时间偏移量，初始时间除每格时间取余数，
+          let msOffset = msPerGrid - (this.startTimestamp % msPerGrid);
+          // 距离偏移量，时间偏移量和每格时间比例乘每格像素
+          let pxOffset = (msOffset / msPerGrid) * pxPerGrid;
+          const ZOOM_DATE_SHOW_RULE = [
+            () => {
+              // 全都显示
+              return true;
+            },
+            (date) => {
+              // 每五分钟显示
+              return date.getMinutes() % 5 === 0;
+            },
+            (date) => {
+              // 显示10、20、30...分钟数
+              return date.getMinutes() % 10 === 0;
+            },
+            (date) => {
+              // 显示整点和半点小时
+              return date.getMinutes() === 0 || date.getMinutes() === 30;
+            },
+            (date) => {
+              // 显示整点小时
+              return date.getMinutes() === 0;
+            },
+            (date) => {
+              // 显示2、4、6...整点小时
+              return date.getHours() % 2 === 0 && date.getMinutes() === 0;
+            },
+          ];
+          for (let i = 0; i < gridNum; i++) {
+            // 横坐标就是当前索引乘每格宽度
+            let x = pxOffset + i * pxPerGrid;
+            // 当前刻度的时间，时间轴起始时间加上当前格子数乘每格代表的毫秒数
+            let graduationTime = this.startTimestamp + msOffset + i * msPerGrid;
+            // 时间刻度高度  根据刻/时/月展示高度不同  具体可以自己去定义
+            let h = 0;
+            let date = new Date(graduationTime);
+            console.log(date.getHours())
+            if (date.getHours() === 0 && date.getMinutes() === 0) {
+              // 其他根据判断条件来显示
+              h = this.height * 0.3;
+              // 刻度线颜色
+              this.ctx.fillStyle = 'rgba(151,158,167,1)';
+              // 显示时间
+              console.log("graduationTitle",this.graduationTitle(graduationTime))
+              this.ctx.fillText(
+                this.graduationTitle(graduationTime),
+                x - 13, // 向左平移一半
+                h + 15, // 加上行高
+              );
+            } else if (ZOOM_DATE_SHOW_RULE[this.currentZoomIndex](date)) {
+              h = this.height * 0.2;
+              this.ctx.fillStyle = 'rgba(151,158,167,1)';
+              this.ctx.fillText(this.graduationTitle(graduationTime), x - 13, h + 15);
+            } else {
+              // 其他不显示时间
+              h = this.height * 0.15;
+            }
+            this.drawLine(x, 0, x, h, 1, '#fff');
+          }
+        },
+        graduationTitle(datetime) {
+          let time = dayjs(datetime);
+          // 0点则显示当天日期
+          if (time.hour() === 0 && time.minute() === 0 && time.millisecond() === 0) {
+            return time.format('MM-DD');
+          } else {
+            // 否则显示小时和分钟
+            return time.format('HH:mm');
+          }
+        },
+        onMousedown(e) {
+          let { left } = this.$refs.canvas.getBoundingClientRect();
+          // 也是计算鼠标相当于时间轴左侧的距离
+          this.mousedownX = e.clientX - left;
+          // 设置一下标志位
+          this.mousedown = true;
+          // 缓存一下鼠标按下时的起始时间点
+          this.mousedownCacheStartTimestamp = this.startTimestamp;
+        },
+        onMousemove(e) {
+          // 计算出相对画布的位置
+          let { left } = this.$refs.canvas.getBoundingClientRect();
+          let x = e.clientX - left;
+          // 计算出时间轴上每毫秒多少像素
+          const PX_PER_MS = this.width / (ZOOM[this.currentZoomIndex] * ONE_HOUR_STAMP); // px/ms
+          //拖拽时候
+          if (this.mousedown) {
+            // 计算鼠标当前相当于鼠标按下那个点的距离
+            let diffX = x - this.mousedownX;
+            // 用鼠标按下时的起始时间点减去拖动过程中的偏移量，往左拖是负值，减减得正，时间就是在增加，往右拖时间就是在减少
+            this.startTimestamp = this.mousedownCacheStartTimestamp - Math.round(diffX / PX_PER_MS);
+            // 不断刷新重绘就ok了
+            this.ctx.clearRect(0, 0, this.width, this.height);
+            this.draw();
+          } else {
+            // 计算所在位置的时间  平移时候
+            let time = this.startTimestamp + x / PX_PER_MS;
+            // 清除画布
+            this.ctx.clearRect(0, 0, this.width, this.height);
+            this.draw();
+            // 绘制实时的竖线及时间
+            this.drawLine(x, 0, x, this.height * 0.3, '#fff', 1);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillText(dayjs(time).format('YYYY-MM-DD HH:mm:ss'), x - 20, this.height * 0.3 + 20);
+          }
+        },
+        onMouseup() {
+          // 设置一下标志位 移动取消
+          this.mousedown = false;
+          //中间刻度距离左侧画布左侧距离
+          let x = this.width / 2;
+          // 计算出时间轴上每毫秒多少像素
+          const PX_PER_MS = this.width / (ZOOM[this.currentZoomIndex] * ONE_HOUR_STAMP); // px/ms
+          // 计算中间位置刻度的时间位置的时间
+          this.currentTime = this.startTimestamp + x / PX_PER_MS;
+        },
+        onMouseout() {
+          // 清除画布
+          this.ctx.clearRect(0, 0, this.width, this.height);
+          //重新绘制画布
+          this.draw();
+        },
+        tab(index){
+          this.tabIndex = index
+        }
+      },
+      beforeDestroy() {
+        clearInterval(this.timer);
+        //clearInterval(this.timers);
+      },
+    });
+  };
+
+  erp.pageScript['mobile-app/cctv-page'].pageInit = (e, page) => {};
+
+  erp.pageScript['mobile-app/cctv-page'].pageBeforeIn = (e, page) => {};
+
+  erp.pageScript['mobile-app/cctv-page'].pageAfterIn = (e, page) => {};
+
+  erp.pageScript['mobile-app/cctv-page'].pageBeforeOut = (e, page) => {};
+
+  erp.pageScript['mobile-app/cctv-page'].pageAfterOut = (e, page) => {};
+
+  erp.pageScript['mobile-app/cctv-page'].pageBeforeRemove = (e, page) => {
+    try {
+      erp.pageScript['mobile-app/cctv-page'].vueApp.$destroy();
+      erp.pageScript['mobile-app/cctv-page'].vueApp = null;
+    } catch (err) {
+      // ignore
+    }
+  };
+</script>
