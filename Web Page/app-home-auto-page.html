@@ -2214,6 +2214,9 @@ export default async (props, ctx) => {
 		}else if(s.device_button_group.startsWith("OPENCLOSE UART")){
 			//openclose uart
 			console.log("device_status curtain",device_status);
+			if(device_status > 100){
+				device_status = 0;
+			}
 			setTimeout(()=>{
 				changeRangeBarUi(p.guid, s.device_button_group, device_status);
 			},200)
@@ -2325,7 +2328,7 @@ export default async (props, ctx) => {
 					
 					if(hexModel == '0351'){
 						//curtain motor
-						debugger
+						//debugger
 						if(isset(peripheral[guid])){
 							peripheral[guid].onChangeGateway(deviceInfo)
 						}

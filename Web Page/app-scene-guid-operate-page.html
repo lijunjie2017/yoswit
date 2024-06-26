@@ -353,6 +353,13 @@
               } else {
                 status = 'Unoccupied';
               }
+              //check if the tempalte is not rcu randar
+              if(this.templateName != 'RCU Radar'){
+                app.dialog.confirm(_('The scene template is not a RCU Radar. Do you want to back for step 1?'), () => {
+                  this.index = 1;
+                  this.trigger = [];
+                },()=>{})
+              }
             } else if (mode == 'On Off Switch') {
               if (ref == 1) {
                 status = 'ON';

@@ -560,7 +560,7 @@ window.Peripheral = (function() {
 		if(!isset(data) || !data)return;
 		if(typeof data != 'string')return;
 		if(p.Guid == '3330633932323236333537611203511d'){
-			debugger
+			//debugger
 		}
 		//console.log("data",data);
 		let io = 0;

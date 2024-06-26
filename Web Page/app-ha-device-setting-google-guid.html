@@ -1,0 +1,370 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Google Setting') }}</div>
+        <div class="right">
+          ${is_google_home_activated == 1? $h`
+          <a link icon-only><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">cloud_done</i></a>
+          `: $h`
+          <a link icon-only><i class="icon material-icons setting-list-icon p-1 text-color-gray" style="font-size: 30px">cloud_off</i></a>
+          `}
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="block mx-3 margin-top">
+            <p class="segmented segmented-strong">
+              <button class="button step-one" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">
+                {{_("Step 1")}}
+              </button>
+              <button class="button step-two" :class="index == 2?'button-active button':'button'" v-on:click="toTab(2)">
+                {{_("Step 2")}}
+              </button>
+              <span class="segmented-highlight"></span>
+            </p>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="card-body">
+                    <input type="hidden" name="name" value="" />
+                    <div class="list no-hairlines-md">
+                      <ul>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">mail</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{ _('Email Address')}}</div>
+                            <div class="item-input-wrap">
+                              <input type="text" name="email" :value="user_email" :placeholder="emailTip" readonly />
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">key</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{ _('Password')}}</div>
+                            <div class="item-input-wrap">
+                              <input type="password" name="password" :value="password" required :placeholder="passwordTip" />
+                              <i
+                                class="material-icons"
+                                style="
+                                  position: absolute;
+                                  right: 0px;
+                                  top: 0px;
+                                  padding: 10px 0px 10px 10px;
+                                  font-size: 20px;
+                                  z-index: 999999;
+                                "
+                                func="show_hide_password_field"
+                                >visibility_off</i
+                              >
+                              <span class="input-clear-button"></span>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">home_app_logo</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label" lang="en">Profile</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                              <select name="device_mode" placeholder="Please choose..." lang="en" id="profile_google">
+                                <option v-for="item in profile_list" :key="item.name" :value="item.name">
+                                  {{tran(item.profile_name)}}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT STEP")}}</div>
+                </div>
+              </div>
+            </div>
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="block-title" style="overflow: initial">{{_("Sync To Google")}}</div>
+              <div class="list media-list no-margin list-group">
+                <ul>
+                  <div v-for="item in deviceList" :key="item.name">
+                    <li class="list-group-title" v-if="item.isTitle">{{tran(item.title)}}</li>
+                    <li class="device mobmob-device swipeout" v-if="!item.isTitle">
+                      <div class="item-content swipeout-content">
+                        <label class="checkbox" style="padding-left: 20px; padding-right: 20px"
+                          ><input v-on:click="changeVal(item)" type="checkbox" :checked="item.unsync_to_google === 1?false:true" /><i
+                            class="icon-checkbox"
+                          ></i
+                        ></label>
+                        <div
+                          class="item-media"
+                          :style="{'background-image' : 'url('+erp.get_url(item.image?item.image:imgError)+')'}"
+                        ></div>
+                        <div class="item-inner">
+                          <div class="item-title-row">
+                            <div class="item-title">{{tran(item.title)}}</div>
+                          </div>
+                          <div class="item-subtitle">{{item.device_mode}}</div>
+                          <div class="item-text">{{item.device}}</div>
+                        </div>
+                        <div class="control-panel-right"></div>
+                      </div>
+                      <div class="swipeout-actions-right">
+                        <a href="#" class="link" func="controller_deviceNetwork_list_set_default_connect"
+                          ><i class="icon material-icons">check</i></a
+                        >
+                      </div>
+                    </li>
+                  </div>
+                </ul>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("COMPELETE")}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let is_google_home_activated = erp.info.user_settings.is_google_home_activated;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1,
+          profile_list: [],
+          user_email: '',
+          password: '',
+          passwordTip: _('Your Password'),
+          emailTip: _('Email Address'),
+          deviceList: [],
+          imgError: 'https://my.yoswit.com/files/products/YO2086-1G.svg',
+          erpProfile: null,
+          profileName: '',
+        },
+        computed: {},
+        mounted() {
+          this.init();
+          const select = document.getElementById('profile_google');
+          select.addEventListener('change', function () {
+            console.log(select.value);
+            this.profileName = select.value;
+            this.getProfileData(select.value);
+          });
+        },
+        methods: {
+          toTab() {},
+          changeVal(item) {
+            if (item.unsync_to_google === 0) {
+              item.unsync_to_google = 1;
+            } else {
+              item.unsync_to_google = 0;
+            }
+          },
+          async init() {
+            let key = `google_password_${erp.userId}`;
+            this.password = await db.get(key);
+            if (!this.password) {
+              this.password = '111111';
+            }
+            this.user_email = users[users.current].usr;
+            let active_profile = erp.info.profile.name;
+            this.profileName = active_profile;
+            let list = await http.request(
+              encodeURI(`${erp.settings[erp.appId].app_api_url}/api/resource/Profile?fields=["*"]&limit=10000000`),
+              {
+                method: 'GET',
+                serializer: 'json',
+                responseType: 'json',
+                timeout: 3,
+              }
+            );
+            let profile_list_temp = list.data.data || [];
+            let temporaryArry = [];
+            let currentIdx = profile_list_temp.findIndex((e) => e.name === active_profile);
+            temporaryArry.push(profile_list_temp[currentIdx]);
+            profile_list_temp.splice(currentIdx, 1);
+            this.profile_list = temporaryArry.concat(profile_list_temp);
+          },
+          nextStep(index) {
+            if (index == 1) {
+              this.save();
+            } else if (index == 2) {
+              this.syncProfileSubdevice();
+            }
+          },
+          async getProfileData(name) {
+            app.dialog.preloader();
+            let url = `/api/resource/Profile/${name}`;
+            try {
+              let data = await http.request(url, {
+                responseType: 'json',
+                serializer: 'json',
+                method: 'get',
+              });
+              console.log(data);
+              let dataObj = data.data.data;
+              erpProfile = dataObj;
+              this.getProfileSubdeviceList(true);
+              app.dialog.close();
+            } catch (err) {
+              app.dialog.close();
+              app.dialog.alert(err);
+            }
+          },
+          async getProfileSubdeviceList(loadStatus) {
+            //loadStatus control is nor load the erp data;
+            let subDeviceList = [];
+            if (!loadStatus) {
+              subDeviceList = cloneDeep(erp.info.profile.profile_subdevice);
+              roomList = cloneDeep(erp.info.profile.profile_room);
+            } else {
+              subDeviceList = cloneDeep(erpProfile.profile_subdevice);
+              roomList = cloneDeep(erpProfile.profile_room);
+            }
+            let modelList = cloneDeep(erp.doctype.device_model);
+            let list = [];
+            roomList.forEach((item, index) => {
+              item.isTitle = true;
+              list.push(item);
+              subDeviceList.forEach((device, kindex) => {
+                if (device.profile_room === item.name) {
+                  device.isTitle = false;
+                  const hexid = device.device.substring(device.device.length - 6, device.device.length - 2).toUpperCase();
+                  for (let i in modelList) {
+                    if (hexid === i) {
+                      device.image = modelList[i].image;
+                    }
+                  }
+                  list.push(device);
+                }
+              });
+            });
+            this.deviceList = cloneDeep(list);
+          },
+          async save() {
+            let profile_val = $('#profile_google').val();
+            //save in local
+            let key = `google_password_${erp.userId}`;
+            db.set(key, this.password);
+            try {
+              app.dialog.preloader();
+              setTimeout(() => {
+                app.dialog.close();
+              }, 1000 * 20);
+              await http.request(encodeURI(`https://my.mob-mob.com/resources/smart/activeGhome.php`), {
+                method: 'POST',
+                data: {
+                  system: erp.setting.app_api_url,
+                  key: '111111',
+                  email: users[users.current].usr,
+                  password: this.password,
+                  profile: profile_val,
+                },
+                serializer: 'urlencoded',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                },
+              });
+              app.dialog.close();
+              this.index = 2;
+              this.getProfileSubdeviceList();
+              //$update();
+            } catch (error) {
+              app.dialog.close();
+              this.index = 1;
+              app.dialog.alert(error);
+            }
+          },
+          async syncProfileSubdevice() {
+            app.dialog.preloader();
+            let this_name = `${erp.appId}-${users[users.current].usr}`;
+            let thisList = this.deviceList.filter((item) => item.isTitle != true);
+            let url = `/api/resource/Profile/${this.profileName}`;
+            try {
+              await http.request(url, {
+                responseType: 'json',
+                serializer: 'json',
+                data: {
+                  profile_subdevice: thisList,
+                },
+                method: 'PUT',
+              });
+              let user_url = `/api/resource/User Settings/${encodeURI(this_name)}`;
+              await http.request(user_url, {
+                responseType: 'json',
+                serializer: 'json',
+                data: {
+                  is_google_home_activated: 1,
+                },
+                method: 'PUT',
+              });
+              is_google_home_activated = 1;
+              erp.info.user_settings.is_google_home_activated = 1;
+              $update();
+              //save successfully
+              thisList.forEach((item, index) => {
+                erp.info.profile.profile_subdevice.forEach((kitem, kindex) => {
+                  if (kitem.name === item.name) {
+                    kitem.unsync_to_google = item.unsync_to_google;
+                  }
+                });
+              });
+              app.dialog.close();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
