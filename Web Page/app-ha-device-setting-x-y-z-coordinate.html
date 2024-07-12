@@ -1,0 +1,252 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Coordinate Setting') }}</div>
+        <div class="right">
+          <a link icon-only @click="${()=>save()}"><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">check</i></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app">
+        <div class="card">
+          <input type="hidden" name="button_group" value="{{ profile_subdevice.device_button_group }}" />
+          <div class="card-content card-content-padding">
+            <div>
+              <div class="list inline-labels no-hairlines-md">
+                <ul>
+                  <li class="item-content item-input">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label">{{ _("X1") }}</div>
+                      <div class="item-input-wrap">
+                        <input type="text" class="setting-value text-muted size-12" v-model="x_1" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label">{{ _("X2") }}</div>
+                      <div class="item-input-wrap">
+                        <input name="X2" required validate class="setting-value text-muted size-12" type="text" v-model="x_2" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label">{{ _("Y1") }}</div>
+                      <div class="item-input-wrap">
+                        <input name="Y1" required validate class="setting-value text-muted size-12" type="text" v-model="y_1" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label">{{ _("Y2") }}</div>
+                      <div class="item-input-wrap">
+                        <input name="Y2" required validate class="setting-value text-muted size-12" type="text" v-model="y_2" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label">{{ _("Z1") }}</div>
+                      <div class="item-input-wrap">
+                        <input name="Z1" required validate class="setting-value text-muted size-12" type="text" v-model="z_1" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label">{{ _("Z2") }}</div>
+                      <div class="item-input-wrap">
+                        <input name="Z2" required validate class="setting-value text-muted size-12" type="text" v-model="z_2" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $ref = ctx.$ref,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+      let {guid} = $f7route.query;
+      const cancelAll = ()=>{
+        vueApp.$reSet();
+      }
+      const save = ()=>{
+        vueApp.$save();
+      }
+      let vueApp = null;
+      $on('pageMounted',(e,page)=>{
+        vueApp = new Vue({
+          el: page.el.querySelector('#vue-app'),
+          data: {
+            x_1 : '-3',
+            x_2 : '3',
+            y_1 : '-3',
+            y_2 : '3',
+            z_1 : '0.5',
+            z_2 : '2.5',
+          },
+          mounted() {
+            this.init();
+            Vue.prototype.$save = this.save;
+          },
+          methods:{
+            async save(){
+              app.dialog.preloader();
+              console.log(this.x_1,this.x_2,this.y_1,this.y_2,this.z_1,this.z_2);
+              //let cmd = [{"action":"connect"}];
+              let pre_command = `95280000`;
+              //setting the x,y
+              let ble_x1 = `${parseInt(this.x_1) == 0?'00000000':core_utils_float_ieee_convert(this.x_1)}`;
+              let ble_x2 = `${parseInt(this.x_2) == 0?'00000000':core_utils_float_ieee_convert(this.x_2)}`;
+              let ble_y1 = `${parseInt(this.y_1) == 0?'00000000':core_utils_float_ieee_convert(this.y_1)}`;
+              let ble_y2 = `${parseInt(this.y_2) == 0?'00000000':core_utils_float_ieee_convert(this.y_2)}`;
+              let $length = `04${ble_x1}${ble_x2}${ble_y1}${ble_y2}`.length/2;
+              let data = `${pre_command}${$length.toString(16).pad("00")}04${ble_x1}${ble_x2}${ble_y1}${ble_y2}`;
+              //setting the z
+              let ble_z1 = `${parseInt(this.z_1) == 0?'00000000':core_utils_float_ieee_convert(this.z_1)}`;
+              let ble_z2 = `${parseInt(this.z_2) == 0?'00000000':core_utils_float_ieee_convert(this.z_2)}`;
+              let $z_length = `${ble_z1}${ble_z2}`.length/2;
+              let z_data = `95290000${$z_length.toString(16).pad("00")}${ble_z1}${ble_z2}`;
+              // cmd.push({"action":"write","data":data});
+              // cmd.push({"action":"write","data":z_data});
+              let erpObj = {
+                "X1" : this.x_1,
+                "X2" : this.x_2,
+                "Y1" : this.y_1,
+                "Y2" : this.y_2,
+                "Z1" : this.z_1,
+                "Z2" : this.z_2
+              };
+              try{
+                //const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+                console.log("x-y",data);
+                console.log("z",z_data);
+                let list = [{
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },{
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: z_data,
+                }]
+                await window.peripheral[guid].write(list);
+                //await ha_process_periperal_cmd(p.id, cmd,true);
+                await iot_device_setting_sync_server(guid,null, null, true,erpObj);
+                app.dialog.close();
+                app.dialog.alert('Save Success!');
+              }catch(e){
+                console.log(e);
+                app.preloader.hide();
+              }
+            },
+            async init(){
+              // const p = Object.values(scanned_periperals).find(item=>item.guid == guid);
+              // let cmd = [{"action":"connect"},{"action":"write","data":"9520"}];
+              //get the erp of the randar
+              let devices = erp.info.device;
+              let deviceMap = devices[guid];
+              let settings = deviceMap.settings;
+              settings.forEach(item => {
+                if(item.setting_type == 'X1'){
+                  this.x_1 = item.setting;
+                }
+                if(item.setting_type == 'X2'){
+                  this.x_2 = item.setting;
+                }
+                if(item.setting_type == 'Y1'){
+                  this.y_1 = item.setting;
+                }
+                if(item.setting_type == 'Y2'){
+                  this.y_2 = item.setting;
+                }
+                if(item.setting_type == 'Z1'){
+                  this.z_1 = item.setting;
+                }
+                if(item.setting_type == 'Z2'){
+                  this.z_2 = item.setting;
+                }
+              });
+              try{
+                await peripheral[guid].connect();
+                const p = peripheral[guid].prop;
+                ble.startNotification(
+                  p.id,
+                  'ff80',
+                  'ff82',
+                  (rs) => {
+                    console.log(rs);
+                  },
+                  (err) => {
+                    //reject(err);
+                  }
+                );
+                setTimeout(async()=>{
+                  let list = [{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '9520',
+                  }]
+                  await window.peripheral[guid].write(list);
+                },1000)
+              }catch(e){
+                await peripheral[guid].disconnect();
+                console.log(e);
+                this.init();
+              }
+            }
+          },
+
+        })
+      })
+    $on('pageBeforeUnmount', (e, page) => {
+        if (vueApp) {
+          vueApp.$destroy();
+        }
+      });
+    return $render;
+  };
+</script>
+
+<style>
+  .list .item-label{
+    width: 50px;
+  }
+</style>

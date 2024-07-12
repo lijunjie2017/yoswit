@@ -9,6 +9,10 @@ window.iot_active_rcu_output = async(element)=>{
       }
     })
     console.log(device_button_group);
+    if(!device_button_group.startsWith("RCU OUTPUT")){
+      app.dialog.alert(`This device is not an rcu output`);
+      return
+    }
     let gang = device_button_group.replaceAll("RCU OUTPUT",'')*1;
     if(gang == 33){
         gang = 98;

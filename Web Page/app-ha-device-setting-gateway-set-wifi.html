@@ -12,7 +12,7 @@
           </div>
           <div class="title">{{ _('Wifi Config') }}</div>
           <div class="right">
-            <a href="#" class="link icon-only" func="controller_frappe_form_reset">
+            <a href="#" class="link icon-only" v-on:click="iotResetWifi">
               <i class="icon material-icons">replay</i>
             </a>
             <a href="#" class="link icon-only" ref="{{ profile_subdevice.device }}" v-on:click="iot_device_wifi_form_save">
@@ -32,12 +32,22 @@
                   <ul>
                     <li class="item-content item-input no-padding-left">
                       <div class="item-inner no-padding-right">
-                        <div class="item-title item-label" lang="en" style="font-size: 16px;">Ssid <span class="text-color-red" style="font-size: 12px;">( {{wifi_tip}} )</span></div>
+                        <div class="item-title item-label" lang="en" style="font-size: 16px">
+                          Ssid <span class="text-color-red" style="font-size: 12px">( {{wifi_tip}} )</span>
+                        </div>
                         <div class="item-input-wrap">
-                          <input type="text" name="ssid" v-model="setting.ssid" :placeholder="ssid" required validate v-on:focus="showWifiInfo"/>
+                          <input
+                            type="text"
+                            name="ssid"
+                            v-model="setting.ssid"
+                            :placeholder="ssid"
+                            required
+                            validate
+                            v-on:focus="showWifiInfo"
+                          />
                           <div class="wifi-box" v-if="wifiShowStatus">
                             <div class="list">
-                              <ul style="padding-left: 0px;">
+                              <ul style="padding-left: 0px">
                                 <li v-for="(kitem,kindex) in localWifiList" :key="kindex" v-on:click="clickWifiBox(kitem.ssid)">
                                   <a class="item-content" style="padding-left: 0px">
                                     <div class="item-inner" style="padding-right: 0px">
@@ -53,7 +63,7 @@
                     </li>
                     <li class="item-content item-input no-padding-left">
                       <div class="item-inner no-padding-right">
-                        <div class="item-title item-label" lang="en" style="font-size: 16px;">Password</div>
+                        <div class="item-title item-label" lang="en" style="font-size: 16px">Password</div>
                         <div class="item-input-wrap">
                           <input
                             type="password"
@@ -64,7 +74,12 @@
                             required
                             validate
                           />
-                          <i class="material-icons" style="position:absolute;right:0px;top:0px;padding:10px 0px 10px 10px;font-size:20px;z-index:999999" func="show_hide_password_field">visibility_off</i>
+                          <i
+                            class="material-icons"
+                            style="position: absolute; right: 0px; top: 0px; padding: 10px 0px 10px 10px; font-size: 20px; z-index: 999999"
+                            func="show_hide_password_field"
+                            >visibility_off</i
+                          >
                         </div>
                       </div>
                     </li>
@@ -161,7 +176,7 @@
       $onUpdated = ctx.$onUpdated,
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
-    let { guid, profile_subdevice_name,device_name } = $f7route.query;
+    let { guid, profile_subdevice_name, device_name } = $f7route.query;
     let vueApp = null;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
@@ -173,8 +188,8 @@
         },
         data: {
           // data
-          localWifiList : [],
-          wifiShowStatus : false,
+          localWifiList: [],
+          wifiShowStatus: false,
           wifi_tip: tran('2.4 GHz Wi-Fi Only'),
           ssid: tran('SSID'),
           password_name: tran('Password'),
@@ -183,7 +198,7 @@
             ssid: '',
             ssid_password: '',
             email: users[users.current].usr,
-            server_url: "mqtt://" + erp.settings[erp.appId].mqtt_server,
+            server_url: 'mqtt://' + erp.settings[erp.appId].mqtt_server,
             port: erp.settings[erp.appId].mqtt_port,
             username: '',
             server_password: '',
@@ -215,10 +230,10 @@
               if (this.setting.ssid && this.setting.ssid_password) {
                 this.getJsonData();
               } else {
-                let thisJson = await db.get("wifiList");
-                if(thisJson){
+                let thisJson = await db.get('wifiList');
+                if (thisJson) {
                   this.localWifiList = JSON.parse(thisJson);
-                  console.log('this.localWifiList',this.localWifiList);
+                  console.log('this.localWifiList', this.localWifiList);
                 }
                 WifiWizard2.getConnectedSSID()
                   .then((res) => {
@@ -232,64 +247,111 @@
               console.log(err);
             }
           },
-          showWifiInfo(){
-            if(this.localWifiList.length !== 0){
+          async iotResetWifi() {
+            app.dialog.confirm(
+              `${_('Confirm reset WiFi?')}`,
+              async () => {
+                app.dialog.preloader();
+                let bleList = [];
+                this.setting.ssid = '';
+                this.setting.ssid_password = '';
+                for(let i in this.wifiInfo){
+                  this.wifiInfo[i] = "";
+                }
+                let ssid_data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
+                let ssid_password_data =
+                  '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: ssid_data,
+                });
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: ssid_password_data,
+                });
+                try {
+                  await peripheral[guid].write(bleList);
+                  //post to the erp
+                  await iot_device_setting_sync_server(guid, null, null, true, {
+                    'Wifi SSID': this.setting.ssid,
+                    'Wifi Password': this.setting.ssid_password,
+                  });
+                  emitter.emit('device/reset', {
+                    guid: guid,
+                  });
+                  //offline the device wifi
+                  app.dialog.close();
+                  app.dialog.alert(_('Reset successfully'));
+                } catch (error) {
+                  app.dialog.close();
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              },
+              () => {
+
+              }
+            );
+          },
+          showWifiInfo() {
+            if (this.localWifiList.length !== 0) {
               this.wifiShowStatus = true;
             }
           },
-          hideWifiInfo(){
+          hideWifiInfo() {
             this.wifiShowStatus = false;
           },
-          clickWifiBox(ssid){
+          clickWifiBox(ssid) {
             this.wifiShowStatus = false;
-            this.localWifiList.forEach(item=>{
-              if(ssid === item.ssid){
+            this.localWifiList.forEach((item) => {
+              if (ssid === item.ssid) {
                 this.setting.ssid = item.ssid;
                 this.setting.ssid_password = item.ssid_password;
               }
-            })
+            });
           },
-          async saveLocalWifi(){
+          async saveLocalWifi() {
             let wifiList = [];
             //get the local wifi setting
-            let json = await  db.get('wifiList');
+            let json = await db.get('wifiList');
             let list = [];
             let addStatus = true;
-            if(json){
+            if (json) {
               list = JSON.parse(json);
-              list.forEach(item=>{
-                if(item.ssid === this.setting.ssid){
+              list.forEach((item) => {
+                if (item.ssid === this.setting.ssid) {
                   item.ssid_password = this.setting.ssid_password;
-                  addStatus  = false;
+                  addStatus = false;
                 }
-              })
-              if(addStatus){
+              });
+              if (addStatus) {
                 list.push({
-                  ssid : this.setting.ssid,
-                  ssid_password : this.setting.ssid_password
+                  ssid: this.setting.ssid,
+                  ssid_password: this.setting.ssid_password,
                 });
               }
-              db.set('wifiList',JSON.stringify(list));
-            }else{
+              db.set('wifiList', JSON.stringify(list));
+            } else {
               list.push({
-                ssid : this.setting.ssid,
-                ssid_password : this.setting.ssid_password
+                ssid: this.setting.ssid,
+                ssid_password: this.setting.ssid_password,
               });
-              db.set('wifiList',JSON.stringify(list));
+              db.set('wifiList', JSON.stringify(list));
             }
           },
-          async sleep(ms){
+          async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
           async iot_device_wifi_form_save() {
             //save the wifi data
             app.dialog.preloader();
-            setTimeout(()=>{
+            setTimeout(() => {
               app.dialog.close();
               //mainView.router.back();
-            },30000)
+            }, 30000);
             this.saveLocalWifi();
-            try{
+            try {
               await iot_ble_check_enable();
               let bleList = [];
               //ssid
@@ -298,96 +360,108 @@
                 service: 'ff80',
                 characteristic: 'ff81',
                 data: ssid_data,
-              })
+              });
               //ssid_password
-              let ssid_password_data = '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
+              let ssid_password_data =
+                '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
               bleList.push({
                 service: 'ff80',
                 characteristic: 'ff81',
                 data: ssid_password_data,
-              })
+              });
               //email
-              let email_data = "932200" + (this.setting.email.toLowerCase().length.toString(16).pad("0000")) + this.setting.email.toLowerCase().convertToHex();
+              let email_data =
+                '932200' +
+                this.setting.email.toLowerCase().length.toString(16).pad('0000') +
+                this.setting.email.toLowerCase().convertToHex();
               bleList.push({
                 service: 'ff80',
                 characteristic: 'ff81',
                 data: email_data,
-              })
+              });
               //server_url
-              let server_url_data =  "930000" + (this.setting.server_url.length.toString(16).pad("0000")) + this.setting.server_url.convertToHex();
+              let server_url_data =
+                '930000' + this.setting.server_url.length.toString(16).pad('0000') + this.setting.server_url.convertToHex();
               bleList.push({
                 service: 'ff80',
                 characteristic: 'ff81',
                 data: server_url_data,
-              })
+              });
               //port
-              let port_data = "9301000002" + (this.setting.port * 1).toString(16).pad("0000");
+              let port_data = '9301000002' + (this.setting.port * 1).toString(16).pad('0000');
               bleList.push({
                 service: 'ff80',
                 characteristic: 'ff81',
                 data: port_data,
-              })
-              //write ble data 
+              });
+              //write ble data
               await peripheral[guid].write(bleList);
               //post to erp data
               let profile_device = erp.info.profile.profile_device;
-              let mac = core_utils_get_mac_address_from_guid(guid,false);
+              let mac = core_utils_get_mac_address_from_guid(guid, false);
               let url = `/api/resource/Profile%20Device/${device_name}`;
-              let method = "PUT";
+              let method = 'PUT';
               let data = {
-                  parenttype:'Profile',
-                  parent:erp.info.profile.name,
-                  parentfield:'profile_device',
-                  gateway : `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`
-              }
-              await http.request(url,{
-                  method: method,
-                  dataType: 'json',
-                  serializer: "json",
-                  data:data,
-                  contentType:'application/json',
+                parenttype: 'Profile',
+                parent: erp.info.profile.name,
+                parentfield: 'profile_device',
+                gateway: `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`,
+              };
+              await http.request(url, {
+                method: method,
+                dataType: 'json',
+                serializer: 'json',
+                data: data,
+                contentType: 'application/json',
               });
               //refresh the local data for erp
-              profile_device.forEach((item)=>{
-                if(item.name == device_name){
+              profile_device.forEach((item) => {
+                if (item.name == device_name) {
                   item.gateway = `${mac.toLowerCase()}-${this.setting.email}`;
                 }
               });
               //post to erp
               await iot_device_setting_sync_server(guid, null, null, true, {
-                  'Wifi SSID': this.setting.ssid,
-                  'Wifi Password': this.setting.ssid_password,
-                  'Email Address' : this.setting.email || "null",
-                  'Server Port' : this.setting.port || "null",
-                  'Server URI' : this.setting.server_url || "null",
+                'Wifi SSID': this.setting.ssid,
+                'Wifi Password': this.setting.ssid_password,
+                'Email Address': this.setting.email || 'null',
+                'Server Port': this.setting.port || 'null',
+                'Server URI': this.setting.server_url || 'null',
               });
               //update the device gateway
-              await http.request(`/api/method/appv6.checkDeviceGateways`,{
-                  method: 'POST',
-                  dataType: 'json',
-                  serializer: "json",
-                  data:{
-                    guid:guid,
-                    platform : 'YO105',
-                    title : mac.toUpperCase(),
-                  },
-                  contentType:'application/json',
+              await http.request(`/api/method/appv6.checkDeviceGateways`, {
+                method: 'POST',
+                dataType: 'json',
+                serializer: 'json',
+                data: {
+                  guid: guid,
+                  platform: 'YO105',
+                  title: mac.toUpperCase(),
+                },
+                contentType: 'application/json',
               });
               //device restart
-              await window.peripheral[guid].write([{
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: "810e",
-              }]);
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '810e',
+                },
+              ]);
               //wait 5s
               this.sleep(5000);
               await window.peripheral[guid].connect();
               app.dialog.close();
-              emitter.emit('refresh',{});
-              app.dialog.confirm(`successfully`,()=>{
+              emitter.emit('refresh', {});
+              emitter.emit('device/wifi/setup', { guid: guid });
+              app.dialog.confirm(
+                `successfully`,
+                () => {
                   mainView.router.back();
-                },()=>{})
-            }catch(error){
+                },
+                () => {}
+              );
+            } catch (error) {
               app.dialog.close();
               mainView.router.back();
               //app.dialog.alert(error);
@@ -413,7 +487,7 @@
             return plainText;
           },
           async getJsonData() {
-            try{
+            try {
               await peripheral[guid].connect();
 
               await ble.startNotification(
@@ -448,15 +522,17 @@
                   //reject(err);
                 }
               );
-              await peripheral[guid].write([{
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: '9329',
-              }]);
-            }catch(error){
+              await peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '9329',
+                },
+              ]);
+            } catch (error) {
               console.log(error);
             }
-            
+
             //iot_ble_write(guid, 'ff80', 'ff81', '9329', false).catch();
           },
         },
@@ -494,7 +570,7 @@
 </script>
 
 <style>
-  .wifi-box{
+  .wifi-box {
     height: 90px;
   }
 </style>

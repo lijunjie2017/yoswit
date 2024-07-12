@@ -1,0 +1,294 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Effective time period') }}</div>
+        <div class="right">
+          <a class="link icon-only" @click="${()=>saveTrigger()}">
+            <i class="icon material-icons md-only">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="list list-strong-ios list-outline-ios list-dividers-ios on-off-list">
+        <ul>
+          <li class="radio-box card" @click="${()=>showTimeBox(1)}">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-time" value="1" checked />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">All day</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box card" @click="${()=>showTimeBox(2)}">
+            <label class="item-radio item-radio-icon-end item-content">
+              <input type="radio" name="demo-radio-time" value="0" />
+              <i class="icon icon-radio"></i>
+              <div class="item-inner">
+                <div class="item-title">Specific time period</div>
+              </div>
+            </label>
+          </li>
+          <li class="radio-box choose-time-box card device-hidden" @click="${()=>openTimes(1)}">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Start time</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <input
+                  class="text-color-gray"
+                  type="text"
+                  name="time"
+                  value=""
+                  placeholder="Time"
+                  readonly="readonly"
+                  id="device-timer-time-picker"
+                  style="width: 25%;text-align: center;"
+                />
+                <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box card choose-time-box card device-hidden" @click="${()=>openTimes(2)}">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">End time</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <input
+                  class="text-color-gray"
+                  type="text"
+                  name="time"
+                  value=""
+                  placeholder="Time"
+                  readonly="readonly"
+                  id="device-timer-time-picker-one"
+                  style="width: 25%;text-align: center;"
+                />
+                <span class="day-tip text-color-gray device-hidden">({{_('Next Day')}})</span>
+                <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box card">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">Repeat</div>
+              <div class="timer-choose item-link display-flex justify-content-space-between align-items-center smart-select smart-select-init" data-open-in="sheet">
+                <div class="item-content" style="min-width: 160px;max-width: 250px;">
+                  <div class="item-inner">
+                    <div class="timer-text text-color-gray item-title"></div>
+                  </div>
+                </div>
+                <select name="week" multiple>
+                  <option value="" selected>Every day</option>
+                  <option value="0">Sun</option>
+                  <option value="1">Mon</option>
+                  <option value="2">Tue</option>
+                  <option value="3">Wed</option>
+                  <option value="4">Thu</option>
+                  <option value="5">Fri</option>
+                  <option value="6">Sat</option>
+                </select>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let timer1 = {};
+    let timer2 = {};
+    let this_day = dayjs().date().toString(16).pad('00');
+    let this_month = (dayjs().month() + 1).toString(16).pad('00');
+    let this_years = dayjs().year().toString(16).pad('0000').match(/.{1,2}/g).reverse().join('');
+    console.log(`${this_day}-${this_month}-${this_years}`);
+    const showTimeBox = (index) => {
+      if (index == 2) {
+        $('.choose-time-box').removeClass('device-hidden');
+      } else {
+        $('.choose-time-box').addClass('device-hidden');
+      }
+    };
+    const openTimes = (type)=>{
+      if(type == 1){
+        timer1.open();
+      }else{
+        timer2.open();
+      }
+    }
+    const saveTrigger = ()=>{
+      //if check all day
+      let typetime = $(`input[name="demo-radio-time"]:checked`).val();
+      console.log(typetime);
+      console.log($('select[name="week"]').val());
+      let weeksList = $('select[name="week"]').val();
+      let weekCommand = weeksList.length>1?[0,0,0,0,0,0,0]:[1,1,1,1,1,1,1];
+      weeksList.forEach(item => {
+        if(item != ''){
+          weekCommand[parseInt(item)] = 1;
+        }
+      });
+      let repeat = `0${weekCommand.join('')}`;
+      let repeat_int = parseInt(repeat,2).toString(16).pad('00');
+      let start_time = '';
+      let end_time = '';
+      console.log("repeat",repeat);
+      console.log("repeat_int",repeat_int);
+      let command = '';
+      if(typetime == 1){
+        command = `000300000000000000${repeat_int}000000`;
+      }else{
+        start_time = $(`#device-timer-time-picker`).val();
+        end_time = $(`#device-timer-time-picker-one`).val();
+        let start_time_hours = parseInt(start_time.split(":")[0]).toString(16).pad('00');
+        let start_time_mins = parseInt(start_time.split(":")[1]).toString(16).pad('00');
+        let end_time_hours = parseInt(end_time.split(":")[0]).toString(16).pad('00'); 
+        let end_time_mins = parseInt(end_time.split(":")[1]).toString(16).pad('00');         
+        command = `000300${start_time_mins}${start_time_hours}${this_day}${this_month}${this_years}${repeat_int}00${end_time_mins}${end_time_hours}`;
+        console.log(command);
+        console.log($(`#device-timer-time-picker`).val())
+      }
+      emitter.emit('set_timmer',{
+          command : command,
+          start_time : start_time,
+          end_time : end_time,
+          weeks : weeksList,
+          typetime : typetime
+      })
+      mainView.router.back(mainView.history[mainView.history.length-2],{force:false});
+    }
+    $onMounted(() => {
+      let form_date = new Date();
+      form_date.setMinutes(form_date.getMinutes() + 2);
+      timer1 = app.picker.create({
+        inputEl: '#device-timer-time-picker',
+        value: [form_date.getHours().toString().pad('00'), form_date.getMinutes().toString().pad('00')],
+        formatValue: function (values, displayValues) {
+          return values[0] + ':' + values[1];
+        },
+        cols: [
+          // Hours
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = 0; i <= 23; i++) {
+                arr.push(i.toString().pad('00'));
+              }
+              return arr;
+            })(),
+          },
+          // Divider
+          {
+            divider: true,
+            content: ':',
+          },
+          // Minutes
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = 0; i <= 59; i++) {
+                arr.push(i.toString().pad('00'));
+              }
+              return arr;
+            })(),
+          },
+        ],
+      });
+      let form_date_one = new Date();
+      form_date_one.setMinutes(form_date_one.getMinutes() + 10);
+      timer2 = app.picker.create({
+        inputEl: '#device-timer-time-picker-one',
+        value: [form_date_one.getHours().toString().pad('00'), form_date_one.getMinutes().toString().pad('00')],
+        formatValue: function (values, displayValues) {
+          return values[0] + ':' + values[1];
+        },
+        cols: [
+          // Hours
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = 0; i <= 23; i++) {
+                arr.push(i.toString().pad('00'));
+              }
+              return arr;
+            })(),
+          },
+          // Divider
+          {
+            divider: true,
+            content: ':',
+          },
+          // Minutes
+          {
+            values: (function () {
+              var arr = [];
+              for (var i = 0; i <= 59; i++) {
+                arr.push(i.toString().pad('00'));
+              }
+              return arr;
+            })(),
+          },
+        ],
+        on:{
+          closed : function(){
+            let start_time = $(`#device-timer-time-picker`).val();
+            let end_time = $(`#device-timer-time-picker-one`).val();
+            if(start_time >= end_time){
+              $(`.day-tip`).removeClass('device-hidden');
+            }else{
+              $(`.day-tip`).addClass('device-hidden');
+            }
+            console.log("start_time",start_time)
+          }
+        }
+      });
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none;
+  }
+  .radio-box {
+    height: 75px;
+    background-color: #fff;
+    margin-bottom: 10px;
+  }
+  .item-radio {
+    height: 100%;
+  }
+  .timer-item {
+    height: 100%;
+    padding-right: 10px;
+  }
+  .links-list a:after, .list .item-inner:after, .simple-list li:after{
+    height: 0px;
+  }
+  .day-tip{
+    font-size: 12px;
+    position: relative;
+    left: -5px;
+  }
+</style>

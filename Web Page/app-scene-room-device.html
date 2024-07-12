@@ -41,6 +41,7 @@
                 :id="'room-bar-title-'+item.idx"
                 v-on:click="controller_home_switch_room_onclick(item.idx)"
                 class="tab-link"
+                v-if="!item.isHidden"
               >
                 {{tran(item.title)}}
               </a>
@@ -54,6 +55,7 @@
             :room="roomItem.name"
             v-for="(roomItem,roomIndex) in roomList"
             :key="roomItem.name"
+            v-if="!roomItem.isHidden"
           >
             <ul>
               <li :id="'room-'+roomItem.idx+'-div-title'" class="swipeout room">
@@ -78,7 +80,7 @@
                   class="li-item"
                   v-for="(subItem,subIndex) in subdevices"
                   :key="subItem.name"
-                  v-if="subItem.profile_room == roomItem.name"
+                  v-if="subItem.profile_room == roomItem.name && !subItem.isHidden"
                 >
                   <li class="device swipeout" :guid="subItem.device">
                     <div class="item-content swipeout-content">
@@ -99,7 +101,7 @@
                           <div class="item-title-row">
                             <div class="item-title ellipsis" lang="en" style="width: 180px">{{tran(subItem.title)}}</div>
                           </div>
-                          <div class="item-subtitle">{{ subItem.device_model }}-{{ subItem.mac_address }}</div>
+                          <div class="item-subtitle">{{ subItem.device_model }}-{{ subItem.mac_address.substring(0,12) }}</div>
                           <div class="signal-panel item-text height-21" style="width: 120%">
                             <div>
                               <div class="status-info text-color-primary" style="display: none;">{{dealWithType(subItem)}}</div>
@@ -354,7 +356,7 @@
       $onUpdated = ctx.$onUpdated,
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
-    const {title,type,target_guid} = $f7route.query;
+    const {title,type,target_guid,template_name} = $f7route.query;
     const batch_save = () => {
       vueApp.$batchSave();
     };
@@ -428,7 +430,7 @@
               profile_devices.forEach((kitem) => {
                 if (device_name === kitem.name) {
                   item.device_model = kitem.device_model;
-                  item.mac_address = kitem.device_name;
+                  item.mac_address = kitem.device_name.substring(0,12);
                 }
               });
             });
@@ -444,6 +446,28 @@
               
               item.buttonBoxType = 0;
               item.ref = 1;
+              //filter the device not show in the page
+              item.isHidden = false;
+              //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
+              let fliterList = ['YO780-Scene-12G','YO780-Scene-6G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
+              if(type == 2){
+                if(fliterList.indexOf(item.device_model) > -1){
+                  item.isHidden = true;
+                }
+              }
+              let triggerFliterList = ['YO105','YO121-BLE-LE','YO121-AC'];
+              if(type == 1){
+                if(triggerFliterList.indexOf(item.device_model) > -1){
+                  item.isHidden = true;
+                }
+                if(item.device_model == 'YO780' && item.device_button_group != 'SCENE MUTIWAY ONOFF GANG1'){
+                  item.isHidden = true;
+                }
+              }
+              //rcu
+              if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1'){
+                item.isHidden = true;
+              }
               //choose status
               item.chooseStatus = false;
               let model = item.device_model;
@@ -461,8 +485,28 @@
                   }
                 }
               }
+              
             });
             this.subdevices = devices;
+            //filter the room devices
+            let roomMap = {};
+            this.roomList.forEach(item=>{
+              roomMap[item.name] = 0;
+              item.isHidden = false;
+            })
+            devices.forEach(item=>{
+              for(let i in roomMap){
+                if(item.profile_room == i && !item.isHidden){
+                  roomMap[i]++;
+                }
+              }
+            });
+            console.log("roomMap",roomMap);
+            this.roomList.forEach(item=>{
+              if(roomMap[item.name] == 0){
+                item.isHidden = true;
+              }
+            })
           },
           clickThermostatChange(item, click_type) {
             console.log(item, click_type);
@@ -531,7 +575,7 @@
           },
           chooseTemplate(subItem) {
             this.clickStatus = true;
-            subItem.chooseStatus = true;
+            //subItem.chooseStatus = true;
             let button_group = subItem.device_button_group;
             let chooseList = [
               {
@@ -755,6 +799,7 @@
                 item.mainType = type;
                 thisSubItem = item;
                 thisSubIndex = index;
+                item.chooseStatus = true;
               }
             });
             thisSubItem.buttonBoxType = 0;

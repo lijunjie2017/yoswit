@@ -31,7 +31,7 @@ window._ble_load_to_device_form_perform_auto = async(loading_config) => {
         loading_device = loading_config;
         clearTimeout(loading_timer);
     }catch(error){
-        app.dialog.alert(error);
+        app.dialog.alert(_(erp.get_log_description(error)));
         return
     }
     //return
@@ -139,7 +139,17 @@ window._ble_load_to_device_form_auto = (loading_config) => {
             dms[device_default_template_list[i].mode] = true;
         }
     }
+    if(loading_config.button_group.startsWith("RCU DIMMING")){
+        dms = {"Triac Dimming" : true,"0-10v Dimming" : true}
+    }
+    if(loading_config.button_group.startsWith("RCU OUTPUT")){
+        dms = {"RCU Controller":true}
+    }
+    
     let device_models = erp.doctype.device_model[device_hex_model];
+    if(device_models.name == 'YO780' && loading_config.button_group == 'ONOFF GANG1'){
+        dms = {"RCU Controller":true}
+    }
     console.log(device_models);
     let profile_room = {}
     let this_room_list = cloneDeep(erp.info.profile.profile_room);
@@ -186,13 +196,51 @@ window._ble_load_to_device_form_auto = (loading_config) => {
         dms:dms,
         subdevice_name : loading_config.subdevice_name
     };
+    if(loading_config.button_group.startsWith("RCU DIMMING")){
+        let rcu_gang = loading_config.button_group.replace("RCU DIMMING","");
+        if(rcu_gang == 1 || rcu_gang == 2){
+            args.config = '01';
+        }else if(rcu_gang == 3 || rcu_gang == 4){
+            args.config = '02';
+        }else if(rcu_gang == 5 || rcu_gang == 6){
+            args.config = '03';
+        }else if(rcu_gang == 7 || rcu_gang == 8){
+            args.config = '04';
+        }else if(rcu_gang == 9 || rcu_gang == 10){
+            args.config = '05';
+        }
+    }else if(loading_config.button_group.startsWith("RCU OUTPUT")){
+        let rcu_gang = loading_config.button_group.replace("RCU OUTPUT");
+        if(rcu_gang.length < 2) rcu_gang = `0${rcu_gang}`;
+        args.config = rcu_gang;
+    }else{
+        args.config = '';
+    }
     // console.log(args);
     let html = jinja2.render(tpl_erp_subdevice_form, args);
     $('.erp-subdevice-form-wrapper').html(html);
     const select = document.getElementById("device_mode");
-    select.value = device_models.mode;
+    if(isset(loading_config.subdevice_name) && loading_config.subdevice_name != 'undefined'){
+        let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+        let this_mode = '';
+        let this_button_group = '';
+        subdevices.forEach(item=>{
+            if(item.name == loading_config.subdevice_name){
+                this_mode = item.device_mode;
+                this_button_group = item.device_button_group;
+            }
+        })
+        setTimeout(()=>{
+            select.value = this_mode;
+        },500)
+    }else{
+        select.value = device_models.mode;
+    }
     select.addEventListener("change", function(){
         let button_group = args.button_group
+        if(button_group.startsWith("RCU DIMMING")){
+            return 
+        }
         let new_button_group = '';
         let default_template = device_models.device_default_template;
         device_models.mode = select.value

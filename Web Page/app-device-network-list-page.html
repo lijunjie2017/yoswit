@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Scene List') }}</div>
+        <div class="title">{{ _('Network List') }}</div>
         <div class="right scene-list-right device-hidden">
           <a class="link icon-only" @click="${()=>downloadBle()}">
             <i class="icon material-icons md-only">download</i>
@@ -30,7 +30,7 @@
       <div id="vue-app" v-cloak>
         <div class="list ha-guide-list">
           <ul>
-            <li class="swipeout scene swipeout-delete-manual" v-for="(item,index) in sceneList" :key="item.name">
+            <li class="swipeout scene swipeout-delete-manual" v-for="(item,index) in networkList" :key="index">
               <div class="card swipeout-content no-shadow no-border bg-color-gray margin-bottom overflow-hidden text-color-white h-110">
                 <div class="overlay"></div>
                 <div
@@ -39,7 +39,7 @@
                 ></div>
                 <div class="card-content card-content-padding">
                   <div class="template-info" style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey">
-                    {{_(item.scene_template)}}
+                    {{_(item.count)}} {{_('Devices')}}
                   </div>
                   <div class="item-content">
                     <div class="item-inner">
@@ -61,7 +61,7 @@
                       <a
                         class="button button-small button-round button-fill icon-button"
                         style="background-color: red; margin-left: 10px; width: 40px; height: 40px; border-radius: 50%"
-                        v-on:click="onDeleted(item)"
+                        v-on:click="onDeleted(index)"
                       >
                         <i class="icon material-icons" style="font-size: 20px">delete</i>
                       </a>
@@ -72,19 +72,19 @@
             </li>
           </ul>
         </div>
-        <div class="device-null" v-if="sceneList.length == 0">
+        <div class="device-null" v-if="networkList.length == 0">
           <div class="block" style="text-align: center">
             <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-            <p>${_('You don\'t have any scene, create one')}</p>
+            <p>${_('You don\'t have any network batch, create one')}</p>
           </div>
           <div class="block block-strong">
             <p class="row">
-              <a class="col button button-large" v-on:click="toScene()">{{ _('Create Scene') }}</a>
+              <a class="col button button-large" v-on:click="createNetwork()">{{ _('Create Network') }}</a>
             </p>
           </div>
         </div>
         <div class="fab fab-right-bottom">
-          <a style="text-align: center" v-on:click="toScene()">
+          <a style="text-align: center" v-on:click="createNetwork()">
             <i class="icon material-icons">add</i>
           </a>
         </div>
@@ -156,6 +156,7 @@
         el: page.el.querySelector('#vue-app'),
         data: {
           sceneList: [],
+          networkList:[],
           localTrigerSceneList: [],
           localActionSceneList: [],
           sheetMap: {},
@@ -164,67 +165,58 @@
         mounted() {
           Vue.prototype.$init = this.init;
           Vue.prototype.$download = this.download;
-          this.scan();
-          this.init();
+          this.initNetwork();
           emitter.on('refresh', (data) => {
             this.init();
           });
         },
         methods: {
-          async onDeleted(item) {
+          async onDeleted(index) {
             app.dialog.confirm(
               `${_('Confirm Deletion?')}`,
               async () => {
-                //get the sceneId
-                app.dialog.preloader();
-                setTimeout(() => {
-                  app.dialog.close();
-                }, 15 * 1000);
-                let scenes = cloneDeep(erp.info.scene);
-                let list = [];
-                for (let i in scenes) {
-                  if (item.name == scenes[i].name) {
-                    list = scenes[i].scene_device_location;
-                  }
-                }
-                try {
-                  for (let i in list) {
-                    let delActionCommand = `8F1100${parseInt(list[i].storage_id).toString(16).pad('00')}`;
-                    let delTriggerCommand = `8F210000${parseInt(list[i].storage_id).toString(16).pad('00')}`;
-                    console.log('device', list[i].device);
-                    console.log('delActionCommand', delActionCommand);
-                    console.log('delTriggerCommand', delTriggerCommand);
-                    await window.peripheral[list[i].device].write([
-                      {
-                        service: 'ff80',
-                        characteristic: 'ff81',
-                        data: delActionCommand,
-                      },
-                      {
-                        service: 'ff80',
-                        characteristic: 'ff81',
-                        data: delTriggerCommand,
-                      },
-                    ]);
-                  }
-                  let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
-                    method: 'DELETE',
-                    serializer: 'json',
-                    responseType: 'json',
-                    data: {},
-                  });
-                  app.dialog.close();
-                  await ha_profile_ready();
-                  this.init();
-                  app.dialog.alert(_('Deletion successful'));
-                } catch (error) {
-                  app.dialog.close();
-                  console.log(error);
-                  app.dialog.alert(_('No Permission'));
-                }
+                console.log(index);
+                this.networkList.splice(index,1)
               },
               () => {}
             );
+          },
+          async initNetwork(){
+            let profileDevices = cloneDeep(erp.info.profile.profile_device);
+            let networkMap = {}
+            profileDevices.forEach((item)=>{
+              if(isset(networkMap[`${item.network_id}`])){
+                networkMap[`${item.network_id}`]++;
+              }else{
+                networkMap[`${item.network_id}`] = 1
+              }
+            });
+            for(let i in networkMap){
+              if(i != 0){
+                this.networkList.push({
+                  title : _('Network')+` ${i}`,
+                  index : i,
+                  count : networkMap[i],
+                  image : `https://dev.mob-mob.com/files/scene.jpg`
+                })
+              }
+            }
+          },
+          async createNetwork(){
+            //get the profile network
+            let index = 1;
+            this.networkList.forEach(item=>{
+              if(parseInt(item.index) > 1){
+                index = parseInt(item.index) 
+              }
+            })
+            mainView.router.navigate('/mobile-app/device-network-detail')
+            // this.networkList.push({
+            //   title : _('Network')+` ${index+1}`,
+            //   index : index+1,
+            //   count : 0,
+            //   image : `https://dev.mob-mob.com/files/scene.jpg`
+            // })
           },
           async download() {
             app.dialog.preloader();

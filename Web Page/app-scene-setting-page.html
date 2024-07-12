@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Scenc Trigger Setting') }}</div>
+        <div class="title">{{ _('Scene Trigger Setting') }}</div>
         <div class="right">
           <a class="link icon-only" @click="${()=>saveTrigger()}">
             <i class="icon material-icons md-only">check</i>
@@ -26,7 +26,7 @@
               <input type="radio" name="demo-radio-end" value="1" checked />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">ON</div>
+                <div class="item-title">{{_('ON')}}</div>
               </div>
             </label>
           </li>
@@ -35,7 +35,7 @@
               <input type="radio" name="demo-radio-end" value="0" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">OFF</div>
+                <div class="item-title">{{_("OFF")}}</div>
               </div>
             </label>
           </li>
@@ -44,7 +44,7 @@
               <input type="radio" name="demo-radio-end" value="2" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">CLICK</div>
+                <div class="item-title">{{_('CLICK')}}</div>
               </div>
             </label>
           </li>
@@ -53,7 +53,7 @@
               <input type="radio" name="demo-radio-end" value="4" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">SECOND CLICK</div>
+                <div class="item-title">{{_("CLICK AND STOP")}}</div>
               </div>
             </label>
           </li>
@@ -62,7 +62,7 @@
               <input type="radio" name="demo-radio-end" value="3" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">RELEASE</div>
+                <div class="item-title">{{_('RELEASE')}}</div>
               </div>
             </label>
           </li>
@@ -75,7 +75,7 @@
               <input type="radio" name="demo-radio-end" value="1" checked />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">ON</div>
+                <div class="item-title">{{_("ON")}}</div>
               </div>
             </label>
           </li>
@@ -84,7 +84,7 @@
               <input type="radio" name="demo-radio-end" value="0" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">OFF</div>
+                <div class="item-title">{{_("OFF")}}</div>
               </div>
             </label>
           </li>
@@ -97,7 +97,7 @@
               <input type="radio" name="demo-radio-end" value="1" checked />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">OPEN</div>
+                <div class="item-title">{{_("OPEN")}}</div>
               </div>
             </label>
           </li>
@@ -106,7 +106,7 @@
               <input type="radio" name="demo-radio-end" value="0" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">CLOSE</div>
+                <div class="item-title">{{_("CLOSE")}}</div>
               </div>
             </label>
           </li>
@@ -119,7 +119,7 @@
               <input type="radio" name="demo-radio-end" value="1" checked />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">Occupied</div>
+                <div class="item-title">{{_("Occupied")}}</div>
               </div>
             </label>
           </li>
@@ -128,7 +128,7 @@
               <input type="radio" name="demo-radio-end" value="0" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">Unoccupied</div>
+                <div class="item-title">{{_("Unoccupied")}}</div>
               </div>
             </label>
           </li>
@@ -149,7 +149,7 @@
           </li>
           <li class="radio-box choose-time-box card temperature-box device-hidden">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Greater than</div>
+              <div class="item-title">{{_("Greater than")}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center">
                 <input
                   class="text-color-gray"
@@ -167,7 +167,7 @@
           </li>
           <li class="radio-box choose-time-box card temperature-box device-hidden">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Less than</div>
+              <div class="item-title">{{_("Less than")}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center">
                 <input
                   class="text-color-gray"
@@ -185,7 +185,7 @@
           </li>
           <li class="radio-box card">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Humidity</div>
+              <div class="item-title">{{_("Humidity")}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center" @click="${()=>showTimeBox(2)}">
                 <label class="item-checkbox item-checkbox-icon-start item-content">
                   <input type="checkbox" name="demo-checkbox-hum" value="0" />
@@ -196,7 +196,7 @@
           </li>
           <li class="radio-box humidity-box card device-hidden">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Greater than</div>
+              <div class="item-title">{{_("Greater than")}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center">
                 <input
                   class="text-color-gray"
@@ -214,7 +214,7 @@
           </li>
           <li class="radio-box humidity-box card device-hidden">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Less than</div>
+              <div class="item-title">{{_("Less than")}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center">
                 <input
                   class="text-color-gray"

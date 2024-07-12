@@ -262,6 +262,10 @@ window.Peripheral = (function() {
                     if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
                     }
+										if(self.prop.status.bluetooth[1] > self.prop.status.control[1]){
+											console.log("----------------大于----------------------------")
+											//self.prop.status.control[0] = self.prop.status.bluetooth[0]
+										}
         	    }
         	}
         	
@@ -310,7 +314,7 @@ window.Peripheral = (function() {
         this.onPropChanged();
     };
     Peripheral.prototype.onPropChanged = function(){
-        console.log("onPropChanged");
+        //console.log("onPropChanged");
         const self = this;
         let emitProp = JSON.parse(JSON.stringify(this.prop));
         delete emitProp.rssi;
@@ -554,7 +558,7 @@ window.Peripheral = (function() {
 	Peripheral.prototype.onChangeGateway = function(p){
 		const self = this;
 		let data = p.manufacturing_data;
-		if(isset(p.raw_data) && p.raw_data!=''){
+		if(isset(p.raw_data) && p.raw_data!='' && p.raw_data.length < data.length){
 			data = p.raw_data;
 		}
 		if(!isset(data) || !data)return;
@@ -656,7 +660,7 @@ window.Peripheral = (function() {
 		if(!isset(p.date)){
 			//less devices can not return the date filed
 			//if no ble,update the status
-			if(self.prop.rssi >= 0 || !isset(self.prop.rssi)){
+			if((self.prop.rssi >= 0 || !isset(self.prop.rssi)) && (isset(p.retain) && !p.retain)){
 				//have ble 
 				self.prop.status.mobmob[1] = DateFormatter.format((new Date(new Date().getTime())), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");			
 				self.onPropChanged();
@@ -669,6 +673,7 @@ window.Peripheral = (function() {
 		}
 	}
     Peripheral.prototype.connect = function() {
+			
         const self = this;
         self.queue = [];
         self.isExecuting = false;
@@ -691,7 +696,7 @@ window.Peripheral = (function() {
     };
     Peripheral.prototype._connect = function() {
         const self = this;
-    	
+				
     	return new Promise((resolve, reject) => {
     		Promise.race([
     			self.doConnect(),
@@ -908,7 +913,7 @@ window.Peripheral = (function() {
 					characteristic: peripheral[findGuid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
 					data: data,
 				}]).then((rs)=>{
-					resolve();
+					resolve(rs);
 				}).catch((error)=>{
 					reject(error);
 				});
@@ -1943,19 +1948,19 @@ const doMOBMOB = (gangs) => {
     	});
 	};
 	Peripheral.prototype._thermostat = function(gangs) {
-			const self = this;
-			let currentRoute = '';
+		const self = this;
+		let currentRoute = '';
 
 		const doBLE = (gangs) => {
 			return new Promise((resolve, reject) => {
-			let service = "ff80", characteristic = "ff81";
-			let commands = [];
+    			let service = "ff80", characteristic = "ff81";
+    			let commands = [];
 			
 				for(let g of gangs){
-						if(g.gang<41 || g.gang>47) continue;
-						
-						self.prop.status.control[0][g.gang] = g.value;
-						data = g.command;
+					if(g.gang<41 || g.gang>47) continue;
+					
+					self.prop.status.control[0][g.gang] = g.value;
+					data = g.command;
 					commands.push({
 						service: service,
 						characteristic: characteristic,
@@ -1963,86 +1968,86 @@ const doMOBMOB = (gangs) => {
 					});
 				}
 				
-			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-			self.onPropChanged();
-			
-							self.doMultipleWrite(commands).then((rs)=>{
-									resolve();
-							}).catch((error)=>{
-									reject(error);
-							});
+    			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+    			self.onPropChanged();
+    			
+    			self.doMultipleWrite(commands).then((rs)=>{
+    				resolve();
+    			}).catch((error)=>{
+    				reject(error);
+			    });
 			});
 		};
 
-	const doMESH = (gangs) => {
+	    const doMESH = (gangs) => {
 			return new Promise((resolve, reject) => {
-			const findGuid = self.findLead();
+    			const findGuid = self.findLead();
+    
+    			let service = "ff80", characteristic = "ff81";
+    			let commands = [];
+    			
+    				for(let g of gangs){
+    					if(g.gang<41 || g.gang>47) continue;
+    						
+    					self.prop.status.control[0][g.gang] = g.value;
+    					data = `02${self.prop.mac_reverse_key}${g.command}`;
+    					commands.push({
+    						service: service,
+    						characteristic: characteristic,
+    						data: data,
+    					});
+    				}
+    				
+    			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+    			self.onPropChanged();
+    			
+    			peripheral[findGuid].write(commands).then((rs)=>{
+    				resolve();
+    			}).catch((error)=>{
+    				reject(error);
+    			});
+    		});
+    	};
 
-			let service = "ff80", characteristic = "ff81";
-			let commands = [];
-			
-				for(let g of gangs){
-					if(g.gang<41 || g.gang>47) continue;
-						
-					self.prop.status.control[0][g.gang] = g.value;
-					data = `02${self.prop.mac_reverse_key}${g.command}`;
-					commands.push({
-						service: service,
-						characteristic: characteristic,
-						data: data,
-					});
-				}
-				
-			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-			self.onPropChanged();
-			
-			peripheral[findGuid].write(commands).then((rs)=>{
-				resolve();
-			}).catch((error)=>{
-				reject(error);
-			});
-		});
-	};
 
-
-	const doMOBMOB = (gangs) => {
+	    const doMOBMOB = (gangs) => {
 			return new Promise((resolve, reject) => {
-			let findGuid = self.findDefaultConnect();
-			if(!isset(findGuid)){
-				findGuid = self.prop.guid;
-			}
-			let service = "ff80", characteristic = "ff81";
-			let commands = [];
-			
-				for(let g of gangs){
-					if(g.gang<41 || g.gang>47) continue;
-						
-					self.prop.status.control[0][g.gang] = g.value;
-					data = `02${self.prop.mac_reverse_key}${g.command}`;
-					commands.push({
-					action: "write",
-					guid: findGuid,
-					mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
-					service_id: service,
-					char_id: characteristic,
-					value: data.toLowerCase()
-				});
-				}
-				
-			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-			self.onPropChanged();
-
-			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
-				command:"Control",
-				function:"bleHelper.perform",
-				params:commands,
-				callback:"",
-				raw:""
-			}, 0, false, false, false).then(() => {
-				resolve();
-			}).catch(reject);
-		});
-	};
+    			let findGuid = self.findDefaultConnect();
+    			if(!isset(findGuid)){
+    				findGuid = self.prop.guid;
+    			}
+    			let service = "ff80", characteristic = "ff81";
+    			let commands = [];
+    			
+    				for(let g of gangs){
+    					if(g.gang<41 || g.gang>47) continue;
+    						
+    					self.prop.status.control[0][g.gang] = g.value;
+    					data = `02${self.prop.mac_reverse_key}${g.command}`;
+    					commands.push({
+    					action: "write",
+    					guid: findGuid,
+    					mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+    					service_id: service,
+    					char_id: characteristic,
+    					value: data.toLowerCase()
+    				});
+    				}
+    				
+    			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+    			self.onPropChanged();
+    
+    			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+    				command:"Control",
+    				function:"bleHelper.perform",
+    				params:commands,
+    				callback:"",
+    				raw:""
+    			}, 0, false, false, false).then(() => {
+    				resolve();
+    			}).catch(reject);
+    		});
+    	};
 		
 	
 		return new Promise((resolve, reject) => {
@@ -2054,41 +2059,41 @@ const doMOBMOB = (gangs) => {
 				})
 			])
 			.then((result) => {
-					currentRoute = result;
-							switch (currentRoute) {
-								case self.route.BLUETOOTH:
-										if(self.prop.connected){
-												return Promise.resolve();
-										}else{
-												return self.doConnect();
-										}
-										break;
-								case self.route.MOBMOB:
-										return Promise.resolve();
-										break;
-								case self.route.MESH:
-										return Promise.resolve();
-										break;
-								case self.route.NA:
-							throw new Error('Device is not here');
-										break;
-							}
+				currentRoute = result;
+				switch (currentRoute) {
+					case self.route.BLUETOOTH:
+						if(self.prop.connected){
+							return Promise.resolve();
+						}else{
+							return self.doConnect();
+						}
+						break;
+					case self.route.MOBMOB:
+						return Promise.resolve();
+						break;
+					case self.route.MESH:
+						return Promise.resolve();
+						break;
+					case self.route.NA:
+						throw new Error('Device is not here');
+						break;
+				}
 			})
 			.then(() => {
-							switch (currentRoute) {
-								case self.route.BLUETOOTH:
-					return doBLE(gangs);
-										break;
-								case self.route.MOBMOB:
-					return doMOBMOB(gangs);
-										break;
-								case self.route.MESH:
-					return doMESH(gangs);
-										break;
-								case self.route.NA:
-							throw new Error('Device is not here');
-										break;
-							}
+				switch (currentRoute) {
+					case self.route.BLUETOOTH:
+					    return doBLE(gangs);
+						break;
+					case self.route.MOBMOB:
+					    return doMOBMOB(gangs);
+						break;
+					case self.route.MESH:
+					    return doMESH(gangs);
+						break;
+					case self.route.NA:
+					    throw new Error('Device is not here');
+						break;
+				}
 			})
 			.then((result) => {
 				resolve(result);
@@ -2620,7 +2625,7 @@ const doMOBMOB = (gangs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
-							app.dialog.alert(_(iot_ha_error_code_defined(error)));
+							app.dialog.alert(_(erp.get_log_description(error)));
     	        action.callback.reject(error);
     	        this.queue = [];
     	        this.isExecuting = false;
@@ -2632,7 +2637,7 @@ const doMOBMOB = (gangs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
-							app.dialog.alert(_(iot_ha_error_code_defined(error)));
+							app.dialog.alert(_(erp.get_log_description(error)));
     	        action.callback.reject(error);
     	        this.queue = [];
     	        this.isExecuting = false;
@@ -2644,7 +2649,7 @@ const doMOBMOB = (gangs) => {
 						action.callback.resolve(rs);
 						this.execute();
 				}).catch((error) => {
-						app.dialog.alert(_(iot_ha_error_code_defined(error)));
+						app.dialog.alert(_(erp.get_log_description(error)));
 						action.callback.reject(error);
 						this.queue = [];
 						this.isExecuting = false;
@@ -2656,7 +2661,7 @@ const doMOBMOB = (gangs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
-							app.dialog.alert(_(iot_ha_error_code_defined(error)));
+							app.dialog.alert(_(erp.get_log_description(error)));
     	        action.callback.reject(error);
     	        this.queue = [];
     	        this.isExecuting = false;
@@ -2668,7 +2673,7 @@ const doMOBMOB = (gangs) => {
 						action.callback.resolve(rs);
 						this.execute();
 				}).catch((error) => {
-						app.dialog.alert(_(iot_ha_error_code_defined(error)));
+						app.dialog.alert(_(erp.get_log_description(error)));
 						action.callback.reject(error);
 						this.queue = [];
 						this.isExecuting = false;
@@ -2680,7 +2685,7 @@ const doMOBMOB = (gangs) => {
 					action.callback.resolve(rs);
 					this.execute();
 			}).catch((error) => {
-					app.dialog.alert(_(iot_ha_error_code_defined(error)));
+					app.dialog.alert(_(erp.get_log_description(error)));
 					action.callback.reject(error);
 					this.queue = [];
 					this.isExecuting = false;
@@ -2692,7 +2697,7 @@ const doMOBMOB = (gangs) => {
 				action.callback.resolve(rs);
 				this.execute();
 			}).catch((error) => {
-				app.dialog.alert(_(iot_ha_error_code_defined(error)));
+				app.dialog.alert(_(erp.get_log_description(error)));
 				action.callback.reject(error);
 				this.queue = [];
 				this.isExecuting = false;
@@ -3041,9 +3046,10 @@ const doMOBMOB = (gangs) => {
         this.onPropChanged();
     };
 
+
     Peripheral.prototype.doConnect = function() {
         const self = this;
-        
+      
     	const connect = () => {
     		return new Promise((resolve, reject) => {
     		    if(self.prop.connected){ //use bluetooth
@@ -3255,7 +3261,6 @@ const doMOBMOB = (gangs) => {
     		    }
     		});
     	};
-    	
         const enableNotify = () => {
     		return new Promise((resolve, reject) => {
     		    const executeEnable = async () => {
@@ -3295,11 +3300,40 @@ const doMOBMOB = (gangs) => {
     		});
     		    
         }
+        const checkBLEEnabled = () => {
+            return new Promise((resolve, reject) => {
+                ble.isEnabled(function(){
+                    resolve();
+                }, function(){
+                    reject(bleError.BLE_MOBILE_BLUETOOTH_NOT_ENABLED);
+                })
+            });
+        };
+        const checkLocationEnabled = () => {
+            return new Promise((resolve, reject) => {
+                ble.isLocationEnabled(function(){
+                    resolve();
+                }, function(){
+                    reject(bleError.BLE_MOBILE_LOCATION_SERVICE_NOT_ENABLED);
+                })
+            });
+        };
     	return new Promise((resolve, reject) => {
     	    if(!isset(self.prop.rssi)){
-    	        reject(6300); //BLE_PERIPHERAL_NOT_FOUND
+    	        reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
     	    }else{
-    	        connect().then((rs)=>{
+    	       // connect().then((rs)=>{
+    	        checkBLEEnabled().then(()=>{
+								if(deviceInfo.operatingSystem === 'ios'){
+									return new Promise((resolve,reject)=>{
+										resolve()
+									})
+								}else{
+									return checkLocationEnabled();
+								}
+    	        }).then(()=>{
+    	            return connect();
+    	        }).then((rs)=>{
         	        return readFirmware();
         	    }).then((firmware) => {
         	        return readMacaddress();
@@ -3321,13 +3355,72 @@ const doMOBMOB = (gangs) => {
     Peripheral.prototype.doWrite = function(service, characteristic, data) {
         const self = this;
         
-    	return new Promise((resolve, reject) => {
-    	    ble.write(self.prop.id, service, characteristic, data.convertToBytes(), function(rs){
-                //nothing to do, instead, need notify
-                resolve(rs);
-            }, function(rs){
-                reject(`Failed to write data ${data} to service ${service} with characteristic ${characteristic} (Error message: ${rs})`);
+        
+        const write = (id, service, characteristic, data) => {
+            return new Promise((resolve, reject) => {
+        	    ble.write(id, service, characteristic, data.convertToBytes(), function(rs){
+                    //nothing to do, instead, need notify
+                    resolve(rs);
+                }, function(rs){
+    				if(data.toLowerCase() == '810e' || data.toLowerCase() == '8110'){
+    					resolve();
+    				}else{
+    					reject(bleError.BLE_PERIPHERAL_WRITE_DATA_FAIL, `Failed to write data ${data} to service ${service} with characteristic ${characteristic} (Error message: ${rs})`);
+    				}
+                });
             });
+        }
+        const checkBLEEnabled = () => {
+            return new Promise((resolve, reject) => {
+                ble.isEnabled(function(){
+                    resolve();
+                }, function(){
+                    reject(bleError.BLE_MOBILE_BLUETOOTH_NOT_ENABLED);
+                })
+            });
+        };
+        const checkLocationEnabled = () => {
+            return new Promise((resolve, reject) => {
+                ble.isLocationEnabled(function(){
+                    resolve();
+                }, function(){
+                    reject(bleError.BLE_MOBILE_LOCATION_SERVICE_NOT_ENABLED);
+                })
+            });
+        };
+        
+    	return new Promise((resolve, reject) => {
+    	    if(!isset(self.prop.rssi)){
+    	        reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
+    	    }else{
+    	       // connect().then((rs)=>{
+    	        checkBLEEnabled().then(()=>{
+								if(deviceInfo.operatingSystem === 'ios'){
+									return new Promise((resolve)=>{
+										resolve()
+									})
+								}else{
+									return checkLocationEnabled();
+								}
+    	        }).then(()=>{
+    	            return write(self.prop.id, service, characteristic, data);
+        	    }).then((result) => {
+    		        resolve(result);
+        		}).catch((error) => {
+        			reject(error);
+        		})
+    	    }
+    	    
+    // 	    ble.write(self.prop.id, service, characteristic, data.convertToBytes(), function(rs){
+    //             //nothing to do, instead, need notify
+    //             resolve(rs);
+    //         }, function(rs){
+				// if(data.toLowerCase() == '810e' || data.toLowerCase() == '8110'){
+				// 	resolve();
+				// }else{
+				// 	reject(`Failed to write data ${data} to service ${service} with characteristic ${characteristic} (Error message: ${rs})`);
+				// }
+    //         });
         });
     };
     Peripheral.prototype.doMultipleWrite = function(commands) {

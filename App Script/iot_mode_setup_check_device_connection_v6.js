@@ -41,6 +41,7 @@ window.iot_mode_setup_check_device_connection = function(params) {
             if(doms.length > 0){
                 doms.remove();
             }
+            app.dialog.alert(_(erp.get_log_description(error)));
         })
         // iot_ble_check_enable().then(() => {
         //     return iot_ble_do_pre_action(guid);

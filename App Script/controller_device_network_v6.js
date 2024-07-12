@@ -17,7 +17,7 @@ window.device_network_component = {
                         <div class="swipeout-content">{{ item.groupName }}</div>
                       </li>
 
-                      <li :class="['home-scanned-peripheral', 'device', item.network_id === '0' ? 'swipeout' : '']" :guid="item.device" signal="0" is-network="true" v-else-if="item.device_model != 'YO105'">
+                      <li :class="['home-scanned-peripheral', 'device', item.network_id === '0' ? 'swipeout' : '']" :guid="item.device" signal="0" is-network="true" v-else-if="item.device_model">
                           <div class="item-content swipeout-content">
                               
                               <label v-show="isSorting" class="checkbox p-2 mx-1">

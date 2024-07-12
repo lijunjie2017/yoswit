@@ -1,0 +1,155 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Hdmicec Pannel') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="block">
+          <div class="row">
+            <div class="col">
+              <a href="#" v-on:click="postCommand(1)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">arrow_upward</i></a
+              >
+            </div>
+          </div>
+          <div class="row" style="margin: 20px 0">
+            <div class="col">
+              <a href="#" v-on:click="postCommand(2)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">arrow_back</i></a
+              >
+            </div>
+            <div class="col">
+              <a href="#" v-on:click="postCommand(3)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><span>OK</span></a
+              >
+            </div>
+            <div class="col">
+              <a href="#" v-on:click="postCommand(4)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">arrow_forward</i></a
+              >
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <a href="#" v-on:click="postCommand(5)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">arrow_downward</i></a
+              >
+            </div>
+          </div>
+          <div class="row" style="margin: 20px 0">
+            <div class="col">
+              <a href="#" v-on:click="postCommand(6)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">add</i></a
+              >
+            </div>
+            <div class="col">
+              <a href="#" v-on:click="postCommand(7)" class="button button-large button-raised" style="padding: 30px 0px"><span>—</span></a>
+            </div>
+          </div>
+          <div class="row" style="margin: 20px 0">
+            <div class="col">
+              <a href="#" v-on:click="postCommand(8)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">undo</i></a
+              >
+            </div>
+            <div class="col">
+              <a href="#" v-on:click="postCommand(9)" class="button button-large button-raised" style="padding: 30px 0px"><i class="icon material-icons">home</i></a>
+            </div>
+          </div>
+          <div class="row" style="margin: 20px 0">
+            <div class="col">
+              <a href="#" v-on:click="postCommand(10)" class="button button-large button-raised" style="padding: 30px 0px"
+                ><i class="icon material-icons">power_settings_new</i></a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { guid } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          power : 0
+        },
+        computed: {},
+        mounted() {},
+        methods: {
+          async postCommand(type) {
+            let command = '';
+            if (type == 1) {
+              command = `9810000003b04401`;
+            } else if (type == 2) {
+              command = `9810000003b04403`;
+            } else if (type == 3) {
+              command = `9810000003b04400`;
+            } else if (type == 4) {
+              command = `9810000003b04404`;
+            } else if (type == 5) {
+              command = `9810000003b04402`;
+            } else if (type == 6) {
+              command = `9810000003b04441`;
+            } else if (type == 7) {
+              command = `9810000003b04442`;
+            }else if (type == 8) {
+              command = `9810000003b0440d`;
+            }else if (type == 9) {
+              command = `9810000003b04409`;
+            }else if (type == 10) {
+              if(this.power == 0){
+                this.power = 1;
+                command = `9810000003b0446d`;
+              }else{
+                this.power = 0;
+              }
+              command = `9810000003b0446c`;
+            }
+            await window.peripheral[guid].write([
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: command,
+              },
+            ]);
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

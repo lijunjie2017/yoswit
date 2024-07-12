@@ -56,10 +56,25 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
                 setting : '',
                 name : '',
             };
+            data.rcu_min = {
+                setting_type : '',
+                setting : '',
+                name : '',
+                dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+            }
             device_setting_list.forEach(device_item=>{
-                //console.log(device_item);
+                console.log(device_item);
                 if(device_item.setting_type == setting_item.label){
                     data.self_setting_data = {
+                        setting_type : device_item.setting_type,
+                        setting : device_item.setting,
+                        name : device_item.name,
+                        dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+                    }
+                }
+                let rcu_key = `Minimum Trim_${data.slot_index}`
+                if(device_item.setting_type == rcu_key){
+                    data.rcu_min = {
                         setting_type : device_item.setting_type,
                         setting : device_item.setting,
                         name : device_item.name,
@@ -135,7 +150,7 @@ window.initSettingData = (subdevice_name,profile_device_name,guid,device_mode)=>
     //debugger
     window.setting_batch.batch_name = window.setting_batch.name;
     window.setting_brand = erp.doctype.device_brand[setting_model.brand];
-    console.log(window.setting_mode);
+    //console.log(window.setting_mode);
 };
 window.iot_device_setting_fun_init = ()=>{
 
