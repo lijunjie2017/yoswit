@@ -2787,10 +2787,9 @@ const doMOBMOB = (gangs) => {
     };
     Peripheral.prototype.getLastOnStatus = function(button_group){
         let gang_id = bleHelper.getGangId(button_group);
-        
         if(isset(this.prop.status) && isset(this.prop.status.last) && isset(this.prop.status.last[0][gang_id])){
 						//curtain motor 100 not 255
-						if(gang_id == 48){
+						if([12,13,14,15,48].includes(gang_id)){
 							return this.prop.status.last[0][gang_id] == 0 ? 100 : this.prop.status.last[0][gang_id];
 						}else{
 							return this.prop.status.last[0][gang_id] == 0 ? ([8,9,10,11,32,33,34,35,36,37,38,39,40,41].includes(gang_id) ? 255 : 1) : this.prop.status.last[0][gang_id];

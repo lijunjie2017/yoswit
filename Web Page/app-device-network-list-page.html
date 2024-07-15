@@ -204,103 +204,19 @@
           },
           async createNetwork(){
             //get the profile network
-            let index = 1;
+            let index = this.networkList.length?1:0;
             this.networkList.forEach(item=>{
               if(parseInt(item.index) > 1){
                 index = parseInt(item.index) 
               }
             })
-            mainView.router.navigate('/mobile-app/device-network-detail')
+            mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${index+1}&edit=0`);
             // this.networkList.push({
             //   title : _('Network')+` ${index+1}`,
             //   index : index+1,
             //   count : 0,
             //   image : `https://dev.mob-mob.com/files/scene.jpg`
             // })
-          },
-          async download() {
-            app.dialog.preloader();
-            setTimeout(() => {
-              app.dialog.close();
-            }, 15 * 1000);
-            //load the scene ble data
-            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-            let guid = '';
-            profile_subdevices.forEach((item) => {
-              if (item.name == subdevice_name) {
-                guid = item.device;
-              }
-            });
-            try {
-              await peripheral[guid].connect();
-              let device_id = peripheral[guid].prop.id;
-              await ble.startNotification(
-                device_id,
-                'ff80',
-                'ff82',
-                (rs) => {
-                  console.log('rs', rs);
-                  if (rs.startsWith('8f22') && rs.length > 8) {
-                    let thisSceneId = rs.slice(6, 8);
-                    if (thisSceneId == '00') {
-                      return;
-                    }
-                    const foundIndex = this.localTrigerSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
-                    if (foundIndex === -1) {
-                      this.localTrigerSceneList.push({
-                        scene_id: rs.slice(6, 8),
-                        command: rs,
-                      });
-                    }
-                  } else if (rs.startsWith('8f12') && rs.length > 8) {
-                    //this means command is action
-                    if (rs.slice(6, 8) == '00') {
-                      return;
-                    }
-                    const foundIndex = this.localActionSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
-                    if (foundIndex === -1) {
-                      this.localActionSceneList.push({
-                        scene_id: rs.slice(6, 8),
-                        command: rs,
-                      });
-                    }
-                  } else if (rs.startsWith('8f1200ff')) {
-                    app.dialog.close();
-                    debugger;
-                    this.loadBleScene();
-                    //compareLocalAndErpData();
-                  }
-                },
-                (err) => {
-                  app.dialog.close();
-                  app.dialog.alert(err);
-                }
-              );
-              let read_action_command = '8F1200FF';
-              let read_trriger_command = `8F220000FF`;
-              await peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: read_trriger_command,
-                },
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: read_action_command,
-                },
-              ]);
-            } catch (error) {
-              app.dialog.close();
-              const toast = app.toast.create({
-                position: 'bottom',
-                closeTimeout: 3000,
-                text: error,
-              });
-
-              toast.open();
-              //app.dialog.alert(error);
-            }
           },
           async loadBleScene() {
             try {
@@ -411,11 +327,8 @@
               }
             }, 10);
           },
-          toScene() {
-            mainView.router.navigate(`/mobile-app/scene-guid-operate-page?sub_name=${subdevice_name}`);
-          },
           toDetail(item) {
-            mainView.router.navigate(`/mobile-app/scene-guid-operate-page?name=${item.name}&sub_name=${subdevice_name}`);
+            mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${item.index}&edit=1`);
           },
         },
       });
