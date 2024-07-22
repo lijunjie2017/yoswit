@@ -478,14 +478,26 @@ const renderMainButton = (props, {
 			peripheral[kitem.device].rcuOpenClose(bleHelper.getGangId(kitem.device_button_group), direction, press).then((rs) => {
 
 			}).catch((error) => {
-				app.dialog.alert(erp.get_log_description(error));
+				if(error == 7200){
+					erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+						
+					})
+				}else{
+					app.dialog.alert(_(erp.get_log_description(error)));
+				}
 			});
 		}else{
 			peripheral[kitem.device].openClose(bleHelper.getGangId(kitem.device_button_group), direction, press).then((rs) => {
 
 
 			}).catch((error) => {
-				app.dialog.alert(erp.get_log_description(error));
+				if(error == 7200){
+					erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+						
+					})
+				}else{
+					app.dialog.alert(_(erp.get_log_description(error)));
+				}
 
 			});
 		}
@@ -499,11 +511,17 @@ const renderMainButton = (props, {
 		kitem['timeout'] = setTimeout(()=>{
 			kitem['click_status'] = null;
 		},10000)
+		let otherModelStatus = false;
+		if(kitem.device_model == 'YO121-AC-R2W') otherModelStatus = true;
 		let reverse = kitem.device_button_group.startsWith('OPENCLOSE UART REVERSE') ? true : false;
 		let bar_value = 0;
 		let data = ``;
 		if (type) {
 			data = "55AA050101036DDC";
+			//this have differ model command
+			if(otherModelStatus){
+				data = '55fefe0303';
+			}
 		} else {
 			if (kitem.device_status == 0) {
 				//props.kitem.device_status = 1;
@@ -529,18 +547,39 @@ const renderMainButton = (props, {
 			}
 			if (reverse) {
 				data = `55AA060102${(100-props.kitem.device_status*1).toString(16).pad("00")}FF`;
+				if(otherModelStatus){
+					data = `55fefe0304${(100-props.kitem.device_status*1).toString(16).pad("00")}`;
+				}
 			} else {
 				data = `55AA060102${props.kitem.device_status.toString(16).pad("00")}FF`;
+				if(otherModelStatus){
+					data = `55fefe0304${props.kitem.device_status.toString(16).pad("00")}`;
+				}
 			}
 
 		}
-		data += core_util_calculate_crc16_modbus_for_doa(data);
+		if(otherModelStatus){
+			data += erp.script.core_util_calculate_crc16_for_motor(data);
+		}else{
+			data += core_util_calculate_crc16_modbus_for_doa(data);
+		}
 		let command = "8602" + data.toLowerCase();
+		console.log("command",command);
 		window.peripheral[props.kitem.device].curtainmotor([{
 			gang: bleHelper.getGangId(kitem.device_button_group),
 			value: props.kitem.device_status,
 			command: command
-		}]);
+		}]).then(()=>{
+
+		}).catch(error=>{
+			if(error == 7200){
+				erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+					
+				})
+			}else{
+				app.dialog.alert(_(erp.get_log_description(error)));
+			}
+		})
 		$update();
 	}
 	const click_onoff_thermostat = (kitem) => {
@@ -554,7 +593,17 @@ const renderMainButton = (props, {
 			gang: bleHelper.getGangId(kitem.device_button_group),
 			value: props.kitem.device_status,
 			command: data
-		}]);
+		}]).then(()=>{
+
+		}).catch(error=>{
+			if(error == 7200){
+				erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+					
+				})
+			}else{
+				app.dialog.alert(_(erp.get_log_description(error)));
+			}
+		})
 		//emitter.off(`thermostat_${props.kitem.device}`);
 		emitter.emit(`thermostat_${props.kitem.device}`, {
 			guid: props.kitem.device,
@@ -600,7 +649,13 @@ const renderMainButton = (props, {
 					}]).then((rs) => {
 
 					}).catch((error) => {
-						app.dialog.alert(erp.get_log_description(error));
+						if(error == 7200){
+							erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+								
+							})
+						}else{
+							app.dialog.alert(_(erp.get_log_description(error)));
+						}
 					});
 				} else if (kitem.device_button_group.startsWith('DIMMING') || kitem.device_button_group.startsWith('RCU DIMMING')) {
 					
@@ -627,12 +682,32 @@ const renderMainButton = (props, {
 							peripheral[props.kitem.device].rcuDimming([{
 								gang: bleHelper.getGangId(props.kitem.device_button_group),
 								value: props.kitem.device_status
-							}])
+							}]).then(()=>{
+
+							}).catch(error=>{
+								if(error == 7200){
+									erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+										
+									})
+								}else{
+									app.dialog.alert(_(erp.get_log_description(error)));
+								}
+							})
 						}else{
 							peripheral[props.kitem.device].dimming([{
 								gang: bleHelper.getGangId(props.kitem.device_button_group),
 								value: props.kitem.device_status
-							}]);
+							}]).then(()=>{
+								
+							}).catch((error)=>{
+								if(error == 7200){
+									erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+										
+									})
+								}else{
+									app.dialog.alert(_(erp.get_log_description(error)));
+								}
+							})
 						}
 					
 				} else {
@@ -643,9 +718,16 @@ const renderMainButton = (props, {
 
 					}).catch((error) => {
 						//if error change the old status
-						props.kitem.device_status = oldStatus;
-						app.dialog.alert(erp.get_log_description(error));
-						$update();
+						//check if paw error
+						if(error == 7200){
+							erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+								
+							})
+						}else{
+							props.kitem.device_status = oldStatus;
+							app.dialog.alert(_(erp.get_log_description(error)));
+							$update();
+						}
 					});
 				}
 			}
@@ -867,8 +949,8 @@ const renderMainButton = (props, {
 							characteristic: 'ff81',
 							data: data,
 						}]);
-						await iot_device_setting_sync_server(item.device, 'TimeStream', JSON.stringify(list));
-						await iot_device_setting_sync_server(item.device, 'ConnectKey', this_password);
+				// 		await iot_device_setting_sync_server(item.device, 'TimeStream', JSON.stringify(list));
+				// 		await iot_device_setting_sync_server(item.device, 'ConnectKey', this_password);
 						let sheet = app.sheet.create({
 							content: `\
 									<div class="sheet-modal">\
@@ -1257,13 +1339,33 @@ const renderBottomButton = (props, {
 				peripheral[props.kitem.device].dimming([{
 					gang: bleHelper.getGangId(props.kitem.device_button_group),
 					value: range_value
-				}]);
+				}]).then(()=>{
+
+				}).catch(error=>{
+					if(error == 7200){
+						erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+							
+						})
+					}else{
+						app.dialog.alert(_(erp.get_log_description(error)));
+					}
+				})
 			} else if (device_button_group.startsWith("RCU DIMMING")) {
 				// debugger
 				peripheral[props.kitem.device].rcuDimming([{
 					gang: bleHelper.getGangId(props.kitem.device_button_group),
 					value: range_value
-				}])
+				}]).then(()=>{
+
+				}).catch(error=>{
+					if(error == 7200){
+						erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+							
+						})
+					}else{
+						app.dialog.alert(_(erp.get_log_description(error)));
+					}
+				})
 			}
 		} catch (error) {
 			app.dialog.alert(erp.get_log_description(error));
@@ -1283,6 +1385,8 @@ const renderBottomButton = (props, {
 		props.kitem['timeout'] = setTimeout(()=>{
 			props.kitem['click_status'] = null;
 		},10000)
+		let otherModelStatus = false;
+		if(props.kitem.device_model == 'YO121-AC-R2W') otherModelStatus = true;
 		let parentElemt = $(element.el).parents('.device').prev();
 		let thisvalue = element.value;
 		const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
@@ -1294,16 +1398,37 @@ const renderBottomButton = (props, {
 		}
 		if (reverse) {
 			data = `55AA060102${(100-thisvalue).toString(16).pad("00")}FF`;
+			if(otherModelStatus){
+				data = `55fefe0304${(100-props.kitem.device_status*1).toString(16).pad("00")}`;
+			}
 		} else {
 			data = `55AA060102${thisvalue.toString(16).pad("00")}FF`;
+			if(otherModelStatus){
+				data = `55fefe0304${props.kitem.device_status.toString(16).pad("00")}`;
+			}
 		}
-		data += core_util_calculate_crc16_modbus_for_doa(data);
+		if(otherModelStatus){
+			data += erp.script.core_util_calculate_crc16_for_motor(data);
+		}else{
+			data += core_util_calculate_crc16_modbus_for_doa(data);
+		}
 		let command = "8602" + data.toLowerCase();
+		console.log('command',command)
 		window.peripheral[props.kitem.device].curtainmotor([{
 			gang: bleHelper.getGangId(props.kitem.device_button_group),
 			value: thisvalue,
 			command: command
-		}]);
+		}]).then(()=>{
+
+		}).catch(error=>{
+			if(error == 7200){
+				erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+					
+				})
+			}else{
+				app.dialog.alert(_(erp.get_log_description(error)));
+			}
+		})
 	}
 	//this is the thermostat click function
 	const click_thermostat_change = (kitem, click_type) => {

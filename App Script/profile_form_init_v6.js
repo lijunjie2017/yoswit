@@ -1,11 +1,13 @@
 window.profile_form_init = function(Lists){
     $('.sure-icon').click(async()=>{
+        app.dialog.preloader();
         let thisName = $('input[name=name]').val() || ''
         let THISURL = '/api/resource/Profile'
         let created_form = $('.created-from').val()
         let profile_name = $('.profile-name').val()
         let languages = $('.profile-language').val()
         if(!profile_name){
+            app.dialog.close();
             app.dialog.alert(`Profile Name is null!`);
             return
         }
@@ -60,11 +62,19 @@ window.profile_form_init = function(Lists){
                     closeTimeout:2000,
                     position:'center'
                 });
-
+                app.dialog.close();
                 app.preloader.hide();
                 app.ptr.refresh('.frappe-list-ptr-content');
+                mainView.router.refreshPage();
+                }else{
+                    app.dialog.close();
+                    mainView.router.back();
+                    setTimeout(()=>{
+                        mainView.router.refreshPage();
+                    },500)
                 }
         }catch(error){
+            app.dialog.close();
             app.dialog.alert(_(error));
         }
     })

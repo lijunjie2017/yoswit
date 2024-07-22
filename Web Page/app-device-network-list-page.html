@@ -10,11 +10,8 @@
           </a>
         </div>
         <div class="title">{{ _('Network List') }}</div>
-        <div class="right scene-list-right device-hidden">
-          <a class="link icon-only" @click="${()=>downloadBle()}">
-            <i class="icon material-icons md-only">download</i>
-          </a>
-          <a class="link icon-only" @click="${()=>delAllScene()}">
+        <div class="right scene-list-right">
+          <a href="/mobile-app/device-network-unassigned-detail" class="link icon-only">
             <i class="icon material-icons md-only">restart_alt</i>
           </a>
         </div>
@@ -38,14 +35,27 @@
                   :style="{'height': '100%','background-size': 'cover','background-image': 'url('+frappe_get_url(item.image)+')'}"
                 ></div>
                 <div class="card-content card-content-padding">
-                  <div class="template-info" style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey">
-                    {{_(item.count)}} {{_('Devices')}}
+                  <div
+                    class="template-info"
+                    style="
+                      text-shadow:
+                        1px 1px 2px grey,
+                        0 0 2px black,
+                        0 0 2px grey;
+                    "
+                  >
+                    
                   </div>
                   <div class="item-content">
                     <div class="item-inner">
                       <div
                         class="h5 d-block text-color-white margin-bottom-half"
-                        style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey"
+                        style="
+                          text-shadow:
+                            1px 1px 2px grey,
+                            0 0 2px black,
+                            0 0 2px grey;
+                        "
                       >
                         {{_(item.title)}}
                       </div>
@@ -111,106 +121,129 @@
     const downloadBle = async () => {
       vueApp.$download();
     };
-    const delAllScene = async () => {
-      let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-      let guid = '';
-      profile_subdevices.forEach((item) => {
-        if (item.name == subdevice_name) {
-          guid = item.device;
-        }
-      });
-      let triggerCommand = `8f210000ff`;
-      let actionCommand = `8f1100ff`;
-      app.dialog.confirm(
-        `Confirm Deletion?`,
-        () => {
-          window.peripheral[guid]
-            .write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: triggerCommand,
-              },
-            ])
-            .then(() => {
-              return window.peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: actionCommand,
-                },
-              ]);
-            })
-            .catch((error) => {
-              app.dialog.alert(error);
-            })
-            .then(() => {
-              app.dialog.alert('BLE Clear Successfully');
-            });
-        },
-        () => {}
-      );
-    };
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
           sceneList: [],
-          networkList:[],
+          networkList: [],
           localTrigerSceneList: [],
           localActionSceneList: [],
           sheetMap: {},
         },
         computed: {},
+        beforeDestroy() {
+          console.log('beforeDestroy');
+          emitter.off('refresh');
+          emitter.off('device_network_update');
+          //emitter.off('set_timmer');
+        },
         mounted() {
-          Vue.prototype.$init = this.init;
+          Vue.prototype.$init = this.initNetwork;
           Vue.prototype.$download = this.download;
           this.initNetwork();
+          this.scan();
           emitter.on('refresh', (data) => {
-            this.init();
+            this.initNetwork();
           });
+          setTimeout(()=>{
+            emitter.on('device_network_update', (data) => {
+            
+              this.initNetwork();
+            });
+          },500)
         },
         methods: {
           async onDeleted(index) {
+            //check if have mutiway devices,can not del
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            let networkMap = this.networkList[index];
+            let network_id = networkMap.index;
+            let delStatus = true;
+            devices.forEach(item=>{
+              if(isset(item.network_1)){
+                let mapList = JSON.parse(item.network_1);
+                 if(mapList.length){
+                  let idList = mapList.map((zitem) => parseInt(zitem.network_id));
+                  let checkIndex = idList.indexOf(parseInt(network_id));
+                  if(checkIndex != -1){
+                    delStatus = false;
+                  }
+                 }
+              }
+            })
+            if(!delStatus){
+              app.dialog.alert(`${_('The network includes gateway devices and cannot be deleted in bulk')}`)
+              return
+            }
             app.dialog.confirm(
               `${_('Confirm Deletion?')}`,
               async () => {
+                app.dialog.preloader();
                 console.log(index);
-                this.networkList.splice(index,1)
+                devices.forEach((item) => {
+                  if (parseInt(item.network_id) == parseInt(network_id)) {
+                    item.network_id = 0;
+                  }
+                });
+                try {
+                  await http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+                    method: 'PUT',
+                    responseType: 'json',
+                    dataType: 'json',
+                    responseType: 'json',
+                    serializer: 'json',
+                    timeout: 60,
+                    data: {
+                      profile_device: devices,
+                    },
+                  });
+                  app.dialog.close();
+                  erp.info.profile.profile_device = devices;
+                  //save the ble command
+                  mainView.router.refreshPage();
+
+                  //this.initNetwork();
+                } catch (error) {
+                  app.dialog.close();
+                  app.dialog.alert(error);
+                }
+                this.networkList.splice(index, 1);
               },
               () => {}
             );
           },
-          async initNetwork(){
+          async initNetwork() {
+            this.networkList = [];
             let profileDevices = cloneDeep(erp.info.profile.profile_device);
-            let networkMap = {}
-            profileDevices.forEach((item)=>{
-              if(isset(networkMap[`${item.network_id}`])){
+            let networkMap = {};
+            profileDevices.forEach((item) => {
+              if (isset(networkMap[`${item.network_id}`])) {
                 networkMap[`${item.network_id}`]++;
-              }else{
-                networkMap[`${item.network_id}`] = 1
+              } else {
+                networkMap[`${item.network_id}`] = 1;
               }
             });
-            for(let i in networkMap){
-              if(i != 0){
+            for (let i in networkMap) {
+              if (i != 0) {
                 this.networkList.push({
-                  title : _('Network')+` ${i}`,
-                  index : i,
-                  count : networkMap[i],
-                  image : `https://dev.mob-mob.com/files/scene.jpg`
-                })
+                  title: _('Network') + ` ${i}`,
+                  index: i,
+                  count: networkMap[i],
+                  image: `https://dev.mob-mob.com/files/network.jpeg`,
+                });
               }
             }
           },
-          async createNetwork(){
+          async createNetwork() {
             //get the profile network
-            let index = this.networkList.length?1:0;
-            this.networkList.forEach(item=>{
-              if(parseInt(item.index) > 1){
-                index = parseInt(item.index) 
+            let index = this.networkList.length ? 1 : 0;
+            this.networkList.forEach((item) => {
+              if (parseInt(item.index) > 1) {
+                index = parseInt(item.index);
               }
-            })
-            mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${index+1}&edit=0`);
+            });
+            mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${index + 1}&edit=0`);
             // this.networkList.push({
             //   title : _('Network')+` ${index+1}`,
             //   index : index+1,
@@ -218,94 +251,8 @@
             //   image : `https://dev.mob-mob.com/files/scene.jpg`
             // })
           },
-          async loadBleScene() {
-            try {
-              this.sheetMap = app.sheet.create({
-                content: `
-              <div class="sheet-modal my-sheet-swipe-to-step" style="height:auto; --f7-sheet-bg-color: #fff;">
-                <div class="toolbar" style="background-color: #fff;">
-                  <div class="toolbar-inner">
-                    <div class="left">
-                      <div class="block-title block-title-medium py-2">${_('BLE SCENE')}</div>  
-                    </div>
-                    <div class="title"></div>
-                    <div class="right"></div>
-                  </div>
-                </div>
-                <div class="block-title">Trigger List</div>
-                <div class="list ha-guide-list list-outline-ios list-strong-ios list-dividers-ios">
-                  <ul>
-                    ${this.localTrigerSceneList
-                      .map(
-                        (kitem) => `
-                    <li v-for="(kitem,kindex) in localTrigerSceneList" :key="kitem.scene_id" style="background: #fff;">
-                      <div class="item-content">
-                        <div class="item-media">${kitem.scene_id}</div>
-                        <div class="item-inner">
-                          <div style="word-wrap:break-word;word-break:break-all;">${kitem.command}</div>
-                        </div>
-                      </div>
-                    </li>
-                    `
-                      )
-                      .join('')}
-                  </ul>
-                </div>
-                <div class="block-title">Action List</div>
-                <div class="list ha-guide-list list-outline-ios list-strong-ios list-dividers-ios">
-                  <ul>
-                    ${this.localActionSceneList
-                      .map(
-                        (kitem) => `
-                    <li style="background: #fff;">
-                      <div class="item-content">
-                        <div class="item-media">${kitem.scene_id}</div>
-                        <div class="item-inner">
-                          <div style="word-wrap:break-word;word-break:break-all;">${kitem.command}</div>
-                        </div>
-                      </div>
-                    </li>
-                    `
-                      )
-                      .join('')}
-                  </ul>
-                </div>
-              </div>
-              `,
-                on: {
-                  open: (sheet) => {},
-                },
-                swipeToClose: true,
-                backdrop: true,
-              });
-              this.sheetMap.open();
-            } catch (error) {
-              this.loadBleScene();
-              console.log(error);
-            }
-          },
-          async init() {
-            this.sceneList = [];
-            console.log(subdevice_name);
-            if (isset(subdevice_name) && subdevice_name) {
-              $('.scene-list-right').removeClass('device-hidden');
-            } else {
-              console.log($('.scene-list-right'));
-              $('.scene-list-right').addClass('device-hidden');
-            }
-            let scenes = cloneDeep(erp.info.scene);
-            for (let i in scenes) {
-              if (!isset(scenes[i].image) || !scenes[i].image) {
-                scenes[i].image = `https://dev.mob-mob.com/files/scene.jpg`;
-              }
-              if (isset(subdevice_name) && subdevice_name) {
-                if (subdevice_name == scenes[i].profile_subdevice) {
-                  this.sceneList.push(scenes[i]);
-                }
-              } else {
-                this.sceneList.push(scenes[i]);
-              }
-            }
+          toDetail(item) {
+            mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${item.index}&edit=1`);
           },
           async scan() {
             await bleManager.stopScan();
@@ -316,19 +263,15 @@
             });
           },
           async onDiscovery(p) {
+            if (!isset(p)) {
+              return;
+            }
             setTimeout(() => {
-              delete p.password;
-              delete p.connected;
-              delete p.connecting;
               if (!isset(peripheral[p.guid])) {
                 peripheral[p.guid] = new Peripheral(p);
-              } else {
-                peripheral[p.guid].update(p);
               }
+              emitter.emit('ha_network_update_status',{p:p});
             }, 10);
-          },
-          toDetail(item) {
-            mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${item.index}&edit=1`);
           },
         },
       });

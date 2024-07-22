@@ -961,7 +961,7 @@ window.Peripheral = (function() {
 						data = `02${self.prop.mac_reverse_key}8000${data}00`;
 						characteristic = "ff81";
 					}else{
-						data = `8000${data}00`;
+						data = `02${self.prop.mac_reverse_key}8000${data}00`;
 						characteristic = "ff81";
 					}
 				}
@@ -1598,7 +1598,9 @@ const doMOBMOB = (gangs) => {
     				data = `8900${data}`;
     				if(findGuid != self.prop.guid){
     					data = `02${self.prop.mac_reverse_key}${data}`;
-    				}
+    				}else{
+							data = `02${self.prop.mac_reverse_key}${data}`;
+						}
     			}
 				
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
@@ -2625,7 +2627,7 @@ const doMOBMOB = (gangs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
-							app.dialog.alert(_(erp.get_log_description(error)));
+							//app.dialog.alert(_(erp.get_log_description(error)));
     	        action.callback.reject(error);
     	        this.queue = [];
     	        this.isExecuting = false;
@@ -2637,7 +2639,7 @@ const doMOBMOB = (gangs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
-							app.dialog.alert(_(erp.get_log_description(error)));
+							//app.dialog.alert(_(erp.get_log_description(error)));
     	        action.callback.reject(error);
     	        this.queue = [];
     	        this.isExecuting = false;
@@ -2649,7 +2651,7 @@ const doMOBMOB = (gangs) => {
 						action.callback.resolve(rs);
 						this.execute();
 				}).catch((error) => {
-						app.dialog.alert(_(erp.get_log_description(error)));
+						//app.dialog.alert(_(erp.get_log_description(error)));
 						action.callback.reject(error);
 						this.queue = [];
 						this.isExecuting = false;
@@ -2661,7 +2663,7 @@ const doMOBMOB = (gangs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
-							app.dialog.alert(_(erp.get_log_description(error)));
+							//app.dialog.alert(_(erp.get_log_description(error)));
     	        action.callback.reject(error);
     	        this.queue = [];
     	        this.isExecuting = false;
@@ -2673,7 +2675,7 @@ const doMOBMOB = (gangs) => {
 						action.callback.resolve(rs);
 						this.execute();
 				}).catch((error) => {
-						app.dialog.alert(_(erp.get_log_description(error)));
+						//app.dialog.alert(_(erp.get_log_description(error)));
 						action.callback.reject(error);
 						this.queue = [];
 						this.isExecuting = false;
@@ -2685,7 +2687,7 @@ const doMOBMOB = (gangs) => {
 					action.callback.resolve(rs);
 					this.execute();
 			}).catch((error) => {
-					app.dialog.alert(_(erp.get_log_description(error)));
+					//app.dialog.alert(_(erp.get_log_description(error)));
 					action.callback.reject(error);
 					this.queue = [];
 					this.isExecuting = false;
@@ -2697,7 +2699,7 @@ const doMOBMOB = (gangs) => {
 				action.callback.resolve(rs);
 				this.execute();
 			}).catch((error) => {
-				app.dialog.alert(_(erp.get_log_description(error)));
+				//app.dialog.alert(_(erp.get_log_description(error)));
 				action.callback.reject(error);
 				this.queue = [];
 				this.isExecuting = false;

@@ -3,7 +3,7 @@ window.iot_device_reset = function(params) {
     const profile_device_name = params.obj.attr("profile-device-name");
     const profile_subdevice_name = params.obj.attr("profile-subdevice-name");
 
-    app.dialog.confirm(_("Do you confirm to reset the device?"), runtime.appInfo.name, () => {
+    app.dialog.confirm(_("Do you confirm to reset the device?"), () => {
         app.dialog.preloader();
         setTimeout(()=>{
             app.dialog.close();

@@ -274,7 +274,7 @@
                               <div class="item-subtitle">{{ item.model }}-{{ item.mac_address }}</div>
                               <div class="signal-panel item-text height-21" style="">
                                 {{tran(item.room_title)}}/
-                                <span class="text-color-theme">{{item.status}}</span>
+                                <span class="text-color-theme">{{_(item.status)}}</span>
                                 <span
                                   class="text-color-theme"
                                   v-if="item.mode == 'Radar Sensor' || item.button_group== 'SCENE MUTIWAY ONOFF GANG1'"
