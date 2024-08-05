@@ -1,0 +1,159 @@
+<script>
+  frappe.web_form.after_load = async () => {
+    try {
+      app.preloader.show();
+      console.log('frappe', frappe);
+      console.log('erp', erp);
+      let data;
+      // 上传图片
+      async function uploadFile(base64String, isPrivate = 0) {
+        const fileData = {};
+        fileData.data = base64String;
+        fileData.name = md5(base64String) + '.jpeg';
+
+        const response = await http2.uploadFileToServer(fileData, 'Home/Mobile', isPrivate, {});
+        const json = JSON.parse(response.data);
+        const imglink = json.message.file_url;
+
+        return imglink;
+      }
+
+      const roomName = mainView.router.currentRoute.query?.roomName;
+
+      if (roomName && roomName != '') {
+        await http2
+          .request({
+            url: encodeURIComponent(`/api/resource/Profile Room/${roomName}`),
+            method: 'GET',
+          })
+          //.then(r => r.json())
+          .then((r) => {
+            console.log('r', r);
+
+            data = r?.data?.data;
+            if (data) {
+              // 给表单赋值
+              frappe.web_form?.set_value('title', data.title);
+            } else {
+              console.log('未找到数据');
+              app.toast
+                .create({
+                  text: 'The room is not found',
+                  closeTimeout: 2000,
+                  position: 'center',
+                })
+                .open();
+              mainView.router.back();
+              return;
+            }
+          });
+      } else {
+        frappe.web_form?.set_value('doctype', 'Profile Room');
+        frappe.web_form?.set_value('parent', erp?.info?.profile?.name);
+        frappe.web_form?.set_value('parentfield', 'profile_room');
+        frappe.web_form?.set_value('parenttype', 'Profile');
+      }
+
+      // 处理顶部图片
+      const iamgeUrl = data?.banner;
+      if (iamgeUrl && iamgeUrl != '') {
+        const topImgDom = $('.topImg')[0].children[0];
+        console.log('topImgDom', topImgDom);
+        topImgDom.src = iamgeUrl
+          .trim()
+          .replace(/^\/files/g, `${erp.setting.app_api_url}/files`)
+          .trim();
+      } else {
+        const topImgDom = $('.topImg');
+        console.log('topImgDom', topImgDom);
+        // 替换成上传图片元素
+        topImgDom[0].innerHTML = `<div style="width: 100%;height: 200px;display: flex;justify-content: center;align-items: center;background-color: rgb(238, 238, 238);"><span class="material-icons" style="font-size: 50px; color: rgb(221, 221, 221);">add_a_photo</span></div>`;
+      }
+
+      // 添加监听事件
+      const topImgUploader = $('.topImgUploader');
+      console.log('topImgUploader', topImgUploader);
+      topImgUploader.on('click', async () => {
+        let res = await Capacitor.Plugins.Camera.getPhoto({
+          quality: 100,
+          resultType: 'uri',
+        });
+        console.log('res', res);
+        const r = await uploadFile(res.webPath);
+        console.log('上传后的图片url', r);
+        const imgUrl = r
+          .trim()
+          .replace(/^\/files/g, `${erp.setting.app_api_url}/files`)
+          .trim();
+        // 替换成图片元素
+        $('.topImg')[0].innerHTML = `
+                        <img src="${imgUrl}" width="100%" height="200" style="object-fit:cover;" />
+                    `;
+        // 传值到表单
+        frappe.web_form?.set_value('banner', imgUrl);
+      });
+
+      app.preloader.hide();
+    } catch (err) {
+      app.preloader.hide();
+      app.dialog.alert(err);
+    }
+  };
+
+  frappe.web_form.submit = async () => {
+    console.log('点击了提交');
+
+    // 获取当前表单数据
+    const formData = frappe.web_form.get_values();
+    console.log('当前表单数据', formData);
+
+    app.preloader.show();
+
+    const roomName = mainView.router.currentRoute.query?.roomName;
+    let url = roomName ? encodeURIComponent(`/api/resource/Profile Room/${roomName}`) : encodeURIComponent(`/api/resource/Profile Room`);
+    await http2
+      .request({
+        url: url,
+        method: roomName ? 'PUT' : 'POST',
+        data: formData,
+        debug: true,
+      })
+      //.then(r => r.json())
+      .then(async (r) => {
+        console.log('提交的结果', r);
+        if (r.status == 200) {
+          app.toast
+            .create({
+              text: _('The save was successful'),
+              closeTimeout: 2000,
+              position: 'center',
+            })
+            .open();
+          await ha_profile_ready();
+          mainView.router.back();
+        }
+      })
+      .catch((err) => {
+        console.log('err', err);
+        app.toast
+          .create({
+            text: _(err?.message),
+            closeTimeout: 2000,
+            position: 'center',
+          })
+          .open();
+      });
+    app.preloader.hide();
+  };
+
+  frappe.web_form.unload = async () => {};
+
+  // 顶部图片
+  frappe.web_form.ui('topImg', {
+    template: `
+              <div class="field-container topImg topImgUploader" style="width: 100%;">
+                  <img src="" width="100%" height="200" style="object-fit:cover;" />
+              </div>
+              `,
+  });
+</script>

@@ -94,6 +94,11 @@ window.iot_mode_setup_change_mode_init = function(params) {
                         let post_data = {
                             "device_mode": selected,
                         }
+                        if(selected == 'Curtain Motor Ac' || selected == 'Curtain Motor'){
+                            post_data['device_button_group'] = 'OPENCLOSE UART';
+                        }else if(selected == 'Curtain Motor Reverse Ac' || selected == 'Curtain Motor Reverse'){
+                            post_data['device_button_group'] = 'OPENCLOSE UART REVERSE';
+                        }
                         return http.request(encodeURI(url), {
                             method: method,
                             serializer: 'json',

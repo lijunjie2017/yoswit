@@ -1,0 +1,372 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Gateway') }}</div>
+        <div class="right frappe-list-right">
+          <a class="link icon-only searchbar-enable" data-searchbar=".searchbar-demo">
+            <i class="icon f7-icons if-not-md">search</i>
+            <i class="icon material-icons md-only">search</i>
+          </a>
+        </div>
+        <form
+          data-search-container=".search-list"
+          data-search-in=".item-title"
+          class="searchbar searchbar-expandable searchbar-demo searchbar-init"
+          id="list-search-form"
+          @submit="${search}"
+        >
+          <div class="searchbar-inner">
+            <div class="searchbar-input-wrap">
+              <input type="search" placeholder="Search" @blur="${search}" />
+              <i class="searchbar-icon"></i>
+              <span class="input-clear-button"></span>
+            </div>
+            <span class="searchbar-disable-button">Cancel</span>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div
+      class="page-content infinite-scroll-content ptr-content"
+      data-ptr-mousewheel="true"
+      data-infinite-distance="50"
+      style="height: 100%"
+      @infinite="${loadMore}"
+      @ptr:refresh="${refreshFun}"
+    >
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
+      <div class="list no-chevron searchbar-found list-dividers-ios search-list">
+        <ul class="dynamic-list-generated-from-jinja">
+          ${profileGatewaysList.length !=0 && $h`
+          <li class="list-group-title display-flex justify-content-space-between">{{_("Gateway")}}</li>
+          `} ${profileGatewaysList.map((item)=> $h`
+          <li class="swipeout">
+            <div class="item-link no-ripple item-content swipeout-content">
+              <div class="item-media" style="padding-left: 8px">
+                <img src="${ erp.get_url('/files/gateway.png') }" width="20" />
+              </div>
+              <div class="item-inner">
+                <a
+                  class="item-title"
+                >
+                  <div class="display-flex flex-direction-row align-items-center">
+                    <i class="material-icons text-muted" style="margin-right: 10px">devices</i>YO105-${ item.mac_address }
+                  </div>
+                  <div class="item-header display-flex flex-direction-row align-items-center" style="margin: 5px 0">
+                    <i class="material-icons text-muted" style="margin-right: 10px">person</i> ${users[users.current].usr}
+                  </div>
+                  <div class="item-footer display-flex flex-direction-row align-items-center" 
+                  style="max-width: 230px"
+                  isuse="${item.isuse?1:0}"
+                  >
+                    <div class="gateway-list-moblie-as-hub-icon"></div>
+                    <div>${item.device}</div>
+                  </div>
+                </a>
+              </div>
+              <div class="control-panel-right">
+                <a href="/mobile-app/gateway-wifi-config?guid=${item.device}&device_name=${item.name}" class="right" style="position: relative; top: 13px">
+                  <div class="button button-raised button-big circle">
+                    <i class="material-icons">settings</i>
+                  </div>
+                </a>
+              </div>
+            </div>
+            <div class="swipeout-actions-right">
+              <a
+                href="#"
+                @click="${()=>onDeleted(item,0)}"
+                data-confirm="Are you sure you want to cancel this gateway?"
+                class="link swipeout-close"
+                style="background-color: rgb(255, 0, 0)"
+              >
+                <i class="icon material-icons">delete</i>
+              </a>
+            </div>
+          </li>
+          `)} ${gatewaysList.length !=0 && $h`
+          <li class="list-group-title display-flex justify-content-space-between">{{_("Mobile")}}</li>
+          `} ${gatewaysList.map((item)=> $h`
+          <li class="swipeout">
+            <div class="item-link  no-ripple item-content swipeout-content">
+              <div class="item-media" style="padding-left: 8px">
+                ${item.platform === 'android'? $h`
+                <img src="${ erp.get_url('/files/android.png') }" width="20" />
+                `:item.platform === 'ios'? $h`
+                <img src="${ erp.get_url('/files/iphone.png') }" width="20" />
+                `: $h`
+                <img src="${ erp.get_url('/files/gateway.png') }" width="20" />
+                `}
+              </div>
+              <div class="item-inner">
+                <a class="item-title">
+                  <div class="display-flex flex-direction-row align-items-center">
+                    <i class="material-icons text-muted" style="margin-right: 10px">devices</i
+                    >${item.title?item.title:item.device?item.device:'Mobile Phone'}
+                  </div>
+                  <div class="item-header display-flex flex-direction-row align-items-center" style="margin: 5px 0">
+                    <i class="material-icons text-muted" style="margin-right: 10px">person</i>${item.owner}
+                  </div>
+                  <div
+                    class="item-footer display-flex flex-direction-row align-items-center"
+                    isuse="${item.online?1:0}"
+                    style="max-width: 230px"
+                  >
+                    <div class="gateway-list-moblie-as-hub-icon"></div>
+                    ${item.guid}
+                  </div>
+                </a>
+              </div>
+              <div class="control-panel-right">
+                ${item.isuse && $h`
+                <a
+                  href="/mobile-app/mobile-as-hub-config?name=${item.name}&guid=${item.guid}"
+                  class="right"
+                  style="position: relative; top: 13px"
+                >
+                  <div class="button button-raised button-big circle">
+                    <i class="material-icons">settings</i>
+                  </div>
+                </a>
+                `}
+              </div>
+            </div>
+            <div class="swipeout-actions-right">
+              <a
+                href="#"
+                @click="${()=>onDeleted(item,1)}"
+                data-confirm="Are you sure you want to cancel this gateway?"
+                class="link swipeout-close"
+                style="background-color: rgb(255, 0, 0)"
+              >
+                <i class="icon material-icons">delete</i>
+              </a>
+            </div>
+          </li>
+          `)}
+        </ul>
+      </div>
+      ${gatewaysList.length === 0 && $h`
+      <no-record-found></no-record-found>
+      `}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    const guid = $f7route.query.guid;
+    let limit_start = 0;
+    let limit = 20;
+    let gatewaysList = [];
+    let profileGatewaysList = [];
+    let active_profile = erp.info.profile.name;
+    let load_status = true;
+    let keyword = '';
+    let listenRefresFun;
+    const refreshFun = async(e, done) => {
+      limit_start = 0;
+      await ha_profile_ready();
+      init();
+      done();
+      $update();
+    };
+    const loadMore = () => {
+      if (!load_status) return;
+      load_status = false;
+      setTimeout(async () => {
+        load_status = true;
+        limit_start = limit_start + limit;
+        await getData();
+        $update();
+      }, 500);
+    };
+    const init = async () => {
+      getData();
+      getProfileGateways();
+    };
+    const getProfileGateways = () => {
+      let list = cloneDeep(erp.info.profile ? erp.info.profile.profile_device : []);
+      list = list.filter((item) => {
+        if (item.device_mode === 'Gateway') {
+          return true;
+        } else {
+          return false;
+        }
+      });
+      list.forEach((item) => {
+        if (erp.info.device && erp.info.device[item.device]) {
+          let setting_list = erp.info.device[item.device].settings;
+          item.email = users[users.current].usr;
+          item.mac_address = erp.info.device[item.device].mac_address;
+          item.online = false;
+          item.isuse = false;
+          setting_list.forEach((kitem) => {
+            if (kitem.setting_type === 'Email Address') {
+              item.email = kitem.setting;
+            }
+          });
+          let self_top = `${item.mac_address}-${item.email}`.toLowerCase();
+          let devices = cloneDeep(erp.info.profile.profile_device);
+          devices.forEach(kitem=>{
+            if(kitem.gateway && self_top == kitem.gateway){
+              item.isuse = true
+            }
+          })
+        }
+      });
+      profileGatewaysList = list;
+      $update();
+    };
+    const getData = async () => {
+      console.log('getData');
+      try {
+        let list = await http.request(
+          encodeURI(
+            `${
+              erp.settings[erp.appId].app_api_url
+            }/api/method/appv6.getGatewaysLists?limit=${limit}&limit_start=${limit_start}&keyword=${keyword}&owner=${
+              users[users.current].usr
+            }`
+          ),
+          {
+            method: 'GET',
+            serializer: 'json',
+            responseType: 'json',
+            timeout: 3,
+          }
+        );
+        if (limit_start == 0) {
+          gatewaysList = list.data.gateways || [];
+        } else {
+          gatewaysList = gatewaysList.concat(list.data.gateways || []);
+        }
+        console.log(gatewaysList);
+        let devices = cloneDeep(erp.info.profile.profile_device);
+
+        gatewaysList.forEach((item) => {
+          item.online = false;
+          item.isuse = false;
+          if (deviceInfo.getDeviceGateway() == item.guid) {
+            item.isuse = true;
+          }
+          devices.forEach((kitem) => {
+            if (item.guid && item.guid == kitem.gateway) {
+              item.online = true;
+            }
+          });
+        });
+        $update();
+      } catch (e) {
+        console.log(e);
+      }
+    };
+    const onDeleted = async (item, type) => {
+      console.log('delete');
+      if(!item.isuse){
+        app.dialog.alert(_('The device is offline and cannot be operated.'));
+        return
+      }
+      //clear the devices gateway
+      let mobile_guid = '';
+      if (type) {
+        mobile_guid = item.guid;
+      } else {
+        mobile_guid = `${item.mac_address.toLowerCase()}-${item.email.toLowerCase()}`;
+      }
+      app.dialog.confirm(
+        `${_('Are you sure you want to cancel this gateway?')}`,
+        async () => {
+          let devices = cloneDeep(erp.info.profile.profile_device);
+          devices.forEach((kitem) => {
+            if (kitem.gateway == mobile_guid) {
+              kitem.gateway = '';
+            }
+          });
+          try {
+            await http.request(`/api/resource/Profile/${erp.info.profile.name}`, {
+              method: 'PUT',
+              responseType: 'json',
+              dataType: 'json',
+              responseType: 'json',
+              serializer: 'json',
+              timeout: 60,
+              data: {
+                profile_device: devices,
+              },
+            });
+            erp.info.profile.profile_device = devices;
+            mainView.router.refreshPage();
+          } catch (err) {
+            app.dialog.alert(err);
+          }
+        },
+        () => {}
+      );
+    };
+    const search = () => {
+      let this_keyword = $(`input[type="search"]`).val();
+      console.log(this_keyword);
+      // if(!this_keyword){
+      //   return;
+      // }
+      keyword = this_keyword;
+      init();
+      load_status = false;
+      $update();
+      setTimeout(() => {
+        load_status = true;
+      }, 500);
+    };
+    $onMounted(() => {
+      init();
+      if (listenRefresFun) {
+        emitter.off('refresh/mobile/as/hub');
+      }
+      listenRefresFun = (data) => {
+        init();
+      };
+      emitter.on('refresh/mobile/as/hub', listenRefresFun);
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .font-bold {
+    font-weight: bold;
+  }
+  .item-footer[isuse='1'] .gateway-list-moblie-as-hub-icon {
+    background-position: left top;
+  }
+  .gateway-list-moblie-as-hub-icon {
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    background-image: url('https://my.yoswit.com/files/gateway_new.png');
+    background-size: 100% auto;
+    background-position: left bottom;
+  }
+</style>

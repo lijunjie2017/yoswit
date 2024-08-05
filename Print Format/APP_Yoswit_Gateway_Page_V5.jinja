@@ -1,0 +1,135 @@
+{%- from "templates/print_formats/custom_macros.html" import tran -%}
+
+{% set gateway = {} %}
+{% if frappe.db.exists('Device Gateway', doc.docname) %}
+    {% set gateway = frappe.get_doc("Device Gateway", doc.docname) %}
+{% else %}
+    {% set kv = doc.docname.split('-') %}
+    {% set _dummy = gateway.update({'platform':'YO105','title':'YO105-'~kv[0],'name':doc.docname,'guid':doc.docname}) %}
+{% endif %}
+
+
+{% set hasProfile = false %}
+{% set profile = frappe.db.get_list('Profile') %}
+{% set user_settings = None %}
+
+{% if profile|length > 0 %}
+    {% set hasProfile = true %}
+    {% set profile = frappe.get_doc('Profile', profile[0]) %}
+    {% if frappe.db.exists('User Settings', doc.appId~'-'~frappe.session.user) %}
+        {% set user_settings = frappe.get_doc('User Settings', doc.appId~'-'~frappe.session.user) %}
+        
+        {% if frappe.db.exists('Profile', user_settings.active_profile) %}
+            {% set profile = frappe.get_doc('Profile', user_settings.active_profile) %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+{% set profile_name = profile.profile_name %}
+{% set control_box = profile.control_box %}
+
+{% set passwords = {} %}
+{% set network_id_obj = {} %}
+{% for device in profile.profile_device %}
+	{% if device.device != None %}
+		{%- set _ = passwords.update({device.device: device.password}) -%}
+        {%- set _ = network_id_obj.update({device.network_id : True}) -%}
+	{% endif %}
+{% endfor %}
+
+
+<div style="overflow:hidden;margin:15px;">
+    <div style="float:left;width:55px;height:80px;text-align:left;background-image:url('{{ frappe.get_url() }}/files/{% if gateway.platform == 'android' %}android{% elif gateway.platform == 'ios' %}iphone{% else %}gateway{% endif %}.png');background-size:40px auto;background-position:left center;background-repeat:no-repeat;">
+        
+    </div>
+    <div style="margin-left:55px;">
+        <div style="font-size:25px;font-weight:bold;height:37px;overflow:hidden;">{{ gateway.title if gateway.title != None else gateway.name }}</div>
+        <div style="-ms-word-break: break-all;word-break: break-all;word-break: break-word;font-size:12px;">GUID: {{gateway.guid}}</div>
+    </div>
+</div>
+{% if gateway.platform != 'Android' and gateway.platform != 'iOS' and gateway.platform != 'android' and gateway.platform != 'ios' %}
+<div class="block" style="margin-bottom:15px;margin-top:15px;">
+	<p class="row">
+		<a href="#" func="core_gateway_sync_list" ref="{{gateway.guid}}" class="col button button-large button-raised button-fill" style="margin:0px 10px;">Sync Gateways</a>
+		<!--<a href="#" class="col button button-large button-raised button-fill color-red" style="margin:0px 10px;">Reboot</a>-->
+	</p>
+</div>
+{% endif %}
+<div class="list media-list no-margin list-group">
+	<ul>
+	    {% set pro_device_to_profile_subdevice_with_room = {} %}
+	    
+        {% for device in profile.profile_device %}
+            {% for subDevice in profile.profile_subdevice if subDevice.profile_device == device.name %}
+                {% for room in profile.profile_room if subDevice.profile_room == room.name %}
+                    {% if device.device in pro_device_to_profile_subdevice_with_room %}
+                        {% set _ = pro_device_to_profile_subdevice_with_room.update({device.device: pro_device_to_profile_subdevice_with_room[device.device]~', '~tran(room.title)~'-'~tran(subDevice.title)}) %}
+                    {% else %}
+                        {% set _ = pro_device_to_profile_subdevice_with_room.update({device.device: tran(room.title)~'-'~tran(subDevice.title)}) %}
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+        
+        <li class="list-group-title">{{_("Mob-Mob Devices")}}</li>
+        {%- for netword_id_item in network_id_obj -%}
+            {% if netword_id_item == "0" %}
+            <li class="list-group-title">{{_("Unassigned")}}</li>
+            {% else %}
+            <li class="list-group-title">{{_("Network")+netword_id_item}}</li>
+            {% endif %}
+            {% for device in profile.profile_device|sort(attribute='network_position')|sort(attribute='network_id') %}
+                {% set model = device.device_model %}
+                {% if model == None or model == "" %}
+                    {% if device.device != None %}
+                        {% set model = frappe.db.get_value("Device", device.device, "device_model") %}
+                        {% if model == None %}
+                        {% set model = frappe.db.get_value("Device Model", {"hexid": device.device[-6:-2]}, "name") %}
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                {% if netword_id_item ==  device.network_id%}
+                {% if model != None and model != "YO105" and device.device!=None %}
+                    {% set rDevice = frappe.get_doc("Device", device.device) %}
+                    {% set device_model = frappe.get_doc("Device Model", model) %}
+                    {% set signal = 0 %}
+                    {% set bluetooth = 0 %}
+                    {% set target_gateway = device.gateway if device.gateway != None else control_box if control_box != None else '' %}
+                    <li class="device mobmob-device swipeout" device-name="{{device.name}}" guid="{{device.device}}"  style="height:70px;"
+                    signal="{{signal}}" bluetooth="{{bluetooth}}" 
+                    password="{{ passwords[device.device] }}"
+                    >
+                        <div class="item-content swipeout-content">
+                            <label class="checkbox" style="padding-left:20px;padding-right:20px;"><input changefunc="core_gateway_change_profile_device_gateway" mac_address="{{rDevice.mac_address}}" guid="{{rDevice.guid}}" firmware="{{rDevice.firmware}}" model="{{model}}" password="{{device.password}}" default_connect="{{ '0' if device.default_connect == None or device.default_connect == 0 else '1' }}" ref="{{target_gateway}}|{{gateway.name}}|{{device.name}}" type="checkbox" {{ 'checked="checked"' if target_gateway == gateway.name else '' }}><i class="icon-checkbox"></i></label>
+                            {% if device_model.image and device_model.image.startswith('http') %}
+                            <div class="item-media" style="background-image:url({{ device_model.image }});"></div>
+                            {% else %}
+                            <div class="item-media" style="background-image:url({{ frappe.get_url(device_model.image) }});"></div>
+                            {% endif %}
+                            <div class="item-inner">
+                                <div class="item-title-row">
+                                    <div class="item-title">{{ model~(' (v'~rDevice.firmware~')' if rDevice.firmware != None else '') }}</div>
+                                </div>
+                                <div class="item-subtitle">{{ pro_device_to_profile_subdevice_with_room[device.device]+'-'+ device.device_name}}</div>
+                                <div class="item-text"  style="{{ '' if target_gateway == gateway.name else 'color:red;font-weight:bold;' }}overflow:hide;height:20px;">{{ _('Gateway')~': '~device.gateway if device.gateway != None and device.gateway != '' else _('Gateway')~': '~control_box if control_box != None and control_box != '' else 'No Gateway' }}</div>
+                            </div>
+                            <div class="control-panel-right" style="margin-right:-10px;">
+                            </div>
+                        </div>
+                        <div class="swipeout-actions-right">
+                            {% set default_connect_class = "color-orange" %}
+                            {% if device.default_connect == None or device.default_connect == 0 %}
+                                {% set default_connect_class = "color-cust-grey" %}
+                            {% endif %}
+                            <a href="#" class="link {{default_connect_class}}" func="controller_deviceNetwork_list_set_default_connect" ref="{{device.name}}"><i class="icon material-icons">check</i></a>
+                            <!--<a href="#" class="link color-cust-purple" func="controller_ble_toggle_connection"><i class="icon material-icons">settings_bluetooth</i></a>-->
+                            <!--<a href="#" class="link color-cust-green"><i class="icon material-icons">refresh</i></a>-->
+                        </div>
+                        <div class="sortable-handler" style="padding-left:10px;padding-right:10px;"></div>
+                    </li>
+                {% endif %}
+                {% endif %}
+            {% endfor %}
+        {%- endfor -%}
+    </ul>
+</div>

@@ -11,7 +11,7 @@
         </div>
         <div class="title">{{ _('Room') }}</div>
         <div class="right frappe-list-right">
-          <a href="#" class="link icon-only sortable-toggle" ref="0|${erp.info.user_settings.active_profile}" func="profile_room_sortable">
+          <a href="#" class="link icon-only sortable-toggle" page-type="${page_type}" ref="0|${erp.info.user_settings.active_profile}" func="profile_room_sortable">
             <i class="icon material-icons">filter_list</i>
           </a>
         </div>
@@ -39,7 +39,7 @@
             <div>
               <div class="swipeout-content">
                 <a
-                  href="/mobile-app/room-device-list?room=${ room.name }&title=${tran(room.title)}"
+                  href="/mobile-app/room-device-list?room=${ room.name }&title=${tran(room.title)}&page_type=${page_type?page_type:0}"
                   class="item-link item-content padding-tb"
                   style="padding-top: 7px"
                 >
@@ -141,6 +141,8 @@
       $onUpdated = ctx.$onUpdated,
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
+    const {page_type} = $f7route.query;
+    console.log("page_type",page_type)
     let roomList = [];
     //emitter.off('refresh');
     emitter.on('refresh', () => {
@@ -168,13 +170,24 @@
         `${_('Are you sure you want to delete this item?')}`,
         async () => {
           try {
-            await http2.request(`/api/resource/Profile%20Room/${item.name}`, {
-              method: 'DELETE',
-            });
+            await http2.request(encodeURI('/api/method/appv6.delSingleProfileRoom'), {
+              method: 'POST',
+              responseType: 'json',
+              dataType: 'json',
+              responseType: 'json',
+              serializer: 'json',
+              timeout: 60,
+              debug:true,
+              data: {
+                profile_name: erp.info.profile.name,
+                room_name : item.name
+              },
+            })
             erp.info.profile.profile_room = erp.info.profile.profile_room.filter((kitem) => {
               return kitem.name !== item.name;
             });
             $update();
+            init();
           } catch (err) {
             app.dialog.alert(err);
             init();

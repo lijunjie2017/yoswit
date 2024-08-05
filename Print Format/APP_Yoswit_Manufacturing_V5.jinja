@@ -1,0 +1,125 @@
+{% set batchs = frappe.db.get_list("Device Batch",
+    fields=['*'],
+    filters={
+        'device_hex_batch':["!=",""]
+    }, order_by="name asc") %}
+    
+    
+{% set models = frappe.db.get_list("Device Model",
+    fields=['*'],
+    filters={
+        'hexid':["!=",""]
+    }, order_by="name asc") %}
+
+
+<style>
+@keyframes spin_icon {
+    from {
+        transform:rotate(0deg);
+    }
+    to {
+        transform:rotate(360deg);
+    }
+}
+
+.spin_icon {
+  animation-name: spin_icon;
+  animation-duration: 4000ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+</style>
+<div style="background-color:#ccc;">
+    <div class="row no-gap">
+        <div class="col-50" style="padding:0px;">
+            <select name="manufacturing-batch" style="font-size:16px;background-color:#ccc;width:100%;font-weight:bold;max-height:50px;line-height:50px;padding:0px 10px;-webkit-border-top-right-radius:0px;-webkit-border-bottom-right-radius: 0px;-moz-border-radius-topright: 0px;-moz-border-radius-bottomright: 0px;border-top-right-radius: 0px;border-bottom-right-radius: 0px;">
+                <option value="">- 选择批次 -</option>
+                {% for b in batchs %}
+                    <option value="{{b.device_hex_batch}}">{{b.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-50" style="padding:0px;">
+            <select name="manufacturing-model" style="font-size:16px;background-color:#ccc;width:100%;font-weight:bold;max-height:50px;line-height:50px;padding:0px 10px;-webkit-border-top-left-radius: 0px;-webkit-border-bottom-left-radius: 0px;-moz-border-radius-topleft: 0px;-moz-border-radius-bottomleft: 0px;border-top-left-radius: 0px;border-bottom-left-radius: 0px;">
+                <option value="">- 选择型号 -</option>
+                {% for b in models %}
+                    <option value="{{b.hexid}}">{{b.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="row no-gap">
+        <div class="col-40" style="padding:0px;">
+            <label class="item-checkbox item-checkbox-icon-start item-content" style="max-height:50px;line-height:50px;" func="manufacturing_toggle_show_done">
+                <input type="checkbox" name="checkbox-manufacturing-show-done" value="show-done" />
+                <i class="icon icon-checkbox" style="float:left;margin:15px 5px 15px 10px"></i>
+                <div class="item-inner" style="float:left;">
+                    <div class="item-title">显示已生产设备</div>
+                </div>
+            </label>
+        </div>
+        <div class="col-40" style="padding:0px;">
+            <label class="item-checkbox item-checkbox-icon-start item-content" style="max-height:50px;line-height:50px;">
+                <input type="checkbox" name="checkbox-manufacturing-show-all" value="show-all" changefunc="manufacturing_toggle_show_all" />
+                <i class="icon icon-checkbox" style="float:left;margin:15px 5px 15px 10px"></i>
+                <div class="item-inner" style="float:left;">
+                    <div class="item-title">显示遥远设备</div>
+                </div>
+            </label>
+        </div>
+        <div class="col-20" style="padding:0px;">
+            <a style="max-height:50px;line-height:50px;-webkit-border-radius: 0px;-moz-border-radius: 0px;border-radius: 0px;" func="controller_toggle_manufacturing" class="col button button-fill button-large manufacturing-btn-start">开始</a>
+        </div>
+    </div>
+</div>
+
+<div class="list media-list no-margin manufacturing-found-list" style="margin-top:0px;padding-top:0px;">
+    <ul></ul>
+</div>
+
+<!-- split -->
+frappe-form-right
+<!-- equalto -->
+<a href="#" class="link icon-only manufacturing-btn-refresh" func="manufacturing_clean_discovery_list">
+	<i class="icon material-icons">replay</i>
+</a>
+<!-- split -->
+script
+<!-- equalto -->
+window.ble_batch = {};
+{% for d in batchs %}
+    {% set d = frappe.get_doc("Device Batch", d.name) %}
+    window.ble_batch['{{d.device_hex_batch|lower}}'] = {
+        'name': '{{d.batch_id}}',
+        'password': '{{d.password if d.password!=None else '000000'}}',
+        'quantity': {{d.quantity if d.quantity!=None else 0}},
+        'default': []
+    };
+    {% for cfg in d.device_default_config %}
+        {% if cfg.device_command == 'SET_BLE_DEVICE_PASSWORD' %}
+            window.ble_batch['{{d.device_hex_batch|lower}}']['default'].push('82'+'000000'.convertToHex()+'{{cfg.description}}'.convertToHex());
+        {% elif cfg.device_command == 'SET_BLE_DEVICE_DEFAULT_PASSWORD' %}
+            window.ble_batch['{{d.device_hex_batch|lower}}']['default'].push('88038354'+'{{cfg.description}}'.convertToHex());
+        {% elif cfg.description != None %}
+            window.ble_batch['{{d.device_hex_batch|lower}}']['default'].push('{{cfg.description}}');
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+
+window.ble_model = {};
+{% for d in models %}
+    {% set d = frappe.get_doc("Device Model", d.name) %}
+    window.ble_model['{{d.hexid|lower}}'] = {
+        'name': '{{d.model_code}}',
+        'default': []
+    };
+    {% for cfg in d.device_default_config %}
+        {% if cfg.device_command == 'SET_BLE_DEVICE_PASSWORD' %}
+            window.ble_model['{{d.hexid|lower}}']['default'].push('82'+'000000'.convertToHex()+'{{cfg.description}}'.convertToHex());
+        {% elif cfg.device_command == 'SET_BLE_DEVICE_DEFAULT_PASSWORD' %}
+            window.ble_model['{{d.hexid|lower}}']['default'].push('88038354'+'{{cfg.description}}'.convertToHex());
+        {% elif cfg.description != None %}
+            window.ble_model['{{d.hexid|lower}}']['default'].push('{{cfg.description}}');
+        {% endif %}
+    {% endfor %}
+{% endfor %}

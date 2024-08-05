@@ -114,6 +114,7 @@ window.Peripheral = (function() {
         	
         	if(isset(p.gateway)) self.prop.gateway = p.gateway;
         	if(isset(p.is_mobmob)) self.prop.is_mobmob = p.is_mobmob;
+					if(isset(p.is_mobile_gateway)) self.prop.is_mobile_gateway = p.is_mobile_gateway;
         	
         	if(isset(p.is_mesh)) self.prop.is_mesh = p.is_mesh;
 			if(isset(p) && isset(p.config)){
@@ -239,6 +240,7 @@ window.Peripheral = (function() {
 						i += 4 + dataLength;
 					}
 					if(RcuData.length == 5){
+						console.log("RcuData",RcuData)
 						RcuData.forEach(kitem=>{
 							if(kitem.index == '01'){
 								self.prop.status.bluetooth[0][32] = parseInt(kitem.data.substring(0,2),16);
@@ -264,7 +266,7 @@ window.Peripheral = (function() {
                     }
 										if(self.prop.status.bluetooth[1] > self.prop.status.control[1]){
 											console.log("----------------大于----------------------------")
-											//self.prop.status.control[0] = self.prop.status.bluetooth[0]
+											self.prop.status.control[0] = self.prop.status.bluetooth[0]
 										}
         	    }
         	}
@@ -346,14 +348,15 @@ window.Peripheral = (function() {
                     delete storeProp.characteristics;
                     delete storeProp.connecting;
                     delete storeProp.is_mobmob;
+										delete storeProp.is_mobile_gateway;
                     delete storeProp.is_mesh;
                     delete storeProp.manufactureData;
                     delete storeProp.connected;
                     
                     
                     storedPeripheral[self.prop.guid] = storeProp;
-					if(storeProp.guid == '6630356563646662363330641201501d'){
-						console.log("storedPeripheral",storedPeripheral);
+					if(storeProp.guid == '3038623631666565383663361203491d'){
+						//console.log("storedPeripheralRan",storedPeripheral);
 					}
                     db.set('peripheral', JSON.stringify(storedPeripheral));
                 });
@@ -363,6 +366,11 @@ window.Peripheral = (function() {
         delete emitProp.status.control;
         
         let emitchecksum = md5(JSON.stringify(emitProp));
+				if(emitProp.guid == '3038623631666565383663361203491d'){
+					// console.log('this.lastEmitchecksum',this.lastEmitchecksum);
+					// console.log('emitchecksum',emitchecksum);
+					// console.log('this.prop',this.prop)
+				}
         if(!this.lastEmitchecksum || this.lastEmitchecksum!=emitchecksum){
             this.lastEmitchecksum = emitchecksum;
             emitter.emit('on_peripheral_changed', this.prop);
@@ -432,8 +440,8 @@ window.Peripheral = (function() {
     
     			if(Object.keys(message.Device).length > 0 && (self.prop.lastMqttChechsum=="" || self.prop.lastMqttChechsum != md5(JSON.stringify(message)))){
     			    self.prop.lastMqttChechsum = md5(JSON.stringify(message));
-    			    core_mqtt_publish("will/"+md5(md5(self.prop.gateway.toLowerCase())), 'Online', 0, true, false, true);
-    				core_mqtt_publish("status/"+md5(md5(self.prop.gateway.toLowerCase())), JSON.stringify(message), 0, true, false, true);
+    			    //core_mqtt_publish("will/"+md5(md5(self.prop.gateway.toLowerCase())), 'Online', 0, true, false, true);
+    				//core_mqtt_publish("status/"+md5(md5(self.prop.gateway.toLowerCase())), JSON.stringify(message), 0, true, false, true);
     			}
             }
             
@@ -2840,6 +2848,7 @@ const doMOBMOB = (gangs) => {
             delete storeProp.characteristics;
             delete storeProp.connecting;
             delete storeProp.is_mobmob;
+						delete storeProp.is_mobile_gateway;
             delete storeProp.is_mesh;
             delete storeProp.manufactureData;
             delete storeProp.connected;
@@ -2867,6 +2876,7 @@ const doMOBMOB = (gangs) => {
             delete storeProp.characteristics;
             delete storeProp.connecting;
             delete storeProp.is_mobmob;
+						delete storeProp.is_mobile_gateway;
             delete storeProp.is_mesh;
             delete storeProp.manufactureData;
             delete storeProp.connected;
@@ -3062,6 +3072,7 @@ const doMOBMOB = (gangs) => {
     	                self.update(rs);
         			    resolve(rs);
         			}, (err)=>{
+        			    console.log('class_err',err)
     		            self.onConnectionChanged('disconnected');
         			    reject(6001); //Failed to connect
         			});

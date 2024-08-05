@@ -449,7 +449,7 @@
               //filter the device not show in the page
               item.isHidden = false;
               //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
-              let fliterList = ['YO780-Scene-12G','YO780-Scene-6G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
+              let fliterList = ['YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
               if(type == 2){
                 if(fliterList.indexOf(item.device_model) > -1){
                   item.isHidden = true;
@@ -736,7 +736,7 @@
           async tindyCommand() {
             let this_list = this.subdevices.filter((item) => item.chooseStatus);
             this_list.forEach((item) => {
-              let { device_button_group, name, device, ref,device_mode } = item;
+              let { device_button_group, name, device, ref,device_mode ,device_model} = item;
               let mackey = core_utils_get_mac_address_from_guid(device, true);
               let command = ``;
               //on off and the rcu on off
@@ -756,19 +756,33 @@
                 }
                 item.ref = parseInt((item.ref/100)*255);
               } else if (device_button_group.startsWith('OPENCLOSE UART')) {
+                //have differ model to be handle
+                let otherModelStatus = false;
+                if(device_model == 'YO121-AC-R2W') otherModelStatus = true;
                 if(item.ref == 2){
                   let data = `55AA050101036DDC`;
                   data += core_util_calculate_crc16_modbus_for_doa(data);
+                  if(otherModelStatus){
+                    data = `55fefe030338e5`;
+                  }
                   command = `02${mackey}8602${data}`;
                   item.action_command = command;
                 }else if (device_button_group.includes('REVERSE')) {
                   let data = `55AA060102${parseInt(100-item.ref).toString(16).pad('00')}FF`;
                   data += core_util_calculate_crc16_modbus_for_doa(data);
+                  if(otherModelStatus){
+                    data = `55fefe0304${parseInt(100-item.ref).toString(16).pad('00')}`;
+                    data += erp.script.core_util_calculate_crc16_for_motor(data);
+                  }
                   command = `02${mackey}8602${data}`;
                   item.action_command = command;
                 }else{
                   let data = `55AA060102${parseInt(item.ref).toString(16).pad('00')}FF`;
                   data += core_util_calculate_crc16_modbus_for_doa(data);
+                  if(otherModelStatus){
+                    data = `55fefe0304${parseInt(item.ref).toString(16).pad('00')}`;
+                    data += erp.script.core_util_calculate_crc16_for_motor(data);
+                  }
                   command = `02${mackey}8602${data}`;
                   item.action_command = command;
                 }

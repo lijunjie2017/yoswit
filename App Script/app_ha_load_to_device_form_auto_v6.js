@@ -11,10 +11,12 @@ window.ble_load_to_device_form_auto = (params) => {setTimeout(function(){
     const button_group = obj.attr('button_group');
     const guid = obj.attr("guid");
     const display_name = obj.attr('display-name');
+    const page_type = obj.attr('page-type')?1:0;//this can check edit or add
+
     if(!isset(uuid)){
         uuid = window.peripheral[guid].prop.id
     }
-    _ble_load_to_device_form_perform_auto({guid:guid,uuid:uuid, button_group:button_group,display_name : display_name,subdevice_name : subdevice_name});
+    _ble_load_to_device_form_perform_auto({guid:guid,uuid:uuid, button_group:button_group,display_name : display_name,subdevice_name : subdevice_name,"page_type":page_type});
 }, 10);};
 
 window._ble_load_to_device_form_perform_auto = async(loading_config) => {
@@ -31,7 +33,14 @@ window._ble_load_to_device_form_perform_auto = async(loading_config) => {
         loading_device = loading_config;
         clearTimeout(loading_timer);
     }catch(error){
-        app.dialog.alert(_(erp.get_log_description(error)));
+        console.log("error",error);
+        if(error == 7200){
+            erp.script.iot_entry_class_password_verify(guid).then(()=>{
+                _ble_load_to_device_form_perform_auto(loading_config);
+            })
+        }else{
+            app.dialog.alert(_(erp.get_log_description(error)));
+        }
         return
     }
     //return
@@ -82,7 +91,7 @@ window._ble_load_to_device_form_perform_auto = async(loading_config) => {
         if(loading_config.button_group=='IR Setup'){
             mainView.router.navigate(`/mobile-app/device-type-ir?guid=${guid}&model=${model_name}`, {history:true});
         }else{
-            mainView.router.navigate('/mobile-app/general-setting', {history:true});
+            mainView.router.navigate(`/mobile-app/general-setting?page_type=${loading_config.page_type}`, {history:true});
         }
         //if is IAQ model
         let new_cmd = [];
@@ -194,7 +203,8 @@ window._ble_load_to_device_form_auto = (loading_config) => {
         image : device_models.image,
         mac_address: mac_address,
         dms:dms,
-        subdevice_name : loading_config.subdevice_name
+        subdevice_name : loading_config.subdevice_name,
+        page_type : loading_config.page_type
     };
     if(loading_config.button_group.startsWith("RCU DIMMING")){
         let rcu_gang = loading_config.button_group.replace("RCU DIMMING","");

@@ -1,0 +1,349 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Profile') }}</div>
+        <div class="right frappe-list-right">
+          <a class="link icon-only searchbar-enable" data-searchbar=".searchbar-demo">
+            <i class="icon f7-icons if-not-md">search</i>
+            <i class="icon material-icons md-only">search</i>
+          </a>
+        </div>
+        <form data-search-container=".search-list" data-search-in=".item-title"
+          class="searchbar searchbar-expandable searchbar-demo searchbar-init" id="list-search-form" @submit=${search}>
+          <div class="searchbar-inner">
+            <div class="searchbar-input-wrap">
+              <input type="search" placeholder="Search" @blur=${search}/>
+              <i class="searchbar-icon"></i>
+              <span class="input-clear-button"></span>
+            </div>
+            <span class="searchbar-disable-button">Cancel</span>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="page-content infinite-scroll-content ptr-content" data-ptr-mousewheel="true" data-infinite-distance="50" style="height: 100%" @infinite="${loadMore}" @ptr:refresh="${refreshFun}">
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
+      <div class="list medium-inset no-chevron virtual-list searchbar-found search-list">
+        <ul class="dynamic-list-generated-from-jinja">
+          ${profileList.map((item)=> $h`
+          <li
+            class="swipeout swipeout-delete-manual"
+            @swipeout:deleted="${()=>onDeleted(item)}"
+            ref="url:/api/resource/Profile/${item.name}|method:DELETE|data:"
+          >
+            <div class="swipeout-content item-link item-content">
+              <div class="item-inner">
+                <a func="iot_switch_profile" ref="${item.name}" class="item-title" style="width: 90%">
+                  <div class="item-header"><font lang="en">{{ _('Owner') }}</font>: ${item.owner}</div>
+                  <font lang="en" lang-packet="${item.profile_name}" class="${item.name === active_profile?'font-bold':''}">
+                    ${item.flat?item.flat+'-':''}${ tran(item.profile_name) }
+                  </font>
+                  <div class="item-footer">
+                    ${item.shared.map((kitem)=> $h`
+                    <div class="sharewith" style="margin-left: 5px; padding-left: 8px">
+                      <div
+                        style="
+                          margin-left: -10px;
+                          overflow: hidden;
+                          border: solid #fff 2px;
+                          -webkit-border-radius: 12px;
+                          -moz-border-radius: 12px;
+                          border-radius: 12px;
+                          width: 20px;
+                          height: 20px;
+                          background-color: #fff;
+                          background-position: center;
+                          background-repeat: no-repeat;
+                          background-size: 100%;
+                          float: left;
+                        "
+                      >
+                        ${kitem.user_image ? $h`
+                          <div
+                            style="
+                              width: 20px;
+                              height: 20px;
+                              background-image: url('${erp.get_url(kitem.user_image)}');
+                              background-position: center;
+                              background-repeat: no-repeat;
+                              background-size: 100%;
+                            "
+                            alt="{{share}}"
+                          ></div>
+                          ` : $h`
+                          <div
+                            style="
+                              width: 20px;
+                              height: 20px;
+                              background-image: url('style/img/noalbum.png');
+                              background-position: center;
+                              background-repeat: no-repeat;
+                              background-size: 100%;
+                            "
+                            alt="{{ assign.full_name }}"
+                          ></div>
+                          `}
+                      </div>
+                    </div>
+                    `)}
+                  </div>
+                </a>
+                <div
+                  class="item-after"
+                  style="
+                    margin-left: 0px;
+                    padding-left: 0px;
+                    overflow: hidden;
+                    width: 30px;
+                    height: 30px;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    background-size: 100%;
+                    float: left;
+                    color: #fff;
+                  "
+                >
+                  <div class="fab">
+                    ${item.share_permision && $h`
+                    <a
+                      class="share-button-refresh"
+                      @click="${()=>shareWithUser(item)}"
+                      ref="Profile|${item.name}|${tran(item.profile_name)}"
+                      style="width: 30px; height: 30px; text-align: center"
+                    >
+                      <i class="icon material-icons">share</i>
+                    </a>
+                    `}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="swipeout-actions-right ${erp.info.user_settings.owner === item.owner || erp.info.user_settings.owner === 'Administrator'?'':'disabled'}"
+            >
+              <a
+                href="/frappe/form/{{ _('Edit') }} ${tran(item.profile_name)}/APP_HA_Profile_Form_V5/Profile/${item.name}/"
+                class="link color-orange"
+              >
+                <i class="icon material-icons">settings</i>
+              </a>
+              <a href="#" data-confirm="Are you sure you want to delete this item?" class="link swipeout-delete">
+                <i class="icon material-icons">delete</i>
+              </a>
+            </div>
+          </li>
+          `)}
+        </ul>
+        ${load_status && can_load_more && $h`
+        <div class="preloader infinite-scroll-preloader"></div>
+        `}
+      </div>
+      <div class="fab fab-right-bottom" style="position: fixed;">
+        <a href="/frappe/form/{{ _('Create Profile') }}/APP_HA_Profile_Form_V5/Profile/null/" style="text-align: center">
+          <i class="icon material-icons">add</i>
+        </a>
+      </div>
+      ${profileList.length === 0 && $h`
+      <no-record-found></no-record-found>
+      `}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    let limit_start = 0;
+    let limit = 20;
+    let profileList = [];
+    let active_profile = erp.info.profile.name;
+    let load_status = true;
+    let can_load_more = true;
+    let keyword = '';
+    const refreshFun = (e, done) => {
+      limit_start = 0;
+      init();
+      done();
+      $update();
+    };
+    const loadMore = () => {
+      if(!load_status) return;
+      if (!can_load_more) return;
+
+      load_status = false;
+      setTimeout(async()=>{
+        load_status = true;
+        limit_start = limit_start+limit;
+        await getData();
+        $update();
+      },500)
+    };
+    const init = async () => {
+      getData();
+    };
+    const getData = async () => {
+      console.log('getData');
+      try {
+        let list = await http.request(
+          encodeURI(`${erp.settings[erp.appId].app_api_url}/api/method/appv6.getProfileLists?limit=${limit}&limit_start=${limit_start}&keyword=${keyword}`),
+          {
+            method: 'GET',
+            serializer: 'json',
+            responseType: 'json',
+            timeout: 3,
+          }
+        );
+        if(limit_start == 0){
+          profileList = list.data.profile || []
+        }else{
+          profileList = profileList.concat(list.data.profile || []);
+        }
+
+        if ((list.data.profile || []).length < limit) {
+          can_load_more = false;
+        }
+        // let temporaryArry = [];
+        // let currentIdx = profile_list_temp.findIndex((e) => e.name === active_profile);
+        // console.log(currentIdx);
+        // temporaryArry.push(profile_list_temp[currentIdx]);
+        // profile_list_temp.splice(currentIdx, 1);
+        // profileList = temporaryArry.concat(profile_list_temp);
+        //update the share permissions
+        profileList.forEach((item) => {
+          let this_list = item.shared;
+          let share_permision = false;
+          if (item.owner === erp.info.user_settings.owner || erp.info.user_settings.owner === 'Administrator') {
+            share_permision = true;
+          } else {
+            this_list.forEach((kitem) => {
+              if (kitem.user === erp.info.user_settings.owner) {
+                share_permision = true;
+              }
+            });
+          }
+          item.share_permision = share_permision;
+        });
+        console.log(profileList);
+        //load_status = false;
+        $update();
+      } catch (e) {
+        console.log(e);
+      }
+    };
+    const onDeleted = async(item)=>{
+      console.log("delete");
+      try{
+        await http.request(`/api/resource/Profile/${item.name}`, {
+            method: 'DELETE'
+        })
+      }catch(err){
+        app.dialog.alert(err);
+        init();
+        
+      }
+    }
+    const search = ()=>{
+      let this_keyword = $(`input[type="search"]`).val();
+      console.log(this_keyword);
+      // if(!this_keyword){
+      //   return;
+      // }
+      keyword = this_keyword;
+      init();
+      load_status = false;
+      $update();
+      setTimeout(()=>{
+        load_status = true;
+      },500)
+    }
+    const shareWithUser = (item) => {
+      console.log(item);
+      let tempList = [];
+      item.shared.forEach(kitem=>{
+        tempList.push(kitem.user.toLowerCase());
+      })
+      let nameList = tempList.join(',')
+      app.dialog.prompt(_('Share With'), _(`Share this ${tran(item.profile_name)} with`), (email) => {
+        //check repeat email
+        if (nameList.includes(email.toLowerCase())) {
+          app.dialog.alert(`Sorry,this email ${email.toLowerCase()} has been shared.`);
+          return;
+        }
+        const re = /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
+        if (re.test(String(email).toLowerCase()) || String(email).toLowerCase() == 'administrator') {
+          let thisurl = '/api/method/frappe.share.add';
+          http
+            .request(thisurl, {
+              method: 'POST',
+              serializer: 'json',
+              responseType: 'json',
+              data: {
+                doctype: 'Profile',
+                name: item.name,
+                user: email.toLowerCase(),
+                read: 1,
+                write: 0,
+                submit: 0,
+                share: 1,
+                notify: 1,
+              },
+            })
+            .then(
+              (res) => {
+                console.log('added');
+                // app.dialog.alert('Success.')
+                //app.ptr.refresh('.frappe-list-ptr-content');
+                item.shared.push({
+                  user : email,
+                  user_image : 'style/img/noalbum.png'
+                })
+                $update();
+                // let newHTML = '';
+                // newHTML += `<div style="margin-left:-10px;overflow:hidden;border:solid #fff 2px;-webkit-border-radius: 12px;-moz-border-radius: 12px;border-radius: 12px;width:20px;height:20px;background-color: #fff;background-position:center;background-repeat:no-repeat;background-size:100%;float:left;">`;
+                // newHTML += `<div style="width:20px;height:20px;background-image:url('view/default/style/img/noalbum.png');background-position:center;background-repeat:no-repeat;background-size:100%;"></div>`;
+                // newHTML += `</div>`;
+                // $(this).parents('.item-inner').find('.sharewith').prepend(newHTML);
+              },
+              (error) => {
+                //print_r(error, TAG);
+                app.dialog.alert(`Sorry, this email (${email.toLowerCase()}) does not exist.`);
+              }
+            );
+        } else {
+          app.dialog.alert(`Sorry, this email (${email.toLowerCase()}) does not exist`);
+        }
+      });
+    };
+    $onMounted(() => {
+      init();
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .font-bold {
+    font-weight: bold;
+  }
+</style>

@@ -7,7 +7,10 @@ window.device_gateway_setting_component = {
         erp.setting.app_api_url + '/files/gateway.png'
       }');background-size:40px auto;background-position:left center;background-repeat:no-repeat;"></div>
       <div style="margin-left:55px;margin-top: 10px;">
-        <div style="font-size:25px;font-weight:bold;height:37px;overflow:hidden;">{{ device.device_model }}-{{ device.mac_address }}</div>
+        <div style="font-size:25px;font-weight:bold;height:37px;overflow:hidden;">
+        <span v-if="ismobile == false">{{ device.device_model }}-{{ device.mac_address }}</span>
+        <span v-else>{{_('Mobile Phone')}}</span>
+        </div>
         <div style="-ms-word-break: break-all;word-break: break-all;word-break: break-word;font-size:12px;">GUID: {{ gateway }}</div>
       </div>
     </div>
@@ -46,7 +49,7 @@ window.device_gateway_setting_component = {
                       <div class="item-inner">
                           <div class="item-title-row">
                               <div class="item-title display-flex justify-content-flex-start align-content-center" :signal="item.signal" >
-                              <div class="signal"></div>
+                              <div class="signal" v-if="!ismobile"></div>
                               <span>{{ item.device_model }} (v{{item.firmware}})</span>
                               <i class="material-icons text-color-orange" v-if="item.default_connect === 1">check_box</i>
                               <i class="material-icons" style="color:red;" v-if="item.checked && !item.link">link_off</i>
@@ -68,7 +71,7 @@ window.device_gateway_setting_component = {
     </div>
   </div>
   `,
-  props: ['gateway', 'guid','type'],
+  props: ['gateway', 'guid','type','ismobile'],
   data: () => {
     return {
       profileDevice: [],
@@ -82,6 +85,7 @@ window.device_gateway_setting_component = {
   },
   mounted() {
     console.log("gateway",this.gateway);
+    console.log("ismobile",this.ismobile);
     this.getProfile();
     console.log(this.type);
   },
@@ -115,13 +119,22 @@ window.device_gateway_setting_component = {
           }
         })
         .then(() => {
-          return http.request(encodeURI('/api/resource/Device/' + this.guid), {
-            responseType: 'json',
-            method: 'GET',
-          });
+          if(this.ismobile){
+            //no return
+            return new Promise((resolve,reject)=>{
+              resolve(1)
+            })
+          }else{
+            return http.request(encodeURI('/api/resource/Device/' + this.guid), {
+              responseType: 'json',
+              method: 'GET',
+            });
+          }
         })
         .then((res) => {
-          this.device = res.data.data;
+          if(!this.ismobile){
+            this.device = res.data.data;
+          }
         })
         .then(() => {
           this.checkMqttStatus();
@@ -169,11 +182,11 @@ window.device_gateway_setting_component = {
 
       const arr = [];
       // New Network
-      arr.push({
-        network_id: '---',
-        isGroup: true,
-        groupName: _('Mob-Mob Devices'),
-      });
+      // arr.push({
+      //   network_id: '---',
+      //   isGroup: true,
+      //   groupName: _('Mob-Mob Devices'),
+      // });
 
       // New Network
       keys.forEach((e) => {
@@ -239,6 +252,17 @@ window.device_gateway_setting_component = {
     },
     async handleChangeAllGateway(){
       console.log(this.allchecked);
+      //if profile device have other gateway,cancel this operate
+      let this_profile_devices = cloneDeep(erp.info.profile.profile_device);
+      let isallChecked = true;
+      this_profile_devices.forEach(kitem=>{
+        if(isset(kitem.gateway) && kitem.gateway){
+          isallChecked = false;
+        }
+      })
+      if(!isallChecked){
+        return
+      }
       this.allchecked = true;
       let default_connect_count = 0;
       this.profileDevice.forEach(item=>{
@@ -327,7 +351,7 @@ window.device_gateway_setting_component = {
               method: 'PUT',
               serializer: 'json',
               data: {
-                gateway: gateway,
+                gateway: gateway.toLowerCase(),
               },
             });
     
@@ -474,6 +498,7 @@ window.device_gateway_setting_component = {
     checkMqttStatus(){
         let topic_self = this.gateway;
         window.topic_self = topic_self;
+        console.log('topic_self',topic_self)
         //core_mqtt_publish("status/"+md5(md5(topic_self.toLowerCase())), json, 0, true, false);
         core_mqtt_subscribe("status/"+md5(md5(topic_self.toLowerCase())), 0, false).then(()=>{
             core_mqtt_publish("cmd/"+md5(md5(topic_self.toLowerCase())), {
@@ -507,6 +532,9 @@ window.device_gateway_setting_component = {
     startScanDeviceForGateway(){
       // after 20s later quit the scan
       let that = this;
+      if(this.ismobile){
+        return
+      }
       let cmd = [{"action":'connect'},{"action":"write",data:'9390'}];
       cmd.push({"action":"startNotification",post:(id,s,rs)=>{
         //console.log('data',rs);

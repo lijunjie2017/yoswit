@@ -1,0 +1,192 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Test') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <step-component></step-component>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        components:{
+          StepComponent : window.app_core_vue_component_map['Step']
+        },
+        data : {},
+        mounted(){},
+        methods:{},
+        computed:{},
+        beforeDestroy(){}
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+.center {
+  color: #d6d6d6;
+	text-align: center;
+	margin-top: 50px;
+}
+.buttons {
+	display: block;
+	width: 100%;
+	margin-top: 65px;
+	text-align: center;
+}
+.buttons a {
+	text-decoration: none;
+	background-color: gray;	
+	padding: 8px 25px;
+	color: #ffffff;
+	-webkit-border-radius: 3px;
+	   -moz-border-radius: 3px;
+	        border-radius: 3px;
+}
+.buttons a:hover {
+	background-color: #cfcfcf;
+}
+a.next {
+	margin-left: 25px;
+}
+a.prev {
+	margin-right: 25px;
+}
+/* =================== */
+/* PROGRESS BAR STYLES */
+/* =================== */
+.progress {
+	width: 100%;
+	max-width: 800px;
+	position: relative;
+	text-align: center;
+	left: 4%;
+}
+.progress ul li {
+	background-color: #d6d6d6; /* Default Bar Color */
+	display: table-cell;
+	position: relative;
+  width: 70px;
+  height: 10px;
+	line-height: 20px;
+	z-index: -3;
+	color: #FFF;
+	text-align: left;
+	transition: background-color 0.75s, color 0.5s;
+}
+.progress ul li::before {
+	content:'';
+	width: 40px;
+	height: 40px;
+	color: #FFF;
+	line-height: 30px;
+	text-align: center;
+	left: -15px;
+	background-color: #d6d6d6;/* Default Circle Color */
+	border: solid 5px #d6d6d6;/* Default Circle Color */
+	index: -9;
+	position: absolute;
+	display: block;
+	top: -10px;	
+	margin-right: auto;
+	margin-left: auto;
+	z-index: -1;
+	
+	transition: background-color 0.75s, color 0.5s;
+	
+	
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
+	
+	-webkit-border-radius: 50%;
+	   -moz-border-radius: 50%;
+	        border-radius: 50%;
+}
+/* CURRENT STEP */
+.progress ul li.current {
+	display: inline-block;
+	z-index: -3;
+	color: #0e90d2;
+	position: relative;
+	transition: background-color 0.75s, color 0.5s;
+	
+}
+.progress ul li.current::before {
+	border: solid 5px #0e90d2;/* Current Step Circle Color */
+	background-color: #FFF;
+	transition: background-color 0.75s, color 0.5s;
+	
+	-webkit-animation: pulse 3s ease-out;
+  -moz-animation: pulse 3s ease-out;
+  animation: pulse 3s ease-out;
+  -webkit-animation-iteration-count: infinite;
+  -moz-animation-iteration-count: infinite;
+  animation-iteration-count: infinite;
+}
+/* COMPLETED STEPS */
+.progress ul li.complete {
+	background-color: #0e90d2; /* Completed Step Bar Color */
+	transition: background-color 0.75s, color 0.5s;
+}
+.progress ul li.complete::before {
+	background-color: #0e90d2; /* Completed Step Circle Color */
+	border: 5px solid transparent;
+	transition: background-color 0.75s, color 0.5s;
+}
+/* REMOVE FIRST STEP COLOR BAR LINE */
+.progress ul li:last-of-type {
+	background-color: transparent;
+}
+.progress ul li.current:last-of-type,
+.progress ul li.complete:last-of-type  {
+	background-color: transparent;
+}
+
+@-webkit-keyframes pulse {
+    0% {-webkit-transform: scale(1, 1);}
+    50% {-webkit-transform: scale(1.1, 1.1);}
+    100% {-webkit-transform: scale(1, 1);}
+}
+@-keyframes pulse {
+    0% {transform: scale(1, 1);}
+    50% {transform: scale(1.1, 1.1);}
+    100% {transform: scale(1, 1);}
+}
+</style>

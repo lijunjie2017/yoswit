@@ -258,18 +258,26 @@ window.core_device_replace_device_write_command = (guid) => {
         		data:{data:core_device_replace_target_device},
         	});
     	}).then((rs)=>{
-    	    url = "/api/resource/Profile%20Device/"+encodeURI(core_device_replace_original_device.name);
+    	    url = "/api/resource/Profile/"+encodeURI(erp.info.profile.name);
     	    method = "PUT";
           let newData = Object.assign(core_device_replace_target_profile_device,{
             parenttype:'Profile',
             parent:erp.info.profile.name,
             parentfield:'profile_device'
           });
+          let devices = cloneDeep(erp.info.profile.profile_device);
+          devices.forEach(item=>{
+            if(item.name == core_device_replace_original_device.name){
+                item = newData
+            }
+          })
     	    return http.request(url, {
         		method: method,
                 dataType: 'json',
         		serializer: 'json',
-        		data:core_device_replace_target_profile_device,
+        		data:{
+                    profile_device:devices,
+                },
                 contentType:'application/json',
         	});
     	}).then((rs)=>{

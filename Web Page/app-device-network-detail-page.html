@@ -540,6 +540,16 @@
             });
             return peripheral[item.device].write(postCommand);
           },
+          updateDialogConfirm(title){
+            return new Promise((resolve,reject)=>{
+              app.dialog.confirm(`${_(title)}`,()=>{
+                resolve(1);
+                mainView.router.back();
+              },()=>{
+                resolve(0)
+              })
+            })
+          },
           async updateDeviceSettings() {},
           async updateDeviceNetwork() {
             //get this network devices
@@ -660,6 +670,9 @@
                                 text: _('Update Successfully'),
                                 closeTimeout: 2000,
                               });
+                              setTimeout(()=>{
+                                this.updateDialogConfirm('Configuration successful. It will take some time for the devices to connect. Would you like to return?');
+                              },2001)
                             }
                           } catch (errors) {
                             app.toast.close();
@@ -682,6 +695,9 @@
                   text: _('Update Successfully'),
                   closeTimeout: 2000,
                 });
+                setTimeout(()=>{
+                  this.updateDialogConfirm('Configuration successful. It will take some time for the devices to connect. Would you like to return?');
+                },2001)
                 // app.dialog.confirm(
                 //   `${_('The configuration is complete. It will take some time for the devices to network with each other. Do you want to go back?')}`,
                 //   () => {
