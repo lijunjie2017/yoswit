@@ -225,10 +225,9 @@
 																</a>
 																${profilePermision && $h`
 																<${renderSwipeLeftPanel} kitem="${kitem}" />
-																
 																<${renderSwipeRightPanel} kitem="${kitem}" />
-																`}
 																<${renderMainButton} kitem="${kitem}" key="${md5(JSON.stringify(kitem))}"/>
+																`}
 															</div>
 														</li>
 														<${renderBottomButton} kitem="${kitem}" key="${md5(kitem.device_attachment_status)}${md5(kitem.config?kitem.config:'')}${md5(kitem.device_config?kitem.device_config:'')}${md5(md5(updateTime+''))}"/>
@@ -244,7 +243,7 @@
 					`}
 							`)}
 				</div>
-				${profilePermision && $h`
+				${profilePermision && $h`	
 				<div id="room-0-div" class="list media-list no-margin ${show_unassigned?'':'device-none'}">
 					<ul>
 						<li class="room">
@@ -259,7 +258,6 @@
 								</div>
 							</div>
 						</li>
-						
 						<div class="unassigned-box">
 									${unassigned_subdevices.map((kitem)=> $h`
 							<li 
@@ -695,57 +693,20 @@ const renderMainButton = (props, {
 							}
 						}
 						if(kitem.device_button_group.startsWith('RCU DIMMING')){
-							//if no signal,post to the anthord rcu
-							let selfPostStatus = true;
-							//try to connect next rcu
-							let anthordRcuDevice = '';
-							let anthordRcuGateway = '';
-							// if(!peripheral[props.kitem.device].prop.disappear && peripheral[props.kitem.device].prop.is_mobmob == 0){
-								
-							// 	let devices = cloneDeep(erp.info.profile.profile_device);
-							// 	devices.forEach(zitem=>{
-							// 		if(zitem.device_model == 'YO780' && zitem.device != props.kitem.device){
-							// 			anthordRcuDevice = zitem.device;
-							// 			anthordRcuGateway = zitem.gateway;
-							// 		}
-							// 	})
-							// 	if(anthordRcuDevice && anthordRcuGateway){
-							// 		selfPostStatus = false;
-							// 	}
-							// }
-							if(!selfPostStatus){
-								peripheral[props.kitem.device].prop.gateway = anthordRcuGateway;
-								peripheral[props.kitem.device].prop.is_mobmob = true;
-								peripheral[anthordRcuDevice].rcuDimming([{
-									gang: bleHelper.getGangId(props.kitem.device_button_group),
-									value: props.kitem.device_status
-								}]).then(()=>{
+							peripheral[props.kitem.device].rcuDimming([{
+								gang: bleHelper.getGangId(props.kitem.device_button_group),
+								value: props.kitem.device_status
+							}]).then(()=>{
 
-								}).catch(error=>{
-									if(error == 7200){
-										erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
-											
-										})
-									}else{
-										app.dialog.alert(_(erp.get_log_description(error)));
-									}
-								})
-							}else{
-								peripheral[props.kitem.device].rcuDimming([{
-									gang: bleHelper.getGangId(props.kitem.device_button_group),
-									value: props.kitem.device_status
-								}]).then(()=>{
-
-								}).catch(error=>{
-									if(error == 7200){
-										erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
-											
-										})
-									}else{
-										app.dialog.alert(_(erp.get_log_description(error)));
-									}
-								})
-							}
+							}).catch(error=>{
+								if(error == 7200){
+									erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+										
+									})
+								}else{
+									app.dialog.alert(_(erp.get_log_description(error)));
+								}
+							})
 						}else{
 							peripheral[props.kitem.device].dimming([{
 								gang: bleHelper.getGangId(props.kitem.device_button_group),
@@ -1211,8 +1172,12 @@ const renderMainButton = (props, {
 					`;
 	} else if (props.kitem.device_button_group.startsWith('RCU DIMMING') || props.kitem.device_button_group.startsWith('DIMMING')) {
 		return () => $h`
-					<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" mobmob="${props.kitem.mobmob || 0}">
-						
+					<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
+						<a class="iot-connect non-connect" @click="${()=>click_connect(props.kitem)}">
+							<div class="button button-raised button-big circle">
+								<i class="material-icons">bluetooth_connected</i>
+							</div>
+						</a>
 						<a href="#" class="on_flag off_flag" ref="${props.kitem.device_status>0?1:0}" @click="${() => click_onoff(props.kitem)}">
 								<div class="button button-raised button-big onoff"></div>
 						</a>
@@ -1393,6 +1358,7 @@ const renderBottomButton = (props, {
 	let device_button_group = props.kitem.device_button_group
 	let key = `dimer_slidebar_${props.kitem.device}`;
 	let guid = props.kitem.device || props.kitem.guid;
+	console.log("renderBottomButton")
 	//thie function control the Dimming mode bar change 
 	const range_change_fun_dimming = (element) => {
 			debugger
@@ -1424,56 +1390,20 @@ const renderBottomButton = (props, {
 				})
 			} else if (device_button_group.startsWith("RCU DIMMING")) {
 				// debugger
-				let selfPostStatus = true;
-				let anthordRcuDevice = '';
-				let anthordRcuGateway = '';
-				// if(!peripheral[props.kitem.device].prop.disappear && peripheral[props.kitem.device].prop.is_mobmob == 0){
-				// 	//try to connect next rcu
-				// 	let devices = cloneDeep(erp.info.profile.profile_device);
-				// 	devices.forEach(zitem=>{
-				// 		if(zitem.device_model == 'YO780' && zitem.device != props.kitem.device){
-				// 			anthordRcuDevice = zitem.device;
-				// 			anthordRcuGateway = zitem.gateway;
-				// 		}
-				// 	})
-				// 	if(anthordRcuDevice){
-				// 		selfPostStatus = false;
-				// 	}
-				// }
-				if(!selfPostStatus){
-					peripheral[props.kitem.device].prop.gateway = anthordRcuGateway;
-					peripheral[props.kitem.device].prop.is_mobmob = true;
-					peripheral[anthordRcuDevice].rcuDimming([{
-						gang: bleHelper.getGangId(props.kitem.device_button_group),
-						value: range_value
-					}]).then(()=>{
+				peripheral[props.kitem.device].rcuDimming([{
+					gang: bleHelper.getGangId(props.kitem.device_button_group),
+					value: range_value
+				}]).then(()=>{
 
-					}).catch(error=>{
-						if(error == 7200){
-							erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
-								
-							})
-						}else{
-							app.dialog.alert(_(erp.get_log_description(error)));
-						}
-					})
-				}else{
-					peripheral[props.kitem.device].rcuDimming([{
-						gang: bleHelper.getGangId(props.kitem.device_button_group),
-						value: range_value
-					}]).then(()=>{
-
-					}).catch(error=>{
-						if(error == 7200){
-							erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
-								
-							})
-						}else{
-							app.dialog.alert(_(erp.get_log_description(error)));
-						}
-					})
-				}
-				
+				}).catch(error=>{
+					if(error == 7200){
+						erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
+							
+						})
+					}else{
+						app.dialog.alert(_(erp.get_log_description(error)));
+					}
+				})
 			}
 		} catch (error) {
 			app.dialog.alert(erp.get_log_description(error));
@@ -1709,72 +1639,59 @@ const renderBottomButton = (props, {
 		let element = $(`.curtain-subdevice .range-slider[data-id="${key}"]`);
 		setTimeout(() => {
 			if (props.kitem.device_button_group.startsWith('OPENCLOSE UART')) {
-				let range_key = `${props.kitem.device}_${props.kitem.device_button_group}`;
-				if(!isset(range_silder_list[range_key])){
-					setTimeout(()=>{
-						range_silder_list[range_key] = app.range.create({
-							el: `.page-current .range-slider[guid="${props.kitem.device}"]`,
-							value: props.kitem.device_status || 0,
-							min: 0,
-							max: 100,
-							draggableBar: false,
-							label: true,
-							step: 1,
-							scale: true,
-							scaleSteps: 5,
-							scaleSubSteps: 4,
-							on: {
-								changed: range_change_fun_curtain,
-							},
-						});
-					},500)
-				}
+				let range_silder = app.range.create({
+					el: `.range-slider[guid="${props.kitem.device}"]`,
+					value: props.kitem.device_status || 0,
+					min: 0,
+					max: 100,
+					draggableBar: false,
+					label: true,
+					step: 1,
+					scale: true,
+					scaleSteps: 5,
+					scaleSubSteps: 4,
+					on: {
+						changed: range_change_fun_curtain,
+					},
+				});
 			}else if (props.kitem.device_button_group.startsWith('RCU DIMMING') || props.kitem.device_button_group.startsWith('DIMMING')) {
 				const v = Math.ceil((props.kitem.device_status*1.0 / 255.0) * 100.0) || 0;
 				    let range_key = `${props.kitem.device}_${props.kitem.device_button_group}`;
 				    if(!isset(range_silder_list[range_key])){
-							setTimeout(()=>{
-								range_silder_list[range_key] = app.range.create({
-									el: `.page-current .range-slider-home-auto[guid="${props.kitem.device}"][button_group="${props.kitem.device_button_group}"]`,
-									value: v,
-									min: 0,
-									max: 100,
-									draggableBar: false,
-									label: true,
-									step: 1,
-									scale: true,
-									scaleSteps: 5,
-									scaleSubSteps: 4,
-									on: {
-										changed: range_change_fun_dimming,
-									},
-								});
-							},500)
+    				    range_silder_list[range_key] = app.range.create({
+    						el: `.range-slider[guid="${props.kitem.device}"][button_group="${props.kitem.device_button_group}"]`,
+    						value: v,
+    						min: 0,
+    						max: 100,
+    						draggableBar: false,
+    						label: true,
+    						step: 1,
+    						scale: true,
+    						scaleSteps: 5,
+    						scaleSubSteps: 4,
+    						on: {
+    							changed: range_change_fun_dimming,
+    						},
+    					});
 				    }
 			}else if(props.kitem.device_button_group.startsWith('OPENCLOSE GANG') || props.kitem.device_button_group.startsWith('RCU OPENCLOSE GANG')) {
 				let range_key = `${props.kitem.device}_${props.kitem.device_button_group}`;
-					// alert(range_key);
-					// alert(isset(range_silder_list[range_key]))
 				    if(!isset(range_silder_list[range_key])){
-							//console.log($(`.range-slider[guid="${props.kitem.device}"][button_group="${props.kitem.device_button_group}"]`))
-    				  setTimeout(()=>{
-								range_silder_list[range_key] = app.range.create({
-									el: `.page-current .range-slider[guid="${props.kitem.device}"][button_group="${props.kitem.device_button_group}"]`,
-									value: 0,
-									min: 0,
-									max: 100,
-									draggableBar: false,
-									label: true,
-									step: 1,
-									scale: true,
-									scaleSteps: 5,
-									scaleSubSteps: 4,
-									on: {
-										changed: range_change_fun_switch_curtain,
-									},
-								});
-							},500)  
-							//alert(range_silder_list[range_key]);
+    				    range_silder_list[range_key] = app.range.create({
+    						el: `.range-slider[guid="${props.kitem.device}"][button_group="${props.kitem.device_button_group}"]`,
+    						value: 0,
+    						min: 0,
+    						max: 100,
+    						draggableBar: false,
+    						label: true,
+    						step: 1,
+    						scale: true,
+    						scaleSteps: 5,
+    						scaleSubSteps: 4,
+    						on: {
+    							changed: range_change_fun_switch_curtain,
+    						},
+    					});
 				    }
 			}
 		}, 0)
@@ -1995,10 +1912,9 @@ export default async (props, ctx) => {
 				subdevices = [];
 				range_silder_list = {};//init the dimming bar
 				updateTime = new Date().getTime();
-				setTimeout(()=>{
+        setTimeout(()=>{
 					mainView.router.refreshPage();
 				},50)
-        
       }
 			initPage(2);
 			scan();
@@ -2889,20 +2805,20 @@ export default async (props, ctx) => {
 					setTimeout(()=>{
 						$("li.device[guid='" + p.guid + "'] .rf-sensor i").html('directions_walk');
 					},500)
-					//console.log($("li.device[guid='" + p.guid + "'] .rf-sensor i"));
+					console.log($("li.device[guid='" + p.guid + "'] .rf-sensor i"));
         } else {
           //$("li.device[guid='" + p.guid + "'] .rf-sensor i").text('block');
         }
 		}else if(s.device_button_group.startsWith("DOOR SIGN")){
 			//this must be check the 81(clear) and 82(dnd)
 			let gangs = peripheral[p.guid].prop.status.control;
-			//console.log("gangs",gangs)
+			console.log("gangs",gangs)
 			let clear = gangs[0][80];
 			let dnd = gangs[0][81];
 			s['dnd'] = dnd;
 			s['clear'] = clear;
-			//console.log("clear",clear);
-			//console.log("dnd",dnd);
+			console.log("clear",clear);
+			console.log("dnd",dnd);
 		}
 	};
 	const update_subdevice_by_device = (s, p) => {};
@@ -2973,7 +2889,7 @@ export default async (props, ctx) => {
 				continue;
 			}
 			let checkhash = '';
-			//console.log('p.gateway.split',p.gateway.split('-').length)
+			console.log('p.gateway.split',p.gateway.split('-').length)
 			if(p.gateway.split('-').length <= 2){
 				checkhash = `will/${md5(md5(p.gateway.toLowerCase()))}`
 			}else{
@@ -2983,7 +2899,7 @@ export default async (props, ctx) => {
 					is_mobile_gateway = 1;
 				}
 			}
-			//console.log('checkhash',checkhash)
+			console.log('checkhash',checkhash)
 			if (`will/${selfgatewayhash}` == checkhash) {
 				
 				peripheral[guid].update({

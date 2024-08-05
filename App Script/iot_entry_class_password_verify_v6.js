@@ -15,9 +15,8 @@ erp.script.iot_entry_class_password_verify = (guid, profile_subdevice_id) => {
           if (err == 7200) {
             app.dialog.password('Please enter correct password', function (password) {
               if (password.trim() == '' || password.length != 6) {
-                app.dialog.alert('Invalid Password!', function () {
-                  iot_entry_class_password_verify(guid);
-                });
+                app.dialog.alert('Invalid Password!');
+                //iot_entry_class_password_verify(guid);
               } else {
                 peripheral[guid].prop.password = password;
                 //if password is correct, then update the profile

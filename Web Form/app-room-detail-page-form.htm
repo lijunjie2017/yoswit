@@ -2,8 +2,8 @@
   frappe.web_form.after_load = async () => {
     try {
       app.preloader.show();
-      console.log('frappe', frappe);
-      console.log('erp', erp);
+      //console.log('frappe', frappe);
+      //console.log('erp', erp);
       let data;
       // 上传图片
       async function uploadFile(base64String, isPrivate = 0) {
@@ -33,7 +33,7 @@
             data = r?.data?.data;
             if (data) {
               // 给表单赋值
-              frappe.web_form?.set_value('title', data.title);
+              frappe.web_form?.set_value('title', tran(data.title));
             } else {
               console.log('未找到数据');
               app.toast
@@ -110,12 +110,23 @@
     app.preloader.show();
 
     const roomName = mainView.router.currentRoute.query?.roomName;
-    let url = roomName ? encodeURIComponent(`/api/resource/Profile Room/${roomName}`) : encodeURIComponent(`/api/resource/Profile Room`);
+    //in case the permision,should post all the data to the profile
+
+    let url = roomName ? encodeURIComponent(`/api/resource/Profile/${erp.info.profile.name}`) : encodeURIComponent(`/api/resource/Profile Room`);
+    let roomList = cloneDeep(erp.info.profile.profile_room);
+    roomList.forEach(item=>{
+      if(item.name === roomName){
+        item.title = formData.title;
+      }
+    });
+    let postData = {
+      profile_room : roomList
+    }
     await http2
       .request({
         url: url,
         method: roomName ? 'PUT' : 'POST',
-        data: formData,
+        data: roomName?postData:formData,
         debug: true,
       })
       //.then(r => r.json())

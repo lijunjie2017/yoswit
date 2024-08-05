@@ -34,24 +34,30 @@ window.profile_form_init = function(Lists){
                 let data = JSON.parse(res.data).data
                 console.log(data)
                 let namecode = data.name
+                let profile_room = []
                 for(let i in Lists){
-                    let THISURLONE = '/api/resource/Profile%20Room/'
-                    setTimeout(async()=>{
-                        await http.request(THISURLONE,{
-                            method: "POST",
-                            dataType: 'json',
-                            contentType:'application/json',
-                            serializer : 'json',
-                            data : {
-                                banner:'',
-                                current_language:'',
-                                parent : namecode,
-                                parentfield : 'profile_room',
-                                parenttype : 'Profile',
-                                title : Lists[i]
-                            }
-                        })
-                    },500)
+                    profile_room.push({
+                        banner:'',
+                        current_language:'',
+                        parent : namecode,
+                        parentfield : 'profile_room',
+                        parenttype : 'Profile',
+                        title : Lists[i]
+                    })
+                }
+                let THISURLONE = '/api/resource/Profile/'+namecode;
+                try{
+                    await http.request(THISURLONE,{
+                        method: "PUT",
+                        dataType: 'json',
+                        contentType:'application/json',
+                        serializer : 'json',
+                        data : {
+                            profile_room : profile_room
+                        }
+                    })
+                }catch(error){
+                    console.log("error",error)
                 }
                 //save defalut profile
                 await iot_switch_profile_for_save(namecode);
@@ -64,8 +70,8 @@ window.profile_form_init = function(Lists){
                 });
                 app.dialog.close();
                 app.preloader.hide();
-                app.ptr.refresh('.frappe-list-ptr-content');
-                mainView.router.refreshPage();
+                //app.ptr.refresh('.frappe-list-ptr-content');
+                //mainView.router.refreshPage();
                 }else{
                     app.dialog.close();
                     mainView.router.back();

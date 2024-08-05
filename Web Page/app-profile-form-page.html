@@ -1,0 +1,85 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${ tran(title) }</div>
+        <div class="right frappe-form-right">
+          <a href="#" class="link icon-only" func="controller_frappe_form_reset">
+            <i class="icon material-icons">replay</i>
+          </a>
+          <a href="#" class="link icon-only check-button sure-icon">
+            <i class="icon material-icons">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="list no-hairlines-md">
+        <ul>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-title item-label" lang="en">{{ _("Name") }}</div>
+              <div class="item-input-wrap">
+                <input class="init-input profile_name profile-name" name="multilang-profile_name-{{doc.lang}}" 
+                    value="{{ tran(profile.profile_name) if profile != None else (user_settings.flat if user_settings.flat != None   else '') }}" 
+                        type="text" placeholder="{{ _('Name') }}" required validate/>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input">
+            <div class="item-inner">
+                <div class="item-title item-label" lang="en">{{ _("Flat") }}</div>
+                <div class="item-input-wrap">
+                    <input class="init-input"
+                        type="text" readonly="readonly" value="{{ tran(user_settings.flat) }}"/>
+                </div>
+            </div>
+          </li>
+          <li class="item-content item-input">
+            <div class="item-inner">
+                <div class="item-title item-label" lang="en">{{ _("Profile Template") }}</div>
+                <div class="item-input-wrap">
+                    <input type="text" placeholder="Your Profile Template" readonly="readonly" id="demo-picker-device" />
+                </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+      const title = 'Create Profile';
+    return $render;
+  };
+</script>
+
+<style>
+  .control-opacity{
+      opacity: 0;
+  }
+  .sharedwith-title{
+      padding : 15px;
+  }
+</style>
