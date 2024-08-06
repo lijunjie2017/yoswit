@@ -1,0 +1,711 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${ title }</div>
+        <div class="right">
+          <a link icon-only><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px" @click="${runMechine}">play_circle</i></a>
+          {# <a link icon-only
+            ><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px" @click="${runMechine}">play_circle</i></a
+          > #}
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      ${!this_miele_token? $h`
+      <iframe id="myIframe" src="${targetUrl}" frameborder="0" style="height: 100%; width: 100%"></iframe>
+      `: $h`
+      <div class="steam-oven-micro">
+        <div class="card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                  <select name="running-mode" @change="${()=>modeChange()}">
+                    ${currentProgram.map((item,index)=> $h`
+                    <option value="${item.programId}" selected>${item.program}</option>
+                    `)}
+                    ${programs.map((item,index)=> $h`
+                    <option value="${item.programId}">${item.program}</option>
+                    `)}
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">Running Mode</div>
+                      <div class="item-after"></div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        ${modeConfigParams.map((item)=> $h` ${item.key !== "duration" ? $h`
+        <div class="card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                  <select name="${item.key}-${item.programId}">
+                    ${item.arr.map((val)=> $h`
+                    <option value="${val}" selected>${val}</option>
+                    `)}
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">${item.key}</div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        ` : $h`
+        <a></a>
+        `} ${item.key === "duration" ? $h`
+        <div class="card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link">
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">${item.key}</div>
+                      <input
+                        class="text-muted start-time"
+                        name="start-time"
+                        type="text"
+                        readonly="readonly"
+                        id="demo-picker-describe"
+                        style="text-align: right; width: 80%"
+                      />
+                    </div>
+                  </div>
+                </a>
+                {#
+                <div class="item-content item-input">
+                  <div class="item-inner">
+                    <div class="item-input-wrap">
+                      <input type="text" placeholder="duration" readonly="readonly" id="demo-picker-describe-${item.programId}" />
+                    </div>
+                  </div>
+                </div>
+                #}
+              </li>
+            </ul>
+          </div>
+        </div>
+        ` : $h`
+        <a></a>
+        `} `)}
+        <div class="card defalut-card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                  <select name="target-temperature">
+                    ${target_temperature_list.map((kitem)=> $h`
+                    <option value="${kitem.value}" ${kitem.selected ? "selected" :''}>${kitem.value}</option>
+                    `)}
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">Target Temperature</div>
+                      <div class="item-after"></div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="card defalut-card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                  <select class="disabled" name="real-temperature">
+                    <option value="mac" selected>100℃</option>
+                    <option value="windows">150℃</option>
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">Real Temperature</div>
+                      <div class="item-after"></div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="card defalut-card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link">
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">${_("duration")}</div>
+                      <input
+                        class="text-muted start-time"
+                        name="start-time"
+                        type="text"
+                        readonly="readonly"
+                        id="demo-picker-describe-time"
+                        style="text-align: right; width: 80%"
+                      />
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="washing-machine"></div>
+      `}
+    </div>
+    <div class="toolbar tabbar toolbar-bottom">
+      <div class="toolbar-inner">
+        <a href="#tab-1" class="tab-link tab-link-active">Time Left</a>
+        <a href="#tab-2" class="tab-link tab-link-active runtime">00:00</a>
+        <a class="tab-link tab-link-active" @click="${()=>turnOff()}">
+          <i class="material-icons" style="">power_settings_new</i>
+        </a>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    const { title, guid } = $f7route.query;
+    let miele_token = '';
+    let miele_time = '';
+    let this_miele_token = '';
+    let targetUrl = '';
+    let postUrl = '';
+    let response_type = '';
+    let client_id = '';
+    let redirect_uri = '';
+    let scope = '';
+    let client_secret = '';
+    let status = '';
+    let programs = [];
+    let pickObj = null;
+    let modeConfigParams = [];
+    let target_temperature_list = [];
+    let miele_device_type = '';
+    let currentProgram = [];
+    window.addEventListener('message', (event) => {
+      console.log('event', event);
+      let data = JSON.parse(event.data);
+      if (isset(data) && data.access_token) {
+        let key = `miele_${users.current}`;
+        data.expires_in_date = dayjs().format();
+        db.set(key, JSON.stringify(data));
+        window.miele_access_token = data.access_token;
+        window.miele_express_in = data.expires_in;
+        this_miele_token = data.access_token;
+        getToeknFromMie();
+        $update();
+      }
+    });
+    const turnOff = async()=>{
+      let postObj = {
+        'powerOff': true
+      }
+      try{
+        app.dialog.confirm('Are you sure to turn off the machine?', erp.settings[erp.appId].app_name, async() => {
+          await changeStatus(false, postObj);
+          app.dialog.alert('Turn off success');
+        },()=>{})
+      }catch(err){
+        app.dialog.alert(err);
+      }
+    }
+    const delay = (ms)=>{
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    const runMechine = async () => {
+      app.preloader.show();
+      let programId = '';
+      let targetTemperature = 0;
+      for (let i in modeConfigParams) {
+        programId = modeConfigParams[i].programId;
+        if (modeConfigParams[i].key === 'temperature') {
+          targetTemperature = $(`select[name="${modeConfigParams[i].key}-${modeConfigParams[i].programId}"]`).val();
+        }
+      }
+      if(miele_device_type == 'Warming drawer'){
+        targetTemperature = $(`select[name="target-temperature"]`).val();
+        programId = $(`select[name="running-mode"]`).val();
+      }
+      let startTime = $(`input[name="start-time"]`).val();
+      let startList = startTime ? startTime.split(':') : [0, 0];
+      let list = [];
+      startList.forEach(item=>{
+        list.push(parseInt(item))
+      })
+      let postObj = {
+        programId: programId,
+        targetTemperature: targetTemperature ? parseInt(targetTemperature) :'',
+        duration: list,
+      };
+      let actionObj = {
+        processAction : 1
+      };
+      if (!targetTemperature) {
+        delete postObj.targetTemperature;
+      }
+      console.log(postObj);
+      try{
+        //return;
+        await projectAction(postObj);
+        await delay(1000);
+        await changeStatus(true, actionObj);
+        app.preloader.hide();
+        app.dialog.alert('The machine is running');
+      }catch(error){
+        app.preloader.hide();
+        app.dialog.alert(_(error));
+      }
+    };
+    const modeChange = async() => {
+      let val = $(`select[name="running-mode"]`).val();
+      console.log(val);
+      //get the paramsid,init the action data
+      modeConfigParams = [];
+      //change the program
+      try{
+        await changeStatus(true, { 'programId': parseInt(val)});
+      }catch(e){
+        app.dialog.alert(e);
+      }
+      programs.forEach((item) => {
+        if (item.programId == val) {
+          let dataObj = item.parameters;
+          for (let i in dataObj) {
+            let obj = {};
+            obj.key = i;
+            obj.programId = val;
+            obj = Object.assign(obj, dataObj[i]);
+            if (i === 'duration') {
+              let num = parseInt(obj.max[0]);
+              let maxnum = parseInt(obj.max[1]);
+              if (isset(pickObj)) {
+                pickObj.destroy();
+              }
+              setTimeout(() => {
+                pickObj = app.picker.create({
+                  inputEl: `#demo-picker-describe`,
+                  rotateEffect: true,
+                  formatValue: function (values) {
+                    return values[0] + ':' + values[2];
+                  },
+                  cols: [
+                    {
+                      textAlign: 'left',
+                      values: Array.from({ length: num + 1 }, (_, i) => i),
+                    },
+                    {
+                      values: ['H'],
+                    },
+                    {
+                      values: Array.from({ length: maxnum + 1 }, (_, i) => i),
+                    },
+                    {
+                      values: ['M'],
+                    },
+                  ],
+                });
+              }, 1000);
+            }
+            //computer the min to max
+            if (isset(obj.min) && isset(obj.max)) {
+              if (!Array.isArray(obj.min)) {
+                obj.min = parseInt(obj.min);
+                obj.max = parseInt(obj.max);
+                obj.step = parseInt(obj.step);
+                let arr = [];
+                for (let i = obj.min; i <= obj.max; i += obj.step) {
+                  arr.push(i);
+                }
+                obj.arr = arr;
+              }
+            }
+            modeConfigParams.push(obj);
+          }
+        }
+      });
+      console.log('modeConfigParams', modeConfigParams);
+      $update();
+    };
+    const getApiHookParam = async () => {
+      let url = `/api/resource/API Hook/Miele Authorization`;
+      let list = await http.request(encodeURI(url), {
+        method: 'GET',
+        serializer: 'json',
+        responseType: 'json',
+        timeout: 3,
+      });
+      let data = list.data.data;
+      if (isset(data.url)) {
+        postUrl = data.url;
+      }
+      let dataList = data.api_params;
+      dataList.forEach((item) => {
+        if (item.key === 'response_type') {
+          response_type = item.value;
+        }
+        if (item.key === 'client_id') {
+          client_id = item.value;
+        }
+        if (item.key === 'redirect_uri') {
+          redirect_uri = item.value;
+        }
+        if (item.key === 'scope') {
+          scope = item.value;
+        }
+        if (item.key === 'client_secret') {
+          client_secret = item.value;
+        }
+      });
+      $update();
+    };
+    const getStatusOfMachine = async () => {
+      let url = `https://api.mcs3.miele.com/v1/devices/${guid}`;
+      try {
+        return await http.request(encodeURI(url), {
+          method: 'GET',
+          serializer: 'json',
+          responseType: 'json',
+          headers: {
+            'content-type': 'application/json;charset=utf-8',
+            'Authorization': `Bearer ${this_miele_token}`,
+          },
+          timeout: 3,
+        });
+        // let thisStatus = deviceStatus.data.status;
+        // if(isset(thisStatus)){
+        //   status = thisStatus.value_localized;
+        // }
+      } catch (err) {
+        return null;
+      }
+    };
+    const getWasherData = async () => {
+      //get action to do,must be open the machine
+      console.log(this_miele_token);
+      console.log(guid);
+      try {
+        let list = await http.request(encodeURI(`https://api.mcs3.miele.com/v1/devices/${guid}/programs`), {
+          method: 'GET',
+          serializer: 'json',
+          responseType: 'json',
+          headers: {
+            'content-type': 'application/json;charset=utf-8',
+            'Authorization': `Bearer ${this_miele_token}`,
+          },
+          timeout: 3,
+        });
+        console.log('list', list);
+        if (list.status === 200) {
+          let data = list.data;
+          programs = data;
+          $update();
+        }
+      } catch (err) {
+        console.log('error', err);
+        this_miele_token = '';
+        //must be juge the status of the machine
+        getLoginUrl();
+        $update();
+      }
+    };
+    const handleDevice = async (deviceObj) => {
+      getWasherData();
+      //set the target-temperature can set how
+      let deviceType = deviceObj.data.ident.type.value_localized;
+      miele_device_type = deviceObj.data.ident.type.value_localized;
+      console.log("deviceType",deviceType);
+      if(deviceType != 'Warming drawer'){
+        setTimeout(()=>{
+          console.log($(".defalut-card"))
+          $(".defalut-card").hide();
+        },500)
+      }
+      //if have run the program
+      let programObj = deviceObj.data.state.ProgramID;
+      if(programObj && programObj.value_localized){
+        setTimeout(() => {
+          $(`select[name="running-mode"]`).parent().find('.item-after').text(programObj.value_localized);
+          $(`select[name="running-mode"]`).val(programObj.value_raw);
+          currentProgram.push({
+            programId : programObj.value_raw,
+            program : programObj.value_localized
+          })
+          //append the option
+          $update();
+        },500);
+      }
+      //if in use to show the info of the device
+      let temperature = cloneDeep(deviceObj.data.state.temperature);
+      let targetTemperature = cloneDeep(deviceObj.data.state.targetTemperature);
+      if (isset(temperature)) {
+        let realTemperature = '';
+        temperature.forEach((item) => {
+          if (item.value_localized) {
+            realTemperature = item.value_localized;
+          }
+        });
+        let realTargetTemperature = '';
+        if (isset(targetTemperature)) {
+          targetTemperature.forEach((item) => {
+            if (item.value_localized) {
+              realTargetTemperature = item.value_localized;
+            }
+          });
+        }
+        console.log(realTemperature);
+        if (realTemperature) {
+          setTimeout(() => {
+            $(`select[name="real-temperature"]`).parent().find('.item-after').text(parseInt(realTemperature));
+          }, 500);
+        }
+        console.log('realTemperature', realTemperature);
+        if (targetTemperature) {
+          setTimeout(() => {
+            $(`select[name="target-temperature"]`).parent().find('.item-after').text(parseInt(realTargetTemperature));
+          }, 500);
+        }
+        if(deviceType == 'Warming drawer'){
+          setTimeout(() => {
+            target_temperature_list = [{
+              value : 40,
+              selected : false
+            },{
+              value : 45,
+              selected : false
+            },{
+              value : 50,
+              selected : false
+            },{
+              value : 55,
+              selected : false
+            },{
+              value : 60,
+              selected : false
+            }];
+            target_temperature_list.forEach(item=>{
+              if(item.value == targetTemperature){
+                item.selected = true
+              }
+            })
+            $update();
+          },500);
+          setTimeout(() => {
+            let num = 12;
+            let maxnum = 12;
+            pickObj = app.picker.create({
+              inputEl: `#demo-picker-describe-time`,
+              rotateEffect: true,
+              formatValue: function (values) {
+                return values[0] + ':' + values[2];
+              },
+              cols: [
+                {
+                  textAlign: 'left',
+                  values: Array.from({ length: num + 1 }, (_, i) => i),
+                },
+                {
+                  values: ['H'],
+                },
+                {
+                  values: Array.from({ length: maxnum + 1 }, (_, i) => i),
+                },
+                {
+                  values: ['M'],
+                },
+              ],
+            });
+          }, 1000);
+        }
+        //set the time left 
+        let timeLeft = deviceObj.data.state.remainingTime;
+        console.log(timeLeft);
+        if(isset(timeLeft) && timeLeft.length > 0){
+          setTimeout(() => {
+            let hours = timeLeft[0].toString().padStart(2, '0');
+            let seconds = timeLeft[1].toString().padStart(2, '0');
+            $('.runtime').text(`${hours}:${seconds}`);
+            startCountdown(`${hours}:${seconds}`)
+          },500)
+        }
+      }
+      console.log(deviceObj);
+    };
+    const startCountdown = (timeString)=> {
+        let timeArray = timeString.split(":");
+        let minutes = parseInt(timeArray[0]);
+        let seconds = parseInt(timeArray[1]);
+
+        const countdown = setInterval(function() {
+            if (minutes === 0 && seconds === 0) {
+                clearInterval(countdown); // 清除计时器
+            } else {
+                console.log(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+                $('.runtime').text(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+                if (seconds === 0) {
+                    minutes--;
+                    seconds = 59;
+                } else {
+                    seconds--;
+                }
+            }
+        }, 60000); //每分钟执行一次，即60*1000毫秒
+    }
+    const projectAction = async (postObj) => {
+      let url = `https://api.mcs3.miele.com/v1/devices/${guid}/actions`;
+      try{
+        let url = `https://api.mcs3.miele.com/v1/devices/${guid}/programs`;
+        let postStatus = await http.request(encodeURI(url), {
+          method: 'PUT',
+          serializer: 'json',
+          responseType: 'json',
+          headers: {
+            'content-type': 'application/json;charset=utf-8',
+            'Authorization': `Bearer ${this_miele_token}`,
+          },
+          timeout: 10,
+          data: postObj,
+        });
+        console.log('postStatus', postStatus);
+        return postStatus
+      }catch(err){
+        console.log(err);
+        return null;
+      }
+    }
+    const changeStatus = async (status = true, postObj) => {
+      //change the status of the machine
+      try{
+        let url = `https://api.mcs3.miele.com/v1/devices/${guid}/actions`;
+        let postStatus = await http.request(encodeURI(url), {
+          method: 'PUT',
+          serializer: 'json',
+          responseType: 'json',
+          headers: {
+            'content-type': 'application/json;charset=utf-8',
+            'Authorization': `Bearer ${this_miele_token}`,
+          },
+          timeout: 10,
+          data: postObj ? postObj : { 'powerOn': status },
+        });
+        console.log('postStatus', postStatus);
+        if (postStatus.status === 204) {
+          //handleDevice();
+          return postStatus
+        }
+      }catch(err){
+        console.log(err);
+        return null;
+      }
+    };
+    const getLoginUrl = async () => {
+      let url = `${postUrl}?response_type=${response_type}&client_id=${client_id}&redirect_uri=${redirect_uri}&scope=${scope}&state=${md5(
+        users.current
+      )}`;
+      targetUrl = url;
+      $update();
+    };
+    const getToeknFromMie = async () => {
+      //get the data from the miele api,can get the menu of the washer
+      let key = `miele_${users.current}`;
+      let data = await db.get(key);
+      app.preloader.show();
+      if (data) {
+        let tokenData = JSON.parse(data);
+        miele_token = tokenData.access_token;
+        miele_time = tokenData.expires_in;
+        let expires_in_date = tokenData.expires_in_date;
+        let thisTime = dayjs().format();
+        let compare_time = dayjs(thisTime).diff(dayjs(expires_in_date), 'second');
+        if (compare_time <= miele_time) {
+          //token can be used
+          this_miele_token = miele_token;
+          //first get the state
+          let deviceStatus = await getStatusOfMachine();
+          console.log('deviceStatus', deviceStatus);
+          if (isset(deviceStatus)) {
+            let thisStatus = deviceStatus.data.state.status.value_localized;
+            console.log(thisStatus);
+            if (thisStatus == 'On') {
+             await getWasherData();
+             handleDevice(deviceStatus);
+             app.preloader.hide();
+            } else if (thisStatus == 'In use') {
+              app.preloader.hide();
+              handleDevice(deviceStatus);
+              //getWasherData();
+            } else if (thisStatus == 'Off') {
+              //must be open the machine
+              app.preloader.hide();
+              app.dialog.confirm('The machine is off,please open it', erp.settings[erp.appId].app_name, async() => {
+                //open the machine
+                app.preloader.show();
+                await changeStatus(true);
+                setTimeout(() => {
+                  getToeknFromMie();
+                }, 2000);
+                //getToeknFromMie(deviceStatus);
+                app.preloader.hide();
+              },()=>{
+                mainView.router.back();
+              });
+            } else if (thisStatus === 'Not connected') {
+              app.preloader.hide();
+              app.dialog.alert('Machine not connected.');
+              mainView.router.back();
+            }
+          }
+        } else {
+          //out of date
+          app.preloader.hide();
+          this_miele_token = '';
+          getLoginUrl();
+        }
+      }
+      $update();
+      //console.log("data",data)
+    };
+    const init = async () => {
+      await getApiHookParam();
+      await getToeknFromMie();
+    };
+    $onMounted(async () => {
+      await init();
+    });
+    return $render;
+  };
+</script>

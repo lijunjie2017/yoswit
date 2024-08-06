@@ -2314,7 +2314,7 @@
               //in that distinguish the value and the other value(temp,templess,hum,hum_less)
               if (isset(ref)) {
                 if (item.mode == 'RF Sensor' || item.mode == 'Radar Sensor') {
-                  typeIndex = `01`;
+                  typeIndex = `22`; //34 is SCENE TYPE BUTTON V3
                   let opcode = '00';
                   if (this.triggerCondition == 1 && index != randarList.length - 1) {
                     opcode = 'tt';

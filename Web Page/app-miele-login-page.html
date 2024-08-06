@@ -1,0 +1,875 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Miele') }}</div>
+        <div class="right">
+          <a link icon-only>
+						<i class="icon material-icons" @click="${()=>clearAccount()}">logout</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      ${!this_miele_token? $h`
+      <iframe id="myIframe" src="${targetUrl}" frameborder="0" style="height: 100%; width: 100%"></iframe>
+      `: $h`
+      <div id="room-0-div" class="list media-list no-margin device-none">
+        <ul>
+          ${deviceList.length !== 0 && $h`
+          <li class="room">
+            <div class="item-content">
+              <div class="item-inner">
+                <div class="item-title-row">
+                  <div class="item-title" lang="en" lang-packet="Unassigned" func="controller_common_home_collapse" ref="0">
+                    <i class="room-collapse material-icons" id="collapse-0">
+                      expand_more
+                    </i>
+                    {{ _('Unassigned')  }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </li>
+          `}
+          <div>
+            ${deviceList.map((item)=> $h`
+            <li class="device home-scanned-peripheral swipeout swipeout-delete-manual">
+              <div class="item-content swipeout-content">
+                <a class="item-link item-content no-chevron no-ripple no-active-state">
+                  <div class="device-thumb item-media" style="background-position:center;background-size : contain;position:relative;background-image:url('${item.imgUrl}')">
+        
+                  </div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title ellipsis" lang="en" style="width:180px;">
+                        <i class="material-icons text-muted" style="position:relative;top:5px;">settings</i>
+                      ${item.ident.type.value_localized}
+                      </div>
+                    </div>
+                    <div class="item-subtitle">${ item.device_id }</div>
+                    <div class="signal-panel item-text height-21" style="width:120%;">
+                      <div>
+                          <div class="signal"></div>
+                          <div class="bluetooth"></div>
+                          <div class="mesh"></div>
+                          <div class="mobmob"></div>
+                          <div class="iostatus"></div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+                <div class="control-panel-right" style="">
+                  <a class="on_flag off_flag" @click="${()=>addDevice(item)}">
+                      <div class="button button-raised button-big addbtn">
+                        <i class="material-icons" style="color: #333;position: relative;top: -20px;">add</i>
+                      </div>
+                  </a>
+                </div>
+              </div>
+            </li>
+            `)}
+          </div>
+        </ul>
+      </div>
+      `}
+      ${deviceList.length === 0 && this_miele_token && $h`
+      <no-record-found></no-record-found>
+      `}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    const {brand} = $f7route.query;
+    let deviceList = [];
+    let responeObj = {
+      "000137439624": {
+        "ident": {
+          "type": {
+            "key_localized": "Device type",
+            "value_raw": 12,
+            "value_localized": "Oven"
+          },
+          "deviceName": "Oven",
+          "protocolVersion": 4,
+          "deviceIdentLabel": {
+            "fabNumber": "000137439624",
+            "fabIndex": "00",
+            "techType": "H7860BP",
+            "matNumber": "10552450",
+            "swids": [
+              "5158",
+              "5029",
+              "25211",
+              "25210",
+              "4860",
+              "25245",
+              "5746",
+              "5165",
+              "25300",
+              "25307",
+              "25247",
+              "20436",
+              "25223",
+              "5214",
+              "20366",
+              "20462"
+            ]
+          },
+          "xkmIdentLabel": {
+            "techType": "EK037",
+            "releaseVersion": "03QC2"
+          }
+        },
+        "state": {
+          "ProgramID": {
+            "value_raw": 0,
+            "value_localized": "",
+            "key_localized": "Program name"
+          },
+          "status": {
+            "value_raw": 1,
+            "value_localized": "Off",
+            "key_localized": "status"
+          },
+          "programType": {
+            "value_raw": 1,
+            "value_localized": "Own programme",
+            "key_localized": "Program type"
+          },
+          "programPhase": {
+            "value_raw": 0,
+            "value_localized": "",
+            "key_localized": "Program phase"
+          },
+          "remainingTime": [
+            0,
+            0
+          ],
+          "startTime": [
+            0,
+            0
+          ],
+          "targetTemperature": [
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "temperature": [
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "signalInfo": false,
+          "signalFailure": false,
+          "signalDoor": false,
+          "remoteEnable": {
+            "fullRemoteControl": true,
+            "smartGrid": false,
+            "mobileStart": true
+          },
+          "ambientLight": null,
+          "light": 2,
+          "elapsedTime": [
+            0,
+            0
+          ],
+          "spinningSpeed": {
+            "unit": "rpm",
+            "value_raw": null,
+            "value_localized": null,
+            "key_localized": "Spin speed"
+          },
+          "dryingStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Drying level"
+          },
+          "ventilationStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Fan level"
+          },
+          "plateStep": [],
+          "ecoFeedback": null,
+          "batteryLevel": null
+        }
+      },
+      "000105666767": {
+        "ident": {
+          "type": {
+            "key_localized": "Device type",
+            "value_raw": 7,
+            "value_localized": "Dishwasher"
+          },
+          "deviceName": "Dishwasher",
+          "protocolVersion": 4,
+          "deviceIdentLabel": {
+            "fabNumber": "000105666767",
+            "fabIndex": "65",
+            "techType": "G7310",
+            "matNumber": "10992560",
+            "swids": [
+              "5418",
+              "20492",
+              "25166",
+              "25293",
+              "25386",
+              "4928",
+              "20475",
+              "25266",
+              "4875",
+              "20366",
+              "20462"
+            ]
+          },
+          "xkmIdentLabel": {
+            "techType": "EK057",
+            "releaseVersion": "08.15"
+          }
+        },
+        "state": {
+          "ProgramID": {
+            "value_raw": 13,
+            "value_localized": "QuickPowerWash",
+            "key_localized": "Program name"
+          },
+          "status": {
+            "value_raw": 5,
+            "value_localized": "In use",
+            "key_localized": "status"
+          },
+          "programType": {
+            "value_raw": 0,
+            "value_localized": "Program",
+            "key_localized": "Program type"
+          },
+          "programPhase": {
+            "value_raw": 1795,
+            "value_localized": "Main wash",
+            "key_localized": "Program phase"
+          },
+          "remainingTime": [
+            0,
+            54
+          ],
+          "startTime": [
+            0,
+            0
+          ],
+          "targetTemperature": [
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "temperature": [
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "signalInfo": false,
+          "signalFailure": false,
+          "signalDoor": false,
+          "remoteEnable": {
+            "fullRemoteControl": true,
+            "smartGrid": false,
+            "mobileStart": true
+          },
+          "ambientLight": null,
+          "light": null,
+          "elapsedTime": [
+            0,
+            28
+          ],
+          "spinningSpeed": {
+            "unit": "rpm",
+            "value_raw": null,
+            "value_localized": null,
+            "key_localized": "Spin speed"
+          },
+          "dryingStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Drying level"
+          },
+          "ventilationStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Fan level"
+          },
+          "plateStep": [],
+          "ecoFeedback": {
+            "currentWaterConsumption": {
+              "unit": "l",
+              "value": 1
+            },
+            "currentEnergyConsumption": {
+              "unit": "kWh",
+              "value": 0.7
+            },
+            "waterForecast": 0.4,
+            "energyForecast": 0.65
+          },
+          "batteryLevel": null
+        }
+      },
+      "000148508574": {
+        "ident": {
+          "type": {
+            "key_localized": "Device type",
+            "value_raw": 1,
+            "value_localized": "Washing machine"
+          },
+          "deviceName": "Washing Machine",
+          "protocolVersion": 4,
+          "deviceIdentLabel": {
+            "fabNumber": "000148508574",
+            "fabIndex": "10",
+            "techType": "WWV980",
+            "matNumber": "10708820",
+            "swids": [
+              "4850",
+              "20457",
+              "20449",
+              "25260",
+              "20450",
+              "5012",
+              "25314",
+              "25205",
+              "25313",
+              "25191"
+            ]
+          },
+          "xkmIdentLabel": {
+            "techType": "EK037",
+            "releaseVersion": "03QC2"
+          }
+        },
+        "state": {
+          "ProgramID": {
+            "value_raw": 1,
+            "value_localized": "Cottons",
+            "key_localized": "Program name"
+          },
+          "status": {
+            "value_raw": 4,
+            "value_localized": "Waiting to start",
+            "key_localized": "status"
+          },
+          "programType": {
+            "value_raw": 1,
+            "value_localized": "Own programme",
+            "key_localized": "Program type"
+          },
+          "programPhase": {
+            "value_raw": 256,
+            "value_localized": "",
+            "key_localized": "Program phase"
+          },
+          "remainingTime": [
+            2,
+            14
+          ],
+          "startTime": [
+            1,
+            34
+          ],
+          "targetTemperature": [
+            {
+              "value_raw": 6000,
+              "value_localized": 60,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "temperature": [
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "signalInfo": false,
+          "signalFailure": false,
+          "signalDoor": false,
+          "remoteEnable": {
+            "fullRemoteControl": true,
+            "smartGrid": true,
+            "mobileStart": false
+          },
+          "ambientLight": null,
+          "light": null,
+          "elapsedTime": [
+            0,
+            0
+          ],
+          "spinningSpeed": {
+            "unit": "rpm",
+            "value_raw": 1600,
+            "value_localized": "1600",
+            "key_localized": "Spin speed"
+          },
+          "dryingStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Drying level"
+          },
+          "ventilationStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Fan level"
+          },
+          "plateStep": [],
+          "ecoFeedback": {
+            "currentWaterConsumption": {
+              "unit": "l",
+              "value": 0
+            },
+            "currentEnergyConsumption": {
+              "unit": "kWh",
+              "value": 0
+            },
+            "waterForecast": 0.3,
+            "energyForecast": 0.4
+          },
+          "batteryLevel": null
+        }
+      },
+      "007109230215": {
+        "ident": {
+          "type": {
+            "key_localized": "Device type",
+            "value_raw": 19,
+            "value_localized": "Refrigerator"
+          },
+          "deviceName": "Refrigerator",
+          "protocolVersion": 1,
+          "deviceIdentLabel": {
+            "fabNumber": "007109230215",
+            "fabIndex": "17",
+            "techType": "K 34483 iDF",
+            "matNumber": "09358070",
+            "swids": [
+              "60684",
+              "0"
+            ]
+          },
+          "xkmIdentLabel": {
+            "techType": "EK044W",
+            "releaseVersion": "02Q73"
+          }
+        },
+        "state": {
+          "ProgramID": {
+            "value_raw": 0,
+            "value_localized": "",
+            "key_localized": "Program name"
+          },
+          "status": {
+            "value_raw": 5,
+            "value_localized": "In use",
+            "key_localized": "status"
+          },
+          "programType": {
+            "value_raw": 0,
+            "value_localized": "Program",
+            "key_localized": "Program type"
+          },
+          "programPhase": {
+            "value_raw": 0,
+            "value_localized": "",
+            "key_localized": "Program phase"
+          },
+          "remainingTime": [
+            0,
+            0
+          ],
+          "startTime": [
+            0,
+            0
+          ],
+          "targetTemperature": [
+            {
+              "value_raw": 600,
+              "value_localized": 6,
+              "unit": "Celsius"
+            }
+          ],
+          "temperature": [
+            {
+              "value_raw": 600,
+              "value_localized": 6,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            },
+            {
+              "value_raw": -32768,
+              "value_localized": null,
+              "unit": "Celsius"
+            }
+          ],
+          "signalInfo": false,
+          "signalFailure": false,
+          "signalDoor": false,
+          "remoteEnable": {
+            "fullRemoteControl": true,
+            "smartGrid": false,
+            "mobileStart": false
+          },
+          "ambientLight": null,
+          "light": null,
+          "elapsedTime": [],
+          "spinningSpeed": {
+            "unit": "rpm",
+            "value_raw": null,
+            "value_localized": null,
+            "key_localized": "Spin speed"
+          },
+          "dryingStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Drying level"
+          },
+          "ventilationStep": {
+            "value_raw": null,
+            "value_localized": "",
+            "key_localized": "Fan level"
+          },
+          "plateStep": [],
+          "ecoFeedback": null,
+          "batteryLevel": null
+        }
+      }
+    }
+    let targetUrl = '';
+    let this_miele_token = '';
+    let postUrl = '';
+    let response_type = '';
+    let client_id = '';
+    let redirect_uri = '';
+    let scope = '';
+    let client_secret = '';
+    let tempList;
+    let elemIframList = document.getElementsByTagName('iframe');
+    let iframe = document.getElementById('myIframe');
+    window.addEventListener('message',(event)=>{
+      console.log("event",event);
+      let data = JSON.parse(event.data);
+      if(isset(data) && data.access_token){
+        let key = `miele_${users.current}`;
+        data.expires_in_date = dayjs().format();
+        db.set(key,JSON.stringify(data));
+        window.miele_access_token = data.access_token;
+        window.miele_express_in = data.expires_in;
+        this_miele_token = data.access_token;
+        $update();
+      }
+    })
+    const clearAccount = async()=>{
+     await db.set(`miele_${users.current}`,'');
+     mainView.router.refreshPage();
+    };
+    const addDevice = async(item)=>{
+      let data = {
+        profile_id : erp.info.profile.name,
+        password : '000000',
+        device_mode : item.device_mode,
+        guid : item.device_id,
+        mac_address : item.ident.deviceIdentLabel.matNumber,
+        device_model : item.device_model,
+        model : item.device_model,
+        batch : "YO0013",
+        firmware : item.ident.xkmIdentLabel.releaseVersion,
+        peripheral : item.ident.deviceIdentLabel.matNumber,
+        profile_room : erp.info.profile.profile_room[0].name,
+        title : item.ident.type.value_localized,
+        device_button_group : 'ONOFF GANG1'
+      }
+      console.log(data);
+      try{
+        app.preloader.show();
+      await http.request(`/api/method/appv6.addMieleDevices`, {
+          method: 'post',
+          serializer: 'json',
+          responseType: 'json',
+          data:data,
+        })
+        
+        await ha_profile_ready();
+        app.preloader.hide();
+        const toast = app.toast.create({
+            position: 'bottom',
+            closeTimeout: 3000,
+            text: `Added successfully`,
+        });
+        toast.open();
+        getDeviceList(false);
+      }catch(err){
+        const toast = app.toast.create({
+            position: 'bottom',
+            closeTimeout: 3000,
+            text: err,
+        });
+        toast.open();
+        app.preloader.hide();
+      }
+      
+    }
+    const getDeviceList = async(post_status=true)=>{
+      //if post_status is false,can not upload the api
+      let modelList = cloneDeep(erp.doctype.device_model);
+      let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice)
+      // for(let i in responeObj){
+      //   let device_id = i;
+      //   responeObj.device_id = i;
+      //   for(let j in modelList){
+      //     if(j.substring(0,2) === '03' && responeObj[i].ident.type.value_raw === parseInt(j.substring(2,4))){
+      //       console.log(modelList[j])
+      //       responeObj[i].imgUrl = modelList[j].image
+      //     }
+      //   }
+      //   deviceList.push(responeObj[i])
+      // }
+      // return;
+      //get the miele devie list from the api
+      try {
+        let list;
+        if(post_status){
+          list = await http.request(
+            encodeURI(
+              `https://api.mcs3.miele.com/v1/devices`
+            ),
+            {
+              method: 'GET',
+              serializer: 'json',
+              responseType: 'json',
+              headers:{
+                "content-type" : "application/json;charset=utf-8",
+                "Authorization" : `Bearer ${this_miele_token}`
+              },
+              timeout: 3,
+            }
+          );
+          tempList = cloneDeep(list);
+        }else{
+          list = tempList;
+          deviceList = [];
+        }
+        console.log(list);
+        let data = list.data;
+        for(let i in data){
+          let device_id = i;
+          data[i].device_id = i;
+          for(let j in modelList){
+            if(j.substring(0,2) === '03' && data[i].ident.type.value_raw === parseInt(j.substring(2,4))){
+              //console.log(modelList[j])
+              data[i].imgUrl = modelList[j].image;
+              data[i].device_model = modelList[j].model_code;
+              data[i].device_mode = modelList[j].mode;
+            }
+          }
+          let add_status = true;
+          for(let z in profile_subdevices){
+            if(profile_subdevices[z].device === i){
+              add_status = false;
+            }
+          }
+          if(add_status){
+            deviceList.push(data[i])
+          }
+        }
+        //deviceBrands = list.data.data;
+        $update();
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    //init access_token
+    const getLocalToken = async()=>{
+      try{
+        let token = await db.get(`miele_${users.current}`);
+        if(token){
+          //check is nor Invalid
+          let data = JSON.parse(token);
+          let thisTime = dayjs().format();
+          let expires_in_date = data.expires_in_date;
+          let expires_in = data.expires_in;
+          let compare_time = dayjs(thisTime).diff(dayjs(expires_in_date),'second');
+          if(compare_time <= expires_in){
+            window.miele_access_token = data.access_token;
+            this_miele_token = data.access_token;
+            getDeviceList();
+          }else{
+            window.miele_access_token = '';
+            this_miele_token = '';
+          }
+          $update();
+        }
+      }catch(e){}
+    }
+    const getApiHookParam = async()=>{
+      let url = `/api/method/appv6.getApiHookList?name=Miele Authorization`;
+      let list = await http.request(encodeURI(url), {
+        method: 'GET',
+        serializer: 'json',
+        responseType: 'json',
+        timeout: 3,
+      });
+      let data = list.data.data;
+      console.log("data",data);
+      if(isset(data.url)){
+        postUrl = data.url;
+      }
+      let dataList = data.api_params;
+      dataList.forEach(item=>{
+        if(item.key === 'response_type'){
+          response_type = item.value;
+        }
+        if(item.key === 'client_id'){
+          client_id = item.value;
+        }
+        if(item.key === 'redirect_uri'){
+          redirect_uri = item.value;
+        }
+        if(item.key === 'scope'){
+          scope = item.value;
+        }
+        if(item.key === 'client_secret'){
+          client_secret = item.value;
+        }
+      })
+      $update();
+    }
+    const getData = async () => {
+      let url = `${postUrl}?response_type=${response_type}&client_id=${client_id}&redirect_uri=${redirect_uri}&scope=${scope}&state=${md5(
+        users.current
+      )}`;
+      targetUrl = url;
+      $update();
+      //window.location.href = url;
+      return;
+      console.log(url);
+      debugger;
+      let list = await http.request(encodeURI(url), {
+        method: 'GET',
+        serializer: 'json',
+        responseType: 'json',
+        timeout: 3,
+      });
+
+      console.log(list);
+    };
+    $onMounted(async() => {
+      await getLocalToken();
+      await getApiHookParam();
+      await getData();
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .addbtn{
+    border-radius: 50%;
+    background-color: #ffffff;
+    color: #ffffff;
+    border-color: #ffffff;
+    width: 65px;
+    height: 65px;
+    margin-top: 5px;
+    margin-bottom: 0px;
+    line-height: 65px;
+    font-size: 12px;
+  }
+</style>

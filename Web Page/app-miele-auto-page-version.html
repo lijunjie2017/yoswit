@@ -1,0 +1,337 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Miele Devices') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div id="room-0-div" class="list media-list no-margin device-none">
+          <ul>
+            <li class="room">
+              <div class="item-content">
+                <div class="item-inner">
+                  <div class="item-title-row">
+                    <div class="item-title" lang="en" lang-packet="Unassigned" func="controller_common_home_collapse" ref="0">
+                      <i class="room-collapse material-icons" id="collapse-0"> expand_more </i>
+                      {{ _('Unassigned') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <div v-for="(item,index) in deviceList" :key="item.name">
+              <li class="device home-scanned-peripheral swipeout swipeout-delete-manual">
+                <div class="item-content swipeout-content">
+                  <a class="item-link item-content no-chevron no-ripple no-active-state">
+                    <div
+                      class="device-thumb item-media"
+                      :style="{'background-position':'center','background-size' : 'contain','position':'relative','background-image':'url(' + item.url + ')'}"
+                    ></div>
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title ellipsis" lang="en" style="width: 180px">
+                          <i class="material-icons text-muted" style="position: relative; top: 5px">settings</i>
+                          {{tran(item.display_name)}}
+                        </div>
+                      </div>
+                      <div class="item-subtitle">{{ item.device_model }}-{{ item.macaddress }}</div>
+                      <div class="signal-panel item-text height-21" style="width: 120%">
+                        <div>
+                          <div class="signal"></div>
+                          <div class="bluetooth"></div>
+                          <div class="mesh"></div>
+                          <div class="mobmob"></div>
+                          <div class="iostatus"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                  <div class="control-panel-right" style="">
+                    <a class="on_flag off_flag" :onoffref="item.ref" @click="clickOnoff(item)" gang="1">
+                      <div class="button button-raised button-big onoff"></div>
+                    </a>
+                  </div>
+                </div>
+              </li>
+              <li class="device home-scanned-peripheral" v-if="hexid != '0227'">
+                <div class="item-content subdevice-item-content" style="min-height: 0px">
+                  <div class="item-inner" style="min-height: 0px">
+                    <div class="row" style="--f7-grid-gap: 3px; padding-left: 20px; padding-right: 15px">
+                      <button
+                        class="col on_flag off_flag button button-large button-raised openclose cl"
+                        :class="actionState == 3?'active-button':''"
+                        ref="0"
+                        @click="changeStates()"
+                      >
+                        <div class="display-flex justify-content-center align-items-center" style="margin-left: -5px; margin-top: -5px">
+                          Start
+                        </div>
+                      </button>
+                      <button
+                        class="col on_flag off_flag button button-large button-raised stop"
+                        :class="actionState == 2?'active-button':''"
+                        ref="n"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeStates()"
+                      >
+                        <div>Pause</div>
+                      </button>
+                      <button
+                        class="col on_flag off_flag button button-large button-raised openclose op"
+                        :class="actionState == 1?'active-button':''"
+                        ref="1"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeStates(name,3)"
+                      >
+                        <div class="display-flex justify-content-center align-items-center" style="margin-left: -7px; margin-top: -5px">
+                          Stop
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="device home-scanned-peripheral" style="height: auto" v-if="hexid == '0227'">
+                <div class="item-content subdevice-item-content" style="min-height: 0px">
+                  <div class="item-inner" style="min-height: 0px">
+                    <div class="row" style="--f7-grid-gap: 3px; padding-left: 20px; padding-right: 15px">
+                      <button
+                        class="col on_flag off_flag button button-large button-raised openclose cl"
+                        ref="0"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeMode()"
+                      >
+                        <div
+                          class="display-flex justify-content-center align-items-center"
+                          style="margin-left: -5px; margin-top: -5px; font-size: 12px"
+                        >
+                          {{modeStr}}
+                        </div>
+                      </button>
+                      <button
+                        class="col on_flag off_flag button button-large button-raised stop"
+                        :class="freezing == 1?'active-button':''"
+                        ref="n"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeFreezing(name,1)"
+                      >
+                        <div style="font-size: 12px">Start Freezing</div>
+                      </button>
+                      <button
+                        class="col on_flag off_flag button button-large button-raised openclose op"
+                        :class="freezing == 2?'active-button':''"
+                        ref="1"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeFreezing(name,2)"
+                      >
+                        <div
+                          class="display-flex justify-content-center align-items-center"
+                          style="margin-left: -7px; margin-top: -5px; font-size: 12px"
+                        >
+                          Stop Freezing
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="item-content subdevice-item-content" style="min-height: 0px">
+                  <div class="item-inner" style="min-height: 0px">
+                    <div class="row" style="--f7-grid-gap: 3px; padding-left: 20px; padding-right: 15px">
+                      <button
+                        class="col on_flag off_flag button button-large button-raised openclose cl"
+                        ref="0"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeTemp(name,temp,'reduce')"
+                      >
+                        <div
+                          class="display-flex justify-content-center align-items-center"
+                          style="margin-left: -5px; margin-top: -5px; font-size: 24px"
+                        >
+                          -
+                        </div>
+                      </button>
+                      <button
+                        class="col on_flag off_flag button button-large button-raised stop"
+                        :class="freezing == 1?'active-button':''"
+                        ref="n"
+                        command-type="Bluetooth"
+                        command=""
+                        style="background: transparent; box-shadow: unset !important"
+                      >
+                        <div style="font-size: 18px"><span>{{temp}}</span>&deg;C</div>
+                      </button>
+                      <button
+                        class="col on_flag off_flag button button-large button-raised openclose op"
+                        :class="freezing == 2?'active-button':''"
+                        ref="1"
+                        command-type="Bluetooth"
+                        command=""
+                        @click="changeTemp(name,temp,'add')"
+                      >
+                        <div
+                          class="display-flex justify-content-center align-items-center"
+                          style="margin-left: -7px; margin-top: -5px; font-size: 24px"
+                        >
+                          +
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </div>
+          </ul>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          deviceList: [
+            {
+              display_name: 'Oven',
+              hexid: '0225',
+              device_model: 'Oven',
+              macaddress: '083a8d16fc5a',
+              url: 'https://www.miele.com/developer/assets/12_oven.svg',
+              name: 1,
+              ref: '0',
+              action_state: 0, //0 off,1 play,2 pause, 3 stop
+            },
+            {
+              display_name: 'Washer Dryer',
+              hexid: '0226',
+              device_model: 'Washer Dryer',
+              macaddress: '083a8d16fc5b',
+              url: 'https://www.miele.com/developer/assets/24_washerdryer.svg',
+              name: 2,
+              ref: '0',
+              action_state: 0,
+            },
+            {
+              display_name: 'Fridge / Freezer',
+              hexid: '0227',
+              device_model: 'Fridge / Freezer',
+              macaddress: '083a8d16fc5c',
+              url: 'https://www.miele.com/developer/assets/21_fridgefreezer.svg',
+              name: 3,
+              ref: '0',
+              action_state: 0,
+              mode: 0, //0 Normal,1 Sabbath mode,2 Party mode,3 Holiday mode
+              cooling: 0, //1 start,0 stop
+              freezing: 0, //1 start, 0 stop
+              temp: 12,
+            },
+            {
+              display_name: 'Combi Steam',
+              hexid: '0228',
+              device_model: 'Combi Steam',
+              macaddress: '083a8d16fc5c',
+              url: 'https://www.miele.com/developer/assets/31_steamovencombination.svg',
+              name: 4,
+              ref: '0',
+              action_state: 0,
+            },
+            {
+              display_name: 'Warming Drawer',
+              hexid: '0229',
+              device_model: 'Warming Drawer',
+              macaddress: '083ad16fc5d',
+              url: 'https://www.miele.com/developer/assets/31_steamovencombination.svg',
+              name: 5,
+              ref: '0',
+              action_state: 0,
+            },
+            {
+              display_name: 'Coffee Machine',
+              hexid: '0230',
+              device_model: 'Coffee Machine',
+              macaddress: '083ad16fc5e',
+              url: 'https://www.miele.com/developer/assets/17_coffeesystem.svg',
+              name: 6,
+              ref: '0',
+              action_state: 0,
+            },
+          ],
+        },
+        mounted() {
+          
+        },
+        methods: {
+          clickOnoff(item){
+            
+          }
+        },
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+<style>
+  .page-content .button.onoff[ref='0'],
+  .page-content *[onoffref='0'] > .button.onoff {
+    background-color: var(--f7-block-strong-bg-color);
+    color: #8e8d93;
+    border-color: #8e8d93;
+  }
+  .control-panel-left,
+  .subdevice-item-content {
+    display: flex !important;
+  }
+  .subdevice-item-content .openclose {
+    display: inline-block !important;
+  }
+  .subdevice-item-content .active-button,
+  .item-content .active-button {
+    background: var(--f7-theme-color) !important;
+    color: #fff !important;
+  }
+  .button-big {
+    font-size: 10px;
+  }
+  .page-content .button.onoff[ref='0']:after,
+  .page-content *[onoffref='0'] > .button.onoff:after {
+    content: 'OFF';
+  }
+</style>

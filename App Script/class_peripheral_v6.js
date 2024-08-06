@@ -265,8 +265,8 @@ window.Peripheral = (function() {
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
                     }
 										if(self.prop.status.bluetooth[1] > self.prop.status.control[1]){
-											console.log("----------------大于----------------------------")
-											self.prop.status.control[0] = self.prop.status.bluetooth[0]
+											//console.log("----------------大于----------------------------")
+											//self.prop.status.control[0] = self.prop.status.bluetooth[0]
 										}
         	    }
         	}
@@ -799,12 +799,17 @@ window.Peripheral = (function() {
     };
     Peripheral.prototype.onoff = function(gangs) {
         const self = this;
+				//first can get the last sattus
+				let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+				console.log("data",data);
+				self.prop.status.control[0] = data[0];
         // set manual control first
 		if(!isset(self.prop.firmwareNo) || self.prop.firmwareNo < 6){
-		    let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+		    
 		    for(let g of gangs){
 				data[0][g.gang] = g.on ? 1 : 0;
 		    } 
+				
 			self.prop.status.control[0] = data[0];
 		}else{
 		    for(let g of gangs){
@@ -1512,7 +1517,9 @@ const doMOBMOB = (gangs) => {
 };
 	Peripheral.prototype.dimming = function(gangs) {
 		const self = this;
-		
+		//first can get the last sattus
+		let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+		self.prop.status.control[0] = data[0];
 		for(let g of gangs){
 			if(g.gang!=8) continue;
 			self.prop.status.control[0][g.gang] = g.value;
@@ -1730,7 +1737,9 @@ const doMOBMOB = (gangs) => {
 	};
     Peripheral.prototype.rcuDimming = function(gangs) {
         const self = this;
-        
+        //first can get the last sattus
+				let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+				self.prop.status.control[0] = data[0];
 	    for(let g of gangs){
 	        if(g.gang<32 || g.gang>41) continue;
 	        self.prop.status.control[0][g.gang] = g.value;
