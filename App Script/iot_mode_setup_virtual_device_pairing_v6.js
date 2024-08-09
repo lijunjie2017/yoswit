@@ -42,6 +42,8 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                 }
             })
         }
+        console.log("valueEl",valueEl);
+        console.log("show_value",show_value)
         if(show_value){
             valueEl.html(show_value);
         }else{
@@ -205,7 +207,7 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                         return iot_device_setting_sync_server(guid, setting_type, mac);
                     }).then(() => {
                         params.obj.attr("setting-value", mac);
-                        
+                        valueEl.html(mac);
                         update_setting_value();
 
                         app.preloader.hide();

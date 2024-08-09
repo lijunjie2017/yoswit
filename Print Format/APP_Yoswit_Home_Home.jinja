@@ -1,0 +1,1395 @@
+{%- from "templates/print_formats/custom_macros.html" import tran -%}
+
+{# check if user is a developer, start #}
+{% set developer = false %}{% set roles = get_roles(frappe.session.user) %} {% if 'App Developer' in roles or 'App Developer - Tier 1' in roles %}{% set developer = true %}{% endif %}
+script
+<!-- equalto -->
+{% if developer %}
+window.developer = true;
+{% else %}
+window.developer = false;
+{% endif %}
+<!-- split -->
+{# check if user is a developer, end #}
+
+{% set user_app_setting = frappe.get_doc('User App Setting', doc.users.currentUsername) %}
+
+{% set profile_id = user_app_setting.app_profile_id %}
+{% set profile = frappe.get_doc("Profile", profile_id) %}
+{% set profile_name = profile.profile_name %}
+{% set control_box = profile.control_box %}
+{% set print_format = frappe.get_doc("Print Format", "APP_Yoswit_Home_Home") %}
+{% set modifiedKey = profile_id~'_'~profile.modified~'_'~print_format.modified %}
+
+{######## checking modified template, start #}
+{% if doc.modifiedKey != None and doc.modifiedKey==modifiedKey %}
+    {# nothing to render if modifiedKey is not changed #}
+{% else %}
+
+{######## send out the modifiedKey, app should store it #}
+{#
+modifiedKey
+<!-- equalto -->
+{{modifiedKey}}
+<!-- split -->
+#}
+{######## header value in home page #}
+
+profile_title
+<!-- equalto -->
+<font lang="en" lang-packet="{{ profile_name }}">{{ tran(profile_name) }}</font>
+<!-- split -->
+
+
+fab-detail
+<!-- equalto -->
+<!--div class="fab fab-left-bottom">
+	<a href="#" func="setMirrorBackLight" ref="0"><i class="icon material-icons">settings_overscan</i></a>
+</div>
+<div class="fab fab-right-bottom">
+	<a href="#" func="setMirrorBackLight" ref="0"><i class="icon material-icons">settings_overscan</i></a>
+</div>
+<div class="fab fab-left-top">
+	<a href="#" func="setMirrorBackLight" ref="0"><i class="icon material-icons">settings_overscan</i></a>
+</div>
+<div class="fab fab-right-top">
+	<a href="#" func="setMirrorBackLight" ref="0"><i class="icon material-icons">settings_overscan</i></a>
+</div-->
+<!-- split -->
+
+{######## main page content #}
+{% set scenes = frappe.db.get_list('Scene',
+    filters={'profile': profile_id},
+    fields=['*'],
+    order_by='sort_order asc',
+    start=0,
+    page_length=2000000000000
+) %}
+
+{% set seted = {} %}
+{% set passwords = {} %}
+{% set profile_id = doc.profile_id %}
+{% set network_leader = {} %}
+{% set network_size = {} %}
+{% set guid_to_network_id = {} %}
+{% for device in profile.profile_device %}
+  {%- set _ = guid_to_network_id.update({device.device: device.network_id}) -%}
+  {% if device.network_id != '0' %}
+      {% if device.network_id in network_size %}
+          {%- set _ = network_size.update({device.network_id: (network_size[device.network_id]+1)}) -%}
+      {% else %}
+          {%- set _ = network_size.update({device.network_id: 1}) -%}
+      {% endif %}
+    {% if device.default_connect == 1 %}
+      {%- set _ = network_leader.update({device.network_id: device.device}) -%}
+    {% else %}
+      {% if device.network_id in network_leader %}
+      {% else %}
+        {%- set _ = network_leader.update({device.network_id: device.device}) -%}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+
+
+
+<!-- split -->
+<style>
+  /* region swiper */
+  .home-swiper {
+    width: 100%;
+    background: white;
+    overflow-x: hidden;
+  }
+
+  .home-swiper-slide {
+    text-align: center;
+    background-color: #455057;
+    background-repeat:no-repeat;
+    font-size: 25px;
+    font-weight: 300;
+  }
+
+  .home-swiper-slide-inner {
+    /*padding: 8px 16px 8px 30px;*/
+  }
+
+  /* endregion swiper */
+
+  /* region custom toggle */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #949499;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+
+  input:checked + .slider {
+    background-color: #30d057;
+  }
+
+  input:focus + .slider {
+    box-shadow: 0 0 1px #30d057;
+  }
+
+  input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+  }
+
+  /* Rounded sliders */
+  .slider.round {
+    border-radius: 34px;
+  }
+
+  .slider.round:before {
+    border-radius: 50%;
+  }
+
+  /* endregion */
+
+  .room-gradient-view {
+    z-index: 2;
+    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(0,0,0,0.1) 80%, rgba(0,0,0,0.2) 100%);
+    width: 64px;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+
+  .room-more-icon-box {
+    z-index: 3;
+    width: 10vw;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 10%;
+    text-align: center;
+    color: var(--f7-theme-color);
+  }
+  li.device .control-panel-left .control-panel-left-inner {
+      left:-260px;
+      width:260px;
+  }
+  
+  ul.pin-to-top {
+    list-style-type: none;
+    padding: 0;
+    overflow: hidden;
+    width: 100%;
+    margin: 16px 0;
+  }
+
+  li.pin-to-top {
+    float: left;
+    text-align: center;
+  }
+
+  .pin-to-top-div {
+    display: block;
+    overflow: auto;
+
+  }
+
+  .iaq-score-container {
+    position: relative;
+    text-align: center;
+  }
+
+  .iaq-score-icon {
+    width: 10vw;
+    height: 10vw;
+    border-radius: 50%;
+    display: inline-block;
+    position: absolute;
+    z-index: 10;
+    right: 0;
+  }
+
+  .iaq-score-icon-box {
+    display: flex;
+    justify-content: center;
+  }
+
+  .iaq-score-icon-box-icon {
+    width: 6vw;
+    height: 6vw;
+    margin-top: 7px;
+  }
+
+  .iaq-score-text-icon {
+    position: relative;
+    text-align: center;
+    top: 13px;
+  }
+
+  .iaq-score {
+    position: absolute;
+    top: 50%;
+    left: 60%;
+    font-size: 26px;
+    line-height: 12px;
+    color: #4D4D4D;
+    transform: translate(-50%, -50%);
+  }
+  .page-content .pvistatus {float:left;margin-right:4px;height:18px;width:18px;margin-top:2px;background-image:url({{ frappe.get_url() }}/files/pvi_new.png);background-size:100% auto;background-position:left top;text-align:right;font-size:10px;color:blue;font-weight:bold;line-height:30px;display:none;}
+
+    .circle {
+  border-radius: 50%;
+  display: inline-block;
+  height: 20px;
+  font-weight: bold;
+  font-size: 1.2em;
+  width: 20px;
+  margin: 0 auto;
+  vertical-align: middle;
+}
+
+.circle span {
+  display: table-cell;
+  vertical-align: middle;
+  height: 50px;
+  width: 50px;
+  text-align: center;
+  padding: 0 15px;
+}
+
+.chart{
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.green-c{
+    background: #3bb33b;
+}
+
+.orange-c{
+    background: #ee7400;
+}
+
+.red-c{
+    background: #ff0013;
+}
+
+.g-ml-5{
+    margin-left:5px;
+}
+
+.g-mr-6{
+    margin-right:6px;
+}
+</style>
+
+{% set paddingTop = 152 if scenes|length > 0 else 48 %}
+
+<!-- Scene region, start -->
+<div class="banner-swiper-container swiper-container swiper-init home-swiper" style="z-index: 5;position:fixed;">
+  <div class="swiper-wrapper">
+    {% for sc in scenes %}
+    {% set scene = frappe.get_doc("Scene", sc.name) %}
+    <div class="swiper-slide home-swiper-slide" {% if scene.image != None %} style="background-image:url('{{ frappe.get_url() }}{{ scene.image }}'); max-width: 100%; max-height: 100%;background-size:cover;background-position:center;" {% endif %}>
+      <div class="home-swiper-slide-inner">
+        <div style="margin:8px 16px 8px 30px;"> 
+        <div style="text-align: left; float: left; width: 50%; line-height: 29px;padding-top:5px;">
+          <b style="font-size: 25px;text-shadow: 1px 2px 3px #000;color:#fff;">{{ _(scene.title) }}</b>
+        </div>
+        <div style="text-align: right; float: right; width: 50%;display:none;">
+          <a class="button" href="/frappe/form/{{ _('Edit Scene') }}/APP_Yoswit_Scene_Form/Website Sidebar Item/{{scene.name}}/" class="right">
+            <i class="material-icons">settings</i>
+          </a>
+        </div>
+        <br />
+        <div style="text-align: right; float: right; width: 50%; margin-top: -20px; margin-bottom: 20px;">
+          {% if scene.is_local != None and scene.is_local %}
+              <!--<a href="#" func="controller_click_scene" ref="{{scene.scene_configuration}}{% if scene.scene_device != None %}+{% for sd in scene.scene_device %}{{sd.profile_subdevice}}={{sd.commands|e}}|{% endfor %}{% endif %}" class="right off_flag">-->
+              <!--  <div class="button button-small button-raised button-round button-fill onoff" ref="1"-->
+              <!--    style="width: 60px; height: 60px; content: '';-webkit-border-radius: 0px 50% 50% 0px;-moz-border-radius: 0px 50% 50% 0px;border-radius: 0px 50% 50% 0px;margin-top:0px;">-->
+                  
+              <!--  </div>-->
+              <!--</a>-->
+              <!--<a href="#" func="controller_click_scene" ref="{{scene.scene_configuration}}{% if scene.scene_device != None %}+{% for sd in scene.scene_device %}{{sd.profile_subdevice}}={{sd.commands|e}}|{% endfor %}{% endif %}" class="right off_flag">-->
+              <!--  <div class="button button-small button-raised button-round button-fill onoff" ref="0"-->
+              <!--    style="width: 60px; height: 60px; content: '';-webkit-border-radius: 50% 0px 0px 50%;-moz-border-radius: 50% 0px 0px 50%;border-radius: 50% 0px 0px 50%;margin-top:0px;">-->
+                  
+              <!--  </div>-->
+              <!--</a>-->
+                        <label class="switch" style="margin-top:10px;margin-bottom:20px;">
+                            <input type="checkbox" scene-name="{{scene.name}}" {% if scene.is_enabled %}checked="checked"{% endif %} func="controller_toggle_scene" ref="{{scene.profile_subdevice}}" />
+                            <span class="slider round"></span>
+                        </label>
+          {% else %}
+              <a href="#" func="controller_click_scene" ref="{{scene.scene_configuration}}{% if scene.scene_device != None %}+{% for sd in scene.scene_device %}{{sd.profile_subdevice}}={{sd.commands|e}}|{% endfor %}{% endif %}" class="right off_flag">
+                <div class="button button-small button-raised button-round button-fill"
+                  style="width: 60px; height: 60px; content: '';-webkit-border-radius: 50%;-moz-border-radius: 50%;border-radius: 50%;">
+                  <i class="material-icons">touch_app</i>
+                </div>
+              </a>
+          {% endif %}
+        </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="banner-swiper-pagination swiper-pagination" style="text-align: center;"></div>
+</div>
+<!-- Scene region, end -->
+
+<style>
+  li.device a.item-link {
+    padding-bottom: 8px;
+  }
+  
+  li.room i.room-collapse {
+    font-size: 20px !important;color: #fff;
+    margin:9px 10px 0px 10px!important;float:left!important;
+  }
+  
+  li.device .icons-authfail {
+    display: none;color: red;margin-left: auto;margin-right: auto;
+  }
+  
+  li.device[authfail='1'] .icons-authfail,
+  li.device[authfail='true'] .icons-authfail {
+    display: block;
+  }
+  
+  li.refonoff-0 {
+    display: none !important;
+  }
+</style>
+
+<div class="toolbar tabbar tabbar-scrollable toolbar-home-room" style="z-index: 5;position:fixed;{% if paddingTop>100 %}margin-top:104px{% endif %}">
+    <div class="room-gradient-view"></div>
+    <div class="toolbar-inner">
+        <a href="#tab-hidden-0" ref="0" id="room-bar-title-0" func="controller_home_switch_room_onclick" class="tab-link tab-link-active"><i class="material-icons">home</i></a>
+        {% for room in profile.profile_room %}
+            {% set roomCount = {'count': False} %}
+            {% for subDevice in profile.profile_subdevice if subDevice.profile_room == room.name and subDevice.hidden == 0 %}
+                {% if roomCount.update({'count': True}) %} {% endif %}
+            {% endfor %}
+            {% if roomCount.count %}
+                <a href="#ab-hidden-{{ loop.index }}" ref="{{ loop.index }}" id="room-bar-title-{{ loop.index }}" func="controller_home_switch_room_onclick" class="tab-link">
+                    {{ tran(room.title,'en') }}
+                </a>
+            {% endif %}
+        {% endfor %}
+        <a href="#" style="min-width:30px;">&nbsp;</a>
+    </div>
+    <div class="room-gradient-view"></div>
+    <div class="room-more-icon-box">
+        <a href="/frappe/list/Room/APP_Yoswit_Room/Website Sidebar Item/null/1000000/" class="button">
+            <i class="material-icons">more_vert</i>
+        </a>
+    </div>
+</div>
+<div class="tabs" style="display:none;">
+    <div id="tab-hidden-0" class="page-content tab tab-active"></div>
+    {% for room in profile.profile_room %}
+        {% set roomCount = {'count': False} %}
+        {% for subDevice in profile.profile_subdevice if subDevice.profile_room == room.name and subDevice.hidden == 0 %}
+            {% if roomCount.update({'count': True}) %} {% endif %}
+        {% endfor %}
+        {% if roomCount.count %}
+            <div id="tab-hidden-{{loop.index}}" class="page-content tab"></div>
+        {% endif %}
+    {% endfor %}
+</div>
+<div style="height:{{paddingTop}}px"></div>
+
+<div class="pin-to-top-div" style="display: none">
+    <div class="list media-list no-margin pin-to-top">
+        <ul id="pin-to-top-ul"></ul>
+    </div>
+</div>
+
+{% for room in profile.profile_room %}
+    {% set roomIndex = loop.index %}
+  {% set roomcount = {'count': False} %}
+  {% for subdevice in profile.profile_subdevice if subdevice.profile_room == room.name %}
+    {% if subdevice.hidden == 0 %}
+      {% if roomcount.update({'count': True}) %} {% endif %}
+    {% endif %}
+  {% endfor %}
+
+  <!-- region if room device count > 0 -->
+  {% if roomcount.count %}
+    <div id="room-{{ loop.index }}-div" class="list media-list no-margin">
+      <ul>
+        <!-- region room title -->
+        <li id="room-{{ loop.index }}-div-title" 
+            room="{{room.name}}" 
+            class="swipeout{{ '2' if 'innocell' in doc.users.currentUsername.lower() }} room">
+          <div class="item-content swipeout-content">
+            <div class="item-inner">
+              <div class="item-title-row">
+                <!-- title text -->
+                <div class="item-title" lang="en" lang-packet="{{ room.title }}" func="controller_common_home_collapse" ref="{{ loop.index }}">
+                  <i class="room-collapse material-icons" id="collapse-{{ loop.index }}">
+                    expand_less
+                  </i>
+                  {{ tran(room.title,'en') }}
+                </div>
+
+                <!-- click to turn on all device in room -->
+                <div class="item-after">
+                  {% if doc.appId != "com.lincogn.wlab" %}
+                    <p class="segmented segmented-raised segmented-round">
+                          {% if frappe.session.user == "tak.wong@yoswit.com" %}
+                          {% endif %}
+                          {% if 'innocell' in frappe.session.user %} 
+                                            {% else %}  
+                          <button class="button button-round link" func="controller_common_home_click_room_onoff" ref="1">Off</button>
+                          <button class="button button-round link" func="controller_common_home_click_room_onoff" ref="0">On</button>
+                                            {% endif %}
+                    </p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="swipeout-actions-right" {{ 'style="display:none;"' if 'innocell' in doc.users.currentUsername.lower() }}>
+            <a href="/frappe/form/Edit {{ tran(room.title, 'en') }}/APP_Yoswit_Room_Form/Profile Room/{{ room.name }}/"
+               class="link color-orange"><i class="icon material-icons">settings</i></a>
+            <!--<a href="#" data-confirm="Are you sure you want to delete this item?" class="link swipeout-delete"><i class="icon material-icons">delete</i></a>-->
+          </div>
+        </li>
+        <!-- endregion -->
+
+        <!-- region same room device loop -->
+        {% for subdevice in profile.profile_subdevice if subdevice.profile_room == room.name %}
+          {% if subdevice.hidden == 0 %}
+              {% set subdeviceIndex = loop.index %}
+            {% set device = frappe.get_doc("Profile Device", subdevice.profile_device) %}
+            {% set gdevice = None %}
+            {% if device.device != None %}
+                {% set gdevice = frappe.get_doc("Device", device.device) %}
+            {% endif %}
+            {% set deviceStatus = None %}
+            
+            {% if subdevice.device_button_group and subdevice.device_button_group.startswith("Awair IAQ") %}
+              
+            {% endif %}
+            
+            {% if device.gateway != None and device.gateway != "" %}
+                {% set control_box = device.gateway %}
+            {% endif %}
+  
+            {% if device.device != None %}
+              {%- set _ = passwords.update({device.device: device.password}) -%}
+            {% endif %}
+  
+            {% set model = device.device_model %}
+  
+            {% if model == None or model == "" %}
+              {% if device.device != None %}
+                {% set model = frappe.db.get_value("Device", device.device, "device_model") %}
+                {% if model == None %}
+                  {% set model = frappe.db.get_value("Device Model", {"hexid": device.device[-6:-2]}, "name") %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+  
+            <!-- region if device is null -->
+            {% if device.device == None %}
+              {% set device_model = frappe.get_doc("Device Model",model) %}
+                {% set deviceSubTitle = device_model.model_code + "-" + _("Template") %}
+                {% set pinToTop = subdevice.pin_to_top %}
+              {% set signal = 0 %}
+              {% set bluetooth = 0 %}
+              {% set button_groups = frappe.get_doc("Device Button Group",subdevice.device_button_group) %}
+  
+              <li class="swipeout{{ '2' if 'innocell' in doc.users.currentUsername.lower() }} device swipeout-delete-manual {{ 'withsubdevice' if button_groups.button_group_sub_list|length > 0 }}"
+                  control-box="{{control_box}}" 
+                  swipeout-delete-func="controller_iot_device_delete" ref="{{ device.name }}|{{ subdevice.name }}" 
+                  subdevice-name="{{ subdevice.name }}" 
+                  guid="{{ device.device }}" 
+                  authfail="0" 
+                  signal="{{ signal }}" 
+                  bluetooth="{{ bluetooth }}" 
+                  password="{{ passwords[device.device] }}" 
+                  network-leader="{{ network_leader[device.network_id] }}" 
+                  network-id="{{device.network_id}}" 
+                                pin-to-top="{{ pinToTop }}" 
+                                room-index="{{ roomIndex }}" 
+                                sub-index="{{ subdeviceIndex }}"
+                  >
+                <div class="item-content swipeout-content">
+                  <div class="item-media" style="background-image:url({{ frappe.get_url()~device_model.image }});">
+                    <i class="material-icons icons-authfail">no_encryption</i>
+                  </div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title" lang="en"
+                           lang-packet="{{ subdevice.title }}">{{ tran(subdevice.title,'en') }}</div>
+                    </div>
+                    <div class="item-subtitle">{{ deviceSubTitle|truncate(22, True) }}</div>
+                    <div class="item-text height-21">
+                      <div>
+                        {% if button_groups.name == "OPEN_LOCK" or button_groups.name == "WRITE_WIEGAND_4963" %}
+                          <div class="mobmob" style="background-position-y: 0%"></div>
+                        {% else %}
+                          <div class="signal"></div>
+                          <div class="bluetooth"></div>
+                          <div class="mesh"><font></font>/{{ network_size[device.network_id] }}</div>
+                          <div class="mobmob" style="background-position-y: 0%"></div>
+                          <div class="iostatus"></div>
+                          <div class="pvistatus"></div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="control-panel-right">
+                    <a href="#" func="controller_manufacturing_batch_browse_device"
+                       ref="{{ device.name }}|{{ device.device_model }}|{{ profile.profile_manufacturing }}|{{ profile.profile_batch }}|{{ device.default_manufacturing_setup }}">
+                      <div class="button button-raised button-big circle"><i class="material-icons" style="margin-top:-45px;">get_app</i></div>
+                    </a>
+                  </div>
+                </div>
+              </li>
+            {% endif %}
+            <!-- endregion -->
+  
+            <!-- region control device-->
+            {% if device.device != None and model != None and subdevice.device_button_group != None %}
+              {% set _ = seted.update({device.device+"-"+subdevice.device_button_group: device.device+"-"+subdevice.device_button_group}) %}
+              {% set device_model = frappe.get_doc("Device Model",model) %}
+              {% set signal = 0 %}
+              {% set bluetooth = 0 %}
+              {% set configString = subdevice.config %}
+              {% set button_groups = frappe.get_doc("Device Button Group",subdevice.device_button_group) %}
+  
+              <!-- region device header (icon, name, id, main button-->
+              
+                            {% set showSubList = false %}
+                            {% if (device_model.model_code and device_model.model_code.startswith("AWAIR-")) %}
+                                {% set showSubList = false %}
+                                {% set pinToTop = true %}
+                            {% else %}
+                                {% set showSubList = button_groups.button_group_sub_list|length > 0 %}
+                                {% set pinToTop = subdevice.pin_to_top %}
+                            {% endif %}
+              
+              {% set isJohnsonControl = None %}
+              {% if button_groups.name == "JOHNSON CONTROLS AIR CONDITIONER" %}
+                {% set isJohnsonControl = True %}
+              {% endif %}
+              
+              <li class="swipeout{{ '2' if 'innocell' in doc.users.currentUsername.lower() }} device swipeout-delete-manual {% if showSubList %} withsubdevice {% endif %}" 
+                  control-box="{{control_box}}" 
+                swipeout-delete-func="controller_iot_device_delete" 
+                ref="{{ device.name }}|{{ subdevice.name }}"
+                subdevice-name="{{ subdevice.name }}" 
+                guid="{{ device.device }}" 
+                authfail="0" 
+                signal="{{ signal }}"
+                bluetooth="{{ bluetooth }}" 
+                config-string="{{configString}}" 
+                password="{{ passwords[device.device] }}"
+                network-leader="{{ network_leader[device.network_id] }}" 
+                network-id="{{device.network_id}}" 
+                                pin-to-top="{{ pinToTop }}" 
+                                room-index="{{ roomIndex }}" 
+                                sub-index="{{ subdeviceIndex }}" 
+                                {% if (device_model.model_code and device_model.model_code.startswith("AWAIR-")) %} 
+                                    style="height: unset" 
+                                    ip="{{device.default_manufacturing_setup}}" 
+                                {% endif %} 
+                                {% if (device_model.model_code and device_model.model_code.startswith("INTESIS-")) %} 
+                                    is-intesis="true" 
+                                    ip="{{device.default_manufacturing_setup}}" 
+                                {% endif %} 
+                {% if isJohnsonControl %} is-johnson-control="true" {% endif %}
+                {% if button_groups.name.startswith("Air Conditioner-") %} is-ir-aircond="true" {% endif %}
+                >
+  
+                <!-- region if device button group list have dimming button -->
+                {% for button in button_groups.button_group_list %}
+                  {% if button.button_type == "Dimming" %}
+                    {% set button_command = frappe.get_doc("Device Command", button.device_command) %}
+                    {% set ref = 0 %}
+                    <div class="control-panel-left" style="right:100%">
+                      <div class="control-panel-left-inner">
+                        <div>
+                          <div class="range-slider-min-wrapper" style="margin-left:40px;"><i class="icon material-icons">brightness_low</i></div>
+                          <div class="range-slider-max-wrapper"><i class="icon material-icons">brightness_high</i></div>
+                          <div class="range-slider-wrapper" style="margin-left:80px;">
+                            <div class="range-slider color-green" data-label="true"
+                                 data-id="dimer_slidebar_{{ device.device }}_{{ button.button_status }}"
+                                 id="dimer_slidebar_{{ device.device }}_{{ button.button_status }}"
+                                 changefunc="controller_common_home_slidbar_change" ref="{{ ref }}"
+                                 button-status="{{ button.button_status }}"
+                                 command-type="{{ button_command.command_type }}"
+                                 command="{{ button_command.function|safe }}">
+                              <input type="range" min="0" max="255" step="1" value="{{ ref }}">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="control-panel-left-toggle-wrapper" style="left:-30px;">
+                        <a href="#" ref="0" func="toggle_control_panel_left_inner">
+                          <div class="button button-raised button-big stop button-fill">
+                            <i class="material-icons" style="margin-top:0px;margin-left:20px;">more_horiz</i>
+                          </div>
+                        </a>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+                <!-- endregion -->
+  
+                <!-- region inner -->
+                {% if (device_model.model_code and device_model.model_code.startswith("AWAIR-")) %}
+                    {% set deviceStatus = frappe.db.get_list('Device Sensor Status',
+                                        filters={'device': device.device},
+                                        fields=['*'],
+                                        order_by='timestamp desc',
+                                        start=0,
+                                        page_length=1
+                                    ) %}
+                    <div class="iaq-div item-content swipeout-content" style="display: block; padding: 0">
+                      <ul class="pin-to-top" style="padding-left: 0">
+                        <li class="pin-to-top" style="width: calc(100% / 7 * 2)">
+                          {% set value = deviceStatus[0]['status'] | int if (deviceStatus != None and deviceStatus|length > 0) else 0 %}
+                          {% set bgColorCode = '#3bb33b' if value > 90 and value <= 100 else ('#f7c53f' if value > 80 and value <=90 else ('#ee7400' if value > 60 and value <=80 else ('#ea030d' if value >= 0 and value <=60 else ''))) %}
+                          {% set imgSrcName = '1' if value > 90 and value <= 100 else ('2' if value > 80 and value <=90 else ('3' if value > 60 and value <=80 else ('4' if value >= 0 and value <=60 else ''))) %}
+                          <div class="iaq-score-container">
+                            <div class="iaq-score-icon" style="display:none;background-color: {{ bgColorCode }};">
+                              <div class="iaq-score-icon-box">
+                                <img class="iaq-score-icon-box-icon"
+                                     src="https://erp.lincogn.com/files/score-{{ imgSrcName }}.svg" alt="Temperature">
+                              </div>
+                            </div>
+                            <div class="iaq-score-text-icon">
+                              <img src="https://erp.lincogn.com/files/box.svg" alt="Temperature">
+                              <div class="iaq-score" style="color:{{bgColorCode}}">{{ value if value != 0 else '-' }}</div>
+                            </div>
+                          </div>
+                          
+                        </li>
+                        <li class="pin-to-top iaq-div-temp" style="width: calc(100% / 7 * 1)">
+                          {% set value = deviceStatus[0]['data_1'] | int if (deviceStatus != None and deviceStatus|length > 0) else 0 %}
+                          {% set status = 2 if ((value >= 26 and value < 28) or (value >= 19 and value < 22)) else (3 if ((value >= 28 and value < 30) or (value >= 16 and value < 19)) else (4 if ((value >= 30 and value < 32) or (value >= 13 and value < 16)) else (5 if value >= 32 or value < 13 else 1))) %}
+                          {% set bgColorCode = '#3bb33b' if status == 1 else ('#f7c53f' if status == 2 else ('#f2a300' if status == 3 else ('#ee7400' if status == 4 else ('#ea030d' if status == 5 else '')))) %}
+                          <div>
+                            <div
+                                style="width: 35px; height: 35px; background-color: {{ bgColorCode }}; border-radius: 50%; display: inline-block;">
+                              <img src="https://erp.lincogn.com/files/temp.svg" alt="Temperature"
+                                   style="width: 35px; height: 35px;">
+                            </div>
+                            <br>
+                            <b>{{ value if value != 0 else '-' }}</b><sup style="font-size:8px">°C</sup>
+                          </div>
+                        </li>
+                        <li class="pin-to-top iaq-div-hum" style="width: calc(100% / 7 * 1)">
+                          {% set value = deviceStatus[0]['data_2'] | int if (deviceStatus != None and deviceStatus|length > 0) else 0 %}
+                          {% set status = 2 if ((value >= 50 and value < 60) or (value >= 35 and value < 40)) else (3 if ((value >= 60 and value < 65) or (value >= 20 and value < 35)) else (4 if ((value >= 65 and value < 80) or (value >= 15 and value < 20)) else (5 if (value >= 80 or value < 15) else 1))) %}
+                          {% set bgColorCode = '#3bb33b' if status == 1 else ('#f7c53f' if status == 2 else ('#f2a300' if status == 3 else ('#ee7400' if status == 4 else ('#ea030d' if status == 5 else '')))) %}
+                          <div>
+                            <div
+                                style="width: 35px; height: 35px; background-color: {{ bgColorCode }}; border-radius: 50%; display: inline-block;">
+                              <img src="https://erp.lincogn.com/files/hum.svg" alt="Humidity"
+                                   style="width: 35px; height: 35px;">
+                            </div>
+                            <br>
+                            <b>{{ value if value != 0 else '-' }}</b><sup style="font-size:8px">%</sup>
+                          </div>
+                        </li>
+                        <li class="pin-to-top iaq-div-co2" style="width: calc(100% / 7 * 1)">
+                          {% set value = deviceStatus[0]['data_3'] | int if (deviceStatus != None and deviceStatus|length > 0) else 0 %}
+                          {% set status = 2 if (value >= 600 and value < 1000) else (3 if (value >= 1000 and value < 1500) else (4 if (value >= 1500 and value < 2500) else (5 if (value >= 2500) else 1))) %}
+                          {% set bgColorCode = '#3bb33b' if status == 1 else ('#f7c53f' if status == 2 else ('#f2a300' if status == 3 else ('#ee7400' if status == 4 else ('#ea030d' if status == 5 else '')))) %}
+                          <div>
+                            <div
+                                style="width: 35px; height: 35px; background-color: {{ bgColorCode }}; border-radius: 50%; display: inline-block;">
+                              <img src="https://erp.lincogn.com/files/co2.svg" alt="CO2" style="width: 35px; height: 35px;">
+                            </div>
+                            <br>
+                            <b>{{ value if value != 0 else '-' }}</b><sup style="font-size:8px">ppm</sup>
+                          </div>
+                        </li>
+                        <li class="pin-to-top iaq-div-voc" style="width: calc(100% / 7 * 1)">
+                          {% set value = deviceStatus[0]['data_4'] | int if (deviceStatus != None and deviceStatus|length > 0) else 0 %}
+                          {% set status = 2 if (value >= 333 and value < 1000) else (3 if (value >= 1000 and value < 3333) else (4 if (value >= 3333 and value < 8332) else (5 if (value >= 8332) else 1))) %}
+                          {% set bgColorCode = '#3bb33b' if status == 1 else ('#f7c53f' if status == 2 else ('#f2a300' if status == 3 else ('#ee7400' if status == 4 else ('#ea030d' if status == 5 else '')))) %}
+                          <div>
+                            <div
+                                style="width: 35px; height: 35px; background-color: {{ bgColorCode }}; border-radius: 50%; display: inline-block;">
+                              <img src="https://erp.lincogn.com/files/tvocs.svg" alt="TVOCs"
+                                   style="width: 35px; height: 35px;">
+                            </div>
+                            <br>
+                            <b>{{ value if value != 0 else '-' }}</b><sup style="font-size:8px">ppb</sup>
+                          </div>
+                        </li>
+                        <li class="pin-to-top" style="width: calc(100% / 7 * 1)">
+                          {% set value = deviceStatus[0]['data_5'] | int if (deviceStatus != None and deviceStatus|length > 0) else 0 %}
+                          {% set status = 2 if (value >= 15 and value < 35) else (3 if (value >= 35 and value < 55) else (4 if (value >= 55 and value < 75) else (5 if (value >= 75) else 1))) %}
+                          {% set bgColorCode = '#3bb33b' if status == 1 else ('#f7c53f' if status == 2 else ('#f2a300' if status == 3 else ('#ee7400' if status == 4 else ('#ea030d' if status == 5 else '')))) %}
+                          <div>
+                            <div
+                                style="width: 35px; height: 35px; background-color: {{ bgColorCode }}; border-radius: 50%; display: inline-block;">
+                              <img src="https://erp.lincogn.com/files/pm25.svg" alt="PM2.5" style="width: 35px; height: 35px;">
+                            </div>
+                            <br>
+                            <b>{{ value if value != 0 else '-' }}</b><sup style="font-size:8px">µg/m<sup>3</sup></sup>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                {% else %}
+                    <div class="item-content swipeout-content">
+                      <!-- image -->
+                      <div class="item-media" style="background-image:url({{ frappe.get_url()~device_model.image }});">
+                        <i class="material-icons icons-authfail">no_encryption</i>
+                      </div>
+                      <!-- region name, id, status signal -->
+                      <div class="item-inner">
+                        <div class="item-title-row">
+                          <div class="item-title" lang="en"
+                               lang-packet="{{ subdevice.title }}">{{ tran(subdevice.title,'en') }}</div>
+                        </div>
+                        {% set deviceSubTitle = device_model.model_code + "-" + (device.device if button_groups.name == "OPEN_LOCK" or button_groups.name == "WRITE_WIEGAND_4963" else device.device_name) %}
+                        <div class="item-subtitle">{{ deviceSubTitle|truncate(22, True) }}</div>
+                        <div class="item-text height-21">
+                          <div>
+                            {% if button_groups.name == "OPEN_LOCK" or button_groups.name == "WRITE_WIEGAND_4963" %}
+                              <div class="mobmob" style="background-position-y: 0%"></div>
+                            {% else %}
+                              <div class="signal"></div>
+                              <div class="bluetooth"></div>
+                              {% if device.network_id in network_size %}
+                                  <div class="mesh"><font></font>/{{ network_size[device.network_id] }}</div>
+                              {% else %}
+                                  <div class="mesh"></div>
+                              {% endif %}
+                              <div class="mobmob" style="background-position-y: 0%"></div>
+                              <div class="iostatus"></div>
+                              <div class="pvistatus"></div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                      <!-- endregion -->
+                      <!-- region main button group -->
+                      <div class="control-panel-right">
+                        {%- for button in button_groups.button_group_list|sort(attribute='idx',reverse = True) -%}
+                          {% set button_command = frappe.get_doc("Device Command", button.device_command) %}
+                          {% if button.button_type == "On/Off" %}
+                            <!-- region On/Off Button -->
+                            {% set ref = 0 %}
+                            {% if gdevice != None and gdevice['device_status'] != None %}
+                                {% set ref = 0 if '"'~button.button_status~'":0' in gdevice['device_status'] else 1 %}
+                            {% endif %}
+                            {% set ref = 0 %}
+                            <a href="#"
+                               class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                               ref="{{ ref }}" button-status="{{ button.button_status }}"
+                               func="controller_common_home_onoff_button_click"
+                               command-type="{{ button_command.command_type }}" command="{{ button_command.function|safe }}">
+                              <div class="button button-raised button-big onoff"></div>
+                            </a>
+                            <!-- endregion -->
+                          {% elif button.button_type == "Press" %}
+                            <!-- region Press Button -->
+                            {% if button.button_name == "Curtain_Open" %}
+                              <a href="#"
+                                 class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                                 ref="1" tapfunc="controller_comman_home_openclose_hold_release"
+                                 command-type="{{ button_command.command_type }}"
+                                 command="{{ button_command.function|safe }}" style="margin-left:2px;">
+                                <div class="button button-raised button-big openclose op" style="width:65px;">
+                                  <div class="rotate-90" style="margin-left:-7px;margin-top:-2px;"><i class="material-icons" style="line-height:65px;font-size:24px!important;">unfold_more</i>
+                                  </div>
+                                </div>
+                              </a>
+                            {% elif button.button_name == "Curtain_Close" %}
+                              <a href="#"
+                                 class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                                 ref="0" tapfunc="controller_comman_home_openclose_hold_release"
+                                 command-type="{{ button_command.command_type }}"
+                                 command="{{ button_command.function|safe }}" style="margin-left:2px;">
+                                <div class="button button-raised button-big openclose cl" style="width:65px;">
+                                  <div class="rotate-90" style="margin-left:-5px;margin-top:-2px;"><i class="material-icons" style="line-height:65px;font-size:24px!important;">unfold_less</i>
+                                  </div>
+                                </div>
+                              </a>
+                            {% elif button.button_name == "Curtain_Stop" %}
+                              <a href="#"
+                                 class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                                 ref="n" func="controller_common_home_onoff_button_click"
+                                 command-type="{{ button_command.command_type }}"
+                                 command="{{ button_command.function|safe }}">
+                                <div class="button button-raised button-big stop">
+                                  <div><i class="material-icons" style="line-height:65px;font-size:20px;">pause</i></div>
+                                </div>
+                              </a>
+                            {% else %}
+                              <a href="#" func="controller_common_home_press_button" ref="{{ device.device }}|{{ button_command.function| replace('"',"'") }}">
+                                <div class="button button-raised button-big circle"><i class="f7-icons" style="margin-top:-45px;">lock_open</i>
+                                </div>
+                              </a>
+                            {% endif %}
+                            <!-- endregion -->
+                          {% elif button.button_type == "Normal" %}
+                            <!-- region Normal Button -->
+                            {% if button.button_name == "OPEN_LOCK" %}
+                              <a href="#" func="controller_ui_open_lock" ref="{{ device.device }}|OPEN_LOCK">
+                                <div class="button button-raised button-big circle"><i class="f7-icons" style="margin-top:-45px;">lock_open</i>
+                                </div>
+                              </a>
+                            {% elif button.button_name == "OPEN_LOCK_WIEGAND_4963" %}
+                              <a href="#" func="controller_ui_open_lock" ref="{{ device.device }}|OPEN_LOCK_WIEGAND_4963">
+                                <div class="button button-raised button-big circle"><i class="f7-icons" style="margin-top:-45px;">lock_open</i>
+                                </div>
+                              </a>
+                            {% else %}
+                              {% if button_groups.name and (button_groups.name.startswith("Television-") or button_groups.name.startswith("Projector-") or  button_groups.name.startswith("Set-top boxes-") or button_groups.name.startswith("Air Conditioner-")) %}
+      
+                                {% if button.button_name == "Panel" %}
+                                  <a class="ir-panel" href="/frappe/detail/{{ tran(subdevice.title,'en') }}/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel/Profile/{{ button_groups.name }}/guid={{ device.device }}&subdevice_name={{subdevice.name}}/"
+                                     style="margin-left:5px;">
+                                    <div class="button button-raised button-big circle"><i class="icon material-icons" style="margin-top:-45px;">dialpad</i>
+                                    </div>
+                                  </a>
+                                {% elif button.button_name == "On / Off" %}
+                                  <a href="#" style="margin-left:5px;" func="controller_iot_device_ir_full_panel_click"
+                                     guid="{{ device.device }}" command-type="{{ button_command.command_type }}"
+                                     command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                     button-signal="{{ button.button_signal }}">
+                                    <div class="button button-raised button-big circle"><i class="icon material-icons" style="margin-top:-45px;">power_settings_new</i>
+                                    </div>
+                                  </a>
+                                {% else %}
+                                  <a href="#" style="margin-left:5px;" func="controller_iot_device_ir_full_panel_click"
+                                     guid="{{ device.device }}" command-type="{{ button_command.command_type }}"
+                                     command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                     button-signal="{{ button.button_signal }}">
+                                    <div class="button button-raised button-big circle">{{ button.button_name }}</div>
+                                  </a>
+                                {% endif %}
+                              {% else %}
+                              
+                                {% if button_groups.name == "BACNET AIR CONDITIONER" and button.button_name == "On/Off" %}
+                                  {% set config = configString.split('|') %}
+                                  {% set airconfig = config[5].split(',') %}
+                                  {% set ref = airconfig[0] if airconfig[0] != None else '' %}
+                                  <a href="#"
+                                     class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                                     ref="{{ ref }}" func="controller_home_device_click"
+                                     command-type="{{ button_command.command_type }}"
+                                     command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                     button-signal="{{ button.button_signal }}">
+                                    <div class="button button-raised button-big onoff"></div>
+                                  </a>
+                                {% elif button_groups.name == "JOHNSON CONTROLS AIR CONDITIONER" and button.button_name == "On/Off" %}
+                                  {% set config = configString.split('|') %}
+                                  {% set airconfig = config[2].split(',') %}
+                                  {% set ref = airconfig[0] if airconfig[0] != None else '' %}
+                                  <a href="#"
+                                     class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                                     ref="{{ ref }}" func="controller_home_device_click"
+                                     command-type="{{ button_command.command_type }}"
+                                     command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                     button-signal="{{ button.button_signal }}">
+                                    <div class="button button-raised button-big onoff"></div>
+                                  </a>
+                                {% elif button_groups.name == "INTESIS AIR CONDITIONER" and button.button_name == "On/Off" %}
+                                  {% set config = configString.split('|') %}
+                                  {% set airconfig = config[1].split(',') %}
+                                  {% set ref = airconfig[0] if airconfig[0] != None else '' %}
+                                  <a href="#"
+                                     class="right {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %}"
+                                     ref="{{ ref }}" func="controller_home_device_click"
+                                     command-type="{{ button_command.command_type }}"
+                                     command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                     button-signal="{{ button.button_signal }}">
+                                    <div class="button button-raised button-big onoff"></div>
+                                  </a>
+                                {% else %}
+                                    {% if button.button_name == "Panel" %}
+                                      <a class="ir-panel" href="/frappe/detail/{{ tran(subdevice.title,'en') }}/APP_Yoswit_Life_Panel/IoT%20Print%20Permission/{{ button_groups.name }}/guid={{ device.device }}&subdevice_name={{subdevice.name}}/"
+                                         style="margin-left:5px;">
+                                        <div class="button button-raised button-big circle"><i class="icon material-icons" style="margin-top:-45px;">dialpad</i>
+                                        </div>
+                                      </a>
+                                    {% elif  button.button_name and button.button_name.startswith("color-") %}
+                                        {% set color = button.button_name.split('-') %}
+                                      <a class="ir-panel" href="#" style="margin-left:5px;">
+                                        <div class="button button-raised button-big circle" style="background-color:{{color[1]}}"></div>
+                                      </a>
+                                    {% else %}
+                                      <a href="#" func="controller_home_device_click"
+                                         command-type="{{ button_command.command_type }}"
+                                         command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                         button-signal="{{ button.button_signal }}">
+                                        <div class="button button-raised button-big circle">{{ button.button_name }}</div>
+                                      </a>
+                                    {% endif %}
+                                {% endif %}
+                              {% endif %}
+                            {% endif %}
+                            <!-- endregion -->
+                          {% elif button.button_type == "Label" %}
+                            <!-- region Label Button -->
+                            {% if button_groups.name and button_groups.name.startswith("Awair IAQ") %}
+                              <div
+                                  style="margin-top: 4px; width: 16vw; height: 16vw; background: white; border: 1px solid gray; border-radius: 50%; text-align: center;">
+                                <div style="padding-top: 6px">
+                                    {% set score = 0 %}
+                                    {% if deviceStatus != None %}
+                                  {% set score = deviceStatus.status | int %}
+                                  {% endif %}
+                                  {% set scoreDesc = "Good" %}
+                                  {% if score >= 60 and score < 80 %}
+                                    {% set scoreDesc = "Fair" %}
+                                  {% elif score < 60 %}
+                                    {% set scoreDesc = "Poor" %}
+                                  {% endif %}
+                                  <div style="font-size: 20px;">{{ score }}</div>
+                                  <span style="color: #808080">{{ scoreDesc }}</span>
+                                </div>
+                              </div>
+                            {% endif %}
+                            <!-- endregion -->
+                          {% endif %}
+                        {%- endfor -%}
+                      </div>
+                      <!-- endregion -->
+                    </div>
+                {% endif %}
+                <!-- endregion -->
+  
+                <!-- region swipe left -->
+                <div class="swipeout-actions-left" {{ 'style="display:none;"' if 'innocell' in doc.users.currentUsername.lower() }}>
+                  {% set gateway_device = frappe.db.get_value('Gateway Device', {'gateway': doc.gateway, 'device':device.device}, '*') %}
+                  {% set color_class = "color-orange" %}
+                  {% if gateway_device == None or gateway_device.disabled == 1 %}
+                    {% set color_class = "color-cust-grey" %}
+                  {% endif %}
+  
+                  {% if button_groups.name == "OPEN_LOCK" or button_groups.name == "WRITE_WIEGAND_4963" %}
+                    <a class="color-yellow"
+                       href="/frappe/detail/Access Control/APP_Yoswit_Access_Control/Profile/{{ device.device }}/"
+                       ttt="/Device Access|device,=,{{ device.device }}+device_button_group,=,{{ subdevice.device_button_group }}/Yoswit-App-CMS-Device-Access-List/Device Access/?mac_address={{ device.device }}">
+                      <i class="icon material-icons md-only">vpn_key</i>
+                    </a>
+                  {% else %}
+                    <a href="#" func="controller_iot_device_click_mobmob" ref="{{ device.device }}"
+                       class="link btn_enable_mobmob {{ color_class }}"><i class="icon material-icons">cloud</i></a>
+                    <a href="#" class="link color-cust-blue"><i class="icon material-icons">alarm</i></a>
+                    <a href="#" class="link color-cust-purple" func="controller_ble_toggle_connection"><i class="icon material-icons">settings_bluetooth</i></a>
+                    {# <a href="#" class="link color-cust-yellow"><i class="icon material-icons">directions_walk</i></a>
+                    <a href="#" class="link color-cust-purple"><i class="icon material-icons">tap_and_play</i></a> #}
+                  {% endif %}
+                </div>
+                <!-- endregion -->
+  
+                <!-- region swipe right -->
+                <div class="swipeout-actions-right" {{ 'style="display:none;"' if 'innocell' in doc.users.currentUsername.lower() }}>
+                  {% if button_groups.name == "OPEN_LOCK" or button_groups.name == "WRITE_WIEGAND_4963" %}
+                    <!--<a href="#" func="controller_common_access_device_iot_edit" ref="{{subdevice.name}}|{{device.device}}|{{subdevice.device_button_group}}">-->
+                    <!--<a href="/frappe/form/Edit {{tran(subdevice.title, 'en')}}/APP_Yoswit_Device_Form/Profile Subdevice/{{subdevice.name}}/guid={{device.device}}&device_button_group={{button_groups.name}}/">-->
+                    <a href="/frappe/detail/Edit {{ tran(subdevice.title, 'en') }}/APP_Yoswit_Device_Setting_List/Profile Subdevice/{{ subdevice.name }}/guid={{ device.device }}&device_button_group={{ button_groups.name }}/">
+                      <i class="icon material-icons md-only">settings</i>
+                    </a>
+                  {% else %}
+                    <!--<a href="#" class="link color-orange" func="controller_iot_device_edit" ref="{{subdevice.name}}|{{device.device}}|{{subdevice.device_button_group}}"><i class="icon material-icons">settings</i></a>-->
+                    <!--<a href="/frappe/form/Edit {{tran(subdevice.title, 'en')}}/APP_Yoswit_Device_Form/Profile Subdevice/{{subdevice.name}}/guid={{device.device}}&device_button_group={{button_groups.name}}/" class="link color-orange"><i class="icon material-icons">settings</i></a>-->
+                    <a href="/frappe/detail/{{ tran(subdevice.title, 'en') }} Setting/APP_Yoswit_Device_Setting_List/Profile Subdevice/{{ subdevice.name }}/guid={{ device.device }}&device_button_group={{ button_groups.name }}&device_name={{ device.name }}&device_model={{ gdevice.device_model }}&title=Edit {{ tran(subdevice.title, 'en') }}&name={{ subdevice.name }}&doctype=Profile Subdevice/"
+                       class="link color-orange"><i class="icon material-icons">settings</i></a>
+                    
+                    {% if developer %}
+                    <a href="#" class="link color-cust-yellow" func="controller_manufacturing_batch_browse_device"
+                       ref="{{ device.name }}|{{ device.device_model }}|{{ profile.profile_manufacturing }}|{{ profile.profile_batch }}|{{ device.default_manufacturing_setup }}"><i
+                        class="icon material-icons">get_app</i></a>
+                    {% endif %}
+                    
+                    {# <a href="#" class="link color-cust-blue"><i class="icon material-icons">playlist_add_check</i></a>
+                    <a href="#" class="link color-cust-green"><i class="icon material-icons">mic</i></a>#}
+                    <a href="#" data-confirm="Are you sure you want to delete this item?" class="link swipeout-delete"><i
+                        class="icon material-icons">delete</i></a>
+                  {% endif %}
+                </div>
+                <!-- endregion -->
+  
+              </li>
+              <!-- endregion -->
+  
+              <!-- region device sub button -->
+              
+              
+              {% if showSubList %}
+                {% set config = None %}
+                {% set airconfig = None %}
+                {% set refonoff = "1" %}
+                {% set isBAcnet = "" %}
+                {% set isIntesis = "" %}
+                {% if button_groups.name == "BACNET AIR CONDITIONER" %}
+                  {% set config = configString.split('|') %}
+                  {% set airconfig = config[5].split(',') %}
+                  {% set refonoff = airconfig[0] if airconfig[0] != None else '' %}
+                  
+                {% elif button_groups.name == "JOHNSON CONTROLS AIR CONDITIONER" %}
+                  {% set config = configString.split('|') %}
+                  {% set airconfig = config[2].split(',') %}
+                  {% set refonoff = airconfig[0] if airconfig[0] != None else '' %}
+                  
+                {% elif button_groups.name == "INTESIS AIR CONDITIONER" %}
+                  {% set config = configString.split('|') %}
+                  {% set airconfig = config[1].split(',') %}
+                  {% set refonoff = airconfig[0] if airconfig[0] != None else '' %}
+                {% endif %}
+                
+                {% if button_groups.name[:7] == "BACNET " %}
+                  {% set isBAcnet = "bacnet" %}
+                {% endif %}
+                
+                {% if button_groups.name[:8] == "INTESIS " %}
+                  {% set isIntesis = "intesis" %}
+                {% endif %}
+  
+                <li class="device subdevice refonoff-{{ refonoff }}" 
+                    control-box="{{control_box}}" 
+                    {% if isBAcnet == "bacnet" %} isBacnet="true" {% endif %} 
+                    {% if isIntesis == "intesis" %} isIntesis="true" {% endif %} 
+                    ref="{{ device.name }}|{{ subdevice.name }}"
+                  subdevice-name="{{ subdevice.name }}"
+                  guid="{{ device.device }}" 
+                  authfail="0" 
+                  signal="{{ signal }}"
+                  bluetooth="{{ bluetooth }}" 
+                  password="{{ passwords[device.device] }}" 
+                  network-leader="{{ network_leader[device.network_id] }}" 
+                  network-id="{{device.network_id}}" 
+                                    pin-to-top="{{ pinToTop }}" 
+                                    room-index="{{ roomIndex }}" 
+                                    sub-index="{{ subdeviceIndex }}" 
+                                    {% if (device_model.model_code and device_model.model_code.startswith("INTESIS-")) %} 
+                                        ip="{{device.default_manufacturing_setup}}" 
+                                    {% endif %} 
+                  style="overflow:auto;height:auto;">
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="row" style="--f7-grid-gap:3px;">
+                        {%- for button in button_groups.button_group_sub_list -%}
+                          {% set button_command = frappe.get_doc("Device Command", button.device_command) %}
+                          {% if button.button_type == "Normal" %}
+                            <!-- region Normal Button -->
+                            {% if button.button_name == "Curtain_Open" %}
+                              <button
+                                  class="col {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %} button button-large button-raised openclose op"
+                                  ref="1" func="controller_common_home_curtain_button_click"
+                                  command-type="{{ button_command.command_type }}"
+                                  command="{{ button_command.function|safe }}">
+                                <div style="margin-left:-7px;margin-top:0px;">
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:8px;">chevron_left</i>
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:-22px">chevron_left</i>
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:-10px;">chevron_right</i>
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:-22px">chevron_right</i>
+                                </div>
+                              </button>
+                            {% elif button.button_name == "Curtain_Close" %}
+                              <button
+                                  class="col {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %} button button-large button-raised openclose cl"
+                                  ref="0" func="controller_common_home_curtain_button_click"
+                                  command-type="{{ button_command.command_type }}"
+                                  command="{{ button_command.function|safe }}">
+                                <div style="margin-left:-5px;margin-top:0px;">
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:8px;">chevron_right</i>
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:-22px">chevron_right</i>
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:-10px">chevron_left</i>
+                                    <i class="material-icons" style="line-height:65px;font-size:22px!important;margin-left:-22px">chevron_left</i>
+                                </div>
+                              </button>
+                            {% elif button.button_name == "Curtain_Stop" %}
+                              <button
+                                  class="col {% if button.on_flag != None %}on_flag{% endif %} {% if button.off_flag != None %}off_flag{% endif %} button button-large button-raised stop"
+                                  ref="n" func="controller_common_home_curtain_button_click"
+                                  command-type="{{ button_command.command_type }}"
+                                  command="{{ button_command.function|safe }}">
+                                <div><i class="material-icons"
+                                        style="line-height:65px;font-size:18px!important;">pause</i></div>
+                              </button>
+                            {% else %}
+                              {% if button_groups.name and (button_groups.name.startswith("Television-") or  button_groups.name.startswith("Projector-") or  button_groups.name.startswith("Set-top boxes-") or button_groups.name.startswith("Air Conditioner-")) %}
+                                {% if button.display_at_home == true %}
+                                  <a class="col" href="#" func="controller_iot_device_ir_full_panel_click" guid="{{ device.device }}"
+                                     command-type="{{ button_command.command_type }}"
+                                     command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                     button-signal="{{ button.button_signal }}">
+                                    <div class="button button-raised button-big stop">{{ button.button_name }}</div>
+                                  </a>
+                                {% endif %}
+                              {% elif button_groups.name == "BACNET AIR CONDITIONER" or button_groups.name == "JOHNSON CONTROLS AIR CONDITIONER" or button_groups.name == "INTESIS AIR CONDITIONER" %}
+                                <a href="#" class="col" func="controller_home_device_click"
+                                   command-type="{{ button_command.command_type }}"
+                                   command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                   button-signal="{{ button.button_signal }}">
+                                  <div class="button button-raised button-big stop">
+                                    {% if button.button_name == "Mode" %}
+                                      {% if airconfig[1]=="2" %}
+                                        COOL
+                                      {% elif airconfig[1]=="4" %}
+                                        DRY
+                                      {% elif airconfig[1]=="8" %}
+                                        AIR S
+                                      {% elif airconfig[1]=="16" %}
+                                        HEAT
+                                      {% elif airconfig[1]=="32" %}
+                                        VENT
+                                      {% endif %}
+                                    {% elif button.button_name == "Speed" %}
+                                      {% if airconfig[2]=="2" %}
+                                        HIGH
+                                      {% elif airconfig[2]=="4" %}
+                                        MED
+                                      {% elif airconfig[2]=="8" %}
+                                        LOW
+                                      {% elif airconfig[2]=="16" %}
+                                        AUTO
+                                      {% endif %}
+                                    {% else %}
+                                      {{ button.button_name }}
+                                    {% endif %}
+                                  </div>
+                                </a>
+                              {% else %}
+                                <a href="#" class="col" func="controller_home_device_click"
+                                   command-type="{{ button_command.command_type }}"
+                                   command="{{ button_command.function|safe }}" config="{{ subdevice.config }}"
+                                   button-signal="{{ button.button_signal }}">
+                                  <div class="button button-raised button-big stop">{{ button.button_name }}</div>
+                                </a>
+                              {% endif %}
+                            {% endif %}
+                            <!-- endregion -->
+                          {% elif button.button_type == "Label" %}
+                            <!-- region Label Button -->
+                            {% if button.display_at_home == true %}
+                              <a class="col" style="line-height:60px;margin-top:8px;text-align:center;"
+                                 button-signal="{{ button.button_signal }}">
+                                {% if (button_groups.name == "BACNET AIR CONDITIONER" or button_groups.name == "JOHNSON CONTROLS AIR CONDITIONER" or button_groups.name == "INTESIS AIR CONDITIONER") and button.button_name == "Temp" %}
+                                  {{ airconfig[3] }} &deg;C
+                                {% else %}
+                                  {{ button.button_name }}
+                                {% endif %}
+                              </a>
+                            {% endif %}
+                            <!-- endregion -->
+                          {% elif button.button_type == "Icon" %}
+                            <!-- region Icon Button -->
+                            {% if button_groups.name and button_groups.name.startswith("Awair IAQ") and deviceStatus != None %}
+                              {% set status = 1 %}
+                              {% set unit = '' %}
+                              {% set value = 0 %}
+                              {% set imageName = '' %}
+                              {% if button.button_name == "Temperature" %}
+                                {% set unit = '°C' %}
+                                {% set value = deviceStatus.data_1 | int %}
+                                {% set imageName = 'temp.png' %}
+                                {% if (value >= 26 and value < 28) or (value >= 19 and value < 22) %}
+                                  {% set status = 2 %}
+                                {% elif (value >= 28 and value < 30) or (value >= 16 and value < 19) %}
+                                  {% set status = 3 %}
+                                {% elif (value >= 30 and value < 32) or (value >= 13 and value < 16) %}
+                                  {% set status = 4 %}
+                                {% elif value >= 32 or value < 13 %}
+                                  {% set status = 5 %}
+                                {% endif %}
+                              {% elif button.button_name == "Humidity" %}
+                                {% set unit = '%' %}
+                                {% set value = deviceStatus.data_2 | int %}
+                                {% set imageName = 'hum.png' %}
+                                {% if (value >= 50 and value < 60) or (value >= 35 and value < 40) %}
+                                  {% set status = 2 %}
+                                {% elif (value >= 60 and value < 65) or (value >= 20 and value < 35) %}
+                                  {% set status = 3 %}
+                                {% elif (value >= 65 and value < 80) or (value >= 15 and value < 20) %}
+                                  {% set status = 4 %}
+                                {% elif value >= 80 or value < 15 %}
+                                  {% set status = 5 %}
+                                {% endif %}
+                              {% elif button.button_name == "CO2" %}
+                                {% set unit = 'ppm' %}
+                                {% set value = deviceStatus.data_3 | int %}
+                                {% set imageName = 'co2.png' %}
+                                {% if value >= 600 and value < 1000 %}
+                                  {% set status = 2 %}
+                                {% elif value >= 1000 and value < 1500 %}
+                                  {% set status = 3 %}
+                                {% elif value >= 1500 and value < 2500 %}
+                                  {% set status = 4 %}
+                                {% elif value >= 2500 %}
+                                  {% set status = 5 %}
+                                {% endif %}
+                              {% elif button.button_name == "TVOCs" %}
+                                {% set unit = 'ppb' %}
+                                {% set value = deviceStatus.data_4 | int %}
+                                {% set imageName = 'tvocs.png' %}
+                                {% if value >= 333 and value < 1000 %}
+                                  {% set status = 2 %}
+                                {% elif value >= 1000 and value < 3333 %}
+                                  {% set status = 3 %}
+                                {% elif value >= 3333 and value <8332 %}
+                                  {% set status = 4 %}
+                                {% elif value >= 8332 %}
+                                  {% set status = 5 %}
+                                {% endif %}
+                              {% elif button.button_name == "PM2.5" %}
+                                {% set unit = 'µg/m<sup>3</sup>' %}
+                                {% set value = deviceStatus.data_5 | int %}
+                                {% set imageName = 'pm25.png' %}
+                                {% if value >= 15 and value < 35 %}
+                                  {% set status = 2 %}
+                                {% elif value >= 35 and value < 55 %}
+                                  {% set status = 3 %}
+                                {% elif value >= 55 and value <75 %}
+                                  {% set status = 4 %}
+                                {% elif value >= 75 %}
+                                  {% set status = 5 %}
+                                {% endif %}
+                              {% endif %}
+  
+                              {% set bgColorCode = '' %}
+                              {% if status == 1 %}
+                                {% set bgColorCode = '#3bb33b' %}
+                              {% elif status == 2 %}
+                                {% set bgColorCode = '#f7c53f' %}
+                              {% elif status == 3 %}
+                                {% set bgColorCode = '#f2a300' %}
+                              {% elif status == 4 %}
+                                {% set bgColorCode = '#ee7400' %}
+                              {% elif status == 5 %}
+                                {% set bgColorCode = '#ea030d' %}
+                              {% endif %}
+  
+                              <div style="width: {{ button.width }}; text-align: center;">
+                                <div
+                                    style="width: 10vw; height: 10vw; background-color: {{ bgColorCode }}; border-radius: 50%; display: inline-block;">
+                                  <img src="view/default/style/img/{{ imageName }}" style="width: 10vw; height: 10vw;">
+                                </div>
+                                <br>
+                                <b style="font-size: larger">
+                                  {{ value }}
+                                </b>
+                                <br>
+                                <small>
+                                  {{ unit }}
+                                </small>
+                              </div>
+                            {% endif %}
+                            <!-- endregion -->
+                          {% endif %}
+
+                           {% if button_groups.name == ("Lift")%}
+                          {% if button.button_type == "Label" %}
+                                {% if button.button_name == "NP" %}
+                                <div>
+                                <span class="circle green-c"></span>
+                                  <div class="chart">
+                                    <b>Normal Power</b>
+                                  </div>
+                                </div>
+
+                                {% elif button.button_name == "EP" %}
+                                <div>
+                                <span class="circle green-c"></span>
+                                  <div class="chart">
+                                    <b>Essential Power</b>
+                                  </div>
+                                </div>
+
+                                {% elif button.button_name == "FA" %}
+                                <div>
+                                <span class="circle orange-c"></span>
+                                  <div class="chart">
+                                    <b>Fire Alarm</b>
+                                  </div>
+                                </div>
+
+                                {% elif button.button_name == "FOLO" %}
+                                <div>
+                                <span class="circle green-c"></span>
+                                  <div class="chart">
+                                    <b>Lift Operation</b>
+                                  </div>
+                                </div>
+
+                                {% elif button.button_name == "HSOC" %}
+                                <div class="g-mr-6">
+                                <span class="circle green-c"></span>
+                                  <div class="chart">
+                                    <b>Signal Of Car</b>
+                                  </div>
+                                </div>
+
+                                {% elif button.button_name == "LAS" %}
+                                <div>
+                                <span class="circle red-c"></span>
+                                  <div class="chart">
+                                    <b>Lift Alarm &nbsp &nbsp &nbsp &nbsp</b>
+                                  </div>
+                                </div>
+                                {% endif %}
+                                   {% endif %}
+                                    {% endif %}
+                        {%- endfor -%}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              {% endif %}
+              <!-- endregion -->
+            {% endif %}
+            <!-- endregion -->
+          {% endif %} <!-- if hidden end -->
+        {% endfor %}
+        <!-- endregion -->
+      </ul>
+    </div>
+  {% endif %}
+  <!-- endregion -->
+{% endfor %}
+
+<!-- region unassigned -->
+<div class="home-unassigned controller_home_refresh_unassigned"{{ ' style="display:none;"' if ('innocell' in doc.users.currentUsername.lower()) }}></div>
+<!-- endregion -->
+
+
+
+{% endif %}
+{# checking modified template, end #}

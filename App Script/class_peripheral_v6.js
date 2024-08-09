@@ -94,7 +94,7 @@ window.Peripheral = (function() {
         	if(isset(p.firmware)) p.firmware+="";
         	if(isset(p.firmware) && p.firmware != "----"){
         	    self.prop.firmware = p.firmware;
-        	    self.prop.firmware = self.getFirmwareNo(p.firmware);
+        	    self.prop.firmwareNo = self.getFirmwareNo(p.firmware);
         	}
         	if(isset(p.password) && p.password != "000000") self.prop.password = p.password;
         	
@@ -3090,8 +3090,8 @@ const doMOBMOB = (gangs) => {
     	};
     	const readFirmware = () => {
     		return new Promise((resolve, reject) => {
-    		    if(self.prop.firmwareNo){
-    		        resolve(self.prop.firmwareNo);
+    		    if(parseInt(self.prop.firmwareNo)){
+    		        resolve(self.getFirmwareNo(self.prop.firmwareNo));
     		    }else{
         		    let service="180a", characteristic="2a26";
         		    if(isset(self.prop.characteristics)){
@@ -3107,7 +3107,7 @@ const doMOBMOB = (gangs) => {
                             let firmware = data.convertToAscii().toLowerCase();
         	                self.prop.firmware = firmware;
                             self.prop.firmwareNo = self.getFirmwareNo(firmware);
-                            resolve(self.prop.firmwareNo);
+                            resolve(self.getFirmwareNo(firmware));
                         },
                         function(failure){
                             reject("Failed to read Firmware");

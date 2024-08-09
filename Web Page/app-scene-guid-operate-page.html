@@ -287,6 +287,24 @@
               <div class="card">
                 <div class="card-content card-content-padding">
                   <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px">
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">Self Triggered</div>
+                      <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="switchSelfTrigger(1)">
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!selfTriggeredClickStatus">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="selfTriggeredClickStatus">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px" v-if="selfTriggeredClickStatus">
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">Trigger Status</div>
+                      <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="switchSelfTrigger(2)">
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!selfTriggeredButtonStatus">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="selfTriggeredButtonStatus">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px" v-if="!selfTriggeredClickStatus">
                     <div class="action-list list media-list no-margin">
                       <ul>
                         <li class="device" v-for="(item,index) in trigger" :key="index">
@@ -546,12 +564,33 @@
           uploadImage: '',
           triggerCondition: 2,
           rcuList: [],
+          templateConfig:{
+            //type:1 choose tempalte,2 choose Rcu,3 
+            rcu_scene_button: {
+              name: 'RCU Scene Button',
+              step:[{
+                id : 1,
+                type : 1
+              }]
+            },
+            rcu_scene_toggle:{},
+            rcu_randar:{},
+            scene_button:{},
+            multiway_switch:{},
+            timmer : {}
+          },
           templateList: [
             {
               name: 'RCU Scene Button',
               desription: '',
               icon: 'motion_photos_auto',
               color: '#5855e0',
+            },
+            {
+              name: 'RCU Scene Toggle',
+              desription: '',
+              icon: 'touch_app',
+              color: '#A85F32',
             },
             {
               name: 'RCU Radar',
@@ -589,6 +628,10 @@
           extraTriggerList: [],
           isExtraStatus: false,
           isRelease: false,
+          selfTriggered : false, //is trigger by self rcu
+          selfTriggeredClickStatus : false,
+          selfTriggeredButtonStatus : false,
+          virtualTriggerList : [],
         },
         mounted() {
           this.init();
@@ -597,7 +640,7 @@
             //if exist the same trigger, warn it
             let sameCheckStatus = false;
             this.trigger.forEach((item) => {
-              if (item.title == data.display_name && item.button_group == data.button_group) {
+              if (item.title == data.display_name && item.button_group == data.button_group && item.guid === data.guid) {
                 sameCheckStatus = true;
               }
             });
@@ -745,7 +788,7 @@
 
             for (let i in devices) {
               if (devices[i].device_model.startsWith('YO780') && !devices[i].device_model.startsWith('YO780-Scene')) {
-                this.actionGuid = devices[i].guid;
+                //this.actionGuid = devices[i].guid;
                 devices[i].ischeck = true;
                 this.rcuList.push(devices[i]);
               }
@@ -796,6 +839,36 @@
               this.virtualStatus = true;
             }
           },
+          switchSelfTrigger(type){
+            if(type ==1){
+              this.selfTriggeredClickStatus = !this.selfTriggeredClickStatus;
+              if(this.selfTriggeredClickStatus){
+                //check if have some rcu
+                this.trigger = [];
+                this.rcuList.forEach((item) => {
+                  if(item.ischeck){
+                    this.trigger.push({
+                      guid : item.guid,
+                      button_group : 'SCENE MUTIWAY ONOFF GANG1',
+                      ref : this.selfTriggeredButtonStatus?'01':'00',
+                      img_url: 'https://my.yoswit.com/files/YO780.svg',
+                      title : 'YO780',
+                      mac_address : item.mac_address,
+                      mode : item.device_mode,
+                      model : item.device_model
+                    })
+                  }
+                })
+              }else{
+                this.selfTriggeredButtonStatus = false;
+              }
+            }else{
+              this.selfTriggeredButtonStatus = !this.selfTriggeredButtonStatus;
+              this.trigger.forEach(item=>{
+                item.ref = this.selfTriggeredButtonStatus?'01':'00';
+              })
+            }
+          },
           async chooseTemplate(item) {
             this.templateName = item.name;
             this.index = 0.5;
@@ -808,7 +881,7 @@
                 ischeckIndex++;
               }
             });
-            if (ischeckIndex == 0 || ischeckIndex > 1) {
+            if (ischeckIndex == 0 || ischeckIndex >= 1) {
               this.actionGuid = this.rcuList[0].guid;
             }
             this.initActionSheet();
@@ -818,9 +891,14 @@
               if (this.rcuList[i].ischeck) {
                 let guid = this.rcuList[i].guid;
                 try {
-                  await window.peripheral[guid].connect();
-                  $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
-                  $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
+                  if(window.peripheral[guid].prop.connected){
+                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
+                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
+                  }else{
+                    await window.peripheral[guid].connect();
+                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
+                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
+                  }
                 } catch (error) {
                   console.log(error);
                   rcuConnectStatus = false;
@@ -889,6 +967,7 @@
                 //init the action name and the list
                 let actionMap = JSON.parse(scenes[i].action);
                 this.actionId = actionMap.actionId;
+                debugger
                 this.actionName = actionMap.title;
                 this.actionList = actionMap.actionList;
                 this.trigger = JSON.parse(scenes[i].trigger);
@@ -1024,6 +1103,12 @@
                     subMethod = 'PUT';
                   }
                 }
+                let profile_devices = cloneDeep(erp.info.profile.profile_device);
+                profile_devices.forEach((item) => {
+                  if (item.device == this.actionGuid) {
+                    this.profileDeviceName = item.name;
+                  }
+                });
                 let post_data = {
                   parenttype: 'Profile',
                   parent: erp.info.profile.name,
@@ -1037,6 +1122,7 @@
                   config: `${this.actionId}`,
                   hidden: this.hideDevice ? 1 : 0,
                 };
+                debugger
                 await http.request(encodeURI(subUrl), {
                   method: subMethod,
                   serializer: 'json',
@@ -1044,6 +1130,36 @@
                   data: post_data,
                   debug: true,
                 });
+                for(let j in this.actionLocation){
+                  if(j !== this.actionGuid){
+                    let post_device_name = '';
+                    profile_devices.forEach((item) => {
+                      if (item.device == j) {
+                        post_device_name = item.name;
+                      }
+                    });
+                    let post_data = {
+                      parenttype: 'Profile',
+                      parent: erp.info.profile.name,
+                      parentfield: 'profile_subdevice',
+                      profile_room: erp.info.profile.profile_room[0].name,
+                      profile_device: post_device_name,
+                      device: j,
+                      title: this.actionName,
+                      device_button_group: 'SCENE MUTIWAY ONOFF GANG1',
+                      device_mode: deviceObj.device_mode,
+                      config: `${this.actionId}`,
+                      hidden: this.hideDevice ? 1 : 0,
+                    };
+                    await http.request(encodeURI(`/api/resource/Profile Subdevice`), {
+                      method: 'POST',
+                      serializer: 'json',
+                      responseType: 'json',
+                      data: post_data,
+                      debug: true,
+                    });
+                  }
+                }
                 //post to the scene
                 let ui_url = `/api/resource/Scene/${this.scenePostId}`;
                 let ui_method = 'PUT';
@@ -1467,6 +1583,9 @@
                 ) {
                   sceneId = this.actionId;
                   guid = this.actionGuid;
+                }else if(this.trigger[i].button_group.startsWith('SCENE MUTIWAY ONOFF GANG')){
+                  sceneId = this.actionLocation[this.trigger[i].guid];
+                  debugger
                 } else {
                   postIdList.push({
                     device: this.trigger[i].guid,
@@ -1527,6 +1646,10 @@
                 ) {
                   thisActionCommand = ``;
                 }
+                //if trigger by self
+                if(this.trigger[i].button_group.startsWith('SCENE MUTIWAY ONOFF GANG')){
+                  thisActionCommand = ``;
+                }
                 //let thisActionCommand = `8f0200${parseInt(this.actionId).toString(16).pad("00")}02${rcuMac}${parseInt(this.actionId).toString(16).pad("00")}`;
                 let settingCommand = ``;
                 if (isset(virtualSceneId) && virtualSceneId) {
@@ -1564,6 +1687,8 @@
                       data: settingCommand,
                     });
                   }
+                  console.log('bleList',bleList);
+                  console.log("guid is:",guid);
                   await window.peripheral[guid].write(bleList);
                   await window.peripheral[guid].disconnect();
                   this.trigger[i].isBle = true;
@@ -1592,6 +1717,9 @@
                   async () => {
                     //must be disconnect the device and then retry connect it
                     app.dialog.preloader(`${_('Reconnecting,please wait a moment')}...`);
+                    setTimeout(() => {
+                      app.dialog.close();
+                    }, 15*1000);
                     if (this.templateName == 'RCU Scene Button') {
                       for (let i in this.trigger) {
                         await window.peripheral[this.trigger[i].guid].disconnect();
@@ -1637,6 +1765,12 @@
             //   url = `/api/resource/Profile Subdevice/${this.subdeviceName}`
             //   method = 'PUT'
             // }
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            subdevices.forEach((subItem) => {
+              if (subItem.name == sub_name) {
+                this.actionGuid = subItem.device;
+              }
+            });
             try {
               //let device_batch = erp.doctype.device_batch[peripheral[this.actionGuid].getProp().hexBatch.toUpperCase()];
               let post_data = {
@@ -1652,6 +1786,7 @@
                 config: `${sceneId}`,
                 hidden: isset(hide_device) ? 1 : 0,
               };
+              debugger
               // let post_data = {
               //   title:this.actionName,
               //   guid : this.actionGuid,
@@ -1785,7 +1920,10 @@
                     let triger_status = !this.isRelease ? `01` : '00';
                     if (item.turnlight != 4 && item.turnlight != 5) {
                       //4 on ,5 off ,2 toggle ,3 Brighten, 1 Dim
-                      let this_data = `8f31${item.config}0${gang}${light}${triger_status}`;
+                      let this_data = `8f31${item.config}0${gang}${light}${triger_status}01`;
+                      if(item.turnlight == 2){
+                        this_data = `8f31${item.config}0${gang}${light}${triger_status}`
+                      }
                       let this_length = this_data.length / 2;
                       if (index == 0) {
                         data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
@@ -2283,9 +2421,11 @@
                   app.dialog.close()
                   resolve(1)
                 }).catch(error=>{
+                  app.dialog.close()
                   reject(error);
                 })
               } else {
+                app.dialog.close()
                 resolve(1)
               }
             });
@@ -2434,6 +2574,16 @@
                 triggerCommand = `${opcode}${typeIndex}${mac}${parseInt(gang).toString(16).pad('00')}${this_ref}${runTime}`;
                 triggerCommand = `${(triggerCommand.length / 2).toString(16).pad('00')}${triggerCommand}`;
                 total_command += triggerCommand;
+              }
+              if(item.button_group.startsWith('SCENE MUTIWAY ONOFF GANG')){
+                typeIndex = `1f`;
+                let this_ref = item.ref;
+                let opcode = '00';
+                let gang = isset(item.config)?item.config:parseInt(this.actionLocation[item.guid]);
+                debugger
+                let $thisCommand = `${opcode}${typeIndex}${mac}00${parseInt(this_ref).toString(16).pad('00')}13${parseInt(gang).toString(16).pad('00')}`;
+                $thisCommand = `${($thisCommand.length / 2).toString(16).pad('00')}${$thisCommand}`;
+                total_command += $thisCommand;
               }
               if (item.button_group.startsWith('DIMMING')) {
                 typeIndex = `1a`;

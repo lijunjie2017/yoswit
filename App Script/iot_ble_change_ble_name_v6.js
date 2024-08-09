@@ -36,11 +36,15 @@ window.iot_ble_change_ble_name = (params) => {
             service: 'ff80',
             characteristic: 'ff81',
             data: data,
+        },{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: `810e`,
         }]).then(() => {
             app.dialog.alert(_('Update Successfully.'));
           })
           .catch((error) => {
-            app.dialog.alert(error);
+            app.dialog.alert(erp.get_log_description(error));
           });
       }
     } else {

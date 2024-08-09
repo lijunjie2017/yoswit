@@ -747,6 +747,46 @@ const renderMainButton = (props, {
 			}
 		}, 1);
 	};
+	//this bacnet flow
+	const bacnet_click_onoff = (kitem)=>{
+		let configString = kitem.config;
+		if(configString){
+			let config = configString.split("|");
+			let airconfig = config[5].split(",");
+			let temp = config[0].split(".");
+			let deviceCode = temp[0];
+			let tagCode = temp[1];
+			temp = tagCode.split("_");
+			let roomCode = temp[0];
+			let message = [];
+			if(airconfig[0] == "1"){
+				kitem.ref = 0;
+				airconfig[0] == "0";
+			}else{
+				kitem.ref = 1;
+				airconfig[0] == "1";
+			}
+			config[5] = airconfig.join(",");
+			kitem.config = config.join("|");
+			message.push({
+				"operate": "write",
+				"deviceCode": deviceCode,
+				"tagCode": roomCode + "_ONOFF_CTRL",
+				"val": airconfig[0] + ""
+			});
+			message = JSON.stringify(message);
+			core_mqtt_publish(config[1], JSON.stringify(message), 0, false, false, true);
+			// cordova.plugin.innocow.mqtt.execute({
+			// 	command: "publish",
+			// 	id: (Math.floor(Math.random() * 100000) + 1),
+			// 	topic: config[1],
+			// 	msg: message,
+			// 	qos: 0,
+			// 	retained: false
+			// }, function() {}, function() {});
+		}
+
+	}
 	const iot_rcu_output_change = (kitem,type)=>{
 		kitem['click_status'] = true;
 		kitem['timeout'] = null;
@@ -965,8 +1005,8 @@ const renderMainButton = (props, {
 							characteristic: 'ff81',
 							data: data,
 						}]);
-				// 		await iot_device_setting_sync_server(item.device, 'TimeStream', JSON.stringify(list));
-				// 		await iot_device_setting_sync_server(item.device, 'ConnectKey', this_password);
+						await iot_device_setting_sync_server(item.device, 'TimeStream', JSON.stringify(list));
+						await iot_device_setting_sync_server(item.device, 'ConnectKey', this_password);
 						let sheet = app.sheet.create({
 							content: `\
 									<div class="sheet-modal">\
@@ -1248,6 +1288,14 @@ const renderMainButton = (props, {
 						</a>
 					</div>
 				`;
+	}else if(props.kitem.device_button_group.startsWith('BACNET AIR CONDITIONER')){
+		return () => $h`
+        <div class="control-panel-right">
+					<a class="on_flag off_flag" ref="${props.kitem.device_status}" @click="${() => bacnet_click_onoff(props.kitem)}">
+							<div class="button button-raised button-big onoff"></div>
+						</a>
+        </div>
+        `;
 	} else if (mode == 'RF Sensor' || mode == '4in1 Sensor' || mode == 'Radar Sensor') {
 		return () => $h`
       <div class="control-panel-right">
@@ -1292,7 +1340,7 @@ const renderMainButton = (props, {
           </a>
           <a class="right" func="iot_device_goto_ir_panel" button-signal="ARC_ON_OFF"  command="0141BE02FD0DF209F603FC52AD53AC00FF10EF11EE13EC14EB15EA17E818E719E6FF001BE4FF000AF54AB547B849B64BB44DB248B720DF0000" command-type="Bluetooth">
               <div class="button button-raised button-big circle">
-                  <i class="material-icons">view_sidebar</i>
+                  <i class="material-icons" style="line-height: 25px !important;">view_sidebar</i>
               </div>
           </a>
       </div>
@@ -1467,6 +1515,103 @@ const renderBottomButton = (props, {
 				app.dialog.alert(_(erp.get_log_description(error)));
 			}
 		})
+	}
+	// bacnet change flow
+	const click_bacnet_change = (kitem, click_type) => {
+		let value_list = kitem.device_attachment_status.split(',');
+		let mode_value = value_list[1];
+		let speed_vaule = value_list[2]; //thermostat speed
+		let temperature = parseInt(value_list[3]); //temperature
+		let room_temperature = value_list[4];
+		let data = "";
+		let this_gang = 42;
+		let post_value = ``;
+		//props.kitem.device_attachment_status = [0,0,0,26,26,Math.random()].join(',');
+		switch (click_type) {
+			case "mode":
+				this_gang = 43;
+				if (mode_value == 1) {
+					mode_value = 0
+					$('li.device[guid="' + guid + '"] a[command-type="mode"]').attr('ref', mode_value);
+					$('li.device[guid="' + guid + '"] a[command-type="mode"] img').attr('src', 'style/img/air_condition/icon-mode-4.png');
+				} else if (mode_value == 2) {
+					let devices = cloneDeep(erp.info.device);
+					let device = devices[guid];
+					let mode_seetting = '';
+					if (isset(device)) {
+						let list = device.settings;
+						list.forEach(item => {
+							if (item.setting_type === 'mode_selection') {
+								mode_seetting = item.setting;
+							}
+						})
+					}
+					if (mode_seetting == 'Cooling') {
+						mode_value = 0;
+						$('li.device[guid="' + guid + '"] a[command-type="mode"]').attr('ref', mode_value);
+						$('li.device[guid="' + guid + '"] a[command-type="mode"] img').attr('src', 'style/img/air_condition/icon-mode-4.png');
+					} else {
+						mode_value = 1
+						$('li.device[guid="' + guid + '"] a[command-type="mode"]').attr('ref', mode_value);
+						$('li.device[guid="' + guid + '"] a[command-type="mode"] img').attr('src', 'style/img/air_condition/icon-mode-5.png');
+					}
+				} else if (mode_value == 0) {
+					mode_value = 2;
+					$('li.device[guid="' + guid + '"] a[command-type="mode"]').attr('ref', mode_value);
+					$('li.device[guid="' + guid + '"] a[command-type="mode"] img').attr('src', 'style/img/air_condition/icon-mode-2.png');
+				}
+				data = "9404000001" + parseInt(mode_value).toString(16).pad("00");
+				post_value = mode_value;
+				break;
+			case "fan":
+				this_gang = 44;
+				if (speed_vaule == 4) {
+					if (mode_value == 0) {
+						speed_vaule = 2;
+					} else {
+						speed_vaule = 1;
+					}
+				} else {
+					speed_vaule++
+				}
+				$('li.device[guid="' + guid + '"] a[command-type="fan"]').attr('ref', speed_vaule);
+				$('li.device[guid="' + guid + '"] a[command-type="fan"] img').attr('src', 'style/img/air_condition/icon-speed-' + speed_vaule + '.png');
+				data = "9405000001" + parseInt(speed_vaule).toString(16).pad("00");
+				post_value = speed_vaule;
+				break;
+			case "reduce":
+				this_gang = 45;
+				if (temperature != 5) {
+					temperature--;
+				}
+				$('li.device[guid="' + guid + '"] a[button-signal="5"] span').text(temperature);
+				$('li.device[guid="' + guid + '"] a[command-type="add"]').attr('ref', temperature);
+				$('li.device[guid="' + guid + '"] a[command-type="reduce"]').attr('ref', temperature);
+				data = "9406000001" + parseInt(temperature).toString(16).pad("00");
+				post_value = temperature;
+				break;
+			case "add":
+				this_gang = 45;
+				if (temperature != 32) {
+					temperature++;
+				}
+				$('li.device[guid="' + guid + '"] a[button-signal="5"] span').text(temperature);
+				$('li.device[guid="' + guid + '"] a[command-type="add"]').attr('ref', temperature);
+				$('li.device[guid="' + guid + '"] a[command-type="reduce"]').attr('ref', temperature);
+				data = "9406000001" + parseInt(temperature).toString(16).pad("00");
+				post_value = temperature;
+				break;
+		}
+		props.kitem.device_status = 1;
+		window.peripheral[props.kitem.device].prop.status['control'][0][42] = 1;
+		props.kitem.device_attachment_status = [1, mode_value, speed_vaule, temperature, room_temperature, 0].join(',');
+
+		window.peripheral[props.kitem.device].thermostat([{
+			gang: this_gang,
+			value: post_value,
+			command: data
+		}]);
+		$update();
 	}
 	//this is the thermostat click function
 	const click_thermostat_change = (kitem, click_type) => {
@@ -1817,6 +1962,62 @@ const renderBottomButton = (props, {
 									<span>${temperature}</span>℃
 								</a>
 								<a href="#" class="col" @click="${()=>click_thermostat_change(props.kitem,'add')}" command-type="add" guid="${props.kitem.device}" ref="${temperature}">
+									<div class="button button-raised button-big stop" style="width:70px;font-size:25px;">+</div>
+								</a>
+							</div>
+						</div>
+					</div>
+				</li>
+				`;
+	}else if (device_button_group.startsWith('BACNET AIR CONDITIONER')) {
+		emitter.on(`thermostat_${props.kitem.device}`, (data) => {
+			$update();
+		})
+		if (!isset(props.kitem.device_attachment_status)) {
+			props.kitem.device_attachment_status = [0, 0, 0, 26, 26, 0].join(',');
+		}
+		let this_list = props.kitem.device_attachment_status.split(',')
+		let mode_value = this_list[1]; //thermostat mode
+		let speed_vaule = this_list[2]; //thermostat speed
+		let temperature = this_list[3] == 0 ? 26 : this_list[3]; //temperature
+		let room_temperature = this_list[4]; //room_temperature
+		let humidity = this_list[5]; //humidity
+		let mode_str = 4;
+		let mode_ref = 0;
+		if (mode_value == 1) {
+			mode_ref = 1;
+			mode_str = 5;
+		} else if (mode_value == 2) {
+			mode_ref = 2;
+			mode_str = 2;
+		}
+		if (speed_vaule == 0) {
+			speed_vaule = 1;
+		}
+		if (!temperature) {
+			temperature = 26
+		}
+		//render the mode、fan、temperature
+		return () => $h`
+				<li class="device subdevice home-scanned-peripheral display-flex thermostat-subdevice" style="height:80px;" ref="${props.kitem.device_status}" guid="${
+					props.kitem.device
+				}" config="${props.kitem.config}" button_group="${props.kitem.device_button_group}" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}" mesh="${props.kitem.mesh || 0}">
+					<div class="item-content" style="width:100%;" list="${props.kitem.device_attachment_status}">
+						<div class="item-inner">
+							<div class="display-flex justify-content-space-between align-content-center align-items-center" style="--f7-grid-gap:3px;">
+								<a href="#" class="col" @click="${()=>click_bacnet_change(props.kitem,'mode')}" command-type="mode" guid="${props.kitem.device}" ref="${mode_ref}">
+									<div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="style/img/air_condition/icon-mode-${mode_str}.png" /></div>
+								</a>
+								<a href="#" class="col" @click="${()=>click_bacnet_change(props.kitem,'fan')}" command-type="fan" guid="${props.kitem.device}" ref="${speed_vaule}">
+									<div class="button button-raised button-big stop" style="width:70px"><img style="width:25px;height:25px;" src="style/img/air_condition/icon-speed-${speed_vaule?speed_vaule:0}.png" /></div>
+								</a>
+								<a href="#" class="col" @click="${()=>click_bacnet_change(props.kitem,'reduce')}" command-type="reduce" guid="${props.kitem.device}" ref="${temperature}">
+									<div class="button button-raised button-big stop" style="width:70px;font-size:25px;">-</div>
+								</a>
+								<a href="#" class="col set-temp" style="line-height:60px;margin-top:8px;text-align:center;" button-signal="5">
+									<span>${temperature}</span>℃
+								</a>
+								<a href="#" class="col" @click="${()=>click_bacnet_change(props.kitem,'add')}" command-type="add" guid="${props.kitem.device}" ref="${temperature}">
 									<div class="button button-raised button-big stop" style="width:70px;font-size:25px;">+</div>
 								</a>
 							</div>
@@ -2817,8 +3018,8 @@ export default async (props, ctx) => {
 			let dnd = gangs[0][81];
 			s['dnd'] = dnd;
 			s['clear'] = clear;
-			console.log("clear",clear);
-			console.log("dnd",dnd);
+			// console.log("clear",clear);
+			// console.log("dnd",dnd);
 		}
 	};
 	const update_subdevice_by_device = (s, p) => {};
@@ -2854,6 +3055,7 @@ export default async (props, ctx) => {
 	const update_peripheral_by_device = (s, p) => {
 		s['device_mode'] = s['device_mode'] == 'Unknown' ? p.device_mode : s['device_mode'];
 		s['mac_address'] = p.mac_address;
+		s['firmware'] = p.firmware;
 	};
 	const update_peripheral_by_profile_device = (s, p) => {
 		s['name'] = p.device_name;

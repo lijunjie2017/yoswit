@@ -283,7 +283,7 @@
         //return;
         await projectAction(postObj);
         await delay(1000);
-        await changeStatus(true, actionObj);
+        //await changeStatus(true, actionObj);
         app.preloader.hide();
         app.dialog.alert('The machine is running');
       }catch(error){
@@ -362,7 +362,7 @@
       $update();
     };
     const getApiHookParam = async () => {
-      let url = `/api/resource/API Hook/Miele Authorization`;
+      let url = `/api/method/appv6.getApiHookList?name=Miele Authorization`;
       let list = await http.request(encodeURI(url), {
         method: 'GET',
         serializer: 'json',
@@ -629,6 +629,7 @@
         }
       }catch(err){
         console.log(err);
+        app.dialog.alert(_('No permision,please open the MobileStart Mode in Miele Device'));
         return null;
       }
     };

@@ -45,7 +45,7 @@
             <div class="swipeout-content item-link item-content">
               <div class="item-inner">
                 <a func="iot_switch_profile" ref="${item.name}" class="item-title" style="width: 90%">
-                  <div class="item-header"><font lang="en">{{ _('Owner') }}</font>: ${item.owner}</div>
+                  <!--<div class="item-header"><font lang="en">{{ _('Owner') }}</font>: ${item.owner}</div>!-->
                   <font lang="en" lang-packet="${item.profile_name}" class="${item.name === active_profile?'font-bold':''}">
                     ${item.flat?item.flat+'-':''}${ tran(item.profile_name) }
                   </font>

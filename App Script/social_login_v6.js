@@ -84,6 +84,7 @@ window.social_login = async (params) => {
 	if(userInfo){
 		let redirectUrl = "";
 		try {
+		    cordova.plugin.http.setFollowRedirect(false);
 			let info = await http.request(oauthUrl, {
 				method: "GET"
 			});

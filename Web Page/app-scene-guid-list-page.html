@@ -38,14 +38,27 @@
                   :style="{'height': '100%','background-size': 'cover','background-image': 'url('+frappe_get_url(item.image)+')'}"
                 ></div>
                 <div class="card-content card-content-padding">
-                  <div class="template-info" style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey">
+                  <div
+                    class="template-info"
+                    style="
+                      text-shadow:
+                        1px 1px 2px grey,
+                        0 0 2px black,
+                        0 0 2px grey;
+                    "
+                  >
                     {{_(item.scene_template)}}
                   </div>
                   <div class="item-content">
                     <div class="item-inner">
                       <div
                         class="h5 d-block text-color-white margin-bottom-half"
-                        style="text-shadow: 1px 1px 2px grey, 0 0 2px black, 0 0 2px grey"
+                        style="
+                          text-shadow:
+                            1px 1px 2px grey,
+                            0 0 2px black,
+                            0 0 2px grey;
+                        "
                       >
                         {{_(item.title)}}
                       </div>
@@ -124,29 +137,64 @@
       app.dialog.confirm(
         `Confirm Deletion?`,
         () => {
-          window.peripheral[guid]
-            .write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: triggerCommand,
-              },
-            ])
-            .then(() => {
-              return window.peripheral[guid].write([
+          app.dialog.preloader();
+          if (window.peripheral[guid].prop.connected) {
+            window.peripheral[guid].disconnect().then(() => {
+              window.peripheral[guid]
+                .write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: triggerCommand,
+                  },
+                ])
+                .then(() => {
+                  return window.peripheral[guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: actionCommand,
+                    },
+                  ]);
+                })
+                .then(() => {
+                  app.dialog.close();
+                  app.dialog.alert('BLE Clear Successfully');
+                })
+                .catch((error) => {
+                  app.dialog.close();
+                  app.dialog.alert(erp.get_log_description(error));
+                  return;
+                });
+            });
+          } else {
+            window.peripheral[guid]
+              .write([
                 {
                   service: 'ff80',
                   characteristic: 'ff81',
-                  data: actionCommand,
+                  data: triggerCommand,
                 },
-              ]);
-            })
-            .catch((error) => {
-              app.dialog.alert(error);
-            })
-            .then(() => {
-              app.dialog.alert('BLE Clear Successfully');
-            });
+              ])
+              .then(() => {
+                return window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: actionCommand,
+                  },
+                ]);
+              })
+              .then(() => {
+                app.dialog.close();
+                app.dialog.alert('BLE Clear Successfully');
+              })
+              .catch((error) => {
+                app.dialog.close();
+                app.dialog.alert(erp.get_log_description(error));
+                return;
+              });
+          }
         },
         () => {}
       );
@@ -220,11 +268,14 @@
                 } catch (error) {
                   app.dialog.close();
                   console.log(error);
-                  app.dialog.alert(_('No Permission'));
+                  app.dialog.alert(_('Permission Error'));
                 }
               },
               () => {}
             );
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
           },
           async download() {
             app.dialog.preloader();
@@ -240,8 +291,14 @@
               }
             });
             try {
+              if(peripheral[guid].prop.connected){
+                await peripheral[guid].disconnect();
+                await this.sleep(3000);
+              }
               await peripheral[guid].connect();
               let device_id = peripheral[guid].prop.id;
+              this.localTrigerSceneList = [];
+              this.localActionSceneList = [];
               await ble.startNotification(
                 device_id,
                 'ff80',
@@ -280,8 +337,8 @@
                   }
                 },
                 (err) => {
-                  app.dialog.close();
-                  app.dialog.alert(err);
+                  //app.dialog.close();
+                  //app.dialog.alert(err);
                 }
               );
               let read_action_command = '8F1200FF';
@@ -303,7 +360,7 @@
               const toast = app.toast.create({
                 position: 'bottom',
                 closeTimeout: 3000,
-                text: error,
+                text: erp.get_log_description(error),
               });
 
               toast.open();
@@ -311,6 +368,9 @@
             }
           },
           async loadBleScene() {
+            if (this.sheetMap) {
+              this.sheetMap = null;
+            }
             try {
               this.sheetMap = app.sheet.create({
                 content: `
