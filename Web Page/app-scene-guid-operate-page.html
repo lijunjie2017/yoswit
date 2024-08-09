@@ -17,18 +17,18 @@
       {% raw %}
       <div id="vue-app" v-cloak>
         <div class="main-box">
-          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
             <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
               <div class="toolbar-inner scene-toolbar-inner">
-                <button class="button" :class="index == 0?'button-active button':'button'" v-on:click="toTab(0)">{{_('Step')}} 1</button>
-                <button class="button" :class="index == 0.5?'button-active button':'button'" v-on:click="toTab(0.5)">
+                <button v-for="(item,index) in stepList" :key="item.id" :class="item.isActive?'button-active button':'button'" v-on:click="toTab(0)">{{_('Step')}} {{item.name}}</button>
+                <!--<button class="button" :class="index == 0.5?'button-active button':'button'" v-on:click="toTab(0.5)">
                   {{_('Step')}} 2
                 </button>
                 <button class="button" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">{{_('Step')}} 3</button>
                 <button class="button" :class="index == 2?'button-active button':'button'" v-on:click="toTab(2)">{{_('Step')}} 4</button>
                 <button class="button" :class="index == 3?'button-active button':'button'" v-on:click="toTab(3)">{{_('Step')}} 5</button>
                 <button class="button" :class="index == 4?'button-active button':'button'" v-on:click="toTab(4)">{{_('Step')}} 6</button>
-                <button class="button" :class="index == 5?'button-active button':'button'" v-on:click="toTab(5)">{{_('Step')}} 7</button>
+                <button class="button" :class="index == 5?'button-active button':'button'" v-on:click="toTab(5)">{{_('Step')}} 7</button>!-->
               </div>
             </div>
           </div>
@@ -49,8 +49,10 @@
           </div>
           !-->
           <div class="tabs">
+            <!--choose tempalte-->
             <div id="step-0" class="view tab view-main" :class="[index == 0 ? 'tab-active' : '']" v-if="index == 0">
               <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Select one of the templates")}}</div>
                 <div class="card-content card-content-padding">
                   <div class="scnen-template-intro"></div>
                   <div
@@ -72,7 +74,7 @@
             </div>
             <div id="step-0-1" class="view tab view-main" :class="[index == 0.5 ? 'tab-active' : '']" v-if="index == 0.5">
               <div class="card">
-                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Choose your rcu device")}}</div>
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Choose Your Rcu Device")}}</div>
                 <div class="card-content card-content-padding">
                   <div class="scnen-template-intro"></div>
                   <div
@@ -112,6 +114,7 @@
             </div>
             <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
               <div class="card">
+                <div v-if="templateName == 'RCU Scene Toggle'" class="card-header" style="font-weight: 500; font-size: 18px">{{_("Add The First Scene")}}</div>
                 <div class="card-content card-content-padding">
                   <a
                     href="#"
@@ -151,25 +154,6 @@
                           </div>
                         </div>
                       </li>
-                      <!-- <li>
-                        <div class="item-content item-input no-padding-left">
-                          <div class="item-inner no-padding-right">
-                            <div class="item-title item-label" lang="en" style="font-size: 16px">Scene Template</div>
-                            <div class="item-input-wrap">
-                              <input type="text" placeholder="Scene Template" readonly="readonly" :value="templateName" v-on:click="showPick()"/>
-                              <input type="text" placeholder="Scene Template" readonly="readonly" id="demo-picker-device" style="display: none;;"/>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                      <li class="item-content item-input no-padding-left">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">Rcu Name</div>
-                          <div class="item-input-wrap">
-                            <input type="text"  :value="subdeviceMap.title" readonly="readonly" placeholder="Rcu Name" />
-                          </div>
-                        </div>
-                      </li> -->
                     </ul>
                   </div>
                 </div>
@@ -183,59 +167,8 @@
             <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <!-- this page is choose the action  -->
               <div class="card">
+                <div v-if="templateName == 'RCU Scene Toggle'" class="card-header" style="font-weight: 500; font-size: 18px">{{_("Add The First Scene Action")}}</div>
                 <div class="card-content card-content-padding">
-                  <div class="list no-hairlines-md">
-                    <ul>
-                      <!--<li class="item-content item-input">
-                          <div class="item-media align-self-flex-start" style="margin-top: 3px;">
-                              <label class="checkbox" :checked="true" v-on:change="changeVirtualStatus()"><input type="checkbox" name="virtual_button"/><i class="icon-checkbox" style="opacity: 100;"></i></label>
-                          </div>
-                          <div class="item-inner" style="margin-left: 0;">
-                              <div class="">{{ _('Virtual Button') }}</div>
-                          </div>
-                          <div class="item-media align-self-flex-start" style="margin-top: 3px;">
-                              <label class="checkbox"><input type="checkbox" name="hide_device"/><i class="icon-checkbox" style="opacity: 100;"></i></label>
-                          </div>
-                          <div class="item-inner" style="margin-left: 0;">
-                              <div class="">{{ _('Hide Device') }}</div>
-                          </div>
-                      </li>
-                      <li class="item-content item-input" v-if="virtualStatus">
-                        <div class="item-inner">
-                          <div
-                            class="item-title item-label"
-                            style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
-                          >
-                            {{ _("Virtual Button Name") }}
-                          </div>
-                          <div class="item-input-wrap">
-                            <input
-                              class="init-input"
-                              name="title"
-                              type="text"
-                              :placeholder="_('Virtual Button Name')"
-                              required
-                              v-model="actionName"
-                            />
-                          </div>
-                        </div>
-                      </li>-->
-                      <!--<li class="item-content item-input" v-if="virtualStatus">
-                        <div class="item-media align-self-flex-start" style="margin-top: 3px;">
-                            <label class="radio" ><input type="radio" value="1" checked name="virtual_button_on"/><i class="icon-radio" style="opacity: 100;"></i></label>
-                        </div>
-                        <div class="item-inner" style="margin-left: 0;">
-                            <div class="">{{ _('ON') }}</div>
-                        </div>
-                        <div class="item-media align-self-flex-start" style="margin-top: 3px;">
-                            <label class="radio"><input type="radio" value="0" name="virtual_button_on"/><i class="icon-radio" style="opacity: 100;"></i></label>
-                        </div>
-                        <div class="item-inner" style="margin-left: 0;">
-                            <div class="">{{ _('OFF') }}</div>
-                        </div>
-                    </li>-->
-                    </ul>
-                  </div>
                   <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px">
                     <div class="action-list list media-list no-margin">
                       <ul>
@@ -348,55 +281,6 @@
                       <div class="trigger-text margin-left">{{_("Add a trigger condition")}}</div>
                     </div>
                   </div>
-                  <!-- <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px">
-                    <div class="action-list list media-list no-margin">
-                      <ul>
-                        <li
-                          class="device"
-                          v-for="(item,index) in virtualList"
-                          :key="index"
-                          :style="{'display':item.display?'block':'none'}"
-                        >
-                          <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
-                            <div
-                              class="device-thumb item-media"
-                              :style="{
-                              'background-position': 'center',
-                              'background-size': 'contain',
-                              'position': 'relative',
-                              'background-image': 'url('+item.img_url+')'}
-                            "
-                            ></div>
-                            <div class="item-inner">
-                              <div class="item-title-row">
-                                <div class="item-title ellipsis" lang="en" style="width: 180px">{{item.title}}</div>
-                              </div>
-                              <div class="signal-panel item-text height-21" style="">
-                                <span class="text-color-theme">{{item.ref == 1?"ON":"OFF"}}</span>
-                              </div>
-                            </div>
-                            <div class="margin-right" style="" v-on:click="deleteVirtual(item.name)">
-                              <i class="material-icons text-color-gray">delete</i>
-                            </div>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    <div
-                      class="add-box add-action display-flex justify-content-flex-start align-items-center"
-                      v-on:click="toRoomList('Choose Virtual Device','4')"
-                    >
-                      <i class="material-icons">add_circle</i>
-                      <div class="trigger-text margin-left">Add a virtual condition</div>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Describe yourself"
-                      readonly="readonly"
-                      id="demo-picker-describe"
-                      style="display: none"
-                    />
-                  </div> -->
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
@@ -547,12 +431,15 @@
           scene_tip: '',
           sceneName: '',
           actionName: '',
-          actionList: [],
+          actionList: [],//first action list
+          actionList_2 : [],//sconed action list 
           pickObj: null,
           virtualPick: null,
           rcuMacAddress: '',
           actionId: '',
-          trigger: [],
+          trigger: [],//cutom trigger
+          trigger_1 : [],//mapping actionList
+          trigger_2 : [],//mapping actionList_2
           timercommand: '',
           templateName: 'RCU Scene Button',
           actionMap: {},
@@ -564,17 +451,93 @@
           uploadImage: '',
           triggerCondition: 2,
           rcuList: [],
+          stepList : [],
           templateConfig:{
             //type:1 choose tempalte,2 choose Rcu,3 
             rcu_scene_button: {
               name: 'RCU Scene Button',
               step:[{
                 id : 1,
-                type : 1
+                relatedIndex : 0.5,
+                name: '1',
+              },{
+                id : 2,
+                relatedIndex : 1,
+                name: '2',
+              },{
+                id : 3,
+                relatedIndex : 2,
+                name: '3',
+              },{
+                id : 4,
+                relatedIndex : 3,
+                name: '4',
+              },{
+                id : 5,
+                relatedIndex : 4,
+                name: '5',
+              },{
+                id : 5,
+                relatedIndex : 5,
+                name: '6',
               }]
             },
-            rcu_scene_toggle:{},
-            rcu_randar:{},
+            rcu_scene_toggle:{
+              name : 'RCU Scene Toggle',
+              step:[{
+                id : 1,
+                relatedIndex : 0.5,
+                name: '1',
+              },{
+                id : 2,
+                relatedIndex : 1,
+                name: '2',
+              },{
+                id : 3,
+                relatedIndex : 2,
+                name: '3',
+              },{
+                id : 4,
+                relatedIndex : 3,
+                name: '4',
+              },{
+                id : 5,
+                relatedIndex : 4,
+                name: '5',
+              },{
+                id : 5,
+                relatedIndex : 5,
+                name: '6',
+              }]
+            },
+            rcu_randar:{
+              name : 'RCU Radar',
+              step:[{
+                id : 1,
+                relatedIndex : 0.5,
+                name: '1',
+              },{
+                id : 2,
+                relatedIndex : 1,
+                name: '2',
+              },{
+                id : 3,
+                relatedIndex : 2,
+                name: '3',
+              },{
+                id : 4,
+                relatedIndex : 3,
+                name: '4',
+              },{
+                id : 5,
+                relatedIndex : 4,
+                name: '5',
+              },{
+                id : 5,
+                relatedIndex : 5,
+                name: '6',
+              }]
+            },
             scene_button:{},
             multiway_switch:{},
             timmer : {}
@@ -632,6 +595,11 @@
           selfTriggeredClickStatus : false,
           selfTriggeredButtonStatus : false,
           virtualTriggerList : [],
+        },
+        watch:{
+          index:function(val){
+            this.activeStepList();
+          }
         },
         mounted() {
           this.init();
@@ -869,9 +837,26 @@
               })
             }
           },
+          activeStepList(){
+            this.stepList.forEach(item=>{
+              if(item.relatedIndex == this.index){
+                item.isActive = true;
+              }else{
+                item.isActive = false;
+              }
+            })
+          },
           async chooseTemplate(item) {
             this.templateName = item.name;
+            let activeIndex = '';
+            //change the template config
+            for(let j in this.templateConfig){
+              if(this.templateConfig[j].name == item.name){
+                this.stepList = this.templateConfig[j].step;
+              }
+            }
             this.index = 0.5;
+            this.activeStepList();
           },
           async chooseRcuDevice() {
             //must be handle any rcu
@@ -929,6 +914,23 @@
                 () => {}
               );
             }
+          },
+          //defined the get secen Id Fun
+          getDeviceBleId(guid){
+            let sceneDeviceLocationList = [];
+            let sceneObj = cloneDeep(erp.info.scene);
+            let idList = [];
+            for(let i in sceneObj){
+              sceneObj[i].scene_device_location.forEach((item) => {
+                sceneDeviceLocationList.push(item);
+              });
+            }
+            sceneDeviceLocationList.forEach((kitem) => {
+              if (kitem.device == guid) {
+                idList.push(parseInt(kitem.storage_id));
+              }
+            });
+            return this.findMissingNumber(idList);
           },
           async toTab(index) {
             return;
@@ -1202,23 +1204,9 @@
             let timer = setTimeout(() => {
               app.dialog.close();
             }, 10000);
-            let sceneObj = erp.info.scene;
-            let idList = [];
-            let sceneDeviceLocationList = [];
-            for (let i in sceneObj) {
-              sceneObj[i].scene_device_location.forEach((item) => {
-                sceneDeviceLocationList.push(item);
-              });
-            }
-            sceneDeviceLocationList.forEach((kitem) => {
-              if (kitem.device == this.actionGuid) {
-                idList.push(parseInt(kitem.storage_id));
-              }
-            });
-            //check if have any rcu
-
-            let sceneId = this.actionId ? this.actionId : this.findMissingNumber(idList);
-            this.actionId = sceneId;
+            // let sceneObj = erp.info.scene;
+            // let sceneId = this.actionId ? this.actionId : this.getDeviceBleId(idList);
+            // this.actionId = sceneId;
             try {
               await this.saveActionOnBle();
               this.actionMap.actionList = this.actionList;
@@ -1228,6 +1216,10 @@
               if (isset(virtual_button_check)) {
                 await this.addSubdeviceInErp(sceneId);
               }
+              this.index = 3;
+              app.dialog.close();
+              this.scrollItem(110);
+              return
               let url = ``;
               let method = 'POST';
               if (this.scenePostId) {
@@ -2112,18 +2104,10 @@
                   }
                 });
                 for (let i in sceneObj) {
-                  sceneObj[i].scene_device_location.forEach((item) => {
-                    sceneDeviceLocationList.push(item);
-                  });
                   if (this.scenePostId == sceneObj[i].name) {
                     sceneMap = sceneObj[i];
                   }
                 }
-                sceneDeviceLocationList.forEach((kitem) => {
-                  if (kitem.device == i) {
-                    idList.push(parseInt(kitem.storage_id));
-                  }
-                });
                 if (isset(sceneMap)) {
                   let list = sceneMap.scene_device_location;
                   list.forEach((zitem) => {
@@ -2134,7 +2118,7 @@
                   });
                 }
                 debugger;
-                let sceneId = isset(existId) ? existId : this.findMissingNumber(idList);
+                let sceneId = isset(existId) ? existId : this.getDeviceBleId(i);
                 if(extraStaus){
                   sceneId = parseInt(sceneId) + 1
                 }
@@ -2283,7 +2267,7 @@
                 }
                 if (postPleStatus == true) {
                   this.index = 2;
-                  this.scrollItem(110 * 3);
+                  //this.scrollItem(110 * 3);
                 }
               }
             } else if (index == 2) {
