@@ -72,7 +72,67 @@ window.app_core_vue_component_map['YoButton'] = {
   },
 };
 
-window.app_core_vue_component_map['Step'] = {
+window.app_core_vue_component_map['YoEditorViewer'] = {
+  template: `
+  <div ref="content"></div>
+  `,
+  props: ['value'],
+  watch: {
+    value: function (newVal) {
+      this.renderContent();
+    },
+  },
+  mounted() {
+    this.renderContent();
+  },
+  methods: {
+    renderContent() {
+      if (!this.value) {
+        return;
+      }
+
+      const style = `
+      <style>
+      .ql-editor-viewer .ql-editor {
+        position: relative;
+        width: 100%;
+      }
+
+      .ql-editor-viewer .ql-editor img {
+        width: 100%;
+      }
+      
+      .ql-editor-viewer,
+      .ql-editor-viewer h1,
+      .ql-editor-viewer h2,
+      .ql-editor-viewer h3,
+      .ql-editor-viewer h4,
+      .ql-editor-viewer h5,
+      .ql-editor-viewer h6,
+      .ql-editor-viewer span,
+      .ql-editor-viewer strong,
+      .ql-editor-viewer p,
+      .ql-editor-viewer a {
+        word-wrap: break-word !important;
+      }
+      </style>
+      `;
+
+      const html = `
+      ${style}
+      ${this.value
+        .replace(/\"\/files/g, `"${erp.setting.app_api_url}/files`)
+        .trim()
+        .replace(/\<p\>\<\/p\>/g, '')
+        .replace(/\<p\>\<br\>\<\/p\>/g, '')}
+      `;
+
+      this.$refs.content.innerHTML = html;
+    },
+  },
+};
+
+window.app_core_vue_component_map['YoStepper'] = {
   template: `
   <div class="toolbar-box" style="padding: 0 15px;margin-top: 15px;">
     <div class="toolbar tabbar tabbar-scrollable" style="height: 60px;background:transparent;">
@@ -91,13 +151,13 @@ window.app_core_vue_component_map['Step'] = {
   </div>
   `,
   props: {
+    value: {
+      type: [Number, String],
+      default: 1,
+    },
   },
-  mounted() {
-  },
-  methods: {
-  },
-  style:/*css*/ `
-  `,
+  mounted() {},
+  methods: {},
 };
 
 window.app_core_vue_directive_map = {};

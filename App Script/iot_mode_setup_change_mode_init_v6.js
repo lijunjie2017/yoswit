@@ -5,13 +5,20 @@ window.iot_mode_setup_change_mode_init = function(params) {
     const guid = params.ref;
     const button_group = params.obj.attr("button-group");
     const setting_type = params.obj.attr("setting-type");
-    const device_mode = params.obj.attr("device-mode");
+    let device_mode = params.obj.attr("device-mode");
     const inputEl = params.obj.find("input[name=change_mode]");
     const subdevice_name = params.obj.attr("subdevice-name");
-    let p = Object.values(scanned_periperals).find(item=>item.guid == guid && item.advertising);
     let status = true;//Multiway Switch have different formware
-    let firmware = scanned_periperals[p.id].firmware?scanned_periperals[p.id].firmware:'0';
     let slot_index = params.obj.attr("slot-index")?params.obj.attr("slot-index"):0;
+    //get active device mode
+    if(subdevice_name && isset(subdevice_name)){
+        let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+        subdevices.forEach(item=>{
+            if(subdevice_name === item.name){
+                device_mode = item.device_mode
+            }
+        })
+    }
     if(device_mode == "Multiway Switch" && firmware.startsWith("10.")){
         status = false;
     }
@@ -29,9 +36,11 @@ window.iot_mode_setup_change_mode_init = function(params) {
         valueList.push(i);
     }
     if(button_group.startsWith("RCU DIMMING")){
-        valueList = ["Triac Dimming","0-10v Dimming"];
+        valueList = ["Triac Dimming","0-10v Dimming","1-10v Dimming","On Off Switch","Curtain Switch"];
     }else if(device_mode.startsWith("RCU Controller")){
         valueList = ["RCU Controller"];
+    }else if(button_group.startsWith("RCU ONOFF GANG")){
+        valueList = ["Triac Dimming","0-10v Dimming","1-10v Dimming","On Off Switch","Curtain Switch"];
     }
     iot_mode_setup_change_mode_picker = app.picker.create({
         inputEl: inputEl,
@@ -74,13 +83,56 @@ window.iot_mode_setup_change_mode_init = function(params) {
                                 service: 'ff80',
                                 characteristic: 'ff81',
                                 data: data,
-                              }]);
+                              },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `810e`,
+                            }]);
                         }else if(selected == '0-10v Dimming'){
                             let data = `971f${slot_index}89070202`;
                             return window.peripheral[guid].write([{
                                 service: 'ff80',
                                 characteristic: 'ff81',
                                 data: data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `810e`,
+                            }]);
+                        }else if(selected == '1-10v Dimming'){
+                            let data = `971f${slot_index}89070202`;
+                        }else if(selected == 'On Off Switch'){
+                            let data = `9711${slot_index}01`;
+                            let this_data = `971f${slot_index}810501`;
+                            debugger
+                            return window.peripheral[guid].write([{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: this_data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `810e`,
+                            }]);
+                        }else if(selected == 'Curtain Switch'){
+                            let data = `9711${slot_index}01`;
+                            let this_data = `971f${slot_index}810500`;
+                            return window.peripheral[guid].write([{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: this_data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `810e`,
                             }]);
                         }else{
                             return new Promise((solve)=>{
@@ -88,7 +140,234 @@ window.iot_mode_setup_change_mode_init = function(params) {
                             })
                         }
                     })
-                    .then(() => {
+                    .then(async() => {
+                        //if rcu should add some devices
+                        if(selected == 'On Off Switch'){
+                            let subdevices = erp.info.profile.profile_subdevice;
+                            let device_name = '';
+                            let profile_room = '';
+                            let room_name = '';
+                            let device_guid = '';
+                            let postList = [];
+                            let postSubdevices = [];
+                            subdevices.forEach(item=>{
+                                if(subdevice_name == item.name){
+                                    subdevices.forEach(kitem=>{
+                                        if(kitem.config == item.config && kitem.device == item.device && kitem.name != subdevice_name){
+                                            debugger
+                                            kitem.hidden = 1;
+                                        }
+                                    })
+                                    device_name = item.profile_device;
+                                    profile_room = item.profile_room;
+                                    room_name = item.room_name;
+                                    device_guid = item.device;
+                                    item.device_mode = 'On Off Switch';
+                                    let config = item.config;
+                                    if(config == '01'){
+                                        item.device_button_group = 'RCU ONOFF GANG1';
+                                        postList = [{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 1-2`,
+                                            device_button_group: 'RCU ONOFF GANG2',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 1-3`,
+                                            device_button_group: 'RCU ONOFF GANG2',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 1-4`,
+                                            device_button_group: 'RCU ONOFF GANG2',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          }]
+                                    }else if(config == '02'){
+                                        item.device_button_group = 'RCU ONOFF GANG5';
+                                        postList = [{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 2-2`,
+                                            device_button_group: 'RCU ONOFF GANG6',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 2-3`,
+                                            device_button_group: 'RCU ONOFF GANG7',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 2-4`,
+                                            device_button_group: 'RCU ONOFF GANG8',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          }]
+                                    }else if(config == '03'){
+                                        item.device_button_group = 'RCU ONOFF GANG9';
+                                        postList = [{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 3-2`,
+                                            device_button_group: 'RCU ONOFF GANG10',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 3-3`,
+                                            device_button_group: 'RCU ONOFF GANG11',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 3-4`,
+                                            device_button_group: 'RCU ONOFF GANG12',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          }]
+                                    }else if(config == '04'){
+                                        item.device_button_group = 'RCU ONOFF GANG13';
+                                        postList = [{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 4-2`,
+                                            device_button_group: 'RCU ONOFF GANG14',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 4-3`,
+                                            device_button_group: 'RCU ONOFF GANG15',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 4-4`,
+                                            device_button_group: 'RCU ONOFF GANG16',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          }]
+                                    }else if(config == '05'){
+                                        item.device_button_group = 'RCU ONOFF GANG17';
+                                        postList = [{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 5-2`,
+                                            device_button_group: 'RCU ONOFF GANG18',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 5-3`,
+                                            device_button_group: 'RCU ONOFF GANG19',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          },{
+                                            parenttype: 'Profile',
+                                            parent: erp.info.profile.name,
+                                            parentfield: 'profile_subdevice',
+                                            profile_room: profile_room,
+                                            profile_device: device_name,
+                                            device: device_guid,
+                                            title: `YO780 4G 5-4`,
+                                            device_button_group: 'RCU ONOFF GANG20',
+                                            device_mode: 'On Off Switch',
+                                            config: config,
+                                          }]
+                                    }
+                                }
+                            })
+                            let subUrl = `/api/resource/Profile/${erp.info.profile.name}`;
+                            await http2.request(encodeURI(subUrl), {
+                                method: 'PUT',
+                                serializer: 'json',
+                                responseType: 'json',
+                                data: {
+                                    profile_subdevice : subdevices
+                                },
+                                debug: true,
+                                });
+                            for(let i in postList){
+                                let url = `/api/resource/Profile Subdevice`;
+                                await http2.request(encodeURI(url), {
+                                    method: 'POST',
+                                    serializer: 'json',
+                                    responseType: 'json',
+                                    data: postList[i],
+                                    debug: true,
+                                    });
+                            }  
+                        }
                         let url = `/api/resource/Profile Subdevice/${subdevice_name}`;
                         let method = 'PUT';
                         let post_data = {

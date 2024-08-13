@@ -176,6 +176,36 @@
                           <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important">pause</i>
                         </div>
                         </div>
+                        <div
+                          class="button button-raised button-big circle"
+                          v-if="subItem.mainType == 10"
+                          style="background-color: var(--f7-theme-color);"
+                          v-on:click="chooseTemplate(subItem)"
+                        >
+                          <div><i class="material-icons text-color-white" style="line-height: 70px !important; font-size: 25px !important">cleaning_services</i></div>
+                        </div>
+                        <div
+                          class="button button-raised button-big circle"
+                          v-if="subItem.mainType == 12"
+                          v-on:click="chooseTemplate(subItem)"
+                        >
+                          <div><i class="material-icons" style="line-height: 70px !important; font-size: 25px !important">cleaning_services</i></div>
+                        </div>
+                        <div
+                          class="button button-raised button-big circle"
+                          v-if="subItem.mainType == 11"
+                          style="background-color: var(--f7-theme-color);"
+                          v-on:click="chooseTemplate(subItem)"
+                        >
+                          <div><i class="material-icons text-color-white" style="line-height: 70px !important; font-size: 25px !important">notifications_off</i></div>
+                        </div>
+                        <div
+                          class="button button-raised button-big circle"
+                          v-if="subItem.mainType == 13"
+                          v-on:click="chooseTemplate(subItem)"
+                        >
+                          <div><i class="material-icons" style="line-height: 70px !important; font-size: 25px !important">notifications_off</i></div>
+                        </div>
                       </div>
                     </div>
                     <div class="swipeout-actions-right">
@@ -630,6 +660,29 @@
                 },
               ];
               //this.home_ui_click_touch_app_save(chooseList[0]);
+            }else if(button_group.startsWith('DOOR SIGN')){
+              chooseList = [
+                {
+                  value: '31',
+                  text: 'CLEAR ON',
+                  type: 10,
+                },
+                {
+                  value: '34',
+                  text: 'CLEAR OFF',
+                  type: 12,
+                },
+                {
+                  value: '32',
+                  text: 'DND ON',
+                  type: 11,
+                },
+                {
+                  value: '35',
+                  text: 'DND OFF',
+                  type: 13,
+                },
+              ];
             }
             this.labelList = chooseList;
             //open the pop
@@ -817,6 +870,7 @@
               }
             });
             thisSubItem.buttonBoxType = 0;
+            debugger
             if (
               type == 2 &&
               (thisSubItem.device_button_group.startsWith('DIMMING') || thisSubItem.device_button_group.startsWith('RCU DIMMING'))
@@ -828,6 +882,8 @@
               thisSubItem.chooseType = 4;
             } else if (type == 2 && thisSubItem.device_button_group.startsWith('Thermostat')) {
               thisSubItem.buttonBoxType = 3;
+            }else if(type == 4 && thisSubItem.device_button_group.startsWith("RCU ONOFF GANG")){
+              thisSubItem.ref = 2;
             }else if(type == 4){
               thisSubItem.chooseType = 2;
             }else if(type == 5){
@@ -846,6 +902,9 @@
             }else if(type == 9){
               thisSubItem.chooseType = 8;
               thisSubItem.ref = 2
+            }else if(type > 9){
+              thisSubItem.chooseType = 9;
+              thisSubItem.ref = value;
             } else { 
               thisSubItem.buttonBoxType = 0;
             }

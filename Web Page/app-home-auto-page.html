@@ -767,10 +767,10 @@ const renderMainButton = (props, {
 			console.log("airconfig[0]",airconfig[0])
 			if(airconfig[0] == "1"){
 				
-				airconfig[0] == "0";
+				airconfig[0] = "0";
 			}else{
 				kitem.device_status = 1;
-				airconfig[0] == "1";
+				airconfig[0] = "1";
 			}
 			config[5] = airconfig.join(",");
 			kitem.config = config.join("|");
@@ -778,10 +778,29 @@ const renderMainButton = (props, {
 				"operate": "write",
 				"deviceCode": deviceCode,
 				"tagCode": roomCode + "_ONOFF_CTRL",
-				"val": airconfig[0] + ""
+				"val": `${airconfig[0]}`
 			});
 			message = JSON.stringify(message);
-			core_mqtt_publish(config[1], JSON.stringify(message), 0, false, false, true);
+			console.log("message",message)
+			core_mqtt_publish(config[1], message, 0, false, false, true);
+			try{
+				let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+				subdevices.forEach(item=>{
+						if(item.name == kitem.name){
+								item.config = config.join("|")
+						}
+				})
+				http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+					serializer: "json",
+					responseType: "json",
+					method: "PUT",
+					data: {
+							profile_subdevice : subdevices
+					}
+			})
+			}catch(error){
+				console.log(error);
+			}
 			$update();
 			// cordova.plugin.innocow.mqtt.execute({
 			// 	command: "publish",
@@ -793,6 +812,26 @@ const renderMainButton = (props, {
 			// }, function() {}, function() {});
 		}
 
+	}
+	const bacnet_light_scene_click_onoff = (kitem,type)=>{
+		let configString = kitem.config;
+		if(configString){
+			let config = configString.split("|");
+			let temp = config[0].split(".");
+			let deviceCode = temp[0];
+			let tagCode = temp[1];
+			let message = [];
+			message.push({
+					"operate":"write",
+					"deviceCode":deviceCode,
+					"tagCode":tagCode,
+					"val":`${type}`
+			});
+			message = JSON.stringify(message);
+			console.log("message",message)
+			core_mqtt_publish(config[1], message, 0, false, false, true);
+			$update();
+		}
 	}
 	const iot_rcu_output_change = (kitem,type)=>{
 		kitem['click_status'] = true;
@@ -1296,16 +1335,27 @@ const renderMainButton = (props, {
 					</div>
 				`;
 	}else if(props.kitem.device_button_group.startsWith('BACNET AIR CONDITIONER')){
-		// let configString = props.kitem.config;
-		// if(configString){
-		// 	let config = configString.split("|");
-		// 	let airconfig = config[5].split(",");
-		// 	props.kitem.device_status = airconfig[0];
+		let configString = props.kitem.config;
+		if(configString){
+			let config = configString.split("|");
+			let airconfig = config[5].split(",");
+			props.kitem.device_status = airconfig[0];
+		}
+		// if(!isset(props.kitem.device_status) && props.kitem.device_status != 0){
+		// 	props.kitem.device_status = 1;
 		// }
 		console.log("props.kitem.device_status",props.kitem.device_status)
 		return () => $h`
         <div class="control-panel-right">
 					<a class="on_flag off_flag" ref="${isset(props.kitem.device_status)?props.kitem.device_status:0}" @click="${() => bacnet_click_onoff(props.kitem)}">
+							<div class="button button-raised button-big onoff"></div>
+						</a>
+        </div>
+        `;
+	}else if(props.kitem.device_button_group.startsWith('BACNET LIGHTING SCENE')){
+		return () => $h`
+        <div class="control-panel-right">
+					<a class="on_flag off_flag" ref="0" @click="${() => bacnet_light_scene_click_onoff(props.kitem,1)}">
 							<div class="button button-raised button-big onoff"></div>
 						</a>
         </div>
@@ -1335,7 +1385,7 @@ const renderMainButton = (props, {
         `;
 	} else if (
 		props.kitem.device_button_group_type == 'Television' ||
-		props.kitem.device_button_group_type == 'SetTop' ||
+		props.kitem.device_button_group_type == 'Set-top boxes' ||
 		props.kitem.device_button_group_type == 'Audio' ||
 		props.kitem.device_button_group_type == 'Projector' ||
 		props.kitem.device_button_group_type == 'Fan' ||
@@ -1530,6 +1580,25 @@ const renderBottomButton = (props, {
 			}
 		})
 	}
+	const bacnet_light_scene_click_change = (kitem,type)=>{
+		let configString = kitem.config;
+		if(configString){
+			let config = configString.split("|");
+			let temp = config[0].split(".");
+			let deviceCode = temp[0];
+			let tagCode = temp[1];
+			let message = [];
+			message.push({
+					"operate":"write",
+					"deviceCode":deviceCode,
+					"tagCode":tagCode,
+					"val":`${type}`
+			});
+			message = JSON.stringify(message);
+			core_mqtt_publish(config[1], message, 0, false, false, true);
+			$update();
+		}
+	}
 	// bacnet change flow
 	const click_bacnet_change = (kitem, click_type) => {
 		//mode-1 auto mode-2 cool mode-3 dry model-4 fan model-5 heat
@@ -1616,7 +1685,8 @@ const renderBottomButton = (props, {
 		//props.kitem.device_config = newConfigStr;
 		props.kitem.config = newConfigStr;
 		message = JSON.stringify(message);
-		core_mqtt_publish(config[1], JSON.stringify(message), 0, false, false, true);
+		console.log("message",message);
+		core_mqtt_publish(config[1], message, 0, false, false, true);
 		try{
 			let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
 			subdevices.forEach(item=>{
@@ -1992,6 +2062,28 @@ const renderBottomButton = (props, {
 								</a>
 								<a href="#" class="col" @click="${()=>click_thermostat_change(props.kitem,'add')}" command-type="add" guid="${props.kitem.device}" ref="${temperature}">
 									<div class="button button-raised button-big stop" style="width:70px;font-size:25px;">+</div>
+								</a>
+							</div>
+						</div>
+					</div>
+				</li>
+				`;
+	}else if(device_button_group.startsWith('BACNET LIGHTING SCENE')){
+		return () => $h`
+				<li class="device subdevice home-scanned-peripheral display-flex thermostat-subdevice" style="height:80px;" ref="1" guid="${
+					props.kitem.device
+				}" config="${props.kitem.config}" button_group="${props.kitem.device_button_group}">
+					<div class="item-content" style="width:100%;" list="${props.kitem.device_attachment_status}">
+						<div class="item-inner">
+							<div class="display-flex justify-content-space-between align-content-center align-items-center">
+								<a href="#" @click="${()=>bacnet_light_scene_click_change(props.kitem,2)}" command-type="mode" guid="${props.kitem.device}" style="width:33%;">
+									<div class="button button-raised button-big stop" style="width:100%">${_('Scene')} 1</div>
+								</a>
+								<a href="#" @click="${()=>bacnet_light_scene_click_change(props.kitem,3)}" command-type="fan" guid="${props.kitem.device}" style="width:33%;">
+									<div class="button button-raised button-big stop" style="width:100%">${_('Scene')} 2</div>
+								</a>
+								<a href="#" @click="${()=>bacnet_light_scene_click_change(props.kitem,4)}" command-type="reduce" guid="${props.kitem.device}" style="width:33%;">
+									<div class="button button-raised button-big stop" style="width:100%">${_('Scene')} 3</div>
 								</a>
 							</div>
 						</div>
@@ -2757,6 +2849,15 @@ export default async (props, ctx) => {
 							cont = true;
 							break;
 						}
+						if(tp.device_button_group.startsWith("RCU DIMMING")){
+							let config = Math.ceil(parseInt(tp.device_button_group.replace("RCU DIMMING",""))/2);
+							//console.log("config",config);
+							if(parseInt(subdevice.config) == config && subdevice.device == guid && !subdevice.device_button_group.startsWith("RCU DIMMING")){
+								//console.log("subdevice",subdevice)
+								cont = true;
+								break;
+							}
+						}
 					}
 					if (cont) continue;
 
@@ -2966,8 +3067,9 @@ export default async (props, ctx) => {
 	const update_subdevice_by_peripheral = async(s, p) => {
 		let device_status = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
 		let device_config = p.guid ? peripheral[p.guid].getGangConfig(s.name) : 'ir|0|25,1,2,1,0,1'; //ir|0|25,1,2,1,0,1
-
-		if(p.guid == '3038623631666565383663361203491d'){
+		
+		if(p.guid == '3038623631666565386264321202221d'){
+			debugger
 			//console.log(s.device_button_group)
 		}
 		s['device_config'] = device_config;
