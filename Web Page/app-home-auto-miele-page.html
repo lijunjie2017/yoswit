@@ -11,7 +11,12 @@
         </div>
         <div class="title">${ title }</div>
         <div class="right">
+          ${deviceState == 1 || deviceState == 0 && $h`
           <a link icon-only><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px" @click="${runMechine}">play_circle</i></a>
+          `}
+          ${deviceState == 2 && $h`
+          <a link icon-only><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px" @click="${()=>turnOff(2)}">pause</i></a>
+          `}
           {# <a link icon-only
             ><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px" @click="${runMechine}">play_circle</i></a
           > #}
@@ -76,17 +81,17 @@
           <div class="list list-strong-ios list-outline-ios list-dividers-ios">
             <ul>
               <li>
-                <a class="item-link">
+                <a class="item-link" @click="${()=>showPick()}">
                   <div class="item-content">
                     <div class="item-inner">
-                      <div class="item-title">${item.key}</div>
+                      <div class="item-title" style="min-width: 150px;">${item.key}</div>
                       <input
                         class="text-muted start-time"
                         name="start-time"
                         type="text"
                         readonly="readonly"
                         id="demo-picker-describe"
-                        style="text-align: right; width: 80%"
+                        style="text-align: right; width: 80%;"
                       />
                     </div>
                   </div>
@@ -155,7 +160,7 @@
                 <a class="item-link">
                   <div class="item-content">
                     <div class="item-inner">
-                      <div class="item-title">${_("duration")}</div>
+                      <div class="item-title" style="min-width: 150px;">${_("duration")}</div>
                       <input
                         class="text-muted start-time"
                         name="start-time"
@@ -217,6 +222,7 @@
     let target_temperature_list = [];
     let miele_device_type = '';
     let currentProgram = [];
+    let deviceState = 0;
     window.addEventListener('message', (event) => {
       console.log('event', event);
       let data = JSON.parse(event.data);
@@ -231,15 +237,24 @@
         $update();
       }
     });
-    const turnOff = async()=>{
+    const turnOff = async(type)=>{
       let postObj = {
         'powerOff': true
       }
+      if(type == 2){
+        postObj = {
+          processAction : 3
+        }
+      }
       try{
-        app.dialog.confirm('Are you sure to turn off the machine?', erp.settings[erp.appId].app_name, async() => {
+        if(type == 2){
           await changeStatus(false, postObj);
-          app.dialog.alert('Turn off success');
-        },()=>{})
+        }else{
+          app.dialog.confirm('Are you sure to turn off the machine?', erp.settings[erp.appId].app_name, async() => {
+            await changeStatus(false, postObj);
+            app.dialog.alert('Turn off success');
+          },()=>{})
+        }
       }catch(err){
         app.dialog.alert(err);
       }
@@ -285,12 +300,22 @@
         await delay(1000);
         //await changeStatus(true, actionObj);
         app.preloader.hide();
-        app.dialog.alert('The machine is running');
+        console.log('run success');
+        startCountdown(startTime);
+        deviceState = 2;
+        $update();
+        app.dialog.alert(`${_('The machine is running')}`);
       }catch(error){
         app.preloader.hide();
         app.dialog.alert(_(error));
       }
     };
+    const showPick = ()=>{
+      console.log("pickObj",pickObj)
+      if(isset(pickObj)){
+        pickObj.open();
+      }
+    }
     const modeChange = async() => {
       let val = $(`select[name="running-mode"]`).val();
       console.log(val);
@@ -298,7 +323,7 @@
       modeConfigParams = [];
       //change the program
       try{
-        await changeStatus(true, { 'programId': parseInt(val)});
+        //await changeStatus(true, { 'programId': parseInt(val)});
       }catch(e){
         app.dialog.alert(e);
       }
@@ -312,7 +337,7 @@
             obj = Object.assign(obj, dataObj[i]);
             if (i === 'duration') {
               let num = parseInt(obj.max[0]);
-              let maxnum = parseInt(obj.max[1]);
+              let maxnum = parseInt(obj.max[1]) == 0?60:parseInt(obj.max[1]);
               if (isset(pickObj)) {
                 pickObj.destroy();
               }
@@ -432,6 +457,9 @@
         console.log('list', list);
         if (list.status === 200) {
           let data = list.data;
+          data.unshift({
+            program : `${_('Please select a program')}`
+          })
           programs = data;
           $update();
         }
@@ -586,7 +614,6 @@
         }, 60000); //每分钟执行一次，即60*1000毫秒
     }
     const projectAction = async (postObj) => {
-      let url = `https://api.mcs3.miele.com/v1/devices/${guid}/actions`;
       try{
         let url = `https://api.mcs3.miele.com/v1/devices/${guid}/programs`;
         let postStatus = await http.request(encodeURI(url), {

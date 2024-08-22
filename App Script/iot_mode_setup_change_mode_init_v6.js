@@ -36,11 +36,11 @@ window.iot_mode_setup_change_mode_init = function(params) {
         valueList.push(i);
     }
     if(button_group.startsWith("RCU DIMMING")){
-        valueList = ["Triac Dimming","0-10v Dimming","1-10v Dimming","On Off Switch","Curtain Switch"];
+        valueList = ["Triac Dimming","0-10v Dimming","On Off Switch","Curtain Switch"];
     }else if(device_mode.startsWith("RCU Controller")){
         valueList = ["RCU Controller"];
     }else if(button_group.startsWith("RCU ONOFF GANG")){
-        valueList = ["Triac Dimming","0-10v Dimming","1-10v Dimming","On Off Switch","Curtain Switch"];
+        valueList = ["Triac Dimming","0-10v Dimming","On Off Switch","Curtain Switch"];
     }
     iot_mode_setup_change_mode_picker = app.picker.create({
         inputEl: inputEl,

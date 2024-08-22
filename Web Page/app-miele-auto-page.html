@@ -508,62 +508,10 @@
             </a>
             <a class="right" :href="'/mobile-app/home-auto-miele-page?title='+displayName+'&guid='+deviceName+'&model='+deviceModel">
               <div class="button button-raised button-big circle">
-                  <i class="material-icons">view_sidebar</i>
+                  <i class="material-icons" style="line-height: 25px!important;">view_sidebar</i>
               </div>
           </a>
           </div>
-      </div>
-    </li>
-    <li class="device home-scanned-peripheral" v-if="hexid != '0321'">
-      <div class="item-content subdevice-item-content" style="min-height: 0px;">
-          <div class="item-inner" style="min-height: 0px;">
-              <div class="row" style="--f7-grid-gap:3px;padding-left:20px;padding-right:15px;"> 
-                  
-                  <button class="col on_flag off_flag button button-large button-raised openclose cl" :class="actionState == 3?'active-button':''" ref="0"  command-type="Bluetooth" command="" @click="changeStates(name,1)">
-                      <div class="display-flex justify-content-center align-items-center" style="margin-left:-5px;margin-top:-5px;">Start</div>
-                  </button>      
-                  <button class="col on_flag off_flag button button-large button-raised stop" :class="actionState == 2?'active-button':''" ref="n" 
-                   command-type="Bluetooth" command="" @click="changeStates(name,2)">
-                      <div>Pause</div>
-                  </button>      
-                  <button class="col on_flag off_flag button button-large button-raised openclose op" :class="actionState == 1?'active-button':''" ref="1" command-type="Bluetooth" command="" @click="changeStates(name,3)">
-                      <div class="display-flex justify-content-center align-items-center" style="margin-left:-7px;margin-top:-5px;">Stop</div>
-                  </button>
-              </div>
-          </div>
-      </div>
-    </li>
-    <li class="device home-scanned-peripheral" style="height:auto;" v-if="hexid == '0321'">
-      <div class="item-content subdevice-item-content" style="min-height: 0px;">
-        <div class="item-inner" style="min-height: 0px;">
-          <div class="row" style="--f7-grid-gap:3px;padding-left:20px;padding-right:15px;"> 
-            <button class="col on_flag off_flag button button-large button-raised openclose cl" ref="0"  command-type="Bluetooth" command="" @click="changeMode(name,mode)">
-                <div class="display-flex justify-content-center align-items-center" style="margin-left:-5px;margin-top:-5px;font-size:12px;">{{modeStr}}</div>
-            </button>
-            <button class="col on_flag off_flag button button-large button-raised stop" :class="freezing == 1?'active-button':''" ref="n" 
-              command-type="Bluetooth" command="" @click="changeFreezing(name,1)">
-                <div style="font-size:12px;">Start Freezing</div>
-            </button> 
-            <button class="col on_flag off_flag button button-large button-raised openclose op" :class="freezing == 2?'active-button':''" ref="1" command-type="Bluetooth" command="" @click="changeFreezing(name,2)">
-                <div class="display-flex justify-content-center align-items-center" style="margin-left:-7px;margin-top:-5px;font-size:12px">Stop Freezing</div>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="item-content subdevice-item-content" style="min-height: 0px;">
-        <div class="item-inner" style="min-height: 0px;">
-          <div class="row" style="--f7-grid-gap:3px;padding-left:20px;padding-right:15px;"> 
-            <button class="col on_flag off_flag button button-large button-raised openclose cl" ref="0"  command-type="Bluetooth" command="" @click="changeTemp(name,temp,'reduce')">
-                <div class="display-flex justify-content-center align-items-center" style="margin-left:-5px;margin-top:-5px;font-size:24px;">-</div>
-            </button>
-            <button class="col on_flag off_flag button button-large button-raised stop" :class="freezing == 1?'active-button':''" ref="n" command-type="Bluetooth" command="" style="background:transparent;box-shadow:unset!important;">
-                <div style="font-size:18px;"><span>{{temp}}</span>&deg;C</div>
-            </button> 
-            <button class="col on_flag off_flag button button-large button-raised openclose op" :class="freezing == 2?'active-button':''" ref="1" command-type="Bluetooth" command="" @click="changeTemp(name,temp,'add')">
-                <div class="display-flex justify-content-center align-items-center" style="margin-left:-7px;margin-top:-5px;font-size:24px">+</div>
-            </button>
-          </div>
-        </div>
       </div>
     </li>
     </div>

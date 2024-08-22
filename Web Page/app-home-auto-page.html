@@ -218,7 +218,7 @@
 																		<div class="item-subtitle">${ kitem.device_model }-${ kitem.device_name }</div>
 																		${profilePermision && $h`
 																		<div class="signal-panel item-text height-21" style="width: 120%">
-																				<${renderSignalItem} kitem="${kitem}" key="${kitem.signalRfresh}"/>
+																				<${renderSignalItem} kitem="${kitem}" key="${kitem.signalRfresh}${kitem.mn_head_connected}${kitem.mn_tail_set}${kitem.mn_head_set}${kitem.mn_tail_connected}"/>
 																		</div>
 																		`}
 																	</div>
@@ -328,11 +328,93 @@ const renderSignalItem = (props, {
 			})
 		}
 	}
+	const fixNetwork = (kitem,is_mesh_status)=>{
+		if(!kitem.network_id){
+			return
+		}
+		if(is_mesh_status){
+			return
+		}
+		if(kitem.rssilv == 0){
+			app.dialog.alert(`${_('Device is not here')}`);
+			return
+		}
+		app.dialog.preloader(`${_('Network Repair In Progress')}`)
+		let network_id = kitem.network_id;
+		let network_position = kitem.network_position;
+		let devices = cloneDeep(erp.info.profile.profile_device);
+		let networkIdList = devices.filter((e)=>e.network_id == network_id && e.network_id != 0).sort((a,b)=>{
+			return a.network_position-b.network_position;
+		})
+		let headBytes = '';
+		let tailBytes = '';
+		if(network_position == 0){
+			headBytes= `8500010000000000000000000000`;
+			tailBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position)+1].device,true).toLowerCase()}0100000000`;
+		}else if(network_position == networkIdList.length-1){
+			headBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position)-1].device,true).toLowerCase()}0000000000`;
+			tailBytes = `8500010000000000000100000000`;
+		}else{
+			headBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position)-1].device,true).toLowerCase()}0000000000`;
+			tailBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position)+1].device,true).toLowerCase()}0100000000`;
+		}
+		let meshCommands = ['85000000', '850200', tailBytes, '850201', headBytes, '850200'];
+		let bleList = [];
+		meshCommands.forEach(zitem=>{
+			bleList.push({
+				service: 'ff80',
+				characteristic: 'ff81',
+				data: zitem,
+			})
+		})
+		bleList.push({
+			service: 'ff80',
+			characteristic: 'ff81',
+			data: '810e',
+		})
+		try{
+			console.log('bleList',bleList)
+			peripheral[kitem.device].write(bleList);
+			app.dialog.close();
+			app.dialog.alert(`${_('Repair completed. The device networking will take some time. Please pay attention to the changes in the networking status.')}`)
+		}catch(error){
+			app.dialog.close()
+			app.dialog.alert(_(erp.get_log_description(error)));
+		}
+	}
+	const definedDeviceNetworkStatus = (network_id,head_connected,head_set,tail_connected,tail_set,is_mobmob,rssilv) =>{
+		let is_mesh = false;
+		if(network_id){
+			is_mesh = true
+			if(rssilv){
+				if(head_set){
+					if(!head_connected){
+						is_mesh = false;
+					}
+				}
+				if(tail_set){
+					if(!tail_connected){
+						is_mesh = false;
+					}
+				}
+			}
+		}
+		return is_mesh;
+	}
+	let is_mesh_status = definedDeviceNetworkStatus(props.kitem.network_id,props.kitem.mn_head_connected,props.kitem.mn_head_set,props.kitem.mn_tail_connected,props.kitem.mn_tail_set,props.kitem.mobmob,props.kitem.rssilv);
+	if(props.kitem.device == '30346565303331666337376212012e1d'){
+		debugger
+		console.log("is_mesh_status",is_mesh_status)
+	}
 	return () => $h`
-			<div class="signal-view-main" signal="${props.kitem.rssilv}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}" mobilehub="${props.kitem.is_mobile_gateway?props.kitem.is_mobile_gateway:0}">
+			<div class="signal-view-main" signal="${props.kitem.rssilv}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}" mesh="${props.kitem.network_id>0?1:0}" mobilehub="${props.kitem.is_mobile_gateway?props.kitem.is_mobile_gateway:0}">
 			<div class="signal"></div>
 			<div class="bluetooth"></div>
-			<div class="mesh"></div>
+			<div class="mesh" @click="${()=>fixNetwork(props.kitem,is_mesh_status)}">
+				${(props.kitem.network_id>0 && !is_mesh_status) && $h`
+				<i class="prioritys icon material-icons text-color-red" style="font-size: 20px;position: relative;top: -6px;">priority_high</i>
+				`}
+			</div>
 			<div class="mobmob">
 				<i class="prioritys icon material-icons text-color-red device-none" style="font-size: 20px;position: relative;top: -3px;">priority_high</i>
 			</div>
@@ -1147,7 +1229,31 @@ const renderMainButton = (props, {
 				data: data,
 			}])
 			app.dialog.close();
-			app.dialog.alert(`Audio Source Switched Successfully`);
+			if(kitem.config == 'phone_iphone'){
+				kitem.config = 'tv';
+			}else{
+				kitem.config = 'phone_iphone';
+			}
+			//update profile
+			let this_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+			this_subdevices.forEach(item=>{
+				if(item.name == kitem.name){
+					item.config = kitem.config;
+				}
+			})
+			try{
+				http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+					serializer: "json",
+					responseType: "json",
+					method: "PUT",
+					data: {
+							profile_subdevice : this_subdevices
+					}
+			})
+			}catch(error){
+				console.log(error);
+			}
+			//app.dialog.alert(`Audio Source Switched Successfully`);
 		}catch(error){
 			app.dialog.close();
 			app.dialog.alert(erp.get_log_description(error));
@@ -1183,32 +1289,33 @@ const renderMainButton = (props, {
 		let curtainOpenIcon = `open-curtain.svg`;
 		let imgurl = `${'https://my.yoswit.com/'}/files/app/${ref > 0?curtainOpenIcon:curtainCloseIcon}`;
 		return () => $h`
-			<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}" mesh="${props.kitem.mesh || 0}">
-				<a class="iot-connect" @click="${()=>click_connect(props.kitem)}">
+			<div class="control-panel-right"  bluetooth="${props.kitem.bluetooth}">
+				<a class="iot-connect non-connect" @click="${()=>click_connect(props.kitem)}">
 					<div class="button button-raised button-big circle">
-							<i class="material-icons">bluetooth_connected</i>
+						<i class="material-icons">bluetooth_connected</i>
 					</div>
 				</a>
-				<a class="left on_flag" ref="2" @click="${()=>click_curtain_switch(props.kitem,'pause')}" button_group="${props.kitem.device_button_group}" command-type="Bluetooth" command="">
-						<div class="button button-raised button-big openclose cl" style="width:57px"><div style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-top:6px;">pause</i></div></div>
+				<a class="left off_flag" @touchstart="${()=>press_openclose(props.kitem, 'close', true)}"  @touchend="${()=>press_openclose(props.kitem, 'close', false)}">
+					<div class="button button-raised button-big openclose cl" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
 				</a>
-				<a class="left on_flag" ref="${ref}" @click="${()=>click_curtain_switch(props.kitem)}" button_group="${props.kitem.device_button_group}">
-						<div class="button button-raised button-big openclose op" style="width:57px"><div style="height:100%;width:100%;"><img src="${imgurl}" alt="" style="width:20px;height:20px;margin-top:5px;" /></div></div>
+				<a class="left on_flag" @touchstart="${()=>press_openclose(props.kitem, 'open', true)}"  @touchend="${()=>press_openclose(props.kitem, 'open', false)}">
+					<div class="button button-raised button-big openclose op" style="width:57px"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_more</i></div></div>
 				</a>
 			</div>
-			`;
+		`;
 	} else if (
 		props.kitem.device_button_group.startsWith('RCU ONOFF GANG') ||
 		props.kitem.device_button_group.startsWith('ONOFF GANG')
 	) {
 		if (props.kitem.device_model == 'YO790DC') {
+			let music_config = props.kitem.config;
 			return () => $h`
 					<a class="control-panel-right">
 						<div class="left button button-raised button-big circle"  @click="${()=>iot_get_music_player_password(props.kitem)}">
 								<i class="material-icons">key</i>
 						</div>
 						<div class="left button button-raised button-big circle"  @click="${()=>iot_music_player_change_source(props.kitem)}">
-								<i class="material-icons" style="font-size:30px!important;line-height:30px!important;">swap_horiz</i>
+								<i class="material-icons" style="font-size:30px!important;line-height:30px!important;">${music_config?music_config:'phone_iphone'}</i>
 						</div>
 					</a>
 					`;
@@ -1519,6 +1626,27 @@ const renderBottomButton = (props, {
 			}
 		} catch (error) {
 			app.dialog.alert(erp.get_log_description(error));
+		}
+	}
+	const curtain_switch_custom = (kitem,direction)=>{
+		//type 0-left 1-right 2-right
+		if(peripheral[kitem.device]){
+			if (kitem.device_button_group.startsWith('RCU OPENCLOSE GANG')) {
+					peripheral[kitem.device].rcuOpenClose(bleHelper.getGangId(kitem.device_button_group), direction, true).then((rs) => {
+
+					}).catch((error) => {
+						app.dialog.alert(erp.get_log_description(error));
+					});
+				} else {
+
+					peripheral[kitem.device].openClose(bleHelper.getGangId(kitem.device_button_group), direction, true).then((rs) => {
+
+
+					}).catch((error) => {
+						app.dialog.alert(erp.get_log_description(error));
+
+					});
+				}
 		}
 	}
 	const range_change_fun_switch_curtain = (element)=>{
@@ -1989,29 +2117,24 @@ const renderBottomButton = (props, {
 			`;
 	}else if(device_button_group.startsWith("OPENCLOSE GANG") || device_button_group.startsWith("RCU OPENCLOSE GANG")){
 		return () => $h`
-				<li class="device home-scanned-peripheral display-flex curtain-subdevice" direction="standard" style="height:67px!important;" guid="${
-					props.kitem.device
-				}" bluetooth="${props.kitem.bluetooth_status}">
-						<div class="row padding-tb flex-direction-column justify-content-center ${props.kitem.bluetooth== 0 && props.kitem.mobmob == 0 && !props.kitem.mesh?'disabled':''} ">
-								<div class="col-100 medium-100 large-100">
-										<div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
-												<div class="tip-title"><img src="${
-													'https://my.yoswit.com/'
-												}/files/app/close-curtain.svg" alt="" style="width:20px;height:20px;margin-right:8px;margin-top:5px;" /></div>
-												<div class="range-slider range-slider-home-auto range-slider-init"
-														button_group="${props.kitem.device_button_group}"
-														guid="${props.kitem.device}"
-														subdevice-name="${props.kitem.name}"
-												></div>
-												<div class="tip-title"><img src="${
-													'https://my.yoswit.com/'
-												}/files/app/open-curtain.svg" alt="" style="width:20px;height:20px;margin-left:8px;margin-top:5px;" /></div>
-										</div>
-										<div></div>
-								</div>
-						</div>
-				</li>
-			`;
+      <li class="device subdevice home-scanned-peripheral" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}" slot-index="${props.kitem.config}" style="height:auto;">
+          <div class="item-content subdevice-item-content" style="min-height: 0px;">
+              <div class="item-inner" style="min-height: 0px;">
+                  <div class="row" style="--f7-grid-gap:3px;padding-left:20px;padding-right:15px;">
+                      <button class="col on_flag off_flag button button-large button-raised openclose cl" ref="0" @click="${()=>curtain_switch_custom(props.kitem,'close')}" command-type="Bluetooth" command="">
+                          <div style="margin-left:-5px;"><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_right</i><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_left</i></div>
+                      </button>
+                      <button class="col on_flag off_flag button button-large button-raised stop" ref="n" @click="${()=>curtain_switch_custom(props.kitem,'stop')}" command-type="Bluetooth" command="">
+                          <div><i class="material-icons" style="line-height:65px;font-size:18px!important;">pause</i></div>
+                      </button>
+                      <button class="col on_flag off_flag button button-large button-raised openclose op" ref="1" @click="${()=>curtain_switch_custom(props.kitem,'open')}" command-type="Bluetooth" command="">
+                          <div style="margin-left:-7px;"><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_left</i><i class="material-icons" style="font-size:22px!important;">keyboard_double_arrow_right</i></div>
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </li>
+      `;
 	}else if (device_button_group.startsWith('Thermostat')) {
 		emitter.on(`thermostat_${props.kitem.device}`, (data) => {
 			$update();
@@ -2364,7 +2487,7 @@ export default async (props, ctx) => {
 		//console.log("this_comming");
 		clearTimeout(idleTimer);
 		idleTimer = setTimeout(()=>{
-			console.log("用户已经20秒没有操作了！");
+			console.log("20s active");
 			const debounce_init = core_utils_debounce(initPopup,2000,{
 					leading: true,
 					trailing: false
@@ -2566,7 +2689,7 @@ export default async (props, ctx) => {
 					if(gatewayhashList.length > 2){
 						will_topic = `will/${gatewayhash}`;
 					}else{
-						will_topic = `will/${md5(md5(profile_device[i].gateway))}`;
+						will_topic = `will/${md5(md5(profile_device[i].gateway.toLowerCase()))}`;
 					}
 					
 					core_mqtt_subscribe(will_topic, 1, false);
@@ -2829,7 +2952,69 @@ export default async (props, ctx) => {
 				if (_unassigned_subdevices[i].device != guid) continue;
 				unassigned_subdevices[i].disappear = false;
 			}
-
+			//check if device setting config
+			if(isset(erp.info.device[guid])){
+				let thisDeviceMap = cloneDeep(erp.info.device[guid]);
+				let settings = thisDeviceMap.settings;
+				let rcuSettings = [];
+				let device_mode = thisDeviceMap.device_mode;
+				let device_model = thisDeviceMap.device_model;
+				settings.forEach(zitem=>{
+					if(zitem.setting_type.startsWith('active_io')){
+						let inputStatus = zitem.setting == 'input'?true:false;
+						let status = zitem.setting == 'output'?true:false;
+						if(inputStatus || status){
+							rcuSettings.push({
+								name: zitem.setting_type.replace("active_io_",""),
+								inputStatus : inputStatus,
+								status : status,
+								device_mode : device_mode,
+								device_model : device_model
+							})
+						}
+					}
+				});
+				rcuSettings.forEach(kitem=>{
+					let title = `RCU INPUT${kitem.name}`;
+					let this_button_group = `RCU INPUT${kitem.name}`;
+					//filter the gang of 33 32 31
+					if(kitem.name == 33 || kitem.name == 32 || kitem.name == 31){
+						return;
+					}
+					if(kitem.status){
+						title = `RCU OUTPUT${kitem.name}`;
+						this_button_group = `RCU OUTPUT${kitem.name}`
+					}
+					const u_subdevice = {
+						lastDiscoverDate: p.lastDiscoverDate,
+						rssilv: p.rssilv || 0,
+						bluetooth: p.connected ? 1 : (p.connecting ? 2 : 0),
+						connected: p.connected,
+						connecting: p.connecting,
+						device: p.guid,
+						device_button_group: this_button_group,
+						device_mode: kitem.device_mode,
+						device_model: kitem.device_model,
+						device_name: p.name,
+						name: title, //name is means device model and sort
+						password: p.password,
+						thumb: erp.doctype.device_model['0346'].image,
+						device_status: 0,
+						device_config: '',
+						device_attachment_status: ''
+					};
+					let cont = false;
+					for (let u_subdevice of _unassigned_subdevices) {
+						if (u_subdevice.device != guid) continue;
+						if (u_subdevice.device_button_group == this_button_group) {
+							cont = true;
+							break;
+						}
+					}
+					if (cont) return;
+					unassigned_subdevices.push(u_subdevice);
+				})
+			}
 			if (erp.doctype.device_model[p.hexModel]) {
 				for (let tp of erp.doctype.device_model[p.hexModel]['device_default_template']) {
 					if (!tp.display_in_unassigned) continue;
@@ -3068,12 +3253,16 @@ export default async (props, ctx) => {
 		let device_status = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
 		let device_config = p.guid ? peripheral[p.guid].getGangConfig(s.name) : 'ir|0|25,1,2,1,0,1'; //ir|0|25,1,2,1,0,1
 		
-		if(p.guid == '3038623631666565386264321202221d'){
-			debugger
+		if(p.guid == '30346565303331666337376212012e1d'){
+			//debugger
 			//console.log(s.device_button_group)
 		}
 		s['device_config'] = device_config;
 		s['rssilv'] = p.rssilv || 0;
+		s['mn_head_set'] = p.mn_head_set || 0;
+		s['mn_head_connected'] = p.mn_head_connected || 0;
+		s['mn_tail_set'] = p.mn_tail_set || 0;
+		s['mn_tail_connected'] = p.mn_tail_connected || 0;
 		s['bluetooth'] = p.connected ? 1 : (p.connecting ? 2 : 0);
 		s['mobmob'] = p.is_mobmob;
 		s['is_mobile_gateway'] = p.is_mobile_gateway;

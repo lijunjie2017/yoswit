@@ -3226,6 +3226,7 @@ const doMOBMOB = (gangs) => {
                         });
         		    }else if(self.prop.firmwareNo >= 7){
                         ble.startNotification(self.prop.id, "ff80", "ff82", function(rs){
+                            //ble.stopNotification(self.prop.id, "ff80", "ff82");
                             if(rs.startsWith("8e")){
                                 let pwd = "";
                                 if(rs.substr(2,2)=="01"){

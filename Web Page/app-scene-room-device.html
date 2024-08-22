@@ -810,6 +810,21 @@
                 item.ref = parseInt((item.ref/100)*255);
               } else if (device_button_group.startsWith('OPENCLOSE UART')) {
                 //have differ model to be handle
+                //check if have gateway
+                // let devices = cloneDeep(erp.info.profile.profile_device);
+                // let gateway = '';
+                // devices.forEach(deviceItem=>{
+                //   if(deviceItem.name == item.profile_device){
+                //     gateway = deviceItem.gateway;
+                    
+                //   }
+                // })
+                // if(gateway){
+                //   let mac_address = gateway.split("-")[0];
+                //   let cleanedMac = mac_address.replace(/:/g, '').toLowerCase();
+                //   let reversedMac = cleanedMac.match(/.{1,2}/g).reverse().join('');
+                //   mackey = reversedMac;
+                // }
                 let otherModelStatus = false;
                 if(device_model == 'YO121-AC-R2W') otherModelStatus = true;
                 if(item.ref == 2){

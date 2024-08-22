@@ -35,6 +35,7 @@ window.initSettingTemplate = ()=>{
                             guid="{{guid}}"
                             display-name="{{setting_title}}"
                             load-type="setting"
+                            page-type="1"
                             ref="{{ device }}|{{ device_button_group }}|{{ profile_subdevice_name }}|0" 
                             href="#"
                             class="button button-fill button-44 color-theme button-raised device"
@@ -62,6 +63,43 @@ window.initSettingTemplate = ()=>{
                     <div class="col-auto">
                         <a 
                             func="iot_device_load_detail" 
+                            device-name="{{device_name}}"
+                            mac-address="{{mac_address}}"
+                            hexBatch="{{device_hex_batch}}"
+                            hexModel="{{ guid[-6:-2]}}"
+                            firmware="{{firmware}}"
+                            uuid="{{uuid}}"
+                            button_group="{{device_button_group}}"
+                            guid="{{guid}}"
+                            display-name="{{setting_title}}"
+                            load-type="setting"
+                            ref="{{ device }}|{{ device_button_group }}|{{ profile_subdevice_name }}|0" 
+                            href="#"
+                            class="button button-fill button-44 color-theme button-raised device"
+                        >
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Set Time";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">settings</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">${_(setting_label)}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                            func="iot_ble_sync_clock" 
                             device-name="{{device_name}}"
                             mac-address="{{mac_address}}"
                             hexBatch="{{device_hex_batch}}"
@@ -118,6 +156,46 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Mesh Retry Times";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_rcu_retry_time_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            device-mode="{{device_mode }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            subdevice-name="{{profile_subdevice_name}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="rcu_retry_time" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">bolt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting != ""  %}
+                        <p class="setting-value text-muted size-12">{{_(self_setting_data.setting)}}</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{_("5")}}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action-rcu-retry-time" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Change Password";
     setting_label_template[setting_label] = `
         <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
@@ -165,6 +243,33 @@ window.initSettingTemplate = ()=>{
                             ref="{{ device }}" 
                             device-name="{{ profile_device_name }}" 
                             href="#"
+                            class="button button-fill button-44 color-theme button-raised "
+                        >
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Active Configuration";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">key</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">${_(setting_label)}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                            ref="{{ device }}" 
+                            device-name="{{ profile_device_name }}" 
+                            href="/mobile-app/scene-guid-active-page?guid={{guid}}"
                             class="button button-fill button-44 color-theme button-raised "
                         >
                             <i class="material-icons">navigate_next</i>

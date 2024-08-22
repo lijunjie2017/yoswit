@@ -47,7 +47,7 @@
                 <a func="iot_switch_profile" ref="${item.name}" class="item-title" style="width: 90%">
                   <!--<div class="item-header"><font lang="en">{{ _('Owner') }}</font>: ${item.owner}</div>!-->
                   <font lang="en" lang-packet="${item.profile_name}" class="${item.name === active_profile?'font-bold':''}">
-                    ${item.flat?item.flat+'-':''}${ tran(item.profile_name) }
+                    ${item.flat?item.flat+' - ':''}${ tran(item.profile_name) }
                   </font>
                   <div class="item-footer">
                     ${item.shared.map((kitem)=> $h`

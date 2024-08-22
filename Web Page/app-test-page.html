@@ -32,7 +32,7 @@
 
     let vueApp = null;
 
-    $on('pageMounted', (e, page) => {
+    $on('pageMounted', async (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         components: {
@@ -44,6 +44,35 @@
         computed: {},
         beforeDestroy() {},
       });
+
+      const resp = await http2.request({
+        url: encodeURI('https://incafebot.knowin.com/api/user/auth/login'),
+        method: 'POST',
+        serializer: 'json',
+        responseType: 'json',
+        data: {
+          account: '028ee2dc7cec4144bcfe017d7422ad97',
+          password: '7893c37b5b154693b9f5',
+        },
+        debug: true,
+      });
+      console.log(resp);
+      const resp2 = await http2.request({
+        url: encodeURI('https://incafebot.knowin.com/api/inbot/makeConfig/queryPage'),
+        method: 'POST',
+        serializer: 'json',
+        responseType: 'json',
+        data: {
+          pageNum: 1,
+          pageSize: 1000,
+          corpUUID: '028ee2dc7cec4144bcfe017d7422ad97',
+        },
+        headers: {
+          'Access-Token': resp.data.result.token,
+        },
+        debug: true,
+      });
+      console.log(resp2);
     });
 
     $on('pageBeforeRemove', (e, page) => {});

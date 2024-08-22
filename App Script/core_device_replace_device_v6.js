@@ -85,105 +85,105 @@ window.core_device_replace_device = async(params, fpassword) => {
         let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
         let erp_device_setting_obj = {};
         window.core_device_replace_settings = [];
-        profile_device.forEach((item)=>{
+        // profile_device.forEach((item)=>{
 
-            if(isset(item.default_manufacturing_setup)){
-                let json = JSON.parse(item.default_manufacturing_setup);
-                let this_obj = {};
-                for(let i in json){
-                    //first update the erp setting
-                    if(i == 'virtual_device_pairing'){
-                        //update to the erp
-                        //first get the button_group
-                        //sencond tune the device name
-                        //update the setting
-                        let virtual_list = json[i];
-                        for(let z in virtual_list){
-                            let this_gang = virtual_list[z].gang;
-                            let this_mode = virtual_list[z].mode;
-                            let target_button_group = virtual_list[z].target_button_group;
-                            let this_type = '';
-                            if(this_mode == 'On Off Switch'){
-                                this_type = `ONOFF GANG${this_gang}|Virtual Device Pairing`;
-                            }
-                            //get the mapping device info
-                            let this_network_id = virtual_list[z].network_id;
-                            let this_position = virtual_list[z].position;
-                            let this_device_name = '';
-                            this_device_name = profile_device.find(kitem=>kitem.network_id && kitem.network_id == this_network_id && kitem.network_position == this_position).device_name;
-                            window.core_device_replace_settings.push({
-                                "setting_type" : this_type,
-                                "setting" : `${target_button_group}|${this_device_name}`
-                            });
-                        }
-                    }
-                    if(i == 'physical_switch_lock'){
-                        window.core_device_replace_settings.push({
-                            "setting_type" : 'Physical Switch Lock',
-                            "setting" : 'On'
-                        });
-                    }
-                    if(i == 'run_for'){
-                        //different mode have different button_group
-                        let this_mode = item.device_mode;
-                        let setting_type = '';
-                        let run_obj = {};
-                        if(this_mode && this_mode == 'On Off Switch'){
-                            let this_gang = json[i].gang;
-                            setting_type = `ONOFF GANG${this_gang}`;
-                            run_obj = {
-                                "button_group" : setting_type,
-                                "Run for (s)" : json[i].run_for_time,
-                                "Delay Mode" : 'Off Only',
-                                "Delay for (s)" : 0
-                            }
-                            window.core_device_replace_settings.push({
-                                "setting_type" : `${setting_type}|Delay Lastfor`,
-                                "setting" : JSON.stringify(run_obj)
-                            });
-                        }
-                        if(this_mode && this_mode == 'Curtain Switch'){
-                            let this_gang = json[i].gang;
-                            setting_type = `OPENCLOSE GANG${this_gang}`;
-                            run_obj = {
-                                "button_group" : setting_type,
-                                "Run for (s)" : json[i].run_for_time,
-                                "Delay Mode" : 'Off Only',
-                                "Delay for (s)" : 0
-                            }
-                            window.core_device_replace_settings.push({
-                                "setting_type" : `${setting_type}|Delay Lastfor`,
-                                "setting" : JSON.stringify(run_obj)
-                            });
-                        }
-                    }
-                    if(i != 'virtual_device_pairing'){
-                        let list = json[i];
-                        list.forEach((kitem)=>{
-                            core_device_replace_pending_cmds.push(kitem);
-                        })
-                    }else{
-                        let list = json[i];
-                        list.forEach((kitem)=>{
-                            let gang = kitem.gang;
-                            let nework_id = kitem.nework_id;
-                            let position = kitem.position;
-                            let target_mac = '';
-                            profile_device.forEach((zitem=>{
-                                if(nework_id == zitem.nework_id && position == zitem.network_position){
-                                    target_mac = zitem.device_name;
-                                }
-                            }))
-                            //map the virtual_device_pairing command
-                            let command = `8108${gang.toString(16).pad("00")}20${target_mac}2000`
-                        })
+        //     if(isset(item.default_manufacturing_setup)){
+        //         let json = JSON.parse(item.default_manufacturing_setup);
+        //         let this_obj = {};
+        //         for(let i in json){
+        //             //first update the erp setting
+        //             if(i == 'virtual_device_pairing'){
+        //                 //update to the erp
+        //                 //first get the button_group
+        //                 //sencond tune the device name
+        //                 //update the setting
+        //                 let virtual_list = json[i];
+        //                 for(let z in virtual_list){
+        //                     let this_gang = virtual_list[z].gang;
+        //                     let this_mode = virtual_list[z].mode;
+        //                     let target_button_group = virtual_list[z].target_button_group;
+        //                     let this_type = '';
+        //                     if(this_mode == 'On Off Switch'){
+        //                         this_type = `ONOFF GANG${this_gang}|Virtual Device Pairing`;
+        //                     }
+        //                     //get the mapping device info
+        //                     let this_network_id = virtual_list[z].network_id;
+        //                     let this_position = virtual_list[z].position;
+        //                     let this_device_name = '';
+        //                     this_device_name = profile_device.find(kitem=>kitem.network_id && kitem.network_id == this_network_id && kitem.network_position == this_position).device_name;
+        //                     window.core_device_replace_settings.push({
+        //                         "setting_type" : this_type,
+        //                         "setting" : `${target_button_group}|${this_device_name}`
+        //                     });
+        //                 }
+        //             }
+        //             if(i == 'physical_switch_lock'){
+        //                 window.core_device_replace_settings.push({
+        //                     "setting_type" : 'Physical Switch Lock',
+        //                     "setting" : 'On'
+        //                 });
+        //             }
+        //             if(i == 'run_for'){
+        //                 //different mode have different button_group
+        //                 let this_mode = item.device_mode;
+        //                 let setting_type = '';
+        //                 let run_obj = {};
+        //                 if(this_mode && this_mode == 'On Off Switch'){
+        //                     let this_gang = json[i].gang;
+        //                     setting_type = `ONOFF GANG${this_gang}`;
+        //                     run_obj = {
+        //                         "button_group" : setting_type,
+        //                         "Run for (s)" : json[i].run_for_time,
+        //                         "Delay Mode" : 'Off Only',
+        //                         "Delay for (s)" : 0
+        //                     }
+        //                     window.core_device_replace_settings.push({
+        //                         "setting_type" : `${setting_type}|Delay Lastfor`,
+        //                         "setting" : JSON.stringify(run_obj)
+        //                     });
+        //                 }
+        //                 if(this_mode && this_mode == 'Curtain Switch'){
+        //                     let this_gang = json[i].gang;
+        //                     setting_type = `OPENCLOSE GANG${this_gang}`;
+        //                     run_obj = {
+        //                         "button_group" : setting_type,
+        //                         "Run for (s)" : json[i].run_for_time,
+        //                         "Delay Mode" : 'Off Only',
+        //                         "Delay for (s)" : 0
+        //                     }
+        //                     window.core_device_replace_settings.push({
+        //                         "setting_type" : `${setting_type}|Delay Lastfor`,
+        //                         "setting" : JSON.stringify(run_obj)
+        //                     });
+        //                 }
+        //             }
+        //             if(i != 'virtual_device_pairing'){
+        //                 let list = json[i];
+        //                 list.forEach((kitem)=>{
+        //                     core_device_replace_pending_cmds.push(kitem);
+        //                 })
+        //             }else{
+        //                 let list = json[i];
+        //                 list.forEach((kitem)=>{
+        //                     let gang = kitem.gang;
+        //                     let nework_id = kitem.nework_id;
+        //                     let position = kitem.position;
+        //                     let target_mac = '';
+        //                     profile_device.forEach((zitem=>{
+        //                         if(nework_id == zitem.nework_id && position == zitem.network_position){
+        //                             target_mac = zitem.device_name;
+        //                         }
+        //                     }))
+        //                     //map the virtual_device_pairing command
+        //                     let command = `8108${gang.toString(16).pad("00")}20${target_mac}2000`
+        //                 })
                     
-                    }
-                }
+        //             }
+        //         }
                 
-                window.core_device_replace_settings.push(this_obj);
-            }
-        })
+        //         window.core_device_replace_settings.push(this_obj);
+        //     }
+        // })
         core_device_replace_device_write_command(guid)
     }).catch((error)=>{
         app.preloader.hide();

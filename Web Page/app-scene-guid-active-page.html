@@ -1,0 +1,891 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Rcu Active Configuration') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in stepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                  v-on:click="toTab(item.relatedIndex)"
+                >
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card data-table" v-if="!deviceSettingStatus">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Activate Rcu Slot")}}</div>
+                <div class="card-content card-content-padding">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th class="numeric-cell" style="text-align: center">Slot</th>
+                        <th class="numeric-cell" style="text-align: center">Mode</th>
+                        <th class="numeric-cell" style="text-align: center">Operate</th>
+                      </tr>
+                      <tr v-for="item in slotlist" :key="item.name">
+                        <td class="numeric-cell" style="text-align: center">
+                          <span style="font-size: 14px">{{item.name}}</span>
+                        </td>
+                        <td class="actions-cell" style="text-align: center">
+                          <span
+                            >{{item.mode == 2?'Triac Dimming':item.mode == 1?'On Off Switch':item.mode == 3?'Curtain Switch':item.mode ==
+                            4?'0-10v Dimming':'1-10v Dimming'}}</span
+                          >
+                        </td>
+                        <td class="actions-cell" style="text-align: center">
+                          <a href="#" class="link icon-only text-color-theme" v-on:click="activeSlot(item)">
+                            <i class="material-icons text-color-gray" style="font-size: 35px">edit_note</i>
+                          </a>
+                          <a href="#" class="link icon-only text-color-theme" v-on:click="changeDeviceSetting(item)">
+                            <i class="material-icons text-color-gray" style="font-size: 30px">settings</i>
+                          </a>
+                        </td>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("NEXT STEP")}}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card data-table" v-if="deviceSettingStatus">
+                <div v-for="item in slotItemConfig" :key="item.id" v-if="item.slot == rcuItem.name">
+                  <div class="card-header" style="font-weight: 500; font-size: 18px">{{_(item.name)}}</div>
+                  <div class="card-content card-content-padding">
+                    <div class="auto-init card margin-bottom-half mx-0 my-3" v-for="kitem in item.config" :key="kitem.name">
+                      <div class="card-content card-content-padding">
+                        <div class="row">
+                          <div class="col-auto">
+                            <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                              <i class="material-icons">{{kitem.icon}}</i>
+                            </div>
+                          </div>
+                          <div class="col align-self-center no-padding-left">
+                            <h5 class="no-margin-bottom">{{ _(kitem.title) }}</h5>
+                            <p class="setting-value text-muted size-12">{{ _(kitem.value) }}</p>
+                          </div>
+                          <div class="col-auto">
+                            <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                              <i class="material-icons">navigate_next</i>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="deviceSettingStatus = false">{{_("back")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card data-table">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Activate Output/Input Port")}}</div>
+                <div class="card-content card-content-padding">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th class="numeric-cell" style="text-align: center">Gpio</th>
+                        <th class="numeric-cell" style="text-align: center">Input</th>
+                        <th class="numeric-cell" style="text-align: center">Output</th>
+                      </tr>
+                      <tr v-for="item in ioList" :key="item.name">
+                        <td class="numeric-cell" style="text-align: center">
+                          <span style="font-size: 14px">{{item.name}}</span>
+                        </td>
+                        <td class="actions-cell" style="text-align: center">
+                          <a href="#" class="link icon-only text-color-theme" v-on:click="switchInputStatus(item)" v-if="!item.isNone">
+                            <i
+                              class="material-icons text-color-gray"
+                              style="font-size: 50px; position: relative; top: -10px; left: -10px"
+                              v-if="!item.inputStatus"
+                              >toggle_off</i
+                            >
+                            <i
+                              class="material-icons text-color-theme"
+                              style="font-size: 50px; position: relative; top: -10px; left: -10px"
+                              v-if="item.inputStatus"
+                              >toggle_on</i
+                            >
+                          </a>
+                          <span style="font-size: 18px" v-else>/</span>
+                        </td>
+                        <td class="actions-cell" style="text-align: center">
+                          <a href="#" class="link icon-only text-color-theme" v-on:click="switchStatus(item)">
+                            <i
+                              class="material-icons text-color-gray"
+                              style="font-size: 50px; position: relative; top: -10px; left: -10px"
+                              v-if="!item.status"
+                              >toggle_off</i
+                            >
+                            <i
+                              class="material-icons text-color-theme"
+                              style="font-size: 50px; position: relative; top: -10px; left: -10px"
+                              v-if="item.status"
+                              >toggle_on</i
+                            >
+                          </a>
+                        </td>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="activeRcu()">{{_("COMPLETE")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- <div id="step-2" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card data-table">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Activate Output/Input Port")}}</div>
+                <div class="card-content card-content-padding">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th class="numeric-cell" style="text-align: center">Device</th>
+                        <th class="numeric-cell" style="text-align: center">Input</th>
+                        <th class="numeric-cell" style="text-align: center">Operate</th>
+                      </tr>
+                      <tr v-for="item in deviceList" :key="item.name">
+                        <td class="numeric-cell" style="text-align: center">
+                          <span style="font-size: 14px">{{tran(item.title)}}</span>
+                        </td>
+                        <td class="actions-cell" style="text-align: center">
+                          <span style="font-size: 12px">{{item.config?'IO '+item.config:'/'}}</span>
+                        </td>
+                        <td class="actions-cell" style="text-align: center">
+                          <a href="#" class="link icon-only text-color-theme" v-on:click="editInputConfig(item)">
+                            <i class="material-icons text-color-gray" style="font-size: 35px">edit_note</i>
+                          </a>
+                        </td>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="saveDevice()">{{_("COMPLETE")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>-->
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card data-table">
+                <div class="card-content card-content-padding">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">{{_('Door Bell Enable')}}</div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="doorBellStatus = !doorBellStatus"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!doorBellStatus">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="doorBellStatus">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">
+                        <span>{{_('Clean And Dnd Enable')}}</span>
+                      </div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="cleanAndDndStatus = !cleanAndDndStatus"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!cleanAndDndStatus">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="cleanAndDndStatus">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="tips text-color-gray">{{_('This configuration uses IO ports 31 and 32.')}}</p>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="ioConfigDisplay()">{{_("NEXT STEP")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- popup list start -->
+          <div class="popup demo-popup-swipe-handler" v-show="clickStatus">
+            <div class="view view-init">
+              <div class="page page-with-navbar-large">
+                <div class="navbar navbar-large navbar-transparent">
+                  <div class="navbar-bg"></div>
+                  <div class="navbar-inner">
+                    <div class="title"></div>
+                    <div class="right">
+                      <a class="link popup-close"><i class="material-icons" style="font-size: 40px">cancel</i></a>
+                    </div>
+                    <div class="title-large">
+                      <div class="title-large-text"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="page-content">
+                  <div class="block block-strong-ios block-outline-ios" style="padding: 15px">
+                    <div class="list list-strong-ios list-dividers-ios">
+                      <ul class="operate-box" style="margin-top: 15px">
+                        <li class="radio-box card" style="opacity: 0">
+                          <label class="item-radio item-radio-icon-end item-content">
+                            <input type="radio" name="demo-radio-light" checked value="100" />
+                            <i class="icon icon-radio"></i>
+                            <div class="item-inner">
+                              <div class="item-title">On</div>
+                            </div>
+                          </label>
+                        </li>
+                        <li class="radio-box card" v-for="(labelItem,labelIndex) in labelList" :key="labelItem.value">
+                          <div v-on:click="home_ui_click_touch_app_save(labelItem)" style="width: 100%; padding: 15px">
+                            {{labelItem.text}}
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- popup list end -->
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid } = $f7route.query;
+    //let guid = '3334383531383763323636321203461d';
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          stepList: [
+            {
+              id: 1,
+              name: 1,
+              isActive: true,
+            },
+            {
+              id: 2,
+              name: 2,
+              isActive: false,
+            },
+            {
+              id: 3,
+              name: 3,
+              isActive: false,
+            },
+          ],
+          slotconfigList: [],
+          slotlist: [],
+          deviceSettingStatus: false,
+          deviceList: [],
+          index: 1,
+          ioList: [],
+          slotItemConfig: [
+            {
+              name: 'Slot 1-1',
+              mode: 2,
+              slot :1,
+              config: [],
+            },
+          ],
+          settingConfigList: [
+            {
+              id: 1,
+              mode: 2,
+              config: [
+                {
+                  name: 'config_1',
+                  title: 'Per Brightness',
+                  value: 5,
+                  icon: 'cable',
+                },
+                {
+                  name: 'config_2',
+                  title: 'Minimum Trim',
+                  value: 1,
+                  icon: 'light',
+                },
+              ],
+            },
+            {
+              id: 2,
+              mode: 4,
+              config: [
+                {
+                  name: 'config_1',
+                  title: 'Per Brightness',
+                  value: 5,
+                  icon: 'cable',
+                },
+                {
+                  name: 'config_2',
+                  title: 'Minimum Trim',
+                  value: 1,
+                  icon: 'light',
+                },
+              ],
+            },
+            {
+              id: 3,
+              mode: 5,
+              config: [
+                {
+                  name: 'config_1',
+                  title: 'Per Brightness',
+                  value: 5,
+                  icon: 'cable',
+                },
+                {
+                  name: 'config_2',
+                  title: 'Minimum Trim',
+                  value: 1,
+                  icon: 'light',
+                },
+              ],
+            },
+          ],
+          labelList: [
+            {
+              value: 1,
+              text: 'On Off Switch',
+            },
+            {
+              value: 2,
+              text: 'Triac Dimming',
+            },
+            {
+              value: 3,
+              text: 'Curtain Switch',
+            },
+            {
+              value: 4,
+              text: '0-10v Dimming',
+            },
+            {
+              value: 5,
+              text: '1-10v Dimming',
+            },
+          ],
+          popupItem: null,
+          clickStatus: false,
+          rcuItem: {
+            config: 1,
+          },
+          inputText: _('Output Name'),
+          doorBellStatus: true,
+          cleanAndDndStatus: true,
+        },
+        watch:{
+          slotlist:{
+            handler(){
+              this.initSlotItemConfig();
+            },
+            deep : true,
+            immediate : true
+          }
+        },
+        mounted() {
+          this.initIoList();
+          this.initSetting();
+          this.initDeviceList();
+          this.initSlotlist();
+          this.initSlotConfigList();
+          this.initSlotItemConfig();
+        },
+        methods: {
+          activeStep() {
+            this.stepList.forEach((item) => {
+              if (item.id == this.index) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          home_ui_click_touch_app_save(labelItem) {
+            console.log(labelItem);
+            this.rcuItem.mode = labelItem.value;
+            this.slotlist.forEach((item) => {
+              if (item.name == this.rcuItem.name) {
+                item.mode = parseInt(this.rcuItem.mode);
+              }
+            });
+            console.log('this.popupItem', this.popupItem);
+            this.popupItem.close();
+          },
+          changeDeviceSetting(item) {
+            this.rcuItem = item;
+            this.deviceSettingStatus = true;
+          },
+          initSlotItemConfig() {
+            this.slotItemConfig = [];
+            //init the rcu data
+            this.slotlist.forEach((item) => {
+              //1 on off 2 dimming 3 Curtain Switch 4 0-10v Dimming 5 1-10v Dimming
+              if (item.mode == 2 || item.mode == 4 || item.mode == 5) {
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-1`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-2`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+              } else if (item.mode == 1) {
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-1`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-2`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-3`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-4`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+              } else if (item.mode == 3) {
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-1`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+                this.slotItemConfig.push({
+                  name: `Slot ${item.name}-2`,
+                  slot: `${item.name}`,
+                  mode: item.mode,
+                  config: [],
+                });
+              }
+            });
+            this.slotItemConfig.forEach((item) => {
+              this.settingConfigList.forEach((kitem) => {
+                if (item.mode == kitem.mode) {
+                  item.config = kitem.config;
+                }
+              });
+            });
+            console.log('this.slotItemConfig', this.slotItemConfig);
+            let devices = cloneDeep(erp.info.device);
+            if (isset(devices[guid])) {
+              let settings = devices[guid].settings;
+            }
+          },
+          initSetting() {
+            let devices = cloneDeep(erp.info.device);
+            if (isset(devices[guid])) {
+              let settings = devices[guid].settings;
+              settings.forEach((item) => {
+                if (item.setting_type == 'door_bell') {
+                  if (item.setting == 0) {
+                    this.doorBellStatus = false;
+                  } else {
+                    this.doorBellStatus = true;
+                  }
+                }
+                if (item.setting_type == 'clean_dnd') {
+                  if (item.setting == 0) {
+                    this.cleanAndDndStatus = false;
+                  } else {
+                    this.cleanAndDndStatus = true;
+                  }
+                }
+              });
+            }
+          },
+          initSlotConfigList() {
+            //this.slotconfigList
+            this.slotlist.forEach((item) => {});
+          },
+          async initSlotlist() {
+            for (let i = 1; i <= 5; i++) {
+              this.slotlist.push({
+                name: i,
+                mode: 2,
+              });
+            }
+            //get the rcu manual slot list
+            let data = `9701`;
+            await peripheral[guid].connect();
+            try {
+              ble.startNotification(
+                peripheral[guid].prop.id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log(rs);
+                  if (rs.startsWith('9711')) {
+                    let index_one = rs.substr(6, 2);
+                    let index_two = rs.substr(10, 2);
+                    let index_three = rs.substr(14, 2);
+                    let index_four = rs.substr(18, 2);
+                    let index_five = rs.substr(22, 2);
+                    this.slotlist.forEach((kitem) => {
+                      if (kitem.name == 1) {
+                        kitem.mode = index_one;
+                      } else if (kitem.name == 2) {
+                        kitem.mode = index_two;
+                      } else if (kitem.name == 3) {
+                        kitem.mode = index_three;
+                      } else if (kitem.name == 4) {
+                        kitem.mode = index_four;
+                      } else if (kitem.name == 5) {
+                        kitem.mode = index_five;
+                      }
+                    });
+                  } else if (rs.startsWith('9714')) {
+                  }
+                },
+                (err) => {
+                  //reject(err);
+                }
+              );
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `931F`,
+                },
+              ]);
+            } catch (error) {}
+          },
+          activeSlot(item) {
+            this.clickStatus = true;
+            this.rcuItem = item;
+            //open the pop
+            this.popupItem = app.popup
+              .create({
+                el: '.demo-popup-swipe-handler',
+                swipeToClose: true,
+                push: true,
+              })
+              .open();
+          },
+          initDeviceList() {
+            this.deviceList = [];
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            subdevices.forEach((item) => {
+              if (item.device_button_group == '4in1 Sensor') {
+                this.deviceList.push(item);
+              }
+            });
+          },
+          initIoList() {
+            let settingList = [];
+            let deviceMap = erp.info.device;
+            if (isset(deviceMap[guid])) {
+              let thisDeviceMap = deviceMap[guid];
+              let settings = thisDeviceMap.settings;
+              settings.forEach((item) => {
+                if (item.setting_type.startsWith('active_io')) {
+                  settingList.push({
+                    name: item.setting_type.replace('active_io_', ''),
+                    inputStatus: item.setting == 'input' ? true : false,
+                    status: item.setting == 'output' ? true : false,
+                  });
+                }
+              });
+            }
+            console.log('settingList', settingList);
+            for (let i = 1; i <= 32; i++) {
+              let status = false;
+              let inputStatus = false;
+              let title = '';
+              let isNone = false;
+              if (i == 33) {
+                status = true;
+                inputStatus = false;
+                isNone = true;
+                //title = 'Door Bell'
+              }
+              settingList.forEach((kitem) => {
+                if (kitem.name == i) {
+                  if (kitem.inputStatus) {
+                    inputStatus = true;
+                  }
+                  if (kitem.status) {
+                    status = true;
+                  }
+                }
+              });
+              this.ioList.push({
+                name: i,
+                title: title,
+                status: status,
+                inputStatus: inputStatus,
+                isNone: isNone,
+              });
+            }
+          },
+          switchInputStatus(item) {
+            item.inputStatus = !item.inputStatus;
+            if (item.inputStatus) {
+              item.status = false;
+            }
+          },
+          switchStatus(item) {
+            item.status = !item.status;
+            if (item.status) {
+              item.inputStatus = false;
+            }
+          },
+          editInputConfig(item) {
+            app.dialog.prompt(`${_('Link the device input port,1-32')}`, (name) => {
+              const regex = /^(2[0-9]|[1-9]|1[0-9]|32)$/;
+              if (regex.test(name)) {
+                //check if the input port can not active
+                let canActive = false;
+                this.ioList.forEach((kitem) => {
+                  if (kitem.name == name) {
+                    if (kitem.inputStatus) {
+                      canActive = true;
+                    }
+                  }
+                });
+                if (canActive) {
+                  item.config = name;
+                } else {
+                  app.dialog.alert(_('Sorry, this input port has not been activated yet'));
+                }
+              } else {
+                app.dialog.alert(_('Please enter a valid input port number'));
+              }
+            });
+          },
+          editOutputName(item) {
+            app.dialog.prompt(`${_('IO ' + item.name + ' Output Name')}`, (name) => {
+              item.title = name;
+            });
+            setTimeout(() => {
+              let text = $(`.title-io-${item.name}`).text();
+              console.log('text', text);
+              $('.dialog-input-field input').val(text);
+            }, 50);
+          },
+          async saveDevice() {
+            app.dialog.preloader();
+            let sudevices = cloneDeep(erp.info.profile.profile_subdevice);
+            sudevices.forEach((item) => {
+              this.deviceList.forEach((kitem) => {
+                if (item.name == kitem.name) {
+                  item.config = kitem.config;
+                }
+              });
+            });
+            //post to erp
+            let url = `/api/resource/Profile/${erp.info.profile.name}`;
+            try {
+              await http2.request(encodeURI(url), {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                data: {
+                  profile_subdevice: sudevices,
+                },
+                debug: true,
+              });
+              app.dialog.close();
+              erp.info.profile.profile_subdevice = sudevices;
+              app.dialog.confirm(
+                `${_('Save Successfully.Would you like to back?')}`,
+                () => {
+                  mainView.router.back();
+                },
+                () => {}
+              );
+            } catch (error) {
+              app.dialog.alert(error);
+            }
+          },
+          async ioConfigDisplay() {
+            app.dialog.preloader();
+            let erpObj = {
+              'door_bell': this.doorBellStatus ? 1 : 0,
+              'clean_dnd': this.cleanAndDndStatus ? 1 : 0,
+            };
+            //change the ioList status
+            this.ioList.forEach((item) => {
+              if (item.name == 31 || item.name == 32) {
+                item.status = this.cleanAndDndStatus;
+                item.inputStatus = !this.cleanAndDndStatus;
+              }
+            });
+            try {
+              console.log(erpObj);
+              await iot_device_setting_sync_server(guid, null, null, true, erpObj);
+              app.dialog.close();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+            this.index = 3;
+            this.activeStep();
+          },
+          async activeRcu() {
+            //active the output
+            let commandList = [];
+            let erpObj = {};
+            for (let i in this.ioList) {
+              let gang = this.ioList[i].name;
+              let commandData = '';
+              if (this.ioList[i].status) {
+                erpObj[`active_io_${gang}`] = `output`;
+                if (gang == 33) {
+                  gang = 98;
+                }
+                let data = `972001${gang.toString(16).pad('00')}02`;
+                commandData = data;
+              }
+              if (this.ioList[i].inputStatus) {
+                erpObj[`active_io_${gang}`] = `input`;
+                let data = `972001${gang.toString(16).pad('00')}01`;
+                commandData = data;
+              }
+              if (!this.ioList[i].status && !this.ioList[i].inputStatus) {
+                erpObj[`active_io_${gang}`] = `inactive`;
+                if (gang == 33) {
+                  gang = 98;
+                }
+                let data = `972001${gang.toString(16).pad('00')}00`;
+                commandData = data;
+              }
+              commandList.push({
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: commandData,
+              });
+            }
+            app.dialog.preloader();
+            try {
+              for (let i in commandList) {
+                let list = [];
+                list.push(commandList[i]);
+                await window.peripheral[guid].write(list);
+              }
+              await iot_device_setting_sync_server(guid, null, null, true, erpObj);
+              await ha_profile_ready();
+              app.dialog.close();
+              app.dialog.confirm(
+                `${_('Save Successfully.Would you like to back?')}`,
+                () => {
+                  mainView.router.back();
+                },
+                () => {}
+              );
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          nextStep(sindex) {
+            this.index = sindex;
+            this.activeStep();
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+  .tips {
+    padding: 0px 15px;
+    font-size: 12px;
+  }
+</style>

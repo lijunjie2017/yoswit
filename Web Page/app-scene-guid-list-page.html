@@ -291,10 +291,10 @@
               }
             });
             try {
-              if(peripheral[guid].prop.connected){
-                await peripheral[guid].disconnect();
-                await this.sleep(3000);
-              }
+              // if(peripheral[guid].prop.connected){
+              //   await peripheral[guid].disconnect();
+              //   await this.sleep(3000);
+              // }
               await peripheral[guid].connect();
               let device_id = peripheral[guid].prop.id;
               this.localTrigerSceneList = [];
@@ -304,6 +304,7 @@
                 'ff80',
                 'ff82',
                 (rs) => {
+                  
                   console.log('rs', rs);
                   if (rs.startsWith('8f22') && rs.length > 8) {
                     let thisSceneId = rs.slice(6, 8);
@@ -333,6 +334,7 @@
                     app.dialog.close();
                     debugger;
                     this.loadBleScene();
+                    ble.stopNotification(peripheral[guid].prop.id, "ff80", "ff82");
                     //compareLocalAndErpData();
                   }
                 },

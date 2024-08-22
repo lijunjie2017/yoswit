@@ -154,7 +154,9 @@ window._ble_load_to_device_form_auto = (loading_config) => {
     if(loading_config.button_group.startsWith("RCU OUTPUT")){
         dms = {"RCU Controller":true}
     }
-    
+    if(loading_config.button_group.startsWith("RCU ONOFF GANG")){
+        dms = {"On Off Switch":true}
+    }
     let device_models = erp.doctype.device_model[device_hex_model];
     if(device_models.name == 'YO780' && loading_config.button_group == 'ONOFF GANG1'){
         dms = {"RCU Controller":true}
