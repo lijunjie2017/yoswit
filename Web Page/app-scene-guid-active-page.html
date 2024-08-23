@@ -775,8 +775,8 @@
           async ioConfigDisplay() {
             app.dialog.preloader();
             let erpObj = {
-              'door_bell': this.doorBellStatus ? 1 : 0,
-              'clean_dnd': this.cleanAndDndStatus ? 1 : 0,
+              'door_bell': this.doorBellStatus ? '1' : '0',
+              'clean_dnd': this.cleanAndDndStatus ? '1' : '0',
             };
             //change the ioList status
             this.ioList.forEach((item) => {

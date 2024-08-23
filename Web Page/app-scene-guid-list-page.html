@@ -220,6 +220,82 @@
         },
         methods: {
           async onDeleted(item) {
+            //if mutiway scene
+            if(item.scene_template == 'Multiway Switch'){
+              //should be delete the ble setting and del the profile setting
+              //get the first device name
+              let firstTitle = '';
+              let firstRoomName = '';
+              let secondTitle = '';
+              let secondRoomName = '';
+              let thisGuid = '';
+              let secondGuid = '';
+              let subName = item.profile_subdevice;
+              let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+              let condition = JSON.parse(item.condition);
+              let this_gang = '';
+              let second_gang = '';
+              subdevices.forEach(item=>{
+                if(subName == item.name){
+                  firstTitle = tran(item.title);
+                  firstRoomName = tran(item.room_name);
+                  this_gang = item.device_button_group.replace("ONOFF GANG","");
+                  thisGuid = item.device;
+                }
+              })
+              let secondSubName = condition[thisGuid]['mapping'];
+              subdevices.forEach(item=>{
+                if(secondSubName == item.name){
+                  secondTitle = tran(item.title);
+                  secondRoomName = tran(item.room_name);
+                  second_gang = item.device_button_group.replace("ONOFF GANG","");
+                  secondGuid = item.device;
+                }
+              })
+              app.dialog.confirm(`${_('Are you ready to delete the '+firstRoomName+'/'+tran(firstTitle)+'?')}`,async()=>{
+                app.dialog.preloader();
+                let command = `02${core_utils_get_mac_address_from_guid(thisGuid,true)}81080${this_gang}00`;
+                try{
+                  await window.peripheral[thisGuid].write([{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
+                  }])
+                  app.dialog.close();
+                  app.dialog.confirm(`${_('Are you ready to delete the '+secondRoomName+'/'+tran(secondTitle)+'?')}`,async()=>{
+                    app.dialog.preloader();
+                    try{
+                      let thisCommand = `02${core_utils_get_mac_address_from_guid(secondGuid,true)}81080${second_gang}00`;
+                      await window.peripheral[thisGuid].write([{
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: thisCommand,
+                      }]);
+                      //dele the scene
+                      let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
+                        method: 'DELETE',
+                        serializer: 'json',
+                        responseType: 'json',
+                        data: {},
+                      });
+                      app.dialog.close();
+                      await ha_profile_ready();
+                      this.init();
+                      app.dialog.alert(_('Deletion successful'));
+                    }catch(errors){
+                      app.dialog.close();
+                      app.dialog.alert(_(erp.get_log_description(error)));
+                    }
+                  },()=>{})
+                }catch(error){
+                  app.dialog.close();
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              },()=>{
+
+              })
+              return
+            }
             app.dialog.confirm(
               `${_('Confirm Deletion?')}`,
               async () => {

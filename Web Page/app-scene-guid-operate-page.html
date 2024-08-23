@@ -21,33 +21,9 @@
             <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
               <div class="toolbar-inner scene-toolbar-inner">
                 <button v-for="(item,index) in stepList" :key="item.id" :class="item.isActive?'button-active button':'button'" v-on:click="toTab(item.relatedIndex)">{{_('Step')}} {{item.name}}</button>
-                <!--<button class="button" :class="index == 0.5?'button-active button':'button'" v-on:click="toTab(0.5)">
-                  {{_('Step')}} 2
-                </button>
-                <button class="button" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">{{_('Step')}} 3</button>
-                <button class="button" :class="index == 2?'button-active button':'button'" v-on:click="toTab(2)">{{_('Step')}} 4</button>
-                <button class="button" :class="index == 3?'button-active button':'button'" v-on:click="toTab(3)">{{_('Step')}} 5</button>
-                <button class="button" :class="index == 4?'button-active button':'button'" v-on:click="toTab(4)">{{_('Step')}} 6</button>
-                <button class="button" :class="index == 5?'button-active button':'button'" v-on:click="toTab(5)">{{_('Step')}} 7</button>!-->
               </div>
             </div>
           </div>
-          <!-- <div class="block mx-3 margin-top">
-            <p class="segmented segmented-strong">
-              <button class="button" :class="index == 0?'button-active button':'button'" v-on:click="toTab(0)">{{_('Step')}} 1</button>
-              <button class="button" :class="index == 0.5?'button-active button':'button'" v-on:click="toTab(0.5)">{{_('Step')}} 2</button>
-              <button class="button" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">{{_('Step')}} 3</button>
-              <span class="segmented-highlight" v-if="index<2"></span>
-            </p>
-            <p class="segmented segmented-strong">
-              <button class="button" :class="index == 2?'button-active button':'button'" v-on:click="toTab(2)">{{_('Step')}} 4</button>
-              <button class="button" :class="index == 3?'button-active button':'button'" v-on:click="toTab(3)">{{_('Step')}} 5</button>
-              <button class="button" :class="index == 4?'button-active button':'button'" v-on:click="toTab(4)">{{_('Step')}} 6</button>
-              <button class="button" :class="index == 5?'button-active button':'button'" v-on:click="toTab(5)">{{_('Step')}} 7</button>
-              <span class="segmented-highlight" v-if="index>1"></span>
-            </p>
-          </div>
-          !-->
           <div class="tabs">
             <!--choose tempalte-->
             <div id="step-0" class="view tab view-main" :class="[index == 0 ? 'tab-active' : '']" v-if="index == 0">
@@ -483,6 +459,90 @@
                 </div>
               </div>
             </div>
+            <!-- mutiway choose devices  -->
+            <div id="step-8" class="view tab view-main" :class="[index == 8 ? 'tab-active' : '']" v-if="index == 8">
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Choose Your Mapping Device")}}</div>
+                <div class="card-content card-content-padding">
+                  <div class="scnen-template-intro"></div>
+                  <div
+                    class="scnen-template display-flex justify-content-space-between align-content-center align-items-center"
+                    v-for="(item,index) in mappingDeviceList"
+                    :key="item.guid"
+                    :style="{'background-color':'#253b4f'}"
+                  >
+                    <div class="scnen-template-title">
+                      <p>{{tran(item.title)}}</p>
+                      <p style="font-size: 12px;">{{tran(item.room_name)}}/{{item.device_name}}</p>
+                    </div>
+                    <div class="check-box display-flex justify-content-center align-items-center">
+                      <i
+                        class="material-icons text-color-white"
+                        style="font-size: 30px"
+                        v-if="!item.ischeck"
+                        v-on:click="changeDeviceStatus(item)"
+                        >check_box_outline_blank</i
+                      >
+                      <i
+                        class="material-icons text-color-white"
+                        style="font-size: 30px"
+                        v-else="item.ischeck"
+                        v-on:click="changeDeviceStatus(item)"
+                        >check_box</i
+                      >
+                    </div>
+                  </div>
+                  <!-- No devices -->
+                  <div class="device-null" v-if="mappingDeviceList.length == 0">
+                    <div class="block" style="text-align: center">
+                      <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+                      <p>${_('You don\'t have matching devices, to network?')}</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col" v-if="mappingDeviceList.length == 0">
+                    <div class="button button-fill button-save" v-on:click="toNetwork()">{{_("to Network")}}</div>
+                  </div>
+                  <div class="col" v-if="mappingDeviceList.length > 0">
+                    <div class="button button-fill button-save" v-on:click="mutiwayAction()">{{_("Next Step")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-9" class="view tab view-main" :class="[index == 9 ? 'tab-active' : '']" v-if="index == 9">
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Move Closer To Device And Then Operate")}}</div>
+                <div class="card-content card-content-padding">
+                  <div class="scnen-template-intro"></div>
+                  <div
+                    class="scnen-template display-flex justify-content-space-between align-content-center align-items-center"
+                    v-for="(item,index) in otherMappingDeviceList"
+                    :key="item.device"
+                    :style="{'background-color':'#253b4f'}"
+                  >
+                    <div class="scnen-template-title">
+                      <p>{{tran(item.title)}}</p>
+                      <p style="font-size: 12px;">{{tran(item.room_name)}}/{{item.device_name}}</p>
+                    </div>
+                    <div class="check-box display-flex justify-content-center align-items-center">
+                      <i
+                        class="material-icons text-color-white"
+                        style="font-size: 30px"
+                        v-if="!item.ischeck"
+                        v-on:click="changeDeviceStatus(item)"
+                        >check_box_outline_blank</i
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col" v-if="mappingDeviceList.length > 0">
+                    <div class="button button-fill button-save" v-on:click="otherMutiwayAction()">{{_("COMPLETE")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -726,7 +786,22 @@
               }]
             },
             scene_button:{},
-            multiway_switch:{},
+            multiway_switch:{
+              name : 'Multiway Switch',
+              step : [{
+                id : 1,
+                relatedIndex : 1,
+                name: '1',
+              },{
+                id : 2,
+                relatedIndex : 8,
+                name: '2',
+              },{
+                id : 3,
+                relatedIndex : 9,
+                name: '3',
+              }],
+            },
             timmer : {}
           },
           templateList: [
@@ -789,6 +864,12 @@
           selfTriggeredButtonStatus : false,
           virtualTriggerList : [],
           subscribeMacadrress : '',
+          //mutiway parameter
+          mappingDeviceList : [],
+          otherMappingDeviceList : [],
+          mutiwayPostConfig:{
+            //"guid" : {"mapping" : '',...}
+          }
         },
         watch:{
           index:function(val){
@@ -797,6 +878,7 @@
         },
         mounted() {
           this.init();
+          this.initMutiwayDevices();
           emitter.on('trigger_save', (data) => {
             console.log(data);
             //if exist the same trigger, warn it
@@ -996,24 +1078,176 @@
               }
             });
             //init the pick
-            this.pickObj = app.picker.create({
-              inputEl: '#demo-picker-device',
-              cols: [
-                {
-                  textAlign: 'center',
-                  values: ['RCU Scene Button', 'RCU Radar', 'Multiway Switch', 'Scene Button', 'Timer'],
-                },
-              ],
-              on: {
-                change: (_, value) => {
-                  this.templateName = value[0];
-                },
-              },
-            });
+            // this.pickObj = app.picker.create({
+            //   inputEl: '#demo-picker-device',
+            //   cols: [
+            //     {
+            //       textAlign: 'center',
+            //       values: ['RCU Scene Button', 'RCU Radar', 'Multiway Switch', 'Scene Button', 'Timer'],
+            //     },
+            //   ],
+            //   on: {
+            //     change: (_, value) => {
+            //       this.templateName = value[0];
+            //     },
+            //   },
+            // });
             //this.pickObj.setValue(["RCU Scene Button"])
+          },
+          async initMutiwayDevices(){
+            this.mappingDeviceList = [];
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let subdeviceMap;
+            let deviceMap;
+            subdevices.forEach(item=>{
+              if(item.name == sub_name){
+                subdeviceMap = item;
+                this.subdeviceMap = item;
+              }
+            })
+            const targetDevice = devices.find(kitem => kitem.name == subdeviceMap.profile_device);
+            if (targetDevice) {
+              const mappingDevices = devices.filter(kitem => 
+                kitem.network_id != 0 && kitem.network_id == targetDevice.network_id && kitem.device_mode == 'Multiway Switch' && kitem.name != targetDevice.name);
+              console.log("mappingDevices",mappingDevices)
+              mappingDevices.forEach(item=>{
+                subdevices.forEach(kitem=>{
+                  if(item.name == kitem.profile_device){
+                    kitem.device_name = item.device_name;
+
+                    kitem.ischeck = false;
+                    if(isset(this.mutiwayPostConfig[kitem.device])){
+                      if(this.mutiwayPostConfig[this.subdeviceMap.device].mapping == kitem.name){
+                        kitem.ischeck = true;
+                      }
+                    }
+                    kitem.network_id = item.network_id;
+                    this.mappingDeviceList.push(kitem);
+                  }
+                })
+              })   
+            }
+          },
+          postScene(postData){
+            return new Promise((resolve,reject)=>{
+              let url = encodeURI(`/api/resource/Scene`);
+              let method = 'POST';
+              if(this.scenePostId){
+                url = encodeURI(`/api/resource/Scene/${this.scenePostId}`);
+                method = 'PUT';
+              }
+              http2.request(url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: postData,
+              }).then((rs)=>{
+                resolve(1);
+              }).catch((error)=>{
+                reject(error)
+              })
+            })
+          },
+          async mutiwayAction(){
+            app.dialog.preloader();
+            this.otherMappingDeviceList = [];
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            let this_gang = this.subdeviceMap.device_button_group.replace("ONOFF GANG","");
+            let targetDevice;
+            let profile_subdevice_data = {
+              "mapping" : "",
+              "virtual" : "",
+              "pairing_guid" : ""
+            };
+            this.mappingDeviceList.forEach(item=>{
+              if(item.ischeck){
+                targetDevice = item;
+              }
+            })
+            let command = ``;
+            if(targetDevice){
+              this.mutiwayPostConfig[this.subdeviceMap.device] = {}
+              this.otherMappingDeviceList.push(targetDevice);
+              let target_gang = targetDevice.device_button_group.replace("ONOFF GANG","");
+              command = `02${core_utils_get_mac_address_from_guid(this.subdeviceMap.device,true)}81080${this_gang}fe${core_utils_get_mac_address_from_guid(targetDevice.device,true)}ff0${target_gang}00`;
+              profile_subdevice_data["mapping"] = targetDevice.name;
+              profile_subdevice_data["pairing_guid"] = targetDevice.device;
+              this.mutiwayPostConfig[this.subdeviceMap.device]["mapping"] = targetDevice.name;
+              this.mutiwayPostConfig[this.subdeviceMap.device]["pairing_guid"] = targetDevice.device;
+            }else{
+              command = `02${core_utils_get_mac_address_from_guid(this.subdeviceMap.device,true)}81080${this_gang}00`;              
+            }
+            try{
+              await window.peripheral[this.subdeviceMap.device].write([{
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: command,
+              }]);
+              await iot_update_profile_subdevice_config(this.subdeviceMap.name,JSON.stringify(profile_subdevice_data));
+              
+              app.dialog.close();
+              this.index = 9;
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          async otherMutiwayAction(){
+            app.dialog.preloader();
+            let profile_subdevice_data = {
+              "mapping" : this.subdeviceMap.name,
+              "virtual" : "",
+              "pairing_guid" : this.subdeviceMap.device
+            };
+            this.mutiwayPostConfig[this.otherMappingDeviceList[0].device] = {};
+            this.mutiwayPostConfig[this.otherMappingDeviceList[0].device]["mapping"] = this.subdeviceMap.name;
+            this.mutiwayPostConfig[this.otherMappingDeviceList[0].device]["pairing_guid"] = this.subdeviceMap.device;
+            let this_gang = this.otherMappingDeviceList[0].device_button_group.replace("ONOFF GANG","");
+            let target_gang = this.subdeviceMap.device_button_group.replace("ONOFF GANG","");
+            let command = `02${core_utils_get_mac_address_from_guid(this.otherMappingDeviceList[0].device,true)}81080${this_gang}fe${core_utils_get_mac_address_from_guid(this.subdeviceMap.device,true)}ff0${target_gang}00`;
+            try{
+              await window.peripheral[this.subdeviceMap.device].write([{
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: command,
+              }]);
+              await iot_update_profile_subdevice_config(this.otherMappingDeviceList[0].name,JSON.stringify(profile_subdevice_data));
+              //post to the scene
+              let post_scene_data = {
+                title: this.sceneName,
+                profile: erp.info.profile.name,
+                profile_subdevice: isset(sub_name) && sub_name != 'undefined' ? sub_name : this.subdeviceName,
+                scene_template : this.templateName,
+                trigger : JSON.stringify({}),
+                action : JSON.stringify({}),
+                ui_configuration : JSON.stringify({}),
+                condition : JSON.stringify(this.mutiwayPostConfig),
+                image : this.uploadImage,
+              }
+              await this.postScene(post_scene_data);
+              await ha_profile_ready();
+              app.dialog.close();
+              mainView.router.back();
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          toNetwork(){
+            mainView.router.navigate(`/mobile-app/device-network-guid-list`);
           },
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          changeDeviceStatus(item){
+            this.mappingDeviceList.forEach(kitem=>{
+              if(item.name != kitem.name){
+                kitem.ischeck = false;
+              }
+            })
+            item.ischeck = !item.ischeck;
           },
           changeRcuStatus(item) {
             console.log('item', item);
@@ -1074,7 +1308,11 @@
                 this.stepList = this.templateConfig[j].step;
               }
             }
-            this.index = 0.5;
+            if(this.templateName == 'Multiway Switch'){
+              this.index = 1;
+            }else{
+              this.index = 0.5;
+            }
             this.activeStepList();
           },
           async chooseRcuDevice() {
@@ -1210,7 +1448,7 @@
             return this.findMissingNumber(idList);
           },
           async toTab(index) {
-            //return;
+            return;
             this.scrollItem(120);
 
             this.index = index;
@@ -1264,6 +1502,11 @@
                 if (isset(scenes[i].condition)) {
                   try {
                     let condition = JSON.parse(scenes[i].condition);
+                    //if mutiway template
+                    if(this.templateName == 'Multiway Switch'){
+                      this.mutiwayPostConfig = condition;
+                      return
+                    }
                     //this.virtualList = condition;
                     this.conditionsMap = condition;
                     this.timerList = condition.timerList ? condition.timerList : [];
@@ -2234,8 +2477,12 @@
                     for (let i in this.actionBleCommandList) {
                       let this_mac = core_utils_get_mac_address_from_guid(i, true);
                       let this_sceneId = this.virtualIdList[i];
-                      this_command_data = `0f02${mac}17${this.subscribeMacadrress}972103${parseInt(this_sceneId).toString(16).pad('00')}02`;
-                      return;
+                      //check if one rcu 
+                      if(this.subscribeMacadrress){
+                        this_command_data = `0f02${mac}17${this.subscribeMacadrress}972103${parseInt(this_sceneId).toString(16).pad('00')}02`;
+                      }else{
+                        this_command_data += `0c02${this_mac}972103${parseInt(this_sceneId).toString(16).pad('00')}02`;
+                      }
                     }
                     thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}${this_command_data}`;
                   }
@@ -3035,6 +3282,10 @@
                 return;
               } else {
                 //app.dialog.preloader(`${_("Rcu Connecting")}`);
+                if(this.templateName == 'Multiway Switch'){
+                  this.index = 8;
+                  return;
+                }
                 let postPleStatus = true;
                 try {
                   if ($('input[name="banner"]').val()) {

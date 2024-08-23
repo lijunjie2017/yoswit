@@ -56,6 +56,57 @@
 					<!-- home scene banner -->
 					<div class="banner-swiper-container swiper-container-auto swiper-container home-swiper" style="z-index: 5; position: fixed">
 						<div class="swiper-wrapper">
+							${scenes.map((sceneItem)=> $h`
+								<div class="swiper-slide home-swiper-slide" key="${sceneItem.name}" style="background-image: url('https://dev.mob-mob.com/files/scene.jpg');background-size: cover;">
+									<div class="home-swiper-slide-inner">
+										<div style="margin: 8px 16px 8px 30px">
+											<div style="text-align: left; float: left; width: 50%; line-height: 29px; padding-top: 5px">
+												<b style="font-size: 25px; text-shadow: 1px 2px 3px #000; color: #fff">${ tran(sceneItem.title) }</b>
+											</div>
+											<div style="text-align: right; float: right; width: 50%; display: none">
+												<a
+													class="button right"
+													href=""
+												>
+													<i class="material-icons">settings</i>
+												</a>
+											</div>
+											<br />
+											<div style="text-align: right; float: right; width: 50%; margin-top: -20px; margin-bottom: 20px">
+												<!-- <label
+													class="switch"
+													style="
+														margin-top: 10px;
+														margin-bottom: 20px;"
+												>
+													<input type="checkbox" scene-name="${sceneItem.name}" />
+													<span class="slider round"></span>
+												</label>-->
+												<a
+													href="#"
+													@click="${()=>{home_auto_click_scene(sceneItem)}}"
+													sceneref="${sceneItem.name}"
+													class="right off_flag"
+												>
+													<div
+														class="button button-small button-raised button-round button-fill"
+														style="
+															width: 60px;
+															height: 60px;
+															content: '';
+															-webkit-border-radius: 50%;
+															-moz-border-radius: 50%;
+															border-radius: 50%;
+														"
+													>
+														<i class="material-icons">touch_app</i>
+													</div>
+												</a>
+											</div>
+										</div>
+									</div>
+								</div>
+							`)}
 						</div>
 					</div>
 					
@@ -2480,7 +2531,9 @@ export default async (props, ctx) => {
 	let unassigned_subdevices = [];
 
 	let profile_device = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_device)) : [];
-
+	let scenesMap;
+	let scenes = [];
+	
 	let idleTimer;
 	const IDLE_TIME = 20000;
 	const resetIdleTimer = ()=>{
@@ -2610,6 +2663,22 @@ export default async (props, ctx) => {
 		profile_device = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_device)) : [];
 		show_nosubdevice = (rooms.length && !subdevices && !Object.keys(peripheral).length) ? true : false;
 		devices = erp.info.device ? JSON.parse(JSON.stringify(erp.info.device)) : [];
+		scenesMap = cloneDeep(erp.info.scene);
+		for(let i in scenesMap){
+			if(!scenesMap[i].is_enabled){
+				scenes.push(scenesMap[i])
+			}
+		}
+		if(scenes.length > 0){
+			page_margin_top = 152;
+			setTimeout(() => {
+        const swiper = app.swiper.create('.swiper-container-auto', {
+          speed: 200,
+          spaceBetween: 20,
+					autoplay : true
+        });
+      }, 1000);
+		}
 		profile_device = profile_device.reduce((acc, item) => {
 			acc[item.name] = item;
 			return acc;
@@ -2786,6 +2855,11 @@ export default async (props, ctx) => {
     		});
 		}
 		
+	}
+	const home_auto_click_scene = (item)=>{
+		//excute the scene
+		//mian excute the action command
+		//first get the action guid ,compare the device to get the action command
 	}
 	const getProfilePermision = ()=>{
 		return new Promise((resolve,reject)=>{
@@ -3094,7 +3168,31 @@ export default async (props, ctx) => {
 						}
 						title = display_name
 					}
-					if(tp.device_button_group.startsWith("RCU OUTPUT")){
+					if(tp.device_button_group.startsWith("RCU OUTPUT") || tp.device_button_group.startsWith("DOOR SIGN")){
+						//should check if set unshow in device setting
+						if(isset(erp.info.device[guid])){
+							let settings = erp.info.device[guid].settings;
+							let doorBellStatus = true;
+							let cleanDnd = true;
+							settings.forEach(zitem=>{
+								if(zitem.setting_type.startsWith('door_bell')){
+									if(zitem.setting == 0){
+										doorBellStatus = false;
+									}
+								}
+								if(zitem.setting_type.startsWith('clean_dnd')){
+									if(zitem.setting == 0){
+										cleanDnd = false;
+									}
+								}
+							})
+							if(!doorBellStatus && tp.device_button_group.startsWith("RCU OUTPUT")){
+								continue;
+							}
+							if(!cleanDnd && tp.device_button_group.startsWith("DOOR SIGN")){
+								continue;
+							}
+						}
 						title = tp.device_button_group;
 					}
 					const u_subdevice = {
