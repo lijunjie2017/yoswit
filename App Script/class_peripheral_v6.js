@@ -7,6 +7,8 @@ window.Peripheral = (function() {
     	this.isExecuting = false;
     	this.refreshKey = "";
     	this.default_connect_used = false;
+		this.try = 0;
+		this.max_try = 3;
         this.prop = {
             password:'000000',
             gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83
@@ -223,44 +225,49 @@ window.Peripheral = (function() {
     					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
 					}
 					
-					//RCU scan
-					let i = 4;
-					let RcuData = [];
-					let str = self.prop.manufactureData;
-					while (i < str.length) {
-						let index = str.substring(i, i + 2);
-						let type = str.substring(i + 2, i + 4);
-						let dataLength = type === '01' ? 2 : type === '02' ? 4 : 0;
-						let data = str.substring(i + 4, i + 4 + dataLength);
+					//RCU scan,cancle scan
+				// 	let i = 4;
+				// 	let RcuData = [];
+				// 	let str = self.prop.manufactureData;
+				// 	while (i < str.length) {
+				// 		let index = str.substring(i, i + 2);
+				// 		let type = str.substring(i + 2, i + 4);
+				// 		let dataLength = type === '01' ? 2 : type === '02' ? 4 : 0;
+				// 		let data = str.substring(i + 4, i + 4 + dataLength);
 	
-						RcuData.push({ index, type, data });
+				// 		RcuData.push({ index, type, data });
 	
-						if (index === '05') break;
+				// 		if (index === '05') break;
 	
-						i += 4 + dataLength;
-					}
-					if(RcuData.length == 5){
-						console.log("RcuData",RcuData)
-						RcuData.forEach(kitem=>{
-							if(kitem.index == '01'){
-								self.prop.status.bluetooth[0][32] = parseInt(kitem.data.substring(0,2),16);
-								self.prop.status.bluetooth[0][33] = parseInt(kitem.data.substring(2,4),16);
-							}else if(kitem.index == '02'){
-								self.prop.status.bluetooth[0][34] = parseInt(kitem.data.substring(0,2),16);
-								self.prop.status.bluetooth[0][35] = parseInt(kitem.data.substring(2,4),16);
-							}else if(kitem.index == '03'){
-								self.prop.status.bluetooth[0][36] = parseInt(kitem.data.substring(0,2),16);
-								self.prop.status.bluetooth[0][37] = parseInt(kitem.data.substring(2,4),16);
-							}else if(kitem.index == '04'){
-								self.prop.status.bluetooth[0][38] = parseInt(kitem.data.substring(0,2),16);
-								self.prop.status.bluetooth[0][39] = parseInt(kitem.data.substring(2,4),16);
-							}else if(kitem.index == '05'){
-								self.prop.status.bluetooth[0][40] = parseInt(kitem.data.substring(0,2),16);
-								self.prop.status.bluetooth[0][41] = parseInt(kitem.data.substring(2,4),16);
-							}
-						})
-					}
-                    self.prop.status.bluetooth[1] =DateFormatter.format((new Date(new Date().getTime() - 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+				// 		i += 4 + dataLength;
+				// 	}
+				// 	if(RcuData.length == 5){
+				// 		console.log("RcuData",RcuData)
+				// 		RcuData.forEach(kitem=>{
+				// 			if(kitem.index == '01'){
+				// 				self.prop.status.bluetooth[0][32] = parseInt(kitem.data.substring(0,2),16);
+				// 				self.prop.status.bluetooth[0][33] = parseInt(kitem.data.substring(2,4),16);
+				// 			}else if(kitem.index == '02'){
+				// 				self.prop.status.bluetooth[0][34] = parseInt(kitem.data.substring(0,2),16);
+				// 				self.prop.status.bluetooth[0][35] = parseInt(kitem.data.substring(2,4),16);
+				// 			}else if(kitem.index == '03'){
+				// 				self.prop.status.bluetooth[0][36] = parseInt(kitem.data.substring(0,2),16);
+				// 				self.prop.status.bluetooth[0][37] = parseInt(kitem.data.substring(2,4),16);
+				// 			}else if(kitem.index == '04'){
+				// 				self.prop.status.bluetooth[0][38] = parseInt(kitem.data.substring(0,2),16);
+				// 				self.prop.status.bluetooth[0][39] = parseInt(kitem.data.substring(2,4),16);
+				// 			}else if(kitem.index == '05'){
+				// 				self.prop.status.bluetooth[0][40] = parseInt(kitem.data.substring(0,2),16);
+				// 				self.prop.status.bluetooth[0][41] = parseInt(kitem.data.substring(2,4),16);
+				// 			}
+				// 		})
+				// 	}
+				    //rcu can not support the scan data
+				    if(self.prop.hexModel.toUpperCase() == '0346'){
+				        self.prop.status.bluetooth[1] = '1970-01-01 00:00:00';
+				    }else{
+				        self.prop.status.bluetooth[1] =DateFormatter.format((new Date(new Date().getTime() - 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+				    }
                     if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
                         self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
                     }
@@ -731,13 +738,16 @@ window.Peripheral = (function() {
     	self.isExecuting = false;
         
     	return new Promise((resolve, reject) => {
-    	    ble.disconnect(self.prop.id, (rs)=>{
-    	        self.onConnectionChanged('disconnected');
-    	        resolve();
-    	    }, (error)=>{
-    	        self.onConnectionChanged('disconnected');
-    	        reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
-    	    });
+			ble.refreshDeviceCache(self.prop.id, 0, null, null);
+			setTimeout(()=>{
+				ble.disconnect(self.prop.id, (rs)=>{
+					self.onConnectionChanged('disconnected');
+					resolve();
+				}, (error)=>{
+					self.onConnectionChanged('disconnected');
+					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
+				});
+			}, 500);
     	});
     };
     Peripheral.prototype.write = function(commands) {
@@ -894,7 +904,7 @@ window.Peripheral = (function() {
 				const findGuid = self.findLead();
 
 				let data = [0,0,0,0,0,0,0,0];
-				if(self.prop.firmwareNo < 6){
+				if(self.prop.firmwareNo < 4){
 					data = JSON.parse(JSON.stringify(self.getLatestStatus()));
 					for(let g of gangs){
 						data[g.gang] = g.on ? 1 : 0;
@@ -903,6 +913,15 @@ window.Peripheral = (function() {
 					
 					data = parseInt(data.reverse().join(""), 2).toString(16).toUpperCase().pad("00");
 					data = `ff${self.prop.mac_reverse_key}${data}`;
+				}else if(self.prop.firmwareNo >= 4 && self.prop.firmwareNo < 6){
+					data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+					for(let g of gangs){
+						data[g.gang] = g.on ? 1 : 0;
+					}
+					self.prop.status.control[0] = JSON.parse(JSON.stringify(data));
+					
+					data = parseInt(data.reverse().join(""), 2).toString(16).toUpperCase().pad("00");
+					data = `02${self.prop.mac_reverse_key}00${data}`;
 				}else{
 					for(let g of gangs){
 						if(g.gang<1 || g.gang>4) continue;
@@ -942,7 +961,7 @@ window.Peripheral = (function() {
 				}
 				let data = [0,0,0,0,0,0,0,0];
 				let service = "ff80", characteristic = "ff81";
-				if(self.prop.firmwareNo < 6){
+				if(self.prop.firmwareNo < 4){
 				// 	data = JSON.parse(JSON.stringify(self.prop.gangs));
 					data = JSON.parse(JSON.stringify(self.getLatestStatus()));
 					for(let g of gangs){
@@ -953,6 +972,22 @@ window.Peripheral = (function() {
 					data = parseInt(data.reverse().join(""), 2).toString(16).toUpperCase().pad("00");
 					if(findGuid != self.prop.guid){
 						data = `ff${self.prop.mac_reverse_key}${data}`;
+						characteristic = "ff83";
+					}else{
+						service = "fff0";
+						characteristic = "fff2";
+					}
+				}else if(self.prop.firmwareNo >= 4 && self.prop.firmwareNo < 6){
+				// 	data = JSON.parse(JSON.stringify(self.prop.gangs));
+					data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+					for(let g of gangs){
+						data[g.gang] = g.on ? 1 : 0;
+					} 
+					self.prop.status.control[0] = JSON.parse(JSON.stringify(data));
+					
+					data = parseInt(data.reverse().join(""), 2).toString(16).toUpperCase().pad("00");
+					if(findGuid != self.prop.guid){
+						data = `02${self.prop.mac_reverse_key}00${data}`;
 						characteristic = "ff83";
 					}else{
 						service = "fff0";
@@ -2263,7 +2298,7 @@ const doMOBMOB = (gangs) => {
 			Promise.race([
 				self.findRoute(),
 				self.timeout(10000).then(() => {
-						self.disconnect();
+					self.disconnect();
 					throw 7001;
 				})
 			])
@@ -3082,6 +3117,7 @@ const doMOBMOB = (gangs) => {
         			    resolve(rs);
         			}, (err)=>{
         			    console.log('class_err',err)
+						ble.refreshDeviceCache(self.prop.id, 0, null, null);
     		            self.onConnectionChanged('disconnected');
         			    reject(6001); //Failed to connect
         			});
@@ -3267,7 +3303,7 @@ const doMOBMOB = (gangs) => {
                             }
                         },function(error){
                             ble.stopNotification(self.prop.id, "ff80", "ff82");
-                            reject("Failed to check password for firmware v6.x");
+                            reject("Failed to check password for firmware v7.x");
                         });
                         
                         //check if it is in secure mode
@@ -3340,37 +3376,76 @@ const doMOBMOB = (gangs) => {
                 })
             });
         };
-    	return new Promise((resolve, reject) => {
+
+		return new Promise((resolve, reject) => {
     	    if(!isset(self.prop.rssi)){
     	        reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
     	    }else{
     	       // connect().then((rs)=>{
-    	        checkBLEEnabled().then(()=>{
-								if(deviceInfo.operatingSystem === 'ios'){
-									return new Promise((resolve,reject)=>{
-										resolve()
-									})
-								}else{
-									return checkLocationEnabled();
-								}
-    	        }).then(()=>{
-    	            return connect();
-    	        }).then((rs)=>{
-        	        return readFirmware();
-        	    }).then((firmware) => {
-        	        return readMacaddress();
-        	    }).then((mac_address) => {
-        			return submitPassword();
-        	    }).then((result) => {
-        			return enableNotify();
-        	    }).then((result) => {
-    		        self.onConnectionChanged('connected');
-        	        self.prop.authed = true;
-        	        resolve(result);
-        		}).catch((error) => {
-        	        self.onConnectionChanged('disconnected');
-        			reject(error);
-        		})
+				let enableTry = false;
+				let retryConnect = () => {
+					console.log("class.periperal: checkBLEEnabled");
+					checkBLEEnabled().then(()=>{
+						if(deviceInfo.operatingSystem === 'ios'){
+							return new Promise((resolve,reject)=>{
+								resolve()
+							})
+						}else{
+							console.log("class.periperal: checkLocationEnabled");
+							return checkLocationEnabled();
+						}
+					}).then(()=>{
+						enableTry = true;
+						console.log("class.periperal: connect");
+						return connect();
+					}).then((rs)=>{
+						console.log("class.periperal: readFirmware");
+						return readFirmware();
+					}).then((firmware) => {
+						console.log("class.periperal: readMacaddress");
+						return readMacaddress();
+					}).then((mac_address) => {
+						console.log("class.periperal: submitPassword");
+						return submitPassword();
+					}).then((result) => {
+						console.log("class.periperal: enableNotify");
+						return enableNotify();
+					}).then((result) => {
+						console.log("class.periperal: connected");
+						self.onConnectionChanged('connected');
+						self.prop.authed = true;
+						resolve(result);
+					}).catch((error) => {
+						if(enableTry){
+							if(self.try < self.max_try){
+								console.log("class.periperal: failed and start retry with try "+self.try);
+								self.try++;
+								setTimeout(() => {
+						            if(deviceInfo.operatingSystem === 'ios'){
+						                setTimeout(retryConnect, 600);
+						            }else{
+    									ble.refreshDeviceCache(self.prop.id, 0, () => {
+    										setTimeout(retryConnect, 600); // 0.5 second delay after running ble.refreshDeviceCache
+    									}, () => {
+    										setTimeout(retryConnect, 600); // 0.5 second delay after running ble.refreshDeviceCache
+    									});
+						            }
+								}, 600);
+							}else{
+								console.log("class.periperal: failed with tried all");
+								ble.refreshDeviceCache(self.prop.id, 0, null, null);
+								self.try = 0;
+								self.onConnectionChanged('disconnected');
+								reject(error);
+							}
+						}else{
+							console.log("class.periperal: failed with no retry is allowed");
+							reject(error);
+						}
+					})
+				};
+
+            	retryConnect();
     	    }
     	});
     };
@@ -3416,33 +3491,51 @@ const doMOBMOB = (gangs) => {
     	        reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
     	    }else{
     	       // connect().then((rs)=>{
-    	        checkBLEEnabled().then(()=>{
-								if(deviceInfo.operatingSystem === 'ios'){
-									return new Promise((resolve)=>{
-										resolve()
-									})
-								}else{
-									return checkLocationEnabled();
-								}
-    	        }).then(()=>{
-    	            return write(self.prop.id, service, characteristic, data);
-        	    }).then((result) => {
-    		        resolve(result);
-        		}).catch((error) => {
-        			reject(error);
-        		})
+				let enableTry = false;
+				let retryWrite = () => {
+					checkBLEEnabled().then(()=>{
+						if(deviceInfo.operatingSystem === 'ios'){
+							return new Promise((resolve)=>{
+								resolve()
+							})
+						}else{
+							return checkLocationEnabled();
+						}
+					}).then(()=>{
+						enableTry = true;
+						return write(self.prop.id, service, characteristic, data);
+					}).then((result) => {
+						self.try = 0;
+						resolve(result);
+					}).catch((error) => {
+						if(enableTry){
+							if(self.try < self.max_try){
+								self.try++;
+								setTimeout(() => {
+						            if(deviceInfo.operatingSystem === 'ios'){
+						                setTimeout(retryWrite, 600);
+						            }else{
+    									ble.refreshDeviceCache(self.prop.id, 0, () => {
+    										setTimeout(retryWrite, 600); // 0.5 second delay after running ble.refreshDeviceCache
+    									}, () => {
+    										setTimeout(retryWrite, 600); // 0.5 second delay after running ble.refreshDeviceCache
+    									});
+						            }
+								}, 600);
+							}else{
+								ble.refreshDeviceCache(self.prop.id, 0, null, null);
+								self.try = 0;
+								self.onConnectionChanged('disconnected');
+								reject(error);
+							}
+						}else{
+							reject(error);
+						}
+					})
+				};
+
+				retryWrite();
     	    }
-    	    
-    // 	    ble.write(self.prop.id, service, characteristic, data.convertToBytes(), function(rs){
-    //             //nothing to do, instead, need notify
-    //             resolve(rs);
-    //         }, function(rs){
-				// if(data.toLowerCase() == '810e' || data.toLowerCase() == '8110'){
-				// 	resolve();
-				// }else{
-				// 	reject(`Failed to write data ${data} to service ${service} with characteristic ${characteristic} (Error message: ${rs})`);
-				// }
-    //         });
         });
     };
     Peripheral.prototype.doMultipleWrite = function(commands) {

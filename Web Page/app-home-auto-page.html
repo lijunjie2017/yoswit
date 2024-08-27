@@ -243,7 +243,7 @@
 												${kitem.profile_room === item.name && kitem.hidden == 0? $h`
 														<li
 																class="device home-scanned-peripheral swipeout swipeout-delete-manual"
-															@swipeout:deleted="${()=>onDeleted(kitem)}" guid="${kitem.device}" button_group="${kitem.device_button_group}" config="${kitem.config}" subdevice_name="${kitem.name}" key="${kitem.name}"
+															@swipeout:deleted="${()=>onDeleted(kitem)}" guid="${kitem.device}" is-input="${kitem.device_button_group.startsWith('RCU INPUT')?1:0}" button_group="${kitem.device_button_group}" config="${kitem.config}" subdevice_name="${kitem.name}" key="${kitem.name}"
 														>
 															<div class="item-content swipeout-content">
 																<a class="item-link item-content no-chevron no-ripple no-active-state">
@@ -1414,6 +1414,15 @@ const renderMainButton = (props, {
 						</div>
 					</a>
 					`;
+	}else if(props.kitem.device_button_group.startsWith('RCU INPUT')){
+		//cable block
+		return ()=> $h`
+			<a class="control-panel-right">
+				<div class="left button button-raised button-big circle rcu-output" guid="${props.kitem.device}" device_button_group="${props.kitem.device_button_group}">
+						<i class="material-icons">block</i>
+				</div>
+			</a>
+		`;
 	} else if (props.kitem.device_button_group.startsWith('RCU DIMMING') || props.kitem.device_button_group.startsWith('DIMMING')) {
 		return () => $h`
 					<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
@@ -3085,6 +3094,13 @@ export default async (props, ctx) => {
 							break;
 						}
 					}
+					for (let subdevice of subdevices) {
+						if (subdevice.device != guid) continue;
+						if (subdevice.device_button_group == this_button_group) {
+							cont = true;
+							break;
+						}
+					}
 					if (cont) return;
 					unassigned_subdevices.push(u_subdevice);
 				})
@@ -3438,6 +3454,14 @@ export default async (props, ctx) => {
         } else {
           //$("li.device[guid='" + p.guid + "'] .rf-sensor i").text('block');
         }
+		}else if(s.device_button_group.startsWith("RCU INPUT")){
+			//gateway input
+			console.log("RCU INPUT",device_status);
+			if(device_status > 0){
+
+			}else {
+          //$("li.device[guid='" + p.guid + "'] .rf-sensor i").text('block');
+        }
 		}else if(s.device_button_group.startsWith("DOOR SIGN")){
 			//this must be check the 81(clear) and 82(dnd)
 			let gangs = peripheral[p.guid].prop.status.control;
@@ -3592,21 +3616,45 @@ export default async (props, ctx) => {
 						//randar
 						let inputDataList = manufacturing_data.split("110304");
 						let inputStatus = inputDataList[1].substring(0,8);
-						console.log("inputDataList",inputDataList)
-						console.log("inputStatus",inputStatus);
+						//console.log("inputDataList",inputDataList)
+						//console.log("inputStatus",inputStatus);
 						let inputStatusByteList = splitBytesAndConvertToBinaryArray(inputStatus);
-						console.log("inputStatusByteList",inputStatusByteList);
-						$(`.home-scanned-peripheral[button_group="4in1 Sensor"]`).each(function(item){
-							let config = $(this).attr("config")*1;
+						//console.log("inputStatusByteList",inputStatusByteList);
+						// $(`.home-scanned-peripheral[button_group="4in1 Sensor"]`).each(function(item){
+						// 	let config = $(this).attr("config")*1;
+						// 	let guid = $(this).attr("guid");
+						// 	console.log("config",config);
+						// 	//signal status,no ble 
+						// 	if(!isset(window.peripheral[guid])) return false;
+						// 	let thisDeviceMap = window.peripheral[guid].prop;
+						// 	if((thisDeviceMap.rssi >= 0 || !isset(thisDeviceMap.rssi)) && (isset(data.retain) && !data.retain)){
+						// 		window.peripheral[guid].prop.status.mobmob[0][49] = inputStatusByteList[config-1]>0?1:0;
+						// 		window.peripheral[guid].prop.status.mobmob[1] = DateFormatter.format((new Date(new Date().getTime())), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");		
+						// 		window.peripheral[guid].onPropChanged();
+						// 	}
+						// })
+						//input status 
+						$(`.home-scanned-peripheral[guid="${guid}"][is-input="1"]`).each(function(item){
+							let button_group = $(this).attr("button_group");
+							let config = $(this).attr("button_group").replace("RCU INPUT","")*1;
 							let guid = $(this).attr("guid");
-							console.log("config",config);
 							//signal status,no ble 
 							if(!isset(window.peripheral[guid])) return false;
 							let thisDeviceMap = window.peripheral[guid].prop;
-							if((thisDeviceMap.rssi >= 0 || !isset(thisDeviceMap.rssi)) && (isset(data.retain) && !data.retain)){
-								window.peripheral[guid].prop.status.mobmob[0][49] = inputStatusByteList[config-1]>0?1:0;
-								window.peripheral[guid].prop.status.mobmob[1] = DateFormatter.format((new Date(new Date().getTime())), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");		
-								window.peripheral[guid].onPropChanged();
+							//RCU cancel the ble scan
+
+							if((isset(data.retain) && !data.retain)){
+								let this_status = inputStatusByteList[config-1]>0?1:0;
+								if(this_status > 0){
+									//console.log($(this).find(".rcu-output i"))
+									$(this).find(".rcu-output i").text('cable');
+								}else{
+									$(this).find(".rcu-output i").text('block');
+								}
+								// console.log("inputStatusByteList",inputStatusByteList);
+								// window.peripheral[guid].prop.status.mobmob[0][50+config-1] = inputStatusByteList[config-1]>0?1:0;
+								// window.peripheral[guid].prop.status.mobmob[1] = DateFormatter.format((new Date(new Date().getTime())), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");		
+								// window.peripheral[guid].onPropChanged();
 							}
 						})
 						let rcuDataList = tindyRcuData(manufacturing_data);
@@ -3644,7 +3692,7 @@ export default async (props, ctx) => {
 							subdevices.forEach(kitem => {
 								let button_group = kitem.device_button_group;
 								let slot_index = kitem.config;
-								if (button_group.startsWith("RCU DIMMING") && item.type == '02' && item.index == slot_index) {
+								if (button_group.startsWith("RCU DIMMING") && item.type == '02' && item.index == slot_index && item.device == guid) {
 									let this_gang = parseInt(button_group.replace("RCU DIMMING", ""));
 									let dimming_gang = this_gang - (2 * (parseInt(slot_index) - 1));
 									let this_ref = ``;

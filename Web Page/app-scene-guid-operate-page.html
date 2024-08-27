@@ -899,7 +899,7 @@
             let temp_less = data.temp_less;
             let hum_less = data.hum_less;
             let status = '';
-            if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
+            if (mode == 'RF Sensor' || mode == 'Radar Sensor' || button_group.startsWith('RCU INPUT')) {
               if (ref == 1) {
                 status = 'Occupied';
               } else {
@@ -1488,6 +1488,10 @@
                 this.actionName = actionMap.title;
                 this.actionList = actionMap.actionList;
                 this.trigger = JSON.parse(scenes[i].trigger);
+                //del the connect status
+                this.trigger.forEach(item=>{
+                  item.isBle = false;
+                })
                 //this.virtualStatus = actionMap.isVirtual;
                 if(this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Click And Stop'){
                   this.actionList = actionMap.actionList;
@@ -1524,73 +1528,73 @@
                   this.isHidden = uiConfiguration.isHidden;
                   this.virtualStatus = uiConfiguration.virtualStatus;
                   //check is RCU Toggle Scene
-                  if(uiConfiguration.key == 'first'){
-                    let this_name = name;
-                    this.sceneName = scenes[i].title;
-                    let actionMaps = JSON.parse(scenes[i].action);
-                    this.actionList = actionMaps.actionList;
-                    //find 
-                    for (let j in scenes){
-                      if(isset(scenes[j].ui_configuration)){
-                        let uiConfig = JSON.parse(scenes[j].ui_configuration);
-                        if(uiConfig.mapping == this_name){
-                          if(uiConfig.key == 'second'){
-                            this.secondSceneName = scenes[j].title;
-                            let actionMapss = JSON.parse(scenes[j].action);
-                            this.actionList_2 = actionMapss.actionList;
-                          }
-                          if(uiConfig.key == 'third'){
-                            let actionMapss = JSON.parse(scenes[j].trigger);
-                            this.trigger = actionMapss.trigger;
-                          }
-                        }
-                      }
-                    }
-                  }
-                  if(uiConfiguration.key == 'second'){
-                    let this_name = name;
-                    this.secondSceneName = scenes[i].title;
-                    let actionMaps = JSON.parse(scenes[i].action);
-                    this.actionList_2 = actionMaps.actionList;
-                    //find 
-                    for (let j in scenes){
-                      if(isset(scenes[j].ui_configuration)){
-                        let uiConfig = JSON.parse(scenes[j].ui_configuration);
-                        if(uiConfig.mapping == this_name){
-                          if(uiConfig.key == 'first'){
-                            this.sceneName = scenes[j].title;
-                            let actionMapss = JSON.parse(scenes[j].action);
-                            this.actionList = actionMapss.actionList;
-                          }
-                          if(uiConfig.key == 'third'){
-                            let actionMapss = JSON.parse(scenes[j].trigger);
-                            this.trigger = actionMapss.trigger;
-                          }
-                        }
-                      }
-                    }
-                  }
-                  if(uiConfiguration.key == 'third'){
-                    let this_name = name;
-                    //find 
-                    for (let j in scenes){
-                      if(isset(scenes[j].ui_configuration)){
-                        let uiConfig = JSON.parse(scenes[j].ui_configuration);
-                        if(uiConfig.mapping == this_name){
-                          if(uiConfig.key == 'first'){
-                            this.sceneName = scenes[j].title;
-                            let actionMapss = JSON.parse(scenes[j].action);
-                            this.actionList = actionMapss.actionList;
-                          }
-                          if(uiConfig.key == 'second'){
-                            this.secondSceneName = scenes[j].title;
-                            let actionMapss = JSON.parse(scenes[j].action);
-                            this.actionList_2 = actionMapss.actionList;
-                          }
-                        }
-                      }
-                    }
-                  }   
+                  // if(uiConfiguration.key == 'first'){
+                  //   let this_name = name;
+                  //   this.sceneName = scenes[i].title;
+                  //   let actionMaps = JSON.parse(scenes[i].action);
+                  //   this.actionList = actionMaps.actionList;
+                  //   //find 
+                  //   for (let j in scenes){
+                  //     if(isset(scenes[j].ui_configuration)){
+                  //       let uiConfig = JSON.parse(scenes[j].ui_configuration);
+                  //       if(uiConfig.mapping == this_name){
+                  //         if(uiConfig.key == 'second'){
+                  //           this.secondSceneName = scenes[j].title;
+                  //           let actionMapss = JSON.parse(scenes[j].action);
+                  //           this.actionList_2 = actionMapss.actionList;
+                  //         }
+                  //         if(uiConfig.key == 'third'){
+                  //           let actionMapss = JSON.parse(scenes[j].trigger);
+                  //           this.trigger = actionMapss.trigger;
+                  //         }
+                  //       }
+                  //     }
+                  //   }
+                  // }
+                  // if(uiConfiguration.key == 'second'){
+                  //   let this_name = name;
+                  //   this.secondSceneName = scenes[i].title;
+                  //   let actionMaps = JSON.parse(scenes[i].action);
+                  //   this.actionList_2 = actionMaps.actionList;
+                  //   //find 
+                  //   for (let j in scenes){
+                  //     if(isset(scenes[j].ui_configuration)){
+                  //       let uiConfig = JSON.parse(scenes[j].ui_configuration);
+                  //       if(uiConfig.mapping == this_name){
+                  //         if(uiConfig.key == 'first'){
+                  //           this.sceneName = scenes[j].title;
+                  //           let actionMapss = JSON.parse(scenes[j].action);
+                  //           this.actionList = actionMapss.actionList;
+                  //         }
+                  //         if(uiConfig.key == 'third'){
+                  //           let actionMapss = JSON.parse(scenes[j].trigger);
+                  //           this.trigger = actionMapss.trigger;
+                  //         }
+                  //       }
+                  //     }
+                  //   }
+                  // }
+                  // if(uiConfiguration.key == 'third'){
+                  //   let this_name = name;
+                  //   //find 
+                  //   for (let j in scenes){
+                  //     if(isset(scenes[j].ui_configuration)){
+                  //       let uiConfig = JSON.parse(scenes[j].ui_configuration);
+                  //       if(uiConfig.mapping == this_name){
+                  //         if(uiConfig.key == 'first'){
+                  //           this.sceneName = scenes[j].title;
+                  //           let actionMapss = JSON.parse(scenes[j].action);
+                  //           this.actionList = actionMapss.actionList;
+                  //         }
+                  //         if(uiConfig.key == 'second'){
+                  //           this.secondSceneName = scenes[j].title;
+                  //           let actionMapss = JSON.parse(scenes[j].action);
+                  //           this.actionList_2 = actionMapss.actionList;
+                  //         }
+                  //       }
+                  //     }
+                  //   }
+                  // }   
                 }
                 // console.log("actionMap.isVirtual",actionMap);
                 // if(isset(actionMap.isVirtual) && actionMap.isVirtual){
@@ -2412,6 +2416,9 @@
                 ) {
                   sceneId = this.actionId;
                   guid = this.actionGuid;
+                }else if(this.trigger[i].button_group.startsWith('RCU INPUT') && (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar')){
+                  sceneId = this.actionId;
+                  guid = this.actionGuid;
                 }else if(this.trigger[i].button_group.startsWith('SCENE MUTIWAY ONOFF GANG')){
                   sceneId = this.actionLocation[this.trigger[i].guid];
                   debugger
@@ -2509,6 +2516,10 @@
                   this.trigger[i].button_group.startsWith('4in1 Sensor') &&
                   (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar')
                 ) {
+                  thisActionCommand = ``;
+                }
+                if(this.trigger[i].button_group.startsWith('RCU INPUT') &&
+                (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar')){
                   thisActionCommand = ``;
                 }
                 //if trigger by self
@@ -3504,7 +3515,7 @@
               if (isset(item.condition) && item.condition && item.condition == 1) {
                 this.triggerCondition = 1;
               }
-              if (item.mode == 'RF Sensor' || item.mode == 'Radar Sensor') {
+              if (item.mode == 'RF Sensor' || item.mode == 'Radar Sensor' || item.button_group.startsWith("RCU INPUT")) {
                 randarList.push(item);
               }
             });
@@ -3515,7 +3526,7 @@
               let this_command = '';
               //in that distinguish the value and the other value(temp,templess,hum,hum_less)
               if (isset(ref)) {
-                if (item.mode == 'RF Sensor' || item.mode == 'Radar Sensor') {
+                if (item.mode == 'RF Sensor' || item.mode == 'Radar Sensor' || item.button_group.startsWith("RCU INPUT")) {
                   typeIndex = `22`; //34 is SCENE TYPE BUTTON V3
                   let opcode = '00';
                   if (this.triggerCondition == 1 && index != randarList.length - 1) {
@@ -3523,6 +3534,9 @@
                   }
                   let rcu_mac = core_utils_get_mac_address_from_guid(this.actionGuid, true);
                   let gang = parseInt(item.config && item.config != 'undefined' ? item.config : 1);
+                  if(item.button_group.startsWith("RCU INPUT")){
+                    gang = item.button_group.replace("RCU INPUT",'');
+                  }
                   triggerCommand = `${opcode}${typeIndex}${rcu_mac}${parseInt(gang).toString(16).pad('00')}${ref.toString(16).pad('00')}`;
                   triggerCommand = `${(triggerCommand.length / 2).toString(16).pad('00')}${triggerCommand}`;
                   total_command += triggerCommand;

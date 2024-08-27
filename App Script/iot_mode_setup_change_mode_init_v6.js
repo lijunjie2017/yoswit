@@ -82,8 +82,20 @@ window.iot_mode_setup_change_mode_init = function(params) {
                             return window.peripheral[guid].write([{
                                 service: 'ff80',
                                 characteristic: 'ff81',
+                                data: `9711${slot_index}02`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
                                 data: data,
                               },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `971f${slot_index}89050d0d`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `971f${slot_index}89068a8a`,
+                            },{
                                 service: 'ff80',
                                 characteristic: 'ff81',
                                 data: `810e`,
@@ -93,17 +105,50 @@ window.iot_mode_setup_change_mode_init = function(params) {
                             return window.peripheral[guid].write([{
                                 service: 'ff80',
                                 characteristic: 'ff81',
+                                data: `9711${slot_index}02`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
                                 data: data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `971f${slot_index}89050000`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `971f${slot_index}8906ffff`,
                             },{
                                 service: 'ff80',
                                 characteristic: 'ff81',
                                 data: `810e`,
                             }]);
                         }else if(selected == '1-10v Dimming'){
-                            let data = `971f${slot_index}89070202`;
+                            let data = `971f${slot_index}89070303`;
+                            return window.peripheral[guid].write([{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `9711${slot_index}02`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: data,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `971f${slot_index}89050000`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `971f${slot_index}8906ffff`,
+                            },{
+                                service: 'ff80',
+                                characteristic: 'ff81',
+                                data: `810e`,
+                            }]);
                         }else if(selected == 'On Off Switch'){
                             let data = `9711${slot_index}01`;
-                            let this_data = `971f${slot_index}810501`;
+                            let this_data = `971f${slot_index}810500`;
                             debugger
                             return window.peripheral[guid].write([{
                                 service: 'ff80',
@@ -120,7 +165,7 @@ window.iot_mode_setup_change_mode_init = function(params) {
                             }]);
                         }else if(selected == 'Curtain Switch'){
                             let data = `9711${slot_index}01`;
-                            let this_data = `971f${slot_index}810500`;
+                            let this_data = `971f${slot_index}810501`;
                             return window.peripheral[guid].write([{
                                 service: 'ff80',
                                 characteristic: 'ff81',

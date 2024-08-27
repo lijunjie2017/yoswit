@@ -479,10 +479,17 @@
               //filter the device not show in the page
               item.isHidden = false;
               //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
-              let fliterList = ['YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
+              let fliterList = ['YO780','YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
+              let fliterButtonGroup = ['RCU INPUT','ONOFF GANG',];
               if(type == 2){
                 if(fliterList.indexOf(item.device_model) > -1){
                   item.isHidden = true;
+                  //check if the button group is in the fliterButtonGroup
+                  if(item.device_model == 'YO780'){
+                    if(item.device_button_group != 'ONOFF GANG1'){
+                      item.isHidden = false;
+                    }
+                  }
                 }
               }
               let triggerFliterList = ['YO105','YO121-BLE-LE','YO121-AC'];
@@ -490,7 +497,7 @@
                 if(triggerFliterList.indexOf(item.device_model) > -1){
                   item.isHidden = true;
                 }
-                if(item.device_model == 'YO780' && item.device_button_group != 'SCENE MUTIWAY ONOFF GANG1'){
+                if(item.device_model == 'YO780' && item.device_button_group != 'SCENE MUTIWAY ONOFF GANG1' && !item.device_button_group.startsWith('RCU INPUT')){
                   item.isHidden = true;
                 }
               }
@@ -929,7 +936,7 @@
           },
           toScene(device_item){
             let {device_mode,device_model,local_ip,gateway,device,device_button_group,title,imgUrl,mac_address,room_name,config} = device_item;
-            if(device_button_group == 'SCENE MUTIWAY ONOFF GANG1'){
+            if(device_button_group == 'SCENE MUTIWAY ONOFF GANG1' || device_button_group.startsWith("RCU INPUT")){
               mainView.router.navigate(`/mobile-app/scene-setting?mode=${device_mode}&gateway=${gateway}&model=${device_model}&guid=${device}&button_group=${device_button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${imgUrl}&room_name=${tran(room_name)}&config=${config}`);
             }else if(device_model == 'YO780'){
               //mainView.router.navigate(`/mobile-app/scene-setting-rcu?mode=${device_mode}&local_ip=${local_ip}&target_guid=${target_guid}&gateway=${gateway}&model=${device_model}&guid=${device}&button_group=${device_button_group}&display_name=${tran(title)}&mac_address=${mac_address}&img_url=${imgUrl}&room_name=${tran(room_name)}`);

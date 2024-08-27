@@ -49,17 +49,16 @@
                         </td>
                         <td class="actions-cell" style="text-align: center">
                           <span
-                            >{{item.mode == 2?'Triac Dimming':item.mode == 1?'On Off Switch':item.mode == 3?'Curtain Switch':item.mode ==
-                            4?'0-10v Dimming':'1-10v Dimming'}}</span
+                            >{{dealWithMode(item)}}</span
                           >
                         </td>
                         <td class="actions-cell" style="text-align: center">
                           <a href="#" class="link icon-only text-color-theme" v-on:click="activeSlot(item)">
                             <i class="material-icons text-color-gray" style="font-size: 35px">edit_note</i>
                           </a>
-                          <a href="#" class="link icon-only text-color-theme" v-on:click="changeDeviceSetting(item)">
+                          <!--<a href="#" class="link icon-only text-color-theme" v-on:click="changeDeviceSetting(item)">
                             <i class="material-icons text-color-gray" style="font-size: 30px">settings</i>
-                          </a>
+                          </a>-->
                         </td>
                       </tr>
                     </thead>
@@ -67,7 +66,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="saveRcuModeConfig">{{_("NEXT STEP")}}</div>
                   </div>
                 </div>
               </div>
@@ -104,7 +103,45 @@
                 </div>
               </div>
             </div>
-            <div id="step-1" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <input name="per_press_brightness_init" type="hidden" value="" />
+              <div class="card data-table">
+                <div v-for="item in slotItemConfig" :key="item.name" v-if="item.mode != 1">
+                  <div class="card-header" style="font-weight: 500; font-size: 18px">{{_(item.name)}}</div>
+                  <div class="card-content card-content-padding">
+                    <div class="auto-init card margin-bottom-half mx-0 my-3" v-for="kitem in item.config" :key="md5(item.name)">
+                      <div class="card-content card-content-padding">
+                        <div class="row">
+                          <div class="col-auto">
+                            <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                              <i class="material-icons">{{kitem.icon}}</i>
+                            </div>
+                          </div>
+                          <div class="col align-self-center no-padding-left">
+                            <h5 class="no-margin-bottom">{{ _(kitem.title) }}</h5>
+                            <p class="setting-value text-muted size-12">{{ _(kitem.value) }}</p>
+                          </div>
+                          <div class="col-auto">
+                            <a id="action" v-on:click="chooseInitSlotSetting(item,kitem)" class="button button-fill button-44 color-theme button-raised">
+                              <i class="material-icons">navigate_next</i>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="saveDeviceSetting()">{{_("NEXT STEP")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
               <div class="card data-table">
                 <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Activate Output/Input Port")}}</div>
                 <div class="card-content card-content-padding">
@@ -158,7 +195,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("previous")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(3)">{{_("previous")}}</div>
                   </div>
                   <div class="col">
                     <div class="button button-fill button-save" v-on:click="activeRcu()">{{_("COMPLETE")}}</div>
@@ -203,7 +240,7 @@
                 </div>
               </div>
             </div>-->
-            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+            <div id="step-2" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
               <div class="card data-table">
                 <div class="card-content card-content-padding">
                   <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
@@ -236,7 +273,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("previous")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("previous")}}</div>
                   </div>
                   <div class="col">
                     <div class="button button-fill button-save" v-on:click="ioConfigDisplay()">{{_("NEXT STEP")}}</div>
@@ -312,16 +349,25 @@
             {
               id: 1,
               name: 1,
+              relatedIndex : 1,
               isActive: true,
             },
             {
               id: 2,
               name: 2,
+              relatedIndex : 2,
               isActive: false,
             },
             {
               id: 3,
               name: 3,
+              relatedIndex : 3,
+              isActive: false,
+            },
+            {
+              id: 4,
+              name: 4,
+              relatedIndex : 4,
               isActive: false,
             },
           ],
@@ -371,7 +417,7 @@
                 {
                   name: 'config_2',
                   title: 'Minimum Trim',
-                  value: 1,
+                  value: 0,
                   icon: 'light',
                 },
               ],
@@ -389,7 +435,7 @@
                 {
                   name: 'config_2',
                   title: 'Minimum Trim',
-                  value: 1,
+                  value: 0,
                   icon: 'light',
                 },
               ],
@@ -435,7 +481,10 @@
             immediate : true
           }
         },
-        mounted() {
+        computed:{
+          
+        },
+        mounted() { 
           this.initIoList();
           this.initSetting();
           this.initDeviceList();
@@ -444,6 +493,30 @@
           this.initSlotItemConfig();
         },
         methods: {
+          dealWithMode(item){
+            let modeStr = '/';
+            if(item.activeMode == 1){
+              if(item.mode == 1){
+                modeStr = 'On Off Switch'
+              }else if(item.mode == 3){
+                modeStr = 'Curtain Switch'
+              }
+            }
+            if(item.activeMode == 2){
+              if(item.mode == 2){
+                modeStr = 'Triac Dimming'
+              }else if(item.mode == 4){
+                modeStr = '0-10v Dimming'
+              }else if(item.mode == 5){
+                modeStr = '1-10v Dimming'
+              }
+            }
+            return modeStr;
+          },
+          toTab(index){
+            this.index = index;
+            this.activeStep();
+          },
           activeStep() {
             this.stepList.forEach((item) => {
               if (item.id == this.index) {
@@ -468,7 +541,149 @@
             this.rcuItem = item;
             this.deviceSettingStatus = true;
           },
+          async saveDeviceSetting() {
+            app.dialog.preloader();
+            //this setting will set two gang
+            let commandList = [];
+            let valueList = [0,13,19,25,31,37,43,49,55,61];
+            let postData = {};//{slot:brightness|min_trim|brightness|min_trim}
+            console.log(this.slotItemConfig);
+            let mapData = {};//{slot:{gang_1:{brightness:5,min_trim:1},gang_2:{brightness:5,min_trim:1}}}
+            this.slotItemConfig.forEach(item=>{
+              let slot = parseInt(item.slot).toString(16).pad("00");
+              let mode = parseInt(item.mode);
+              let list = item.config;
+              if(isset(mapData[`${slot}`])){
+                mapData[`${slot}`][`gang_${item.gang}`] = {};
+              }else{
+                mapData[`${slot}`] = {};
+                mapData[`${slot}`][`gang_${item.gang}`] = {};
+              }
+              
+              list.forEach(kitem=>{
+                mapData[`${slot}`][`gang_${item.gang}`][`${kitem.title}`] = kitem.value;
+              })
+            });
+            console.log("mapData",mapData);
+            //post the ble command
+            for(let i in mapData){
+              //Minimum Trim,Per Brightness
+              let slot = i;
+              let $length = Object.keys(mapData[i]);
+              let minData = `971f${slot}8905`;
+              let perData = `971f${slot}8909`;
+              if($length.length == 2){
+                postData[`init_slot_${i}`] = {};
+                let postStr = ``;
+                for(let j in mapData[i]){
+                  if(isset(mapData[i][j]['Per Brightness'])){
+                    let value = parseInt(mapData[i][j]['Per Brightness']);
+                    perData += `${parseInt(value*255/100).toString(16).pad("00")}`;
+                    postStr += `${value}|`;
+                  }
+                  if(isset(mapData[i][j]['Minimum Trim'])){
+                    let value = parseInt(mapData[i][j]['Minimum Trim']);
+                    minData += `${parseInt(valueList[value]).toString(16).pad("00")}`;
+                    postStr += `${value}|`;
+                  }
+                }
+                postData[`init_slot_${i}`] = postStr;
+                commandList.push(minData);
+                commandList.push(perData);
+              }else{
+
+              }
+            }
+            console.log("commandList",commandList);
+            console.log("postData",postData);
+            try{
+              //post to ble
+              let bleList = [];
+              for(let i in commandList){
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: commandList[i],
+                })
+              }
+              await window.peripheral[guid].write(bleList);
+              //post to the erp
+              await iot_device_setting_sync_server(guid,null, null, true, postData);
+              
+              app.dialog.close();
+              this.index = 3;
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+            
+          },
+          chooseInitSlotSetting(item,kitem){
+            console.log(item);
+            console.log(kitem);
+            let itemName = item.name;
+            let values = [];
+            let valueList = [0,13,19,25,31,37,43,49,55,61];
+            let perList = [12,25,38,51,76,102,127]; //this only show this config
+            if(kitem.title == 'Per Brightness'){
+              values = [5, 10,15,20,30,40,50];
+            }else if(kitem.title == 'Minimum Trim'){
+              values = [0,1,2,3,4,5,6,7,8,9,10];
+            }
+            this.pickMap = null;
+            let inputEl = $('input[name="per_press_brightness_init"]');
+            this.pickMap = app.picker.create({
+              inputEl : inputEl,
+              cols : [
+                {
+                  textAlign: "center",
+                  values: values,
+                  displayValues: values
+                }
+              ],
+              formatValue: function(values) {
+                  return values[0];
+              },
+              renderToolbar : ()=>{
+                return `
+                <div class="toolbar">
+                    <div class="toolbar-inner">
+                        <div class="left"></div>
+                        <div class="right">
+                            <a href="#" class="link toolbar-save-link-init">${_("Save")}</a>
+                        </div>
+                    </div>
+                </div>
+                `;
+              },
+              on : {
+                open : (picker)=>{
+                  $(picker.$el.find(".toolbar-save-link-init")).on("click",()=>{
+                    this.pickMap.close();
+                    const selected = parseInt(inputEl.val());
+                    //kitem.value = selected;
+                    //console.log("selected",selected);
+                    this.slotItemConfig.forEach(zitem=>{
+                      if(zitem.name == itemName){
+                        //zitem.name = `${selected}`;
+                        let thisList = cloneDeep(zitem.config);
+                        thisList.forEach(sitem=>{
+                          if(sitem.title == kitem.title){
+                            sitem.value = selected;
+                          }
+                         });
+                         zitem.config = thisList;
+                      }                         
+                    })
+                    // this.saveDeviceSetting(item,kitem);
+                  })
+                }
+              }
+            })
+            this.pickMap.open();
+          },
           initSlotItemConfig() {
+            console.log("change")
             this.slotItemConfig = [];
             //init the rcu data
             this.slotlist.forEach((item) => {
@@ -476,12 +691,14 @@
               if (item.mode == 2 || item.mode == 4 || item.mode == 5) {
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-1`,
+                  gang : 1,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
                 });
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-2`,
+                  gang : 2,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
@@ -489,24 +706,28 @@
               } else if (item.mode == 1) {
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-1`,
+                  gang : 1,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
                 });
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-2`,
+                  gang : 2,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
                 });
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-3`,
+                  gang : 3,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
                 });
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-4`,
+                  gang : 4,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
@@ -514,12 +735,14 @@
               } else if (item.mode == 3) {
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-1`,
+                  gang : 1,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
                 });
                 this.slotItemConfig.push({
                   name: `Slot ${item.name}-2`,
+                  gang : 2,
                   slot: `${item.name}`,
                   mode: item.mode,
                   config: [],
@@ -533,10 +756,47 @@
                 }
               });
             });
-            console.log('this.slotItemConfig', this.slotItemConfig);
+            //console.log('this.slotItemConfig', this.slotItemConfig);
             let devices = cloneDeep(erp.info.device);
             if (isset(devices[guid])) {
+              let slotConfigList = [];
               let settings = devices[guid].settings;
+              settings.forEach(item=>{
+                if(item.setting_type.startsWith("init_slot_")){
+                  slotConfigList.push({
+                    slot : item.setting_type.replace("init_slot_",""),
+                    value : item.setting
+                  })
+                }
+              });
+              this.slotItemConfig.forEach(item=>{
+                slotConfigList.forEach(kitem=>{
+                  let list = kitem.value.split("|");
+                  if(parseInt(kitem.slot) == parseInt(item.slot)){
+                    let thisList = cloneDeep(item.config);
+                    thisList.forEach(zitem=>{
+                      if(item.gang == 1){
+                        if(zitem.title == 'Per Brightness'){
+                          zitem.value = list[0];
+                        }
+                        if(zitem.title == 'Minimum Trim'){
+                          zitem.value = list[1];
+                        }
+                      }else if(item.gang == 2){
+                        if(zitem.title == 'Per Brightness'){
+                          zitem.value = list[2];
+                        }
+                        if(zitem.title == 'Minimum Trim'){
+                          zitem.value = list[3];
+                        }
+                      }
+                    })
+                    item.config = thisList;
+                  }
+                })
+              })
+              //get the erp data
+
             }
           },
           initSetting() {
@@ -566,10 +826,22 @@
             this.slotlist.forEach((item) => {});
           },
           async initSlotlist() {
+            let devices = cloneDeep(erp.info.device);
+            let modeList = [2,2,2,2,2];
+            if(isset(devices[guid])){
+              let settingsList = devices[guid].settings;
+              settingsList.forEach((item) => {
+                if(item.setting_type == 'mode_list'){
+                  modeList = item.setting.split(",");
+                }
+              })
+            }
             for (let i = 1; i <= 5; i++) {
+              let indexItem = ['2','4','5'].indexOf(modeList[i-1]);
               this.slotlist.push({
                 name: i,
-                mode: 2,
+                mode: modeList[i-1],
+                activeMode : indexItem != -1?2:1
               });
             }
             //get the rcu manual slot list
@@ -590,15 +862,15 @@
                     let index_five = rs.substr(22, 2);
                     this.slotlist.forEach((kitem) => {
                       if (kitem.name == 1) {
-                        kitem.mode = index_one;
+                        kitem.activeMode = parseInt(index_one);
                       } else if (kitem.name == 2) {
-                        kitem.mode = index_two;
+                        kitem.activeMode = parseInt(index_two);
                       } else if (kitem.name == 3) {
-                        kitem.mode = index_three;
+                        kitem.activeMode = parseInt(index_three);
                       } else if (kitem.name == 4) {
-                        kitem.mode = index_four;
+                        kitem.activeMode = parseInt(index_four);
                       } else if (kitem.name == 5) {
-                        kitem.mode = index_five;
+                        kitem.activeMode = parseInt(index_five);
                       }
                     });
                   } else if (rs.startsWith('9714')) {
@@ -727,6 +999,61 @@
               }
             });
           },
+          async saveRcuModeConfig(){
+            app.dialog.preloader();
+            //1 on off 2 dimming 3 Curtain Switch 4 0-10v Dimming 5 1-10v Dimming
+            let postData = {};
+            let list = [];
+            let commandList = [];
+            for(let i in this.slotlist){
+              let this_mode = this.slotlist[i].mode;
+              let slotIndex = parseInt(this.slotlist[i].name).toString(16).pad('00');
+              list.push(this_mode);
+              //dimming should set the minimum trim to 13,0-10v should set the minimum trim to 0
+              if(this_mode == 1){
+                commandList.push(`9711${slotIndex}01`);
+                commandList.push(`971f${slotIndex}810500`);
+              }else if(this_mode == 2){
+                commandList.push(`9711${slotIndex}02`);
+                commandList.push(`971f${slotIndex}89070101`);
+                commandList.push(`971f${slotIndex}89050d0d`);
+                commandList.push(`971f${slotIndex}89068a8a`);
+              }else if(this_mode == 3){
+                commandList.push(`9711${slotIndex}01`);
+                commandList.push(`971f${slotIndex}810501`);
+              }else if(this_mode == 4){
+                commandList.push(`9711${slotIndex}02`);
+                commandList.push(`971f${slotIndex}89070202`);
+                commandList.push(`971f${slotIndex}89050000`);
+                commandList.push(`971f${slotIndex}8906ffff`);
+              }else if(this_mode == 5){
+                commandList.push(`9711${slotIndex}02`);
+                commandList.push(`971f${slotIndex}89070303`);
+                commandList.push(`971f${slotIndex}89050000`);
+                commandList.push(`971f${slotIndex}8906ffff`);
+              }
+            }
+            postData['mode_list'] = list.join(",");
+            //save in erp device setting
+            try{
+              let bleList = [];
+              for(let i in commandList){
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: commandList[i],
+                })
+              }
+              await window.peripheral[guid].write(bleList);
+              await iot_device_setting_sync_server(guid,'mode_list',list.join(","));
+              app.dialog.close();
+              this.index = 2;
+              this.activeStep();
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
           editOutputName(item) {
             app.dialog.prompt(`${_('IO ' + item.name + ' Output Name')}`, (name) => {
               item.title = name;
@@ -793,7 +1120,7 @@
               app.dialog.close();
               app.dialog.alert(error);
             }
-            this.index = 3;
+            this.index = 4;
             this.activeStep();
           },
           async activeRcu() {

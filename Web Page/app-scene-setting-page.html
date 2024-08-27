@@ -388,7 +388,7 @@
         $('.on-off-list').removeClass('device-hidden');
       }else if(mode == 'RCU Controller' && button_group == 'SCENE MUTIWAY ONOFF GANG1'){
         $('.dimming-list').removeClass('device-hidden');
-      } else if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
+      } else if (mode == 'RF Sensor' || mode == 'Radar Sensor' || button_group.startsWith("RCU INPUT")) {
         $('.randar-list').removeClass('device-hidden');
       } else if (mode == 'Thermostat') {
         $('.thermostat-list').removeClass('device-hidden');

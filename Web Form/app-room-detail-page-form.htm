@@ -75,7 +75,7 @@
       console.log('topImgUploader', topImgUploader);
       topImgUploader.on('click', async () => {
         let res = await Capacitor.Plugins.Camera.getPhoto({
-          quality: 100,
+          quality: 90,
           resultType: 'uri',
         });
         console.log('res', res);
@@ -141,7 +141,7 @@
             })
             .open();
           await ha_profile_ready();
-          mainView.router.back();
+          mainView.router?.back();
         }
       })
       .catch((err) => {
