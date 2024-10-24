@@ -12,7 +12,9 @@ window.ble_load_to_device_form_auto = (params) => {setTimeout(function(){
     const guid = obj.attr("guid");
     const display_name = obj.attr('display-name');
     const page_type = obj.attr('page-type')?1:0;//this can check edit or add
-
+    if(display_name == 'BG000'){
+        return
+    }
     if(!isset(uuid)){
         uuid = window.peripheral[guid].prop.id
     }
@@ -140,6 +142,7 @@ window._ble_load_to_device_form_auto = (loading_config) => {
     let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
     let device_hex_model = peripheral[guid].getProp().hexModel.toUpperCase();
     let this_firmware = peripheral[guid].getFirmwareNo(peripheral[guid].getProp().firmware);
+    debugger;
     let model_name = erp.doctype.device_model[device_hex_model].name;
     let device_default_template_list = erp.doctype.device_model[peripheral[guid].getProp().hexModel.toUpperCase()].device_default_template || {}
     let dms = {};
@@ -149,13 +152,40 @@ window._ble_load_to_device_form_auto = (loading_config) => {
         }
     }
     if(loading_config.button_group.startsWith("RCU DIMMING")){
-        dms = {"Triac Dimming" : true,"0-10v Dimming" : true}
+        //should get the device setting config
+        //1 on off 2 dimming 3 Curtain Switch 4 0-10v Dimming 5 1-10v Dimming
+        if(isset(erp.info.device[guid])){
+            let thisConfig = Math.ceil(parseInt(loading_config.button_group.replace("RCU DIMMING",""))/2);
+            let thisSettings = erp.info.device[guid].settings;
+            let modeList = [];
+            thisSettings.forEach(settingItem=>{
+                if(settingItem.setting_type == 'mode_list'){
+                    modeList = settingItem.setting.split(",");
+                }
+            });
+            if(modeList.length){
+                let thisMode = modeList[thisConfig-1];
+                if(thisMode == 2){
+                    //dimming
+                    dms = {"Triac Dimming" : true,"0-10v Dimming" : true,"1-10v Dimming" : true};
+                }else if(thisMode == 4){
+                    dms = {"0-10v Dimming" : true,"Triac Dimming" : true,"1-10v Dimming" : true};
+                }else if(thisMode == 5){
+                    dms = {"1-10v Dimming" : true,"Triac Dimming" : true,"0-10v Dimming" : true};
+                }
+            }
+        }else{
+            dms = {"Triac Dimming" : true,"0-10v Dimming" : true,"1-10v Dimming" : true};
+        }
     }
     if(loading_config.button_group.startsWith("RCU OUTPUT")){
         dms = {"RCU Controller":true}
     }
     if(loading_config.button_group.startsWith("RCU ONOFF GANG")){
         dms = {"On Off Switch":true}
+    }
+    if(loading_config.button_group.startsWith("RCU OPENCLOSE GANG")){
+        dms = {"Curtain Switch":true}
     }
     let device_models = erp.doctype.device_model[device_hex_model];
     if(device_models.name == 'YO780' && loading_config.button_group == 'ONOFF GANG1'){
@@ -221,6 +251,14 @@ window._ble_load_to_device_form_auto = (loading_config) => {
         }else if(rcu_gang == 9 || rcu_gang == 10){
             args.config = '05';
         }
+    }else if(loading_config.button_group.startsWith("RCU ONOFF GANG")){
+        let rcu_gang = loading_config.button_group.replace("RCU ONOFF GANG","");
+        args.config = `0${Math.ceil(parseInt(rcu_gang)/4)}`;
+    }else if(loading_config.button_group.startsWith("RCU OPENCLOSE GANG")){
+        let rcu_gang = loading_config.button_group.replace("RCU OPENCLOSE GANG","");
+        let gangList = rcu_gang.split("_");
+        let gang = parseInt(gangList[0]);
+        args.config = `0${Math.ceil(gang/4)}`;
     }else if(loading_config.button_group.startsWith("RCU OUTPUT")){
         let rcu_gang = loading_config.button_group.replace("RCU OUTPUT");
         if(rcu_gang.length < 2) rcu_gang = `0${rcu_gang}`;

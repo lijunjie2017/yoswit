@@ -1,0 +1,2817 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('IR Mapping') }}</div>
+        <div class="right scene-list-right device-hidden">
+          <a class="link icon-only" @click="${()=>toLerance()}">
+            <i class="icon material-icons md-only">extension</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <!-- auto panel model -->
+        <div class="main-box">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button v-for="(item,index) in stepList" :key="item.id" :class="item.isActive?'button-active button':'button'">
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="auto-status-box">
+                    <div class="img-box display-flex justify-content-center" v-if="!autoStatus">
+                      <svg
+                        t="1726645152510"
+                        class="icon"
+                        viewBox="0 0 1170 1024"
+                        version="1.1"
+                        xmlns="http://www.w3.org/2000/svg"
+                        p-id="14302"
+                        width="60"
+                        height="60"
+                      >
+                        <path
+                          d="M1104.457143 585.142857c-21.942857 138.971429-138.971429 241.371429-285.257143 241.371429H336.457143C190.171429 826.514286 73.142857 724.114286 51.2 585.142857 29.257143 585.142857 0 570.514286 0 541.257143V343.771429c0-29.257143 21.942857-51.2 51.2-51.2 0-160.914286 131.657143-292.571429 292.571429-292.571429h482.742857c160.914286 0 292.571429 131.657143 292.571428 292.571429v7.314285c14.628571-7.314286 43.885714 7.314286 51.2 36.571429V541.257143c0 29.257143-21.942857 51.2-51.2 51.2 0 0-7.314286 0-14.628571-7.314286zM336.457143 124.342857c-95.085714 0-168.228571 73.142857-168.228572 168.228572v241.371428c0 95.085714 73.142857 168.228571 168.228572 168.228572h482.742857c95.085714 0 168.228571-73.142857 168.228571-168.228572V292.571429c0-95.085714-73.142857-168.228571-168.228571-168.228572H336.457143z m73.142857 117.028572c36.571429 0 73.142857 36.571429 73.142857 73.142857v131.657143c0 43.885714-29.257143 73.142857-73.142857 73.142857-36.571429 0-73.142857-36.571429-73.142857-73.142857V321.828571c0-43.885714 36.571429-80.457143 73.142857-80.457142z m336.457143 0c36.571429 0 73.142857 36.571429 73.142857 73.142857v131.657143c0 43.885714-29.257143 73.142857-73.142857 80.457142-36.571429 0-73.142857-29.257143-73.142857-73.142857V321.828571c0-43.885714 36.571429-80.457143 73.142857-80.457142zM431.542857 1024C351.085714 1024 292.571429 958.171429 292.571429 877.714286h577.828571c0 80.457143-65.828571 146.285714-138.971429 146.285714H431.542857z m0 0"
+                          fill="#515151"
+                          p-id="14303"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div class="img-box display-flex justify-content-center" v-if="autoStatus">
+                      <i class="material-icons">check_circle</i>
+                    </div>
+                  </div>
+                  <div class="auto-status-text margin-top" style="text-align: center" v-if="!autoStatus">
+                    {{ _('Please click the button below and follow the prompts to proceed.') }}
+                  </div>
+                  <div class="auto-status-text margin-top" style="text-align: center" v-if="!autoStatus">
+                    {{ _('You need to press the following buttons in order:') }}
+                    <span v-for="buttonItem in mappingStepConfig[deviceType]" :key="buttonItem">{{_(buttonItem)}} </span>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toStudy()">{{_("Start Matching")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toManual()">{{_("Manual Mode")}}</div>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 30px; display: none">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTest()">{{_("Test")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="mapCode()">{{_("Get Code")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <div class="row margin-top">
+                  <div class="col display-flex justify-content-space-between">
+                    <a ref="reduce" class="link icon-only ir-click-button button button-large button-raised" v-on:click="reduceClick()">
+                      <i class="icon material-icons">chevron_left</i>
+                    </a>
+                    <a class="link button-large button-raised">
+                      <span class="count-index">{{countIndex}}</span>
+                      <span>/</span>
+                      <span>{{codeModel.length}}</span>
+                    </a>
+                    <a ref="add" class="link icon-only ir-click-button button button-large button-raised" v-on:click="addClick()">
+                      <i class="icon material-icons">chevron_right</i>
+                    </a>
+                  </div>
+                </div>
+                <div class="row margin-top">
+                  <div class="auto-status-text margin-top" style="text-align: center">
+                    {{ _('Please click the button to test if the device responds.') }}
+                  </div>
+                </div>
+                <div class="card-content card-content-padding" v-if="deviceType == 'Air Conditioner'">
+                  <!-- show the mapping pannel  ARC -->
+                  <div
+                    class="display-flex justify-content-space-between"
+                    style="flex-wrap: wrap"
+                    v-for="item in codeModel"
+                    v-if="(item.index+1) == countIndex"
+                    :key="item.index"
+                  >
+                    <div class="ir-item" style="width: calc(47%); margin-top: 15px">
+                      <a
+                        href="#"
+                        class="button button-large button-raised"
+                        style="padding: 30px 0px"
+                        v-on:click="irPanelClick('ARC_ON_OFF')"
+                        ><i class="icon material-icons">power_settings_new</i></a
+                      >
+                    </div>
+                    <div class="ir-item" style="width: calc(47%); margin-top: 15px">
+                      <a href="#" class="button button-large button-raised" style="padding: 30px 0px" v-on:click="irPanelClick('ARC_MODE')"
+                        >MODE</a
+                      >
+                    </div>
+                    <div class="ir-item" style="width: calc(30%); margin-top: 15px" v-on:click="irPanelClick('ARC_REDUCE_TEMP')">
+                      <a href="#" class="button button-large button-raised" style="padding: 30px 0px">-</a>
+                    </div>
+                    <div class="ir-item" style="width: calc(30%); margin-top: 15px">
+                      <a class="button button-large" style="padding: 30px 0px">TEMP</a>
+                    </div>
+                    <div class="ir-item" style="width: calc(30%); margin-top: 15px" v-on:click="irPanelClick('ARC_ADD_TEMP')">
+                      <a href="#" class="button button-large button-raised" style="padding: 30px 0px">+</a>
+                    </div>
+                    <div class="ir-item" style="width: calc(30%); margin-top: 15px" v-on:click="irPanelClick('ARC_SPEED')">
+                      <a href="#" class="button button-large button-raised" style="padding: 30px 0px">SPEED</a>
+                    </div>
+                    <div class="ir-item" style="width: calc(30%); margin-top: 15px" v-on:click="irPanelClick('ARC_DIRECTION')">
+                      <a href="#" class="button button-large button-raised" style="padding: 30px 0px">DIRECTION</a>
+                    </div>
+                    <div class="ir-item" style="width: calc(30%); margin-top: 15px" v-on:click="irPanelClick('ARC_SWING')">
+                      <a href="#" class="button button-large button-raised" style="padding: 30px 0px">SWING</a>
+                    </div>
+                    <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toManual()">{{_("Manual Mode")}}</div>
+                      </div>
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("NEXT")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-content card-content-padding" v-else>
+                  <!-- show the mapping pannel  Television -->
+                  <div class="display-flex justify-content-space-between" style="flex-wrap: wrap">
+                    <div
+                      class="ir-item"
+                      v-for="configItem in panelConfig[deviceType]"
+                      :key="configItem.text"
+                      :style="{'width' : 'calc('+configItem.width+'%)','margin-top' : '15px','opacity' : configItem.buttonType == 4 ? '0' : '1'}"
+                    >
+                      <a
+                        href="#"
+                        :class="{'button':true,'button-large':true,'button-raised':configItem.buttonType != 3}"
+                        style="padding: 30px 0px"
+                        v-on:click="irPanelForOther(configItem.params)"
+                      >
+                        <i class="icon material-icons" style="font-size: 30px" v-if="configItem.buttonType == 1">{{configItem.text}}</i>
+                        <span v-else>{{configItem.text}}</span>
+                      </a>
+                    </div>
+                    <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toManual()">{{_("Manual Mode")}}</div>
+                      </div>
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("NEXT")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row">
+                    <div class="col-100">
+                      <h5>{{ _('Profile Settings') }}</h5>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-content card-content-padding">
+                  <div class="list no-hairlines-md">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i class="icon material-icons setting-list-icon p-1">bed</i>
+                        </div>
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Room')}}</div>
+                          <div class="item-input-wrap input-dropdown-wrap">
+                            <select name="profile_room" placeholder="" lang="en">
+                              <option :value="roomItem.name" selected="selected" v-for="roomItem in profileRoom" :key="roomItem.name">
+                                {{tran(roomItem.title)}}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                        </div>
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Name')}}</div>
+                          <div class="item-input-wrap">
+                            <input class="init-input" name="title" v-model="postTitle" type="text" placeholder="Device Name" />
+                            <span class="input-clear-button"></span>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i
+                            class="icon material-icons setting-list-icon p-1 text-color-theme"
+                            v-if="hideStatus"
+                            v-on:click="hideStatus = !hideStatus"
+                            >check_box</i
+                          >
+                          <i class="icon material-icons setting-list-icon p-1" v-if="!hideStatus" v-on:click="hideStatus = !hideStatus"
+                            >check_box_outline_blank</i
+                          >
+                        </div>
+                        <div class="item-inner">
+                          <div class="" style="line-height: 30px">{{ _('Hide IR Device') }}</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="addDeviceToErp()">{{_("COMPLETE")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- auto panel model end -->
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { brand, device_type, guid, model } = $f7route.query;
+    const toLerance = async () => {
+      vueApp.$toLerance();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          guid: guid,
+          deviceType: device_type,
+          stepList: [
+            {
+              name: 1,
+              id: 1,
+              isActive: true,
+            },
+            {
+              name: 2,
+              id: 2,
+              isActive: false,
+            },
+            {
+              name: 3,
+              id: 3,
+              isActive: false,
+            },
+          ],
+          index: 1,
+          autoStatus: false,
+          irData: [],
+          dbMap: null,
+          irPanelConfig:[],
+          fileName: '8.b.ac_jj_all.db',
+          codeModel: [],
+          countIndex: 1,
+          profileRoom: [],
+          hideStatus: true,
+          postTitle: '',
+          postDeviceButtonGroup: '',
+          mappingList: [],
+          otehrIrDeviceList: [],
+          interCode: 0,
+          mappingStepConfig: {
+            'Air Conditioner': ['power'],
+            'Television': ['power', 'menu', 'back', 'ok'],
+            'Audio': ['power', 'mute', 'menu', 'back'],
+            'Set-top boxes': ['power', 'back', 'VOL+', 'menu'],
+            'Fan': ['power', 'shake', 'timer', 'WIND'],
+            'Projector': ['power on', 'power', 'back', 'mute'],
+            'Air Purifier': ['auto'],
+            'IPTV': ['power', 'menu', 'back', 'mute'],
+            'Camera': ['take'],
+            'Robot Vacuum': ['power'],
+            'DVD': ['power', 'mute', 'pause', 'menu'],
+            'Lamp': ['on'],
+            'Water Heater': ['power'],
+          },
+          panelConfig: {
+            'Television': [
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AV / TV',
+                width: '47',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CH',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '45',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '47',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '51',
+                buttonType: 2, //1-icon 2-text 3-no boder 4-hidden
+                text: 'HOME',
+                width: '30',
+              },
+              {
+                params: '49',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '--/-',
+                width: '30',
+              },
+            ],
+            'Audio': [
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'EJECT', //eject
+                width: '47',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '<<',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PLAY',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>>',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '|<',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'STOP',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>|',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ASPECT',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PAUSE',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TITLE',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+            ],
+            'Set-top boxes': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'GUIDE', //eject
+                width: '47',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CH',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '45',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Fan': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'WIND', //eject
+                width: '47',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SHAKE',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'LOW',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MIDDLE',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'HIGH',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMER',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SLEEP',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'Anion',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'LIGHT',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'Cold',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Projector': [
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ON',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OFF', //eject
+                width: '47',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'COMPUTER',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AV',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SOURCE',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'ZOOM',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'SCREEN',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AUTO',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PAUSE',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MCD',
+                width: '30',
+              },
+            ],
+            'Air Purifier': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'WIND', //eject
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AUTO',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMER',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ANION',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'COMFORT',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+            ],
+            'IPTV': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '100',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CH',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '45',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PLAY',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Dehumidifier': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'HEAT', //eject
+                width: '47',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'TEMP',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '47',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'CONFIRM',
+                width: '47',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMING',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'REVERSE',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+            ],
+            'Camera': [
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TAKE',
+                width: '100',
+              },
+            ],
+            'Robot Vacuum': [
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ON',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OFF', //eject
+                width: '47',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'HOME',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'RECHARGE',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AREA',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ALONG',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PART',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AUTO',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'FIX',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BOW',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'CLEAR',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMER',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SPEED',
+                width: '30',
+              },
+            ],
+            'DVD': [
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'EJECT', //eject
+                width: '47',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '<<',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PLAY',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>>',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '|<',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'STOP',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>|',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'FORMAT',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PAUSE',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TITLE',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+            ],
+            'Lamp': [
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ON',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OFF',
+                width: '47',
+              },
+              {
+                params: '9',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '47',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '47',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'light_mode',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CCT',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'A',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'B',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'C',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'D',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Water Heater': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '100',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '47',
+              },
+              {
+                params: '17',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ANT',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TEMP',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'STEM',
+                width: '30',
+              },
+            ],
+          },
+        },
+        watch: {},
+        computed: {},
+        mounted() {
+          //ir_db_data_init(); // init the tool
+          Vue.prototype.$toLerance = this.toLerance;
+          this.downLoad();
+          this.initProfileData();
+          this.initIotRequestMtu();
+          //creat emitter event
+          emitter.on('disconnected', (data) => {
+            let thisId = window.peripheral[guid].prop.id;
+            if (data.id == thisId) {
+              //device is disconnected
+              app.dialog.close();
+              app.dialog.alert(`${_('Sorry,device is disconnected,retry please.')}`);
+            }
+          });
+        },
+        methods: {
+          toLerance(){
+            mainView.router.navigate(
+              `/mobile-app/device-ir-learn?brand=${brand}&device_type=${device_type}&guid=${guid}&model=${model}`
+            );
+          },
+          async initIotRequestMtu() {
+            try {
+              if (deviceInfo.operatingSystem !== 'ios') {
+                let uuid = window.peripheral[guid].prop.id;
+                await ble.requestMtu(
+                  uuid,
+                  512,
+                  () => {},
+                  () => {}
+                );
+              }
+            } catch (error) {
+              console.log('error', error);
+              app.dialog.confirm(
+                `RequestMtu Fail Retry?`,
+                () => {
+                  this.initIotRequestMtu();
+                },
+                () => {}
+              );
+            }
+          },
+          //init the profile data
+          initProfileData() {
+            this.profileRoom = cloneDeep(erp.info.profile.profile_room);
+          },
+          //init the database
+          initDataBase() {
+            this.dbMap = window.sqlitePlugin.openDatabase({ name: this.fileName, location: 'default' });
+            console.log('this.dbMap', this.dbMap);
+          },
+          toTab(zindex) {
+            this.index = zindex;
+            this.activeStep();
+            if (zindex == 3) {
+              this.updateDeviceButtonGroup();
+            }
+          },
+          activeStep() {
+            this.stepList.forEach((item) => {
+              if (item.id == this.index) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          addClick() {
+            if (this.countIndex == this.codeModel.length) {
+              this.countIndex = this.codeModel.length;
+            } else {
+              this.countIndex++;
+            }
+          },
+          reduceClick() {
+            if (this.countIndex == 1) {
+              this.countIndex = 1;
+            } else {
+              this.countIndex--;
+            }
+          },
+          toManual() {
+            mainView.router.navigate(
+              `/frappe/list-2/${brand}/APP_Yoswit_Device_Type_IR_Brand_Model_V5/Profile/null/20/brand=${brand}&device_type=${device_type}&guid=${guid}&model=${model}/`
+            );
+          },
+          async toStudy() {
+            //auto to matching
+            console.log('toStudy');
+            this.irData = [];
+            app.dialog.preloader(`${_('Preparing, please wait...')}`);
+            let uuid = window.peripheral[guid].prop.id;
+            try {
+              await window.peripheral[guid].connect();
+              //start notify
+              ble.startNotification(
+                peripheral[guid].prop.id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log('start notify');
+                  if (rs.startsWith('89')) {
+                    console.log('rs', rs);
+                    let index = rs.substring(2, 4);
+                    let ir_learned_data = rs.substring(4, rs.length);
+                    this.irData.push(ir_learned_data);
+                    if (index == '00' && rs != '8900') {
+                      app.dialog.close();
+                      console.log('this.irData', this.irData);
+                      //should be check the device_type
+                      this.interCode++;
+                      this.continueStudy(device_type);
+                      //$(`.init-input[name="ir_code"]`).val(this.irData.join(''));
+                    } else if (rs == '8900') {
+                      //can not get the code
+                      app.dialog.close();
+                      app.dialog.alert(_(`Sorry, no data was received. Please re-learn the code.`));
+                    }
+                  }
+                },
+                (notifyError) => {
+                  console.log('notifyError', notifyError);
+                }
+              );
+              let data = '8700';
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+              app.dialog.close();
+              //check the times of the study
+              let title = `${_('Please press the ' + this.mappingStepConfig[this.deviceType][this.interCode] + ' button on the remote control.')}`;
+              // if (device_type == 'Television' && this.interCode == 1) {
+              //   title = `${_('Please press the menu button on the remote control.')}`;
+              // } else if (device_type == 'Television' && this.interCode == 2) {
+              //   title = `${_('Please press the back button on the remote control.')}`;
+              // } else if (device_type == 'Television' && this.interCode == 3) {
+              //   title = `${_('Please press the enter button on the remote control.')}`;
+              // }
+              app.dialog.preloader(title);
+            } catch (err) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+          async continueStudy(device_type) {
+            let title = `${_('Please press the ' + this.mappingStepConfig[this.deviceType][this.interCode] + ' button on the remote control.')}`;
+            if (this.interCode == this.mappingStepConfig[this.deviceType].length) {
+              this.mapCode();
+              return;
+            }
+            app.dialog.close();
+            app.dialog.preloader(`${_(title)}`);
+            try {
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `8700`,
+                },
+              ]);
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          async downLoad() {
+            let url = `https://explorer.si-yee.com/api/public/dl/lMwRArXb/8.b.ac_jj_all.db`;
+            let filePath = '8.b.ac_jj_all.db';
+            let fileName = '8.b.ac_jj_all.db';
+            let mkdirFilePath = `databases/`;
+            if (deviceInfo.operatingSystem === 'ios') {
+              mkdirFilePath = `Library/LocalDatabase/`;
+            }
+            try {
+              
+              await http2.inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${fileName}`);
+              this.initDataBase();
+            } catch (error) {
+              console.log('error', error);
+              app.dialog.confirm(
+                `${_('The automatic matching feature requires downloading some files. Would you like to proceed with the download?')}`,
+                async () => {
+                  try {
+                    app.dialog.preloader(_('Downloading, please wait...'));
+                    this.irTimer = setTimeout(() => {
+                      app.dialog.close();
+                      app.dialog.alert(_('Download Timed Out'));
+                    }, 1000 * 60);
+                    const resData = await http2.request({
+                      url: url,
+                      method: 'DOWNLOAD',
+                      timeout: 60,
+                      debug: true,
+                      file: {
+                        path: cordova.file.applicationStorageDirectory + mkdirFilePath + fileName,
+                        name: `${fileName}`,
+                      },
+                    });
+                    app.dialog.close();
+                    clearTimeout(this.irTimer);
+                    this.initDataBase();
+                  } catch (errorss) {
+                    console.log("errorss",errorss)
+                    app.dialog.alert('Download Faild!');
+                  }
+                },
+                () => {}
+              );
+            }
+          },
+          async toTest() {
+            const TAG = 'iot_ir_test';
+            console.log(TAG);
+            let bytes_array = [];
+            let bytes_string = this.irData.join('');
+            let this_data = `3003${bytes_string.substring(2, bytes_string.length)}`;
+            let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+            let handle_data = iot_ir_learned_init(this_data);
+            let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+            console.log('ref', ref);
+            if (ref.length > 36) {
+              let group = Math.ceil((ref.length * 1.0) / 36.0);
+              for (var i = 0; i < group; i++) {
+                bytes_array.push('87' + (group - i - 1).toString(16).pad('00') + ref.substr(i * 36, 36));
+              }
+            } else {
+              bytes_array.push('8700' + ref);
+            }
+            console.log(bytes_array);
+            let bleList = [];
+            for (var i in bytes_array) {
+              (function (_i, _bytes) {
+                bleList.push({ service: 'ff80', characteristic: 'ff81', data: _bytes });
+              })(i, bytes_array[i]);
+            }
+            try {
+              await window.peripheral[guid].write(bleList);
+            } catch (err) {
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+          async irPanelForOther(button_signal) {
+            // no arc device
+            let button_index = parseInt((parseInt(button_signal) - 1) / 2);
+            console.log('button_index', button_index);
+            let command = '';
+            this.codeModel.forEach((item) => {
+              if (item.index + 1 == this.countIndex) {
+                command = item.code;
+              }
+            });
+            console.log('command', command);
+            if (command) {
+              let ircode = iot_ble_generate_ir_code(command, button_index, null);
+              if (ircode) {
+                try {
+                  await window.peripheral[guid].sendIR(ircode);
+                } catch (error) {
+                  app.dialog.alert(_(erp.get_log_description(err)));
+                }
+              }
+            }
+          },
+          async irPanelClick(button_type) {
+            //ir arc send code
+            let ircode = ``;
+            let configStr = 'ir|0|25,1,2,1,0,1';
+            let config = configStr.split('|');
+            let airconfig = config[2].split(',');
+            if (button_type == 'ARC_ON_OFF') {
+              airconfig[4] = (airconfig[4] * 1 + 1) % 2;
+            }
+            //get command
+            let command = '';
+            this.codeModel.forEach((item) => {
+              if (item.index + 1 == this.countIndex) {
+                command = item.code;
+              }
+            });
+            console.log('command', command);
+            ircode = iot_ble_generate_ir_code(command, button_type, airconfig.join(','));
+            console.log('ircode', ircode);
+            let bytes_array = [];
+            if (ircode) {
+              try {
+                await window.peripheral[guid].sendIR(ircode);
+              } catch (error) {
+                console.log('error', error);
+              }
+            }
+          },
+          packageSqliteExecuteSql(sql) {
+            return new Promise((resolve, reject) => {
+              this.dbMap.executeSql(
+                sql,
+                [],
+                (resultSet) => {
+                  let list = [];
+                  for (let i = 0; i < resultSet.rows.length; i++) {
+                    list.push(resultSet.rows.item(i));
+                  }
+                  resolve(list);
+                },
+                (error) => {
+                  reject(error);
+                }
+              );
+            });
+          },
+          mapCode() {
+            //get the code of the ir data
+
+            //get the brand of the device
+            console.log('brand', brand);
+
+            // if (this.irData.length == 0) {
+            //   app.dialog.alert('error');
+            //   return;
+            // }
+            //compare the different type
+            if (device_type.includes('Conditioner')) {
+              this.mappingIrCode();
+            } else {
+              this.mappingFanCode();
+            }
+            // let this_data = `${bytes_string.substring(2, bytes_string.length)}`;
+            // let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+            // let handle_data = iot_ir_learned_init(bytes_string);
+
+            //console.log('handle_data', handle_data);
+          },
+          async mappingIrCode() {
+            this.codeModel = [];
+            let bytes_string = this.irData.join('');
+            // bytes_string =
+            //   '00638b00341b0130026700270021002800ee04260000002100ffffffffffffffffffffffff0122122221221222222222122222212122123222222222222212222222222222221114f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ade4cb';
+            console.log('bytes_string', bytes_string);
+            //get the mapping code
+            let mapObj = matchData(bytes_string, 1089, 230);
+            console.log('mapObj', mapObj);
+            //select the id of the mapping table
+            if (Object.keys(mapObj).length > 0) {
+              let list = [];
+              for (let i in mapObj) {
+                list.push({
+                  index: i,
+                  count: mapObj[i],
+                });
+              }
+              list.sort((a, b) => {
+                return b.count - a.count;
+              });
+              console.log('list', list);
+              let indexList = list.map((e) => parseInt(e.index));
+
+              let sql = ``;
+              //some index should change the target index
+              indexList.forEach((item, index) => {
+                if (item == 0) {
+                  indexList[index] = 511;
+                } else if (item == 834) {
+                  indexList[index] = 569;
+                } else if (item == 835) {
+                  indexList[index] = 563;
+                } else if (item == 850) {
+                  indexList[index] = 830;
+                } else if (item < 836) {
+                  indexList[index] = item - 1;
+                } else if (item >= 851) {
+                  indexList[index] = item - 4;
+                } else if (item > 836 && item < 849) {
+                  indexList[index] = item - 3;
+                }
+              });
+              console.log('indexList', indexList);
+              let sqlItem = `ORDER BY CASE SERIAL`;
+              indexList.forEach((item, index) => {
+                sqlItem += ` WHEN ${item} THEN ${index + 1}`;
+              });
+              sqlItem += ` END`;
+              sql = `SELECT CODE,SERIAL FROM ARC_LIBRARY_TABLE_NAME WHERE SERIAL IN (${indexList.join(',')}) ${sqlItem};`;
+              console.log('sql', sql);
+              try {
+                let commandList = await this.packageSqliteExecuteSql(sql);
+                console.log('commandList', commandList);
+                commandList.forEach((item, index) => {
+                  this.codeModel.push({
+                    code: item.CODE,
+                    serial: item.SERIAL,
+                    index: index,
+                  });
+                });
+                this.index = 2;
+                this.activeStep();
+              } catch (error) {}
+
+              // this.dbMap.executeSql(
+              //   sql,
+              //   [],
+              //   (resultSet) => {
+              //     console.log('resultSet', resultSet);
+              //     for (let i = 0; i < resultSet.rows.length; i++) {
+              //       this.codeModel.push({
+              //         code: resultSet.rows.item(i).CODE,
+              //         serial: resultSet.rows.item(i).SERIAL,
+              //         index: i,
+              //       });
+              //       console.log(resultSet.rows.item(i));
+              //     }
+              //     this.index = 2;
+              //     this.activeStep();
+              //   },
+              //   (error) => {
+              //     console.log(error);
+              //   }
+              // );
+            } else {
+              app.dialog.alert(_(`Not matched to a model yet.`));
+            }
+
+            // let compareMap = {};
+            // let mappingObj = erp.arc_mapping_table[brand]; // mapping code list
+            // mappingObj.forEach((item, index) => {
+            //   let result = this.compareHexStringsForRemote(bytes_string, item);
+            //   compareMap[item] = {};
+            //   compareMap[item] = {
+            //     result: result.sameCount,
+            //     index: index,
+            //   };
+            // });
+            // console.log('compareMap', compareMap);
+            // let resultList = this.getMaxResultObjects(compareMap);
+            // console.log('resultList', resultList);
+          },
+          returnTableName() {
+            let tableName = `ARC`;
+            if (device_type == 'Television') {
+              tableName = `TV`;
+            } else if (device_type == 'Audio') {
+              tableName = `ADO`;
+            } else if (device_type == 'Set-top boxes') {
+              tableName = `TVBOX`;
+            } else if (device_type == 'Fan') {
+              tableName = `FAN`;
+            } else if (device_type == 'Projector') {
+              tableName = `PJT`;
+            } else if (device_type == 'Air Purifier') {
+              tableName = `AIR`;
+            } else if (device_type == 'IPTV') {
+              tableName = `IPTV`;
+            } else if (device_type == 'Dehumidifier') {
+              tableName = ``;
+            } else if (device_type == 'Camera') {
+              tableName = `SLR`;
+            } else if (device_type == 'Robot Vacuum') {
+              tableName = `Sweeper`;
+            } else if (device_type == 'DVD') {
+              tableName = `DVD`;
+            } else if (device_type == 'Lamp') {
+              tableName = `Lamp`;
+            } else if (device_type == 'Water Heater') {
+              tableName = `WATER`;
+            }
+            return tableName;
+          },
+          //mapping the code except the ir data
+          async mappingFanCode() {
+            let tableName = this.returnTableName();
+
+            app.dialog.preloader(`${_('Matching in progress.')}`);
+            let bytes_string = this.irData.join('');
+            // bytes_string =
+            //   '005a670034fc00f6ff7f001d003e001d00ef011d00fc00fa0000001900ffffffffffffffff0111112121212222221212121341111121212122222212121215f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a4e0c4';
+            console.log('bytes_string', bytes_string);
+            let sql = `SELECT SERIAL,CODE FROM ${tableName}_MATCH_TABLE;`;
+            let selectList = await this.packageSqliteExecuteSql(sql);
+            let deviceMap = [];
+            let checkList = [];
+            let studyBytes = convertToBytesForIr(bytes_string);
+            selectList.forEach((item) => {
+              //get the compare str
+              let bytes = convertToBytesForIr(item.CODE);
+
+              let compareStrList = [];
+              let targetStrList = [];
+              let Ln = bytes.length;
+              for (let i = 38; i < Ln; i++) {
+                if (bytes[i] === 15 || bytes[i] === 240) {
+                  break;
+                } else {
+                  compareStrList.push(bytes[i]);
+                  targetStrList.push(studyBytes[i]);
+                }
+              }
+              if (compareStrList.join('') == targetStrList.join('')) {
+                this.otehrIrDeviceList.push(item.SERIAL);
+                if (checkList.indexOf(item.SERIAL) == -1) {
+                  checkList.push(item.SERIAL);
+                  deviceMap.push(item);
+                }
+              }
+            });
+            console.log('deviceMap', deviceMap);
+            console.log('this.otehrIrDeviceList', this.otehrIrDeviceList);
+            console.log('result', this.findMostFrequentElements(cloneDeep(this.otehrIrDeviceList)));
+            //select the TV_TABLE
+            let irResultList = this.findMostFrequentElements(cloneDeep(this.otehrIrDeviceList));
+            if (irResultList.length == 0) {
+              app.dialog.close();
+              app.dialog.alert(_('Sorry, no models have been matched yet, please try to match manually.'));
+              return;
+            }
+            let sqlItem = `ORDER BY CASE SERIAL`;
+            irResultList.forEach((item, index) => {
+              sqlItem += ` WHEN ${item} THEN ${index + 1}`;
+            });
+            sqlItem += ` END`;
+            sql = `SELECT CODE,SERIAL FROM ${tableName}_LIBRARY_TABLE_NAME WHERE SERIAL IN (${irResultList.join(',')}) ${sqlItem};`;
+            console.log('sql', sql);
+            try {
+              let commandList = await this.packageSqliteExecuteSql(sql);
+              console.log('commandList', commandList);
+              commandList.forEach((item, index) => {
+                this.codeModel.push({
+                  code: item.CODE,
+                  serial: item.SERIAL,
+                  index: index,
+                });
+              });
+              app.dialog.close();
+              this.index = 2;
+              this.activeStep();
+            } catch (error) {}
+            // deviceMap.forEach((deviceItem, deviceIndex) => {
+            //   this.codeModel.push({
+            //     code: deviceItem.CODE,
+            //     serial: deviceItem.SERIAL,
+            //     index: deviceIndex,
+            //   });
+            // });
+            return;
+          },
+          getMaxResultObjects(inputObj) {
+            // check if null
+            if (!inputObj || Object.keys(inputObj).length === 0) {
+              return [];
+            }
+
+            // init object
+            let maxResult = -Infinity; //
+            const maxResultObjects = [];
+
+            // foreach
+            for (const key in inputObj) {
+              if (inputObj.hasOwnProperty(key)) {
+                const currentObj = inputObj[key];
+                const currentResult = currentObj.result;
+
+                // update
+                if (currentResult > maxResult) {
+                  maxResult = currentResult;
+                  maxResultObjects.length = 0; // clear
+                  maxResultObjects.push({ key: key, ...currentObj }); // add key
+                } else if (currentResult === maxResult) {
+                  maxResultObjects.push({ key: key, ...currentObj }); // add key
+                }
+              }
+            }
+
+            return maxResultObjects;
+          },
+          hexToDecimal(hex) {
+            return parseInt(hex, 16);
+          },
+          //compare the new IR data
+          compareStrings(str1, str2) {
+            const totalBytesToMatch = 230; // 定义待比对的总字节数
+            const byteLength = totalBytesToMatch / 2; // 每个字节用两个十六进制字符表示
+            const hexToBytes = (hexStr) =>
+              Array.from({ length: hexStr.length / 2 }, (_, i) => parseInt(hexStr.slice(i * 2, i * 2 + 2), 16));
+
+            // 输入验证：确保字符串长度足够
+            if (str1.length < totalBytesToMatch * 2 || str2.length < totalBytesToMatch * 2) {
+              return { validInput: false, message: 'Input strings should be at least 230 bytes.' };
+            }
+
+            const bytes1 = hexToBytes(str1);
+            const bytes2 = hexToBytes(str2);
+            let matchCounter = 0; // 用于计数
+            let secondSegmentCount = 0; // 第二阶段匹配计数
+            let nonFFSegmentMatchCount = 0; // 第三阶段匹配计数
+
+            // 第一步：比较前4个字节
+            for (let i = 0; i < 4; i++) {
+              if (bytes1[i] !== bytes2[i]) {
+                return { validInput: false, message: 'First 4 bytes are not the same.' };
+              }
+            }
+
+            // 第二步：从第5个字节开始寻找，直到遇到第一个FF
+            for (let i = 4; i < byteLength; i++) {
+              if (bytes1[i] === 0xff && bytes2[i] === 0xff) {
+                break; // 遇到ff，停止第二阶段
+              }
+
+              // 判断是否在正负15%以内
+              if (bytesAreEqualWithinTolerance(bytes1[i], bytes2[i])) {
+                matchCounter++;
+                secondSegmentCount++;
+              }
+            }
+
+            // 第三步：在不连续的FF开始后寻找非F字符
+            let foundNonF = false;
+            for (let i = 4 + secondSegmentCount; i < byteLength; i++) {
+              if (bytes1[i] === 0xf || bytes2[i] === 0xf) {
+                break; // 遇到字符为F，停止比对
+              }
+
+              // 检查非F字符是否完全相同
+              if (bytes1[i] === bytes2[i]) {
+                nonFFSegmentMatchCount++;
+                foundNonF = true;
+              } else {
+                foundNonF = false; // 如果有不一样的字符，则标记为false
+              }
+            }
+
+            // 返回比对结果
+            // 汇总匹配计数
+            const totalMatchCount = matchCounter + nonFFSegmentMatchCount;
+
+            // 返回比对结果对象
+            return {
+              [str2]: { matchCounter: totalMatchCount },
+            };
+          },
+          bytesAreEqualWithinTolerance() {
+            const tolerance = byte1 * 0.15;
+            return Math.abs(byte1 - byte2) <= tolerance;
+          },
+
+          compareHexStrings(hexStr1, hexStr2) {
+            const length = Math.min(Math.min(hexStr1.length, hexStr2.length), 110 * 2);
+            let sameCount = 0;
+            for (let i = 0; i < length; i += 2) {
+              const byte1 = this.hexToDecimal(hexStr1.substr(i, 2));
+              const byte2 = this.hexToDecimal(hexStr2.substr(i, 2));
+              const maxByte = Math.max(byte1, byte2);
+              const minByte = Math.min(byte1, byte2);
+              const similarity = ((maxByte - minByte) / byte2) * 100;
+              if (similarity <= 20) {
+                sameCount++;
+              }
+            }
+
+            return { sameCount };
+          },
+          compareHexStringsForRemote(hexStr1, hexStr2) {
+            const length = Math.min(Math.min(hexStr1.length, hexStr2.length), 230 * 2);
+            let sameCount = 0;
+            for (let i = 0; i < length; i += 2) {
+              const byte1 = this.hexToDecimal(hexStr1.substr(i, 2));
+              const byte2 = this.hexToDecimal(hexStr2.substr(i, 2));
+              const maxByte = Math.max(byte1, byte2);
+              const minByte = Math.min(byte1, byte2);
+              const similarity = ((maxByte - minByte) / byte2) * 100;
+              if (similarity <= 20) {
+                sameCount++;
+              }
+            }
+
+            return { sameCount };
+          },
+          findMostFrequentElements(arr) {
+            const frequencyMap = new Map();
+
+            // 统计每个元素的出现次数
+            arr.forEach((item) => {
+              frequencyMap.set(item, (frequencyMap.get(item) || 0) + 1);
+            });
+
+            let maxFrequency = 0;
+            const mostFrequentElements = [];
+
+            // 查找最大出现次数
+            frequencyMap.forEach((count, item) => {
+              if (count > maxFrequency) {
+                maxFrequency = count;
+                mostFrequentElements.length = 0; // 清空数组
+                mostFrequentElements.push(item);
+              } else if (count === maxFrequency) {
+                mostFrequentElements.push(item);
+              }
+            });
+
+            return mostFrequentElements;
+          },
+          updateDeviceButtonGroup() {
+            //get the model of the database
+            this.mappingList = [];
+            let tableName = this.returnTableName();
+            let command = this.codeModel[this.countIndex - 1].code;
+            let serial = this.codeModel[this.countIndex - 1].serial;
+            let sql = `SELECT CODE,BRAND_EN,MODEL FROM ${tableName}_TABLE WHERE CODE like "${command.substr(0, 4)}%${command.substr(18, command.length)}" AND BRAND_EN IN ("${brand}","ALL");`;
+            if (tableName != 'ARC') {
+              sql = `SELECT CODE,BRAND_EN,MODEL FROM ${tableName}_TABLE WHERE CODE = "${command}";`;
+            }
+            console.log('sql', sql);
+            this.dbMap.executeSql(
+              sql,
+              [],
+              (resultSet) => {
+                console.log('resultSet', resultSet);
+                for (let i = 0; i < resultSet.rows.length; i++) {
+                  this.mappingList.push(resultSet.rows.item(i));
+                  console.log(resultSet.rows.item(i));
+                }
+                if (this.mappingList.length == 0) {
+                  let returnStatus = false;
+                  if (tableName == 'TV') {
+                    this.postDeviceButtonGroup = `Television-ALL-no_model-1321`;
+                    this.postTitle = `Television-ALL-no_model-1321`;
+                    returnStatus = true;
+                  }
+                  if (returnStatus) return;
+                }
+                //this should be check the result
+                const foundKitem = this.mappingList.find((kitem) => kitem.MODEL !== 'no_model');
+                if (foundKitem) {
+                  this.getButtonGroupFromErp(foundKitem.MODEL, foundKitem.BRAND_EN, serial, command);
+                } else if (this.mappingList.length > 0) {
+                  this.getButtonGroupFromErp(this.mappingList[0].MODEL, this.mappingList[0].BRAND_EN, serial, command);
+                }
+              },
+              (error) => {
+                console.log(error);
+              }
+            );
+          },
+          async getButtonGroupFromErp(model, thisBrand, serial, command) {
+            //if no_model
+            let postModel = '';
+            if (model == 'no_model') {
+              postModel = ``;
+            }
+            try {
+              if (thisBrand == 'ALL' || model == 'no_model') {
+                //get the command list
+                let commandUrl = `/api/method/appv6.getIrDeviceButtonGroup?command=${command}&type=2`;
+                let commandData = await http2.request(encodeURI(commandUrl), {
+                  method: 'GET',
+                  serializer: 'json',
+                  responseType: 'json',
+                  debug: true,
+                });
+                console.log('commandData', commandData);
+                if (commandData.status == 200 && commandData.data) {
+                  let dataList = commandData.data.button_command;
+                  if (dataList.length > 0) {
+                    dataList.forEach((item) => {
+                      let commandName = item.name;
+                      //create the device button group
+                      let nameList = commandName.split('-');
+                      let thisDeviceButtonGroup = `${nameList[1]}-${nameList[2]}-${nameList[3]}-${nameList[5]}`;
+                      console.log('thisDeviceButtonGroup', thisDeviceButtonGroup);
+                      this.postDeviceButtonGroup = thisDeviceButtonGroup;
+                      this.postTitle = thisDeviceButtonGroup;
+                      return;
+                    });
+                  }
+                }
+              } else {
+                let url = `/api/method/appv6.getIrDeviceButtonGroup?device_type=${device_type}&model=${model}&brand=${thisBrand == 'ALL' ? brand : thisBrand}&type=1`;
+                let resData = await http2.request(encodeURI(url), {
+                  method: 'GET',
+                  serializer: 'json',
+                  responseType: 'json',
+                  debug: true,
+                });
+                console.log('resData', resData);
+                if (resData.status == 200) {
+                  let data = resData.data.device_button_group;
+                  if (data.length > 0) {
+                    this.postDeviceButtonGroup = data[0].name;
+                    this.postTitle = data[0].name;
+                  }
+                }
+              }
+            } catch (error) {
+              app.dialog.alert(error);
+            }
+          },
+          //add to erp
+          async addDeviceToErp() {
+            console.log('addDeviceToErp');
+            app.preloader.show();
+            //get the post data
+            let profileDevice = cloneDeep(erp.info.profile.profile_device);
+            let prodeviceMap = profileDevice.filter((item) => item.device === guid);
+            //get model should pass the device model tabel
+            let hexid = window.peripheral[guid].prop.hexModel;
+            let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
+            let mode = erp.doctype.device_model[`${hexid}`.toUpperCase()].mode;
+            let device_button_group = this.postDeviceButtonGroup;
+            let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+            let postData = {
+              title: this.postTitle,
+              guid: guid,
+              model: model,
+              device_mode: mode,
+              peripheral: core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
+              device_button_group: device_button_group,
+              parent: erp.info.profile.name,
+              batch: isset(device_batch) ? device_batch.batch_id : 'YO0012',
+              firmware: peripheral[guid].getProp().firmware || 0,
+              profile_room: $('select[name="profile_room"]').val(),
+              password: peripheral[guid].getProp().password,
+              mac_address: core_utils_get_mac_address_from_guid(guid),
+            };
+            try {
+              let resData = await http2.request('/api/method/save.subdevice', {
+                method: 'POST',
+                serializer: 'json',
+                responseType: 'json',
+                data: postData,
+              });
+              //update the hide setting
+              if (this.hideStatus) {
+                console.log('resData', resData);
+                const profile_device = resData.data.message.profile_device;
+                profile_device.forEach((item) => {
+                  if (item.device == guid) {
+                    item.hidden_scan = 1;
+                  }
+                });
+                try {
+                  let this_url = '/api/resource/Profile/' + encodeURI(erp.info.profile.name);
+                  await http.request(this_url, {
+                    method: 'PUT',
+                    serializer: 'json',
+                    responseType: 'json',
+                    data: {
+                      'profile_device': profile_device,
+                    },
+                  });
+                } catch (updateError) {
+                  app.dialog.alert(updateError);
+                }
+              }
+              await ha_profile_ready();
+              app.preloader.hide();
+              window.globalUpdate = true;
+              mainView.router.back(mainView.history[mainView.history.length - 4], { force: true });
+            } catch (error) {
+              app.dialog.alert(error);
+            }
+          },
+        },
+        beforeDestroy() {
+          emitter.off('disconnected');
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+      if (this.irTimer) {
+        clearTimeout(this.irTimer);
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .ir-click-button {
+    display: inline-block;
+    height: 65px;
+    width: 65px;
+    border-radius: 50%;
+    line-height: 35px;
+  }
+</style>

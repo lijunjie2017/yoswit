@@ -59,13 +59,13 @@
                     </div>
                   </div>
                   <div class="item-inner room-item-inner" style="margin-left: 0">
-                    <div class="item-title" style="height: 100%; line-height: 70px; margin-left: 10px">${room.title}</div>
+                    <div class="item-title" style="height: 100%; line-height: 70px; margin-left: 10px">${tran(room.title)}</div>
                   </div>
                 </a>
               </div>
               <div class="swipeout-actions-right">
                 <a
-                  href="/mobile-app/app-room-detail-page?roomName=${room.name}&roomTitle=${'Edit ' + room.title}"
+                  href="/mobile-app/app-room-detail-page?roomName=${room.name}&roomTitle=${_('Edit') + room.title}"
                   class="link color-orange"
                 >
                   <i class="icon material-icons">settings</i>
@@ -115,11 +115,11 @@
       ${roomList.length == 0 && $h`
       <div class="block" style="text-align: center">
         <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-        <p>${tran('You don\'t have any room, create one')}</p>
+        <p>${_('You don\'t have any room, create one')}</p>
       </div>
       <div class="block block-strong">
         <p class="row">
-          <a class="col button button-large" href="/frappe/form/{{_('Create Room')}}/APP_HA_Room_Form_V1/Profile Room/null/"
+          <a class="col button button-large" href="/mobile-app/app-room-detail-page?roomTitle=${_('New Room')}"
             >{{ _('Create Room') }}</a
           >
         </p>

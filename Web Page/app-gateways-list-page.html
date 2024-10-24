@@ -11,7 +11,7 @@
         </div>
         <div class="title">{{ _('Gateway') }}</div>
         <div class="right frappe-list-right">
-          <a class="link icon-only searchbar-enable" data-searchbar=".searchbar-demo">
+          <a class="link icon-only searchbar-enable" style="display: none;" data-searchbar=".searchbar-demo">
             <i class="icon f7-icons if-not-md">search</i>
             <i class="icon material-icons md-only">search</i>
           </a>
@@ -317,7 +317,9 @@
               },
             });
             erp.info.profile.profile_device = devices;
+            await ha_profile_ready();
             mainView.router.refreshPage();
+            window.globalUpdate = true;
           } catch (err) {
             app.dialog.alert(err);
           }

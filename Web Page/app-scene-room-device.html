@@ -355,8 +355,8 @@
                           </div>
                         </label>
                       </li>
-                      <li class="radio-box card" v-for="(labelItem,labelIndex) in labelList" :key="labelItem.value">
-                        <div v-on:click="home_ui_click_touch_app_save(labelItem)" style="width: 100%;padding: 15px;">
+                      <li class="radio-box card" v-for="(labelItem,labelIndex) in labelList" :key="labelItem.value" v-on:click="home_ui_click_touch_app_save(labelItem)">
+                        <div style="width: 100%;padding: 15px;">
                           {{labelItem.text}}
                         </div>
                       </li>
@@ -388,15 +388,15 @@
       $onUnmounted = ctx.$onUnmounted;
     const {title,type,target_guid,template_name} = $f7route.query;
     const batch_save = () => {
-      vueApp.$batchSave();
+      roomDeviceVueApp.$batchSave();
     };
     const cancelAll = () => {
-      vueApp.$reSet();
+      roomDeviceVueApp.$reSet();
     };
-    let vueApp = null;
+    let roomDeviceVueApp = null;
     //let {guid,model,device_mode,button_group,img_url,room_name,mac_address,local_ip,target_guid} = $f7route.query;
     $on('pageMounted', (e, page) => {
-      vueApp = new Vue({
+      roomDeviceVueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
           subdevices: [],
@@ -692,14 +692,19 @@
               ];
             }
             this.labelList = chooseList;
-            //open the pop
-            this.popupItem = app.popup
-              .create({
-                el: '.demo-popup-swipe-handler',
-                swipeToClose: true,
-                push: true,
-              })
-              .open();
+            debugger
+            if(this.$popupItem){
+              this.$popupItem.open();
+            }else{
+              //open the pop
+              this.$popupItem = app.popup
+                .create({
+                  el: '.demo-popup-swipe-handler',
+                  swipeToClose: true,
+                  push: true,
+                })
+                .open();
+            }
           },
           rangeChangeFunDimming(element) {
             console.log(element);
@@ -714,8 +719,8 @@
             });
           },
           initRangeBar(guid, button_group, value) {
-            console.log($(`.range-slider-scene[guid="${guid}"][button_group="${button_group}"]`));
             setTimeout(() => {
+              console.log($(`.range-slider-scene[guid="${guid}"][button_group="${button_group}"]`));
               let range_silder = app.range.create({
                 el: `.range-slider-scene[guid="${guid}"][button_group="${button_group}"]`,
                 value: isset(value) ? value : 100,
@@ -731,7 +736,7 @@
                   changed: this.rangeChangeFunDimming,
                 },
               });
-            }, 150);
+            }, 200);
           },
           changeBarUI(guid, device_button_group, present_value) {
             $(`.range-slider-scene[guid="${guid}"][button_group="${device_button_group}"]`)
@@ -876,8 +881,9 @@
           },
           home_ui_click_touch_app_save(labelItem) {
             this.clickStatus = false;
-            if(this.popupItem){
-              this.popupItem.close(50)
+            debugger
+            if(this.$popupItem){
+              this.$popupItem.close(50)
             }
             let value = labelItem.value;
             let type = labelItem.type;
@@ -892,12 +898,13 @@
               }
             });
             thisSubItem.buttonBoxType = 0;
-            debugger
+            
             if (
               type == 2 &&
               (thisSubItem.device_button_group.startsWith('DIMMING') || thisSubItem.device_button_group.startsWith('RCU DIMMING'))
             ) {
               thisSubItem.buttonBoxType = 1; //1 dimming range bar ,2 curtain range bar  , 3 thermostat box ,4 IR box
+              this.$set(this.subdevices[thisSubIndex],'buttonBoxType',1);
               this.initRangeBar(thisSubItem.device, thisSubItem.device_button_group);
               thisSubItem.turnlight = value;
               thisSubItem.ref = 100;
@@ -930,8 +937,9 @@
             } else { 
               thisSubItem.buttonBoxType = 0;
             }
-            if (isset(this.popupItem)) {
-              this.popupItem.close();
+            this.$set(this.subdevices,thisSubIndex,thisSubItem);
+            if (isset(this.$popupItem)) {
+              this.$popupItem.close();
             }
           },
           toScene(device_item){
@@ -973,9 +981,10 @@
         },
       });
     });
-    $on('pageBeforeUnmount', (e, page) => {
-      if (vueApp) {
-        vueApp.$destroy();
+    $on('pageBeforeRemove', (e, page) => {
+    console.log("leave")
+      if (roomDeviceVueApp) {
+        roomDeviceVueApp.$destroy();
       }
     });
     return $render;

@@ -1,0 +1,162 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${tran(title?title:'Unassigned')}</div>
+        <div class="right">
+          ${roome_type != 'Unassigned' && $h`
+          <a href="#" class="link icon-only sortable-toggle" ref="0|${erp.info.profile.name}" func="profile_room_device_sortable">
+            <i class="icon material-icons">filter_list</i>
+          </a>
+          `}
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="list media-list chevron-center sortable" style="margin-top: 0; overflow-x: hidden">
+        <ul class="dynamic-list-generated-from-jinja">
+          ${deviceList.map((subDevice)=> $h`
+          <li
+            class="device swipeout swipeout-delete-manual"
+            device-name="${subDevice.name}"
+            swipeout-delete-func="controller_iot_device_delete"
+            ref="${ device.name }|${ subDevice.name }"
+            key="${subDevice.name}"
+          >
+            <div class="item-content swipeout-content">
+              <div class="item-media" style="background-image: url('${ subDevice.img_url }')"></div>
+              <div class="item-inner">
+                <div class="item-title">
+                  <font lang="en" lang-packet="${ subDevice.title }">${ tran(subDevice.title) }</font>
+                </div>
+                <div class="item-subtitle">
+                  ${ subDevice.model }-${ subDevice.device_button_group === 'OPEN_LOCK' || subDevice.device_button_group ===
+                  'WRITE_WIEGAND_4963'?subDevice.device:subDevice.mac_address }
+                </div>
+                <div class="item-text">${subDevice.device}</div>
+              </div>
+            </div>
+            <div class="swipeout-actions-right">
+              <a
+                href="#"
+                ref="${ subDevice.name }"
+                func="app_set_device_hidden"
+                class="link ${subDevice.hidden == 1?'color-cust-grey':'color-green'}"
+              >
+                <i class="icon material-icons">${ subDevice.hidden == 1?'visibility_off':'visibility'}</i>
+              </a>
+              <a
+                href="/frappe/detail/${ tran(subDevice.title) } Setting/APP_Yoswit_Setting_Device_Information/Profile Subdevice/${ subDevice.name }/guid=${ subDevice.device }&device_button_group=${ subDevice.device_button_group }&title=Edit ${ tran(subDevice.titl) }&name=${ subDevice.name }&doctype=Profile Subdevice/"
+                class="link color-orange"
+              >
+                <i class="icon material-icons">settings</i>
+              </a>
+              {#
+              <a href="#" data-confirm="Are you sure you want to delete this item?" class="link swipeout-delete">
+                <i class="icon material-icons">delete</i>
+              </a>
+              #}
+            </div>
+            <div class="sortable-handler"></div>
+          </li>
+          `)}
+        </ul>
+        ${!deviceList.length && roome_type != 'Unassigned' && $h`
+        <div class="device-create">
+          <div class="block" style="text-align: center">
+            <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+            <p>${tran('You don\'t have any devices, create one.')}</p>
+          </div>
+          <div class="block block-strong">
+            <p class="row">
+              <a class="col button button-large" href="/frappe/form/{{_('Create Device')}}/APP_Yoswit_Device_Type_V5/Device/null/"
+                >{{ _('Create Device') }}</a
+              >
+            </p>
+          </div>
+        </div>
+        `} ${roome_type === 'Unassigned' && $h`
+        <div class="unassigned-box" style="min-height: 48px">
+          <div class="list media-list chevron-center sortable" style="margin-top: 0; overflow-x: hidden">
+            <ul class="dynamic-list-generated-from-jinja"></ul>
+          </div>
+        </div>
+        `}
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    const { title, room, roome_type,page_type } = $f7route.query;
+    console.log("page_type",page_type)
+    let refreshFun;
+    console.log(roome_type);
+    let deviceList = [];
+    const unasignedLoad = () => {
+      window.unassigned_load_type = roome_type;
+      if (roome_type === 'Unassigned') {
+        window.unassigned_profile = erp.info.profile;
+        window.load_unassigned_devices();
+      }
+    };
+    const init = async () => {
+      let list = cloneDeep(erp.info.profile.profile_subdevice);
+      let profile_device = [];
+      deviceList = [];
+      profile_device = cloneDeep(erp.info.profile.profile_device);
+      console.log('profile_device', profile_device);
+      let device_models = erp.doctype.device_model;
+      list.forEach((item) => {
+        //get the image
+
+        profile_device.forEach((kitem) => {
+          if (kitem.name === item.profile_device) {
+            item.model = kitem.device_model;
+            item.mac_address = kitem.device_name;
+          }
+        });
+        for (let i in device_models) {
+          if (item.model == device_models[i].model_code) {
+            item.img_url = device_models[i].image || 'https://my.yoswit.com/files/products/YO2086-1G.svg';
+          }
+        }
+        if (item.profile_room === room) {
+          deviceList.push(item);
+        }
+      });
+      $update();
+    };
+    $onMounted(() => {
+      if(refreshFun){
+        emitter.off('refresh',refreshFun);
+      }
+      refreshFun = ()=>{
+        init();
+      }
+      emitter.on('refresh',refreshFun);
+      init();
+      unasignedLoad();
+    });
+    return $render;
+  };
+</script>

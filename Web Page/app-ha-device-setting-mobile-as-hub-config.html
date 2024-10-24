@@ -40,7 +40,7 @@
           <div class="tabs">
             <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
               <div class="title-tip" style="padding: 0px 0px 0px 15px">
-                <span class="text-muted">{{_('If you need to modify the devices in the network, please click details to view')}}</span>
+                <span class="text-muted">{{_('If you need to modify the devices in the network, please click details to view.')}}</span>
               </div>
               <device-network-list-component
                 :guid="guid"
@@ -252,7 +252,7 @@
           },
           async checkMqttStatus() {
             let topic_self = this.guid;
-            let will_topic = `will/${md5(md5(topic_self.toLowerCase()))}`;
+            let will_topic = `will/${md5(md5(topic_self))}`;
             this.will_topic = will_topic;
             mqtt.subscribe(will_topic);
             if (this.$topicFun) {
@@ -260,7 +260,7 @@
             }
             this.$topicFun = async (res) => {
               let message = res.message;
-              if (message == 'Online') {
+              if (message.startsWith('Online')) {
                 this.statusList[0].status = 1;
                 this.statusList[1].status = 1;
                 try {
@@ -302,9 +302,9 @@
                 targetDeviceNum++;
               }
             })
-            mqtt.subscribe('status/' + md5(md5(topic_self.toLowerCase()))).then(() => {
+            mqtt.subscribe('status/' + md5(md5(topic_self))).then(() => {
               core_mqtt_publish(
-                'cmd/' + md5(md5(topic_self.toLowerCase())),
+                'cmd/' + md5(md5(topic_self)),
                 {
                   'command': 'Pubmsg',
                   'function': 'bleHelper.pubmsg',
@@ -317,8 +317,8 @@
                 false,
                 false
               );
-              emitter.off('status/' + md5(md5(topic_self.toLowerCase())));
-              emitter.on('status/' + md5(md5(topic_self.toLowerCase())), (res) => {
+              emitter.off('status/' + md5(md5(topic_self)));
+              emitter.on('status/' + md5(md5(topic_self)), (res) => {
                 let message = JSON.parse(res.message);
                 if (isset(message.Device)) {
                   let deviceobj = message.Device;
@@ -400,6 +400,7 @@
           //emitter.off(this.$topic,this.$topicFun);
           emitter.off('gateway/sync', this.$gatewaySyncFun);
           emitter.off(this.will_topic, this.$topicFun);
+          emitter.off('devic/network/add',this.$addNetwork);
           // beforeDestroy
         },
         destroyed() {
@@ -407,7 +408,7 @@
         },
       });
     });
-    $on('pageBeforeUnmount', (e, page) => {
+    $on('pageBeforeRemove', (e, page) => {
       if (vueApp) {
         vueApp.$destroy();
       }
@@ -462,9 +463,9 @@
   }
 
   .signal-icon img {
-    width: 50px; /* 或者根据你的图标实际大小调整 */
+    width: 50px; /*  */
     height: auto;
-    z-index: 2; /* 确保图标位于扩散波纹之上 */
+    z-index: 2; /*  */
   }
 
   .signal-wave {

@@ -154,6 +154,9 @@ window.device_wifi_setting_component = {
         username: '',
         server_password: '',
       },
+      originalSsid: '',
+      originalSsidPassword: '',
+      originalEmail: '',
       wifiInfo: {
         ipaddress: '',
         wifimacaddress: '',
@@ -185,9 +188,14 @@ window.device_wifi_setting_component = {
         settingList.forEach((item) => {
           if (item.setting_type === 'Wifi SSID') {
             this.setting.ssid = item.setting;
+            this.originalSsid = item.setting;
           }
           if (item.setting_type === 'Wifi Password') {
             this.setting.ssid_password = item.setting;
+            this.originalSsidPassword = item.setting;
+          }
+          if(item.setting_type === 'Email Address'){
+            this.originalEmail = item.setting;
           }
         });
         if (this.setting.ssid && this.setting.ssid_password) {
@@ -331,7 +339,21 @@ window.device_wifi_setting_component = {
         emitter.emit('wifi/set', { code: 0 });
         return;
       }
-
+      //check if the ssid and the password and the topic have no save,break this step and next step
+      if(this.setting.ssid === this.originalSsid && this.setting.ssid_password === this.originalSsidPassword && this.setting.email === this.originalEmail){  
+        clearTimeout(this_timer);
+          emitter.emit('refresh', {});
+          window.globalUpdate = true;
+          if (this.type == 2) {
+            app.preloader.show();
+            this.checkIfOnline();
+          } else {
+            mainView.router.back();
+          }
+          //app.preloader.hide();
+          this.settingStatus = true;
+          return
+      }
       // if (!this.setting.email) {
       //   this.setting.email = users[users.current].usr;
       // }
@@ -380,13 +402,16 @@ window.device_wifi_setting_component = {
         })
         .then(() => {
           let mac = core_utils_get_mac_address_from_guid(guid, false);
-          let url = `/api/resource/Profile%20Device/${this.device_name}`;
+          let devices = cloneDeep(erp.info.profile.profile_device);
+          devices.forEach(item=>{
+            if(item.name == this.device_name){
+              item.gateway = `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`;
+            }
+          })
+          let url = `/api/resource/Profile/${erp.info.profile.name}`;
           let method = 'PUT';
           let data = {
-            parenttype: 'Profile',
-            parent: erp.info.profile.name,
-            parentfield: 'profile_device',
-            gateway: `${mac.toLowerCase()}-${this.setting.email}`,
+            profile_device : devices
           };
           return http.request(url, {
             method: method,
@@ -439,6 +464,17 @@ window.device_wifi_setting_component = {
             'Server Port': this.setting.port || 'null',
             'Server URI': this.setting.server_url || 'null',
           });
+        })
+        .catch((err) => {
+          debugger
+          app.preloader.hide();
+          console.log(err);
+          clearTimeout(this_timer);
+          if (this.type == 2) {
+            emitter.emit('wifi/set', { code: 0 });
+          }
+          app.dialog.alert(err);
+
         })
         .then(() => {
           let mac = core_utils_get_mac_address_from_guid(guid, false);

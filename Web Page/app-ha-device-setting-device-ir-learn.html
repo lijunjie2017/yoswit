@@ -1,0 +1,850 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('IR Learn') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="list no-hairlines-md" style="margin: 10px 0">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div
+                            class="item-title item-label"
+                            style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                          >
+                            {{ _("Template Name") }}
+                          </div>
+                          <div class="item-input-wrap">
+                            <input
+                              class="init-input"
+                              name="title"
+                              type="text"
+                              :placeholder="_('Input your template name')"
+                              required
+                              v-model="TemplateName"
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="auto-status-text margin-top" style="text-align: center">
+                    {{ _('Please click the button below to learn the code.') }}
+                  </div>
+                  <div class="display-flex justify-content-space-between" style="flex-wrap: wrap">
+                    <div
+                      :class="{'ir-item':true}"
+                      v-for="(configItem,configIndex) in panelConfig[deviceType]"
+                      :key="configItem.text"
+                      :style="{'position':'relative','width' : 'calc('+configItem.width+'%)','margin-top' : '15px','opacity' : configItem.buttonType == 4 ? '0' : '1'}"
+                      v-on:click="toTab(2,configIndex)"
+                    >
+                      <a
+                        href="#"
+                        :class="{'button':true,'button-large':true,'button-raised':configItem.buttonType != 3,'bg-theme':configItem.code?true:false}"
+                        style="padding: 30px 0px"
+                      >
+                        <i class="icon material-icons" style="font-size: 30px" v-if="configItem.buttonType == 1">{{configItem.text}}</i>
+                        <span v-else>{{configItem.text}}</span>
+                      </a>
+                      <i
+                        class="icon material-icons text-color-white"
+                        style="position: absolute; top: 5px; right: 5px"
+                        v-if="configItem.code"
+                        >check</i
+                      >
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                    <div class="col" v-if="deviceType == 'Air Conditioner'">
+                      <div class="button button-fill button-save" v-on:click="addModel()">{{_("ADD MODEL")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="saveButtonGroupAndDeviceCommand()">{{_("APPLY")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Button And Setting")}}</div>
+                <div class="card-content card-content-padding">
+                  <div class="list no-hairlines-md" style="margin: 10px 0">
+                    <ul>
+                      <li class="item-content item-input" v-if="deviceType == 'Air Conditioner'">
+                        <div class="item-inner">
+                          <div
+                            class="item-title item-label"
+                            style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                          >
+                            {{ _("Button Name") }}
+                          </div>
+                          <div class="item-input-wrap">
+                            <input
+                              class="init-input"
+                              name="title"
+                              type="text"
+                              :placeholder="_('Button Name')"
+                              required
+                              v-model="panelConfig[deviceType][configIndex].text"
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div
+                            class="item-title item-label"
+                            style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                          >
+                            {{ _("Command") }}
+                          </div>
+                          <div class="item-input-wrap">
+                            <input
+                              class="init-input"
+                              name="title"
+                              type="text"
+                              :placeholder="_('Learn Command')"
+                              required
+                              readonly
+                              v-model="learnCode"
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toStudy()">{{_("Learn")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTest()">{{_("Test")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="saveConfig(1)">{{_("SAVE")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row">
+                    <div class="col-100">
+                      <h5>{{ _('Profile Settings') }}</h5>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-content card-content-padding">
+                  <div class="list no-hairlines-md">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i class="icon material-icons setting-list-icon p-1">bed</i>
+                        </div>
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Room')}}</div>
+                          <div class="item-input-wrap input-dropdown-wrap">
+                            <select name="profile_room" placeholder="" lang="en">
+                              <option :value="roomItem.name" selected="selected" v-for="roomItem in profileRoom" :key="roomItem.name">
+                                {{tran(roomItem.title)}}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                        </div>
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Name')}}</div>
+                          <div class="item-input-wrap">
+                            <input class="init-input" name="title" v-model="postTitle" type="text" placeholder="Device Name" />
+                            <span class="input-clear-button"></span>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i
+                            class="icon material-icons setting-list-icon p-1 text-color-theme"
+                            v-if="hideStatus"
+                            v-on:click="hideStatus = !hideStatus"
+                            >check_box</i
+                          >
+                          <i class="icon material-icons setting-list-icon p-1" v-if="!hideStatus" v-on:click="hideStatus = !hideStatus"
+                            >check_box_outline_blank</i
+                          >
+                        </div>
+                        <div class="item-inner">
+                          <div class="" style="line-height: 30px">{{ _('Hide IR Device') }}</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("previous")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="saveErp()">{{_("COMPLETE")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let { brand, device_type, guid, model } = $f7route.query;
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1,
+          configIndex: 0,
+          learnCode: '',
+          deviceType: device_type,
+          TemplateName: '',
+          irData: [],
+          profileRoom: [],
+          postTitle: '',
+          hideStatus: true,
+          panelConfig: {
+            'Air Conditioner': [
+              { text: 'ON', width: '47', buttonType: 2, code: '' },
+              { text: 'OFF', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+            ],
+            'Television': [
+              { text: 'power_settings_new', width: '47', buttonType: 1, code: '' },
+              { text: 'AV / TV', width: '47', buttonType: 2, code: '' },
+              { text: '-', width: '30', buttonType: 2, code: '' },
+              { text: 'CH', width: '30', buttonType: 3, code: '' },
+              {
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+                code: '',
+              },
+              {
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '43',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '45',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '47',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '51',
+                buttonType: 2, //1-icon 2-text 3-no boder 4-hidden
+                text: 'HOME',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '49',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+                code: '',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '--/-',
+                width: '30',
+                code: '',
+              },
+            ],
+            'Set-top boxes': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Fan': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Projector': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Air Purifier': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'IPTV': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Dehumidifier': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Camera': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Robot Vacuum': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'DVD': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Lamp': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+            'Water Heater': [
+              { text: 'POWER', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL3', width: '47', buttonType: 2, code: '' },
+            ],
+          },
+        },
+        watch: {},
+        computed: {},
+        mounted() {
+          this.initProfileData();
+          emitter.on('disconnected', (data) => {
+            let thisId = window.peripheral[guid].prop.id;
+            if (data.id == thisId) {
+              //device is disconnected
+              app.dialog.close();
+              app.dialog.alert(`${_('Sorry,device is disconnected,retry please.')}`);
+            }
+          });
+        },
+        methods: {
+          initProfileData() {
+            this.profileRoom = cloneDeep(erp.info.profile.profile_room);
+          },
+          toTab(index, configIndex) {
+            this.index = index;
+            if (this.index == 3) {
+              if (!this.postTitle) {
+                this.postTitle = this.TemplateName;
+              }
+            }
+            if (isset(configIndex)) {
+              this.configIndex = configIndex;
+              //if no code,should no show the command
+              let code = this.panelConfig[this.deviceType][this.configIndex].code;
+              this.learnCode = code ? md5(code) : '';
+            }
+          },
+          async saveButtonGroupAndDeviceCommand() {
+            //check if input the name
+            // if(!this.TemplateName){
+            //   app.dialog.alert(`${_('Please enter the template name.')}`);
+            //   return
+            // }
+            if (!this.postTitle) {
+              this.postTitle = this.TemplateName;
+            }
+            //save this info in button group and device command
+            
+            //init button_group_sub_list
+            let button_group_sub_list = [];
+            let list = this.panelConfig[this.deviceType];
+            console.log('list', list);
+            
+            //check if not study code
+            let codeStatus = 0;
+            list.forEach((item, index) => {
+              if (!item.code && item.buttonType != 3 && item.buttonType != 4) {
+                codeStatus++;
+              }
+              button_group_sub_list.push({
+                'device_command': `IR-${this.deviceType}-${brand}-learn_model-${md5(this.TemplateName + erp.info.profile.name)}`,
+                'width': item.width == 47 ? '50%' : '33.3%',
+                'button_type': (item.buttonType != 3 && item.buttonType != 4)?'Normal':'Label',
+                'doctype': 'Device Button Group List',
+                'button_signal': index,
+                'button_name' : item.text == 'power_settings_new'?'On / Off':item.text
+              });
+            });
+            let tips = `${_('Are you sure you want to submit?')}`;
+            if(codeStatus > 0){
+              tips = `${_('There are')} ${codeStatus} ${_('templates that have not been matched. Are you sure you want to submit?')}`;
+            }
+            app.dialog.confirm(
+              `${_(tips)}`,
+              async () => {
+                app.dialog.preloader();
+                let postData = {
+                  'device_command_name': `IR-${this.deviceType}-${brand}-learn_model-${md5(this.TemplateName + erp.info.profile.name)}`,
+                  'config': JSON.stringify(this.panelConfig[this.deviceType]),
+                  'device_command_id': '',
+                  'device_button_group_name': `${this.deviceType}-${brand}-learn_model-${md5(this.TemplateName + erp.info.profile.name)}`,
+                  'button_group_list': [],
+                  'button_group_sub_list': button_group_sub_list,
+                  'device_type': this.deviceType
+                };
+                console.log('postData', postData);
+                try {
+                  let resData = await http2.request('/api/method/appv6.saveIrDeviceButtonGroupAndDeviceCommand', {
+                    method: 'POST',
+                    serializer: 'json',
+                    responseType: 'json',
+                    debug:true,
+                    data: postData,
+                  });
+                  app.dialog.close();
+                  this.index = 3;
+                } catch (error) {
+                  app.dialog.close();
+                  app.dialog.alert(error);
+                }
+              },
+              () => {}
+            );
+          },
+          async saveErp() {
+            let subDevice = cloneDeep(erp.info.profile.profile_subdevice);
+            console.log('addDeviceToErp');
+            app.dialog.preloader();
+            //get model should pass the device model tabel
+            let hexid = window.peripheral[guid].prop.hexModel;
+            let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
+            let mode = erp.doctype.device_model[`${hexid}`.toUpperCase()].mode;
+            let device_button_group = 'IR-DIY-no_model';
+            let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+            let postData = {
+              title: this.postTitle,
+              guid: guid,
+              model: model,
+              device_mode: mode,
+              peripheral: core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
+              device_button_group: device_button_group,
+              parent: erp.info.profile.name,
+              batch: isset(device_batch) ? device_batch.batch_id : 'YO0012',
+              firmware: peripheral[guid].getProp().firmware || 0,
+              profile_room: $('select[name="profile_room"]').val(),
+              password: peripheral[guid].getProp().password,
+              mac_address: core_utils_get_mac_address_from_guid(guid),
+              config: JSON.stringify({ 'title': this.TemplateName, 'list': this.panelConfig[this.deviceType] }),
+            };
+            try {
+              let resData = await http2.request('/api/method/save.subdevice', {
+                method: 'POST',
+                serializer: 'json',
+                responseType: 'json',
+                data: postData,
+              });
+              //update the hide setting
+              if (this.hideStatus) {
+                console.log('resData', resData);
+                const profile_device = resData.data.message.profile_device;
+                profile_device.forEach((item) => {
+                  if (item.device == guid) {
+                    item.hidden_scan = 1;
+                  }
+                });
+                //update the profile_subdevice
+                let profile_subdevice = resData.data.message.profile_subdevice;
+                try {
+                  let this_url = '/api/resource/Profile/' + encodeURI(erp.info.profile.name);
+                  await http.request(this_url, {
+                    method: 'PUT',
+                    serializer: 'json',
+                    responseType: 'json',
+                    data: {
+                      'profile_device': profile_device,
+                    },
+                  });
+                } catch (updateError) {
+                  app.dialog.alert(updateError);
+                }
+              }
+              await ha_profile_ready();
+              app.dialog.close();
+              window.globalUpdate = true;
+              mainView.router.back(mainView.history[mainView.history.length - 5], { force: true });
+            } catch (error) {
+              app.dialog.alert(error);
+            }
+          },
+          saveConfig() {
+            //this.panelConfig[this.deviceType][this.configIndex].code = this.irData.join('');
+            this.index = 1;
+          },
+          showCode() {
+            this.panelConfig[this.deviceType][this.configIndex].code = this.irData.join('');
+            this.learnCode = md5(this.irData.join(''));
+          },
+          addModel() {
+            this.panelConfig[this.deviceType].push({ text: 'New Model', width: '47', buttonType: 2, code: '' });
+          },
+          countSubstrings(inputString) {
+            const substrings = ['00', 'ff'];
+            const counts = {};
+            substrings.forEach((sub) => {
+              const matches = inputString.match(new RegExp(sub, 'g'));
+              counts[sub] = matches ? matches.length : 0;
+            });
+            return counts;
+          },
+          async toStudy() {
+            //auto to matching
+            console.log('toStudy');
+            let errorStatus = false;
+            let code = this.panelConfig[this.deviceType][this.configIndex].code;
+            this.learnCode = code ? md5(code) : '';
+            this.irData = [];
+            app.dialog.preloader(`${_('Preparing, please wait...')}`);
+            let uuid = window.peripheral[guid].prop.id;
+            try {
+              await window.peripheral[guid].connect();
+              //start notify
+              ble.startNotification(
+                peripheral[guid].prop.id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log('start notify');
+                  if (rs.startsWith('89')) {
+                    console.log('rs', rs);
+                    let index = rs.substring(2, 4);
+                    let ir_learned_data = rs.substring(4, rs.length);
+                    this.irData.push(ir_learned_data);
+                    if (index == '00' && rs != '8900' && !errorStatus) {
+                      app.dialog.close();
+                      console.log('this.irData', this.irData);
+                      console.log('ir_code', this.irData.join(''));
+                      //should be check the device_type
+                      this.showCode();
+                      //$(`.init-input[name="ir_code"]`).val(this.irData.join(''));
+                    } else if (index == '0a') {
+                      //if get the ir code is all 0,means learn the code is empty
+                      //18 str,if 00 or ff count > 5,means the code is empty
+                      let ir_learned_data = rs.substring(4, rs.length);
+                      let obj = this.countSubstrings(ir_learned_data);
+                      console.log('obj', obj);
+                      if (obj['00'] > 10 || obj['ff'] > 10) {
+                        errorStatus = true;
+                        app.dialog.close();
+                        app.dialog.alert(
+                          _(
+                            `Sorry, the received infrared code is incomplete. Please get closer to the device and press the button again, and avoid pressing multiple times.`
+                          )
+                        );
+                      }
+                    } else if (rs == '8900') {
+                      //can not get the code
+                      app.dialog.close();
+                      app.dialog.alert(_(`Sorry, no data was received. Please re-learn the code.`));
+                    }
+                  }
+                },
+                (notifyError) => {
+                  console.log('notifyError', notifyError);
+                }
+              );
+              let data = '8700';
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+              app.dialog.close();
+              //check the times of the study
+              let title = `${_('Please press the corresponding remote control button based on the key function.')}`;
+              app.dialog.preloader(title);
+            } catch (err) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+          async toTest() {
+            const TAG = 'iot_ir_test';
+            console.log(TAG);
+            let code = this.panelConfig[this.deviceType][this.configIndex].code;
+            if (!code) {
+              app.dialog.alert(_('Sorry, the infrared code has not been learned yet.'));
+              return;
+            }
+            let this_data = `3003${code.substring(2, code.length)}`;
+            let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+            let handle_data = iot_ir_learned_init(this_data);
+            let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+            console.log('ref', ref);
+            try {
+              await window.peripheral[guid].sendIR(ref);
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+        },
+        beforeDestroy() {
+          emitter.off('disconnected');
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .ir-click-button {
+    display: inline-block;
+    height: 65px;
+    width: 65px;
+    border-radius: 50%;
+    line-height: 35px;
+  }
+  .bg-theme {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .bg-theme a {
+    color: #fff;
+  }
+</style>

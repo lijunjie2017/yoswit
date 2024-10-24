@@ -61,7 +61,7 @@ window.device_network_list_component = {
         <div class="device-null" v-if="networkList.length == 0">
           <div class="block" style="text-align: center">
             <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-            <p>${_("You don't have any network batch, create one")}</p>
+            <p>${_("You don't have any network batch, create one.")}</p>
           </div>
           <div class="block block-strong">
             <p class="row">
@@ -95,6 +95,7 @@ window.device_network_list_component = {
     emitter.on('refresh', (data) => {
       this.initNetwork();
     });
+    debugger
     if(this.$addNetwork){
       emitter.off('devic/network/add',this.$addNetwork);
     }
@@ -118,6 +119,7 @@ window.device_network_list_component = {
       }
     }
     this.$addNetwork = (data)=>{
+      console.log("createNetwork");
       this.createNetwork();
     }
     emitter.on('devic/network/add',this.$addNetwork);

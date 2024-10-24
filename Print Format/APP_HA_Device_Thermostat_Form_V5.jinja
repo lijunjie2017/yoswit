@@ -1,0 +1,320 @@
+{# App Script: iot_device_thermostat_form.js #}
+
+{% set profile_subdevice = frappe.get_doc('Profile Subdevice', doc.docname) %}
+{% set device = frappe.get_doc('Device', profile_subdevice.device) %}
+
+{% set setting_type = "Thermostat" %}
+
+script
+<!-- equalto -->
+setTimeout(() => {
+    iot_device_thermostat_form_init({{ device|json|tojson }});
+}, 100)
+
+<!-- split -->
+
+frappe-form-right
+<!-- equalto -->
+<a href="#" class="link icon-only" func="controller_frappe_form_reset">
+	<i class="icon material-icons">replay</i>
+</a>
+<a href="#" class="link icon-only" ref="{{ profile_subdevice.device }}" func="iot_device_thermostat_form_save">
+	<i class="icon material-icons">check</i>
+</a>
+<!-- split -->
+<style>
+    .range-knob{
+        width: 150%;
+        height: 150%;
+    }
+    .px-3{
+        margin:30px 0!important;
+    }
+    .range-knob-label{
+        transform: translateY(0%) scale(1)!important;
+    }
+</style>
+<div class="card">
+    
+    <div class="card-content card-content-padding overflow-hidden">
+        <div>
+            <div class="list">
+                <ul>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Fan Speed") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="fan_speed" 
+                                    value=""
+                                    placeholder="{{ _('Fan Speed') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-fan-speed-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Mode Selection") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="mode_selection" 
+                                    value=""
+                                    placeholder="{{ _('Mode Selection') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-mode-selection-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Temperature Sensor") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="temperature_sensor" 
+                                    value=""
+                                    placeholder="{{ _('Temperature Sensor') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-temperature-sensor-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Temperature Offset") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="temperature_offset" 
+                                    value=""
+                                    placeholder="{{ _('Temperature Offset') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-temperature-offset-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Humidity Offset") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="humidity_offset" 
+                                    value="1"
+                                    placeholder="{{ _('Humidity Offset') }}"
+                                    readonly="readonly" 
+                                    id="thermostat-humidity-offset-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Fan Speed In Auto Mode In Dead Band") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="fan_speed_in_auto_mode_in_dead_band" 
+                                    value=""
+                                    placeholder="{{ _('Fan Speed In Auto Mode In Dead Band') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-dead-band-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("OCC") }}</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                                <select id="thermostat-occ" name="occ" placeholder="Please choose..."></select>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Cooling Setpoint Unoccupied") }}</div>
+                            <div class="item-input-wrap pb-1">
+                                <div class="display-flex flex-direction-row px-3">
+                                    <div id="thermostat-cooling-setpoint-unoccupied-slider" class="range-slider color-primary">
+                                        <input type="range" name="cooling_setpoint_unoccupied" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Heating Setpoint unoccupied") }}</div>
+                            <div class="item-input-wrap pb-1">
+                                <div class="display-flex flex-direction-row px-3">
+                                    <div id="thermostat-heating-setpoint-unoccupied-slider" class="range-slider color-primary">
+                                        <input type="range" name="heating_setpoint_unoccupied" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Fan Mode When Unoccupied") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="fan_mode_when_unoccupied" 
+                                    value=""
+                                    placeholder="{{ _('Fan Mode When Unoccupied') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-unoccupied-fan-mode-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Cooling Setpoint Limit") }}</div>
+                            <div class="item-input-wrap pb-1">
+                                <div class="display-flex flex-direction-row px-3">
+                                    <!-- <div id="thermostat-setpoint-limit-lower-slider" class="range-slider color-primary">
+                                        <input type="range" name="setpoint_limit_lower" />
+                                    </div>-->
+                                    <div class="range-slider range-slider-init color-primary" id="thermostat-setpoint-limit-lower-slider" @range:change=${onPriceChange} data-label="true"
+                                        data-dual="true" data-min="0" data-max="500" data-step="1" data-value-left="5" data-value-right="32">
+                                        <input type="range" name="setpoint_limit_lower" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Heating Setpoint Limit") }}</div>
+                            <div class="item-input-wrap pb-1">
+                                <div class="display-flex flex-direction-row px-3">
+                                    <!-- <div id="thermostat-setpoint-limit-upper-slider" class="range-slider color-primary">
+                                        <input type="range" name="setpoint_limit_upper" />
+                                    </div>-->
+                                    <div class="range-slider range-slider-init color-primary" id="thermostat-setpoint-limit-upper-slider" @range:change=${onPriceChange} data-label="true"
+                                        data-dual="true" data-min="0" data-max="500" data-step="1" data-value-left="5" data-value-right="32">
+                                        <input type="range" name="setpoint_limit_upper" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Frost Protection") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="frost_protection" 
+                                    value=""
+                                    placeholder="{{ _('Frost Protection') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-frost-protection-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Frost Protection Setpoint") }}</div>
+                            <div class="item-input-wrap pb-1">
+                                <div class="display-flex flex-direction-row px-3">
+                                    <div id="thermostat-frost-protection-setpoint-slider" class="range-slider color-primary">
+                                        <input type="range" name="frost_protection_setpoint" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Restart after Power Failure") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="restart_after_power_failure" 
+                                    value=""
+                                    placeholder="{{ _('Restart after Power Failure') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-restart-after-power-failure-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Backlight Off") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="backlight_off" 
+                                    required 
+                                    validate
+                                    pattern="^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+                                    value="30"
+                                    placeholder="{{ _('Backlight Off') }} (0-255)" 
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Keypad Lock After Backlight Off") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="keypad_lock_after_backlight_off" 
+                                    value=""
+                                    placeholder="{{ _('Keypad Lock After Backlight Off') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-keypad-lock-after-backlight-off-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Backlight Brightness") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="backlight_brightness" 
+                                    required 
+                                    validate
+                                    pattern="^(100|[1-9][0-9]?)$"
+                                    value="100"
+                                    placeholder="{{ _('Backlight Brightness') }} (1-100)" 
+                                />
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content item-input no-padding-left" style="display: none;">
+                        <div class="item-inner no-padding-right">
+                            <div class="item-title item-label">{{ _("Screen Lights Up On Command") }}</div>
+                            <div class="item-input-wrap">
+                                <input 
+                                    type="text"
+                                    name="screen_lights_up_on_command" 
+                                    value=""
+                                    placeholder="{{ _('Screen Lights Up On Command') }}" 
+                                    readonly="readonly" 
+                                    id="thermostat-screen-lights-up-picker"
+                                />
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

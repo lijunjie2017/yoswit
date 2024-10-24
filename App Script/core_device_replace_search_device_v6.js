@@ -40,7 +40,7 @@ window.core_device_replace_search_device = function(params){
 									'<a class="link" func="core_device_replace_update_search_device"><i class="material-icons">refresh</i></a>'+
 								'</div>'+
 								'<div class="right">'+
-									'<a class="link show-more-button" func="core_device_replace_update_show_more_device" show-more="false"><span style="font-size:18px;">more</span><i class="material-icons text-color-gray" style="font-size:50px;">toggle_off</i></a>'+
+									'<a class="link show-more-button" func="core_device_replace_update_show_more_device" show-more="false"><span style="font-size:18px;">'+_('more')+'</span><i class="material-icons text-color-gray" style="font-size:50px;">toggle_off</i></a>'+
 								'</div>'+
 							'</div>'+
 						'</div>'+

@@ -33,7 +33,7 @@
                     <li class="item-content item-input no-padding-left">
                       <div class="item-inner no-padding-right">
                         <div class="item-title item-label" lang="en" style="font-size: 16px">
-                          Ssid <span class="text-color-red" style="font-size: 12px">( {{wifi_tip}} )</span>
+                          {{_('Ssid')}} <span class="text-color-red" style="font-size: 12px">( {{wifi_tip}} )</span>
                         </div>
                         <div class="item-input-wrap">
                           <input
@@ -105,7 +105,7 @@
                   </div>
                 </div>
                 <div class="col align-self-center no-padding-left">
-                  <h5 class="no-margin-bottom">{{tran('WiFi Infomation')}}</h5>
+                  <h5 class="no-margin-bottom">{{_('WiFi Information')}}</h5>
                 </div>
                 <div class="col-auto"></div>
               </div>
@@ -115,7 +115,7 @@
                     <li>
                       <a class="item-content" style="padding-left: 0px">
                         <div class="item-inner" style="padding-right: 0px">
-                          <div class="item-title">{{tran('IPv4 address')}}</div>
+                          <div class="item-title">{{_('IPv4 address')}}</div>
                           <div class="item-after" name="ipaddress">{{wifiInfo.ipaddress}}</div>
                         </div>
                       </a>
@@ -123,7 +123,7 @@
                     <li>
                       <a class="item-content" style="padding-left: 0px">
                         <div class="item-inner" style="padding-right: 0px">
-                          <div class="item-title">{{tran('Wifi Mac Address')}}</div>
+                          <div class="item-title">{{_('Wifi Mac Address')}}</div>
                           <div class="item-after" name="wifimacaddress">{{wifiInfo.wifimacaddress}}</div>
                         </div>
                       </a>
@@ -131,7 +131,7 @@
                     <li>
                       <a class="item-content" style="padding-left: 0px">
                         <div class="item-inner" style="padding-right: 0px">
-                          <div class="item-title">{{tran('Ipv6')}}</div>
+                          <div class="item-title">{{_('Ipv6')}}</div>
                           <div class="item-after" name="ipv6">{{wifiInfo.ipv6}}</div>
                         </div>
                       </a>
@@ -139,7 +139,7 @@
                     <li>
                       <a class="item-content" style="padding-left: 0px">
                         <div class="item-inner" style="padding-right: 0px">
-                          <div class="item-title">{{tran('Bssid')}}</div>
+                          <div class="item-title">{{_('Bssid')}}</div>
                           <div class="item-after" name="bssid">{{wifiInfo.bssid}}</div>
                         </div>
                       </a>
@@ -147,7 +147,7 @@
                     <li>
                       <a class="item-content" style="padding-left: 0px">
                         <div class="item-inner" style="padding-right: 0px">
-                          <div class="item-title">{{tran('Rssi')}}</div>
+                          <div class="item-title">{{_('Rssi')}}</div>
                           <div class="item-after" name="rssi">{{wifiInfo.rssi}}</div>
                         </div>
                       </a>
@@ -190,10 +190,10 @@
           // data
           localWifiList: [],
           wifiShowStatus: false,
-          wifi_tip: tran('2.4 GHz Wi-Fi Only'),
-          ssid: tran('SSID'),
-          password_name: tran('Password'),
-          email: tran('Email'),
+          wifi_tip: _('2.4 GHz Wi-Fi Only'),
+          ssid: _('SSID'),
+          password_name: _('Password'),
+          email: _('Email'),
           setting: {
             ssid: '',
             ssid_password: '',
@@ -353,6 +353,14 @@
             this.saveLocalWifi();
             try {
               await iot_ble_check_enable();
+              if(deviceInfo.operatingSystem != 'ios'){
+                await ble.requestMtu(
+                  peripheral[guid].prop.id,
+                  512,
+                  ()=>{},
+                  ()=>{},
+                )
+              }
               let bleList = [];
               //ssid
               let ssid_data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
@@ -454,8 +462,9 @@
               app.dialog.close();
               emitter.emit('refresh', {});
               emitter.emit('device/wifi/setup', { guid: guid });
+              window.globalUpdate = true;
               app.dialog.confirm(
-                `successfully`,
+                `${_('Save Successfully')}`,
                 () => {
                   mainView.router.back();
                 },
@@ -463,6 +472,7 @@
               );
             } catch (error) {
               app.dialog.close();
+              window.globalUpdate = true;
               mainView.router.back();
               //app.dialog.alert(error);
             }
@@ -489,7 +499,14 @@
           async getJsonData() {
             try {
               await peripheral[guid].connect();
-
+              if(deviceInfo.operatingSystem != 'ios'){
+                await ble.requestMtu(
+                  peripheral[guid].prop.id,
+                  512,
+                  ()=>{},
+                  ()=>{},
+                )
+              }
               await ble.startNotification(
                 peripheral[guid].prop.id,
                 'ff80',

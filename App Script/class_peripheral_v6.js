@@ -11,30 +11,30 @@ window.Peripheral = (function() {
 		this.max_try = 3;
         this.prop = {
             password:'000000',
-            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83
+            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
             status:{
                 bluetooth:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
                     '1970-01-01 00:00:00'
                 ],
                 control:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
                     '1970-01-01 00:00:00'
                 ],
                 mobmob:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
                     '1970-01-01 00:00:00'
                 ],
                 mesh:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
                     '1970-01-01 00:00:00'
                 ],
                 mqtt:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
                     '1970-01-01 00:00:00'
                 ],
                 last:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83
+                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85
                     '1970-01-01 00:00:00'
                 ]
             },
@@ -63,6 +63,7 @@ window.Peripheral = (function() {
             let focusRefresh = false;
             
             if(isset(p.guid)) self.prop.guid = p.guid;
+						//if(!p.guid){self.prop.guid = self.prop.id}
             if(isset(p.id)) self.prop.id = p.id;
             if(isset(p.name)) self.prop.name = p.name;
             if(isset(p.hexModel)) self.prop.hexModel = p.hexModel.toUpperCase();
@@ -192,13 +193,19 @@ window.Peripheral = (function() {
 					//console.log("dimmingIo="+dimmingIo);
 					//console.log("self.prop.status="+JSON.stringify(self.prop.status));
 					
+					//Geomagnetic battery_ref
+					let battery_ref  = parseInt(self.prop.manufactureData.substring(14, 16),16);
+					self.prop.status.bluetooth[0][83] = battery_ref
+					let dc_ref = parseInt(self.prop.manufactureData.substring(14, 16),16) & 0x02;
+					self.prop.status.bluetooth[0][84] = dc_ref
                     //thermostat status
 					let thermostat = {
 						power: parseInt(self.prop.manufactureData.substring(4,6), 16),
 						model: parseInt(self.prop.manufactureData.substring(6,8), 16),
 						fan: parseInt(self.prop.manufactureData.substring(8, 10), 16),
 						temp: parseInt(self.prop.manufactureData.substring(10, 12), 16),
-                        room_temp: parseInt(self.prop.manufactureData.substring(12,14), 16)
+            room_temp: parseInt(self.prop.manufactureData.substring(12,14), 16),
+						humidity:parseInt(self.prop.manufactureData.substring(16,18), 16)
 					}
 					if(thermostat.power){
 						//console.log(thermostat);
@@ -217,12 +224,14 @@ window.Peripheral = (function() {
     					self.prop.status.bluetooth[0][44] = latestStatus[0][44];
     					self.prop.status.bluetooth[0][45] = latestStatus[0][45];
     					self.prop.status.bluetooth[0][46] = latestStatus[0][46];
+							self.prop.status.bluetooth[0][47] = latestStatus[0][47];
 					}else{
                         self.prop.status.bluetooth[0][42] = thermostat.power;
     					self.prop.status.bluetooth[0][43] = thermostat.model;
     					self.prop.status.bluetooth[0][44] = thermostat.fan;
     					self.prop.status.bluetooth[0][45] = thermostat.temp;
     					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+							self.prop.status.bluetooth[0][47] = thermostat.humidity;
 					}
 					
 					//RCU scan,cancle scan
@@ -337,6 +346,7 @@ window.Peripheral = (function() {
             self.lastStorechecksum = storechecksum;
             
             setTimeout(function(){
+                //console.log("running Class");
                 db.get('peripheral').then((data)=>{
                     let storedPeripheral = {};
                     if(data){
@@ -378,8 +388,12 @@ window.Peripheral = (function() {
 					// console.log('emitchecksum',emitchecksum);
 					// console.log('this.prop',this.prop)
 				}
+				if(emitProp.guid == '3334383531383763323636321203461d'){
+					console.log("comming2")
+				}
         if(!this.lastEmitchecksum || this.lastEmitchecksum!=emitchecksum){
             this.lastEmitchecksum = emitchecksum;
+						
             emitter.emit('on_peripheral_changed', this.prop);
         }
         
@@ -432,7 +446,7 @@ window.Peripheral = (function() {
         		    let p = peripheral[d.device];
         		    
         		    message.Device[d.device] = {
-        		        mac_address: p.getProp().mac_address,
+        		        mac_address: p.getProp().mac_address?p.getProp().mac_address.toLowerCase():'',
     					manufacturing_data: p.getProp().manufactureData,
     					date: p.getProp().lastDiscoverDate,
         		    }
@@ -481,7 +495,7 @@ window.Peripheral = (function() {
         		    let p = peripheral[d.device];
         		    
         		    message.Device[d.device] = {
-        		        mac_address: p.getProp().mac_address,
+        		        mac_address: p.getProp().mac_address?p.getProp().mac_address.toLowerCase():'',
     					status: p.getLatestStatusFromRealSource()
         		    }
     			}
@@ -549,7 +563,8 @@ window.Peripheral = (function() {
 				model: parseInt(data.substring(12,14), 16),
 				fan: parseInt(data.substring(14, 16), 16),
 				temp: parseInt(data.substring(16, 18), 16),
-                room_temp: parseInt(data.substring(18,20), 16)
+                room_temp: parseInt(data.substring(18,20), 16),
+				humidity : parseInt(data.substring(26,28), 16),
 			}
 			if(thermostat.power){
 				console.log(thermostat);
@@ -560,6 +575,7 @@ window.Peripheral = (function() {
 			self.prop.status.bluetooth[0][44] = thermostat.fan;
 			self.prop.status.bluetooth[0][45] = thermostat.temp;
 			self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+			self.prop.status.bluetooth[0][47] = thermostat.humidity;
 			
 			self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 			self.onPropChanged();
@@ -568,6 +584,72 @@ window.Peripheral = (function() {
           const targetStatus = parseInt(byteStrings[5], 16);
 					self.prop.status.mobmob[0][49] = targetStatus>0?1:0;
 					self.onPropChanged();
+				}else if(data.startsWith("9380")){
+					let rsList = window.iot_ble_iaq_change_list(data);
+					for(let i in rsList){
+						const str = rsList[i].hex;
+						const type = rsList[i].type;
+						const index = rsList[i].index;
+						let value = core_utils_ieee_float_convert(str);
+						const iaqData = iaq_evaluate_rule(type);
+						console.log("value",value);
+						if(isset(iaqData)){
+								$("li.iaq-subdevice[guid='"+self.prop.guid+"']").find(`.${type} .box-btn-img`).css({'background-color':iaqData.bgcolor})
+						}
+						if(type == 'PRESSURE'){
+								value = parseInt(value/1000);
+						}
+						if(type == 'LUX'){
+								console.log("LUX value:"+value);
+								value = parseInt(value*2.5);
+								}
+						if(type == 'CO2'){
+								let str1 = str.substring(0,2);
+								let str2 = str.substring(2,4);
+								let newstr = parseInt(str2,16)*255 + parseInt(str1,16)*1
+								value = newstr
+						}
+						$("li.iaq-subdevice[guid='"+self.prop.guid+"']").find(`.${type} .iaq-title-big`).text(value)
+					}
+					$("li.iaq-subdevice[guid='"+self.prop.guid+"'] .main-btn").forEach((ele)=>{
+						let this_value = $(ele).find(".iaq-title-big").text();
+						if(this_value == '--'){
+								$(ele).hide()
+						}
+						if(this_value != '--'){
+								$(ele).show()
+						}
+					})
+					const score = data.substring(10,12);
+					let score_data = window.iaq_evaluate_rule('score',score);
+					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
+					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score").text(parseInt(score,16));
+				}else if(data.startsWith("87")){
+					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
+					let temp_v = parseInt(data.substr(16,2)+data.substr(14,2)+data.substr(12,2)+data.substr(10,2), 16);
+					let temp_i = parseInt(data.substr(24,2)+data.substr(22,2)+data.substr(20,2)+data.substr(18,2), 16);
+					let pvi_cf = 0.0;
+					if(temp_p>0){
+							pvi_cf = (1.0 / (temp_p /1000000.0));
+					}
+					let pvi_cf1_0 = (1.0 / (temp_v /1000000.0));
+					let pvi_cf1_1 = (1.0 / (temp_i /1000000.0));
+					let p = pvi_cf / 0.1209;
+					let v = (pvi_cf1_0 * 2.43 * 512.0 * 1880.0) / (3579000.0 * 2.0);
+					let i = (pvi_cf1_1 * 2.43 * 512.0) / (3579000.0 * 24.0 * 0.001);
+					if(p<5){
+							i = (p*1.0) / (v*1.0);
+					}
+					
+					let kwh = 0;
+					if(data.length>=34){
+							kwh = parseInt(data.substr(32,2)+data.substr(30,2)+data.substr(28,2)+data.substr(26,2), 16) / 100000.0;
+					}
+
+					let text = '<div class="pvi" style="font-size:12px">P:'+p.toFixed(2)+' &nbsp; V:'+v.toFixed(2)+' &nbsp; I:'+i.toFixed(2)+' &nbsp; Kwh:'+kwh.toFixed(2)+'</div>';
+					$("li.device[guid='"+self.prop.guid+"'] .item-content .pvi").remove();
+					$("li.device[guid='"+self.prop.guid+"'] .item-content .item-inner").append(text);
+					$("li.device[guid='"+self.prop.guid+"']").css({'height':90+'px'});
 				}
     };
 	Peripheral.prototype.onChangeGateway = function(p){
@@ -646,8 +728,8 @@ window.Peripheral = (function() {
 			})
 			const score = data.substring(10,12);
 			let score_data = window.iaq_evaluate_rule('score',score);
-			$("li.iaq-subdevice[guid='"+p.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
-			$("li.iaq-subdevice[guid='"+p.guid+"']").find(".score .iaq-title-big").text(parseInt(score,16));
+			$("li.home-scanned-peripheral[guid='"+p.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
+			$("li.home-scanned-peripheral[guid='"+p.guid+"']").find(".score").text(parseInt(score,16));
 		}
 		let default_connect = p.default_connect;
 		let temp = default_connect?1:0;
@@ -852,7 +934,7 @@ window.Peripheral = (function() {
     		}
     	});
     };
-    Peripheral.prototype._onoff = function(gangs) {
+    Peripheral.prototype._onoff = function(gangs,runtime) {
         const self = this;
         let currentRoute = '';
 
@@ -861,13 +943,20 @@ window.Peripheral = (function() {
 				let service = "ff80", characteristic = "ff81";
 				let data = [0,0,0,0,0,0,0,0];
     			if(self.prop.firmwareNo < 6){
-					data = JSON.parse(JSON.stringify(self.getLatestStatus()));
-    			    for(let g of gangs){
-						data[g.gang] = g.on ? 1 : 0;
-    			    } 
-					self.prop.status.control[0] = JSON.parse(JSON.stringify(data));
+					let low_data = [1,0,0,0,0,1,1,1];
+					let latestStatus = JSON.parse(JSON.stringify(self.getLatestStatus()))[0];
 					
-    			    data = parseInt(data.reverse().join(""), 2).toString(16).toUpperCase().pad("00");
+					low_data[1] = latestStatus[1];low_data[2] = latestStatus[2];low_data[3] = latestStatus[3];low_data[4] = latestStatus[4];
+    			    for(let g of gangs){
+								low_data[g.gang] = g.on ? 1 : 0;
+								latestStatus[g.gang] = g.on ? 1 : 0;
+    			    } 
+					self.prop.status.control[0] = JSON.parse(JSON.stringify(latestStatus));
+					
+    			    data = parseInt(low_data.reverse().join(""), 2).toString(16).toUpperCase().pad("00");
+							if(runtime){
+								data = `${data}000000ffff0000`
+							}
 					service = "fff0";
 					characteristic = "fff2";
     			}else{
@@ -883,10 +972,15 @@ window.Peripheral = (function() {
     			    }
     			    data = parseInt(data.join(""), 2).toString(16).toUpperCase().pad("00");
 					data = `8000${data}00`;
+					if(runtime){
+						data = `${data}000000ffff0000`
+					}
     		}
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 				self.onPropChanged();
-				
+				console.log("service",service);
+				console.log("characteristic",characteristic);
+				console.log("data",data);
                 self.doMultipleWrite([{
 					service: service,
 					characteristic: characteristic,
@@ -1015,8 +1109,14 @@ window.Peripheral = (function() {
 				}
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 				self.onPropChanged();
-
-				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+                let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+				core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 					command:"Control",
 					function:"bleHelper.perform",
 					params:[{
@@ -1279,8 +1379,14 @@ window.Peripheral = (function() {
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 				self.onPropChanged();
-
-				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+                let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+				core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 					command:"Control",
 					function:"bleHelper.perform",
 					params:commands,
@@ -1350,6 +1456,142 @@ window.Peripheral = (function() {
     		});
     	});
     };
+		Peripheral.prototype.doMusicPlayer = function() {
+			const self = this;
+				
+			return new Promise((resolve, reject) => {
+				const action = {
+						func:'doMusicPlayer',
+						args:[
+								
+						],
+						callback: {
+								resolve:resolve,
+								reject:reject
+						}
+				}
+				self.queue.push(action);
+				if (!self.isExecuting) {
+					self.isExecuting = true;
+					self.execute();
+				}
+			});
+		};
+		Peripheral.prototype._doMusicPlayer = function() {
+			const self = this;
+			let currentRoute = '';
+	
+		const doBLE = () => {
+			return new Promise((resolve, reject) => {
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			let data = '9807';
+			commands.push({
+				service: service,
+				characteristic: characteristic,
+				data: data,
+			});
+			
+				self.doMultipleWrite(commands).then((rs)=>{
+						resolve();
+				}).catch((error)=>{
+						reject(error);
+				});
+			});
+		};
+	
+	
+	const doMOBMOB = () => {
+			return new Promise((resolve, reject) => {
+			let findGuid = self.findDefaultConnect();
+			if(!isset(findGuid)){
+				findGuid = self.prop.guid;
+			}
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			let data = '9807';
+			commands.push({
+				action: "write",
+				guid: findGuid,
+				mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+				service_id: service,
+				char_id: characteristic,
+				value: data.toLowerCase()
+			});
+			let strList = self.prop.gateway.split('-');
+			let gatewayStr = '';
+			if(strList.length <= 2 ){
+					gatewayStr = self.prop.gateway.toLowerCase();
+			}else{
+					gatewayStr = self.prop.gateway;
+			}
+			core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
+				command:"Control",
+				function:"bleHelper.perform",
+				params:commands,
+				callback:"",
+				raw:""
+			}, 0, false, false, false).then(() => {
+				resolve();
+			}).catch(reject);
+		});
+	};
+		
+	
+		return new Promise((resolve, reject) => {
+			Promise.race([
+				self.findRoute(),
+				self.timeout(10000).then(() => {
+						self.disconnect();
+					throw 7001;
+				})
+			])
+			.then((result) => {
+					currentRoute = result;
+							switch (currentRoute) {
+								case self.route.BLUETOOTH:
+										if(self.prop.connected){
+												return Promise.resolve();
+										}else{
+												return self.doConnect();
+										}
+										break;
+								case self.route.MOBMOB:
+										return Promise.resolve();
+										break;
+								case self.route.MESH:
+										return Promise.resolve();
+										break;
+								case self.route.NA:
+							throw new Error('Device is not here');
+										break;
+							}
+			})
+			.then(() => {
+							switch (currentRoute) {
+								case self.route.BLUETOOTH:
+					return doBLE();
+										break;
+								case self.route.MOBMOB:
+					return doMOBMOB();
+										break;
+								case self.route.NA:
+							throw new Error('Device is not here');
+										break;
+							}
+			})
+			.then((result) => {
+				resolve(result);
+			})
+			.catch((error) => {
+				reject(error);
+			})
+			.then(() => {
+				// Clean up resources
+				clearTimeout(self.timeout_timer);
+			});
+		});
+	};
 	Peripheral.prototype.rcuOutput = function(gangs) {
 		const self = this;
 		
@@ -1479,8 +1721,14 @@ const doMOBMOB = (gangs) => {
 			
 		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 		self.onPropChanged();
-
-		core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+        let strList = self.prop.gateway.split('-');
+        let gatewayStr = '';
+        if(strList.length <= 2 ){
+            gatewayStr = self.prop.gateway.toLowerCase();
+        }else{
+            gatewayStr = self.prop.gateway;
+        }
+		core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 			command:"Control",
 			function:"bleHelper.perform",
 			params:commands,
@@ -1655,8 +1903,14 @@ const doMOBMOB = (gangs) => {
 				
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 				self.onPropChanged();
-				
-				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+				let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+				core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 					command:"Control",
 					function:"bleHelper.perform",
 					params:[{
@@ -1903,8 +2157,14 @@ const doMOBMOB = (gangs) => {
 					
 				self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 				self.onPropChanged();
-
-				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+                let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+				core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 					command:"Control",
 					function:"bleHelper.perform",
 					params:commands,
@@ -2090,8 +2350,14 @@ const doMOBMOB = (gangs) => {
     				
     			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
     			self.onPropChanged();
-    
-    			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+                let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+    			core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
     				command:"Control",
     				function:"bleHelper.perform",
     				params:commands,
@@ -2280,8 +2546,14 @@ const doMOBMOB = (gangs) => {
 				
 			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 			self.onPropChanged();
-
-			core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+            let strList = self.prop.gateway.split('-');
+            let gatewayStr = '';
+            if(strList.length <= 2 ){
+                gatewayStr = self.prop.gateway.toLowerCase();
+            }else{
+                gatewayStr = self.prop.gateway;
+            }
+			core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 				command:"Control",
 				function:"bleHelper.perform",
 				params:commands,
@@ -2405,6 +2677,7 @@ const doMOBMOB = (gangs) => {
                     	};
                     	commands.push(command);
                     }
+										console.log("command",commands)
     			}
                 self.doMultipleWrite(commands).then((rs)=>{
                     resolve();
@@ -2459,7 +2732,7 @@ const doMOBMOB = (gangs) => {
 						commands.push({
 							action: "write",
 							guid: findGuid,
-							mac_address: peripheral[findGuid].getProp().mac_address,
+							mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
 							service_id: "ff80",
 							char_id: peripheral[findGuid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
 							value: `02${self.prop.mac_reverse_key}10${(count_batch - 1 - i).toString(16).pad("00")}${data.substring(i * dateSetLen, i * dateSetLen + len)}`
@@ -2476,7 +2749,7 @@ const doMOBMOB = (gangs) => {
 							commands.push({
 								action: "write",
 								guid: self.prop.guid,
-								mac_address: self.prop.mac_address,
+								mac_address: self.prop.mac_address.toLowerCase(),
 								service_id: "ff70",
 								char_id: "ff71",
 								value: `${(count_batch - 1 - i).toString(16).pad("00")}${data.substring(i * dateSetLen, i * dateSetLen + len)}`
@@ -2492,7 +2765,7 @@ const doMOBMOB = (gangs) => {
 							commands.push({
 								action: "write",
 								guid: self.prop.guid,
-								mac_address: self.prop.mac_address,
+								mac_address: self.prop.mac_address.toLowerCase(),
 								service_id: "ff80",
 								char_id: "ff81",
 								value: `87${(count_batch - 1 - i).toString(16).pad("00")}${data.substring(i * dateSetLen, i * dateSetLen + len)}`
@@ -2500,8 +2773,14 @@ const doMOBMOB = (gangs) => {
 						}
 					}
 				}
-
-				core_mqtt_publish("cmd/"+md5(md5(self.prop.gateway.toLowerCase())), {
+                let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+				core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
 					command:"Control",
 					function:"bleHelper.perform",
 					params:commands,
@@ -2599,7 +2878,8 @@ const doMOBMOB = (gangs) => {
     		const action = {
     		    func:'onoff',
     		    args:[
-    		        gangs
+    		        gangs,
+								true
     		    ],
     		    callback: {
     		        resolve:resolve,
@@ -2675,7 +2955,7 @@ const doMOBMOB = (gangs) => {
     	        
     	    })
     	}else if(action.func=="onoff"){
-    	    this._onoff(action.args[0]).then((rs) => {
+    	    this._onoff(action.args[0],action.args[1]).then((rs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
@@ -2722,7 +3002,19 @@ const doMOBMOB = (gangs) => {
     	    }).then(()=>{
     	        
     	    })
-    	}else if(action.func=="thermostat"){
+    	}else if(action.func=="doMusicPlayer"){
+				this._doMusicPlayer().then((rs) => {
+						action.callback.resolve(rs);
+						this.execute();
+				}).catch((error) => {
+						//app.dialog.alert(_(erp.get_log_description(error)));
+						action.callback.reject(error);
+						this.queue = [];
+						this.isExecuting = false;
+				}).then(()=>{
+						
+				})
+		}else if(action.func=="thermostat"){
 				this._thermostat(action.args[0]).then((rs) => {
 						action.callback.resolve(rs);
 						this.execute();
@@ -2995,7 +3287,7 @@ const doMOBMOB = (gangs) => {
     Peripheral.prototype.getFirmwareNo = function(firmware){
         try{
             if(firmware.trim() == "3.0.0" || firmware.trim() == "1.0.0"){
-                firmware = `6.0`;
+                firmware = `7.0`;
             }
         }catch(e){}
         
@@ -3119,6 +3411,9 @@ const doMOBMOB = (gangs) => {
         			    console.log('class_err',err)
 						ble.refreshDeviceCache(self.prop.id, 0, null, null);
     		            self.onConnectionChanged('disconnected');
+										emitter.emit("disconnected",{
+											id : self.prop.id
+										})
         			    reject(6001); //Failed to connect
         			});
     		    }
@@ -3218,8 +3513,8 @@ const doMOBMOB = (gangs) => {
                         );
                     }else if(self.prop.firmwareNo >= 3 && self.prop.firmwareNo < 6){
                         ble.startNotification(self.prop.id, "ffc0", "ffc2", function(rs){
-                            ble.stopNotification(self.prop.id, "ffc0", "ffc2");
-                            
+                            //ble.stopNotification(self.prop.id, "ffc0", "ffc2");
+                            debugger
                             if(rs.startsWith("00")){
                                 resolve("Password is correct");
                             }else if(rs.startsWith("01")){
@@ -3234,6 +3529,7 @@ const doMOBMOB = (gangs) => {
                         
                         let data = ((self.prop.password+self.prop.password).convertToHex()).convertToBytes();
                         ble.write(self.prop.id, "ffc0", "ffc1", data, function(rs){
+														console.log("rs",rs)
                             //nothing to do, instead, need notify
                         }, function(rs){
                             reject("Failed to submit password for firmware v3.x to v5.x (Error: "+rs+")");
@@ -3416,7 +3712,9 @@ const doMOBMOB = (gangs) => {
 						self.prop.authed = true;
 						resolve(result);
 					}).catch((error) => {
-						if(enableTry){
+						if(error == 7200){
+							reject(error);
+						}else if(enableTry){
 							if(self.try < self.max_try){
 								console.log("class.periperal: failed and start retry with try "+self.try);
 								self.try++;

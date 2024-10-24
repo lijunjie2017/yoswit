@@ -1,0 +1,270 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Favorite List') }}</div>
+        <div class="right scene-list-right device-hidden"></div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content" style="height: 100%">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="list ha-guide-list">
+          <ul>
+            <li class="swipeout scene swipeout-delete-manual" v-for="(item,index) in favoriteList" :key="index">
+              <div class="card swipeout-content no-shadow no-border bg-color-gray margin-bottom overflow-hidden text-color-white h-110">
+                <div class="overlay"></div>
+                <div
+                  class="coverimg width-100 position-absolute lazy lazy-fade-in"
+                  :style="{'height': '100%','background-size': 'cover','background-image': 'url('+frappe_get_url(item.image)+')'}"
+                ></div>
+                <div class="card-content card-content-padding">
+                  <div
+                    class="template-info"
+                    style="
+                      text-shadow:
+                        1px 1px 2px grey,
+                        0 0 2px black,
+                        0 0 2px grey;
+                    "
+                  >
+                    {{_("Already applied in:")}} {{item.applyForStr}}
+                  </div>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div
+                        class="h5 d-block text-color-white margin-bottom-half"
+                        style="
+                          text-shadow:
+                            1px 1px 2px grey,
+                            0 0 2px black,
+                            0 0 2px grey;
+                        "
+                      >
+                        {{_(item.title)}}
+                        <span style="font-size: 12px">({{item.total}} {{_("devices")}})</span>
+                      </div>
+                    </div>
+                    <div class="item-after">
+                      <a
+                        class="button button-small button-round button-fill icon-button"
+                        v-on:click="toDetail(item)"
+                        style="width: 40px; height: 40px; border-radius: 50%"
+                      >
+                        <i class="f7-icons" style="font-size: 18px">doc_text_search</i>
+                      </a>
+                      <a
+                        class="button button-small button-round button-fill icon-button"
+                        style="background-color: red; margin-left: 10px; width: 40px; height: 40px; border-radius: 50%"
+                        v-on:click="onDeleted(item)"
+                      >
+                        <i class="icon material-icons" style="font-size: 20px">delete</i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="device-null" v-if="favoriteList.length == 0">
+          <div class="block" style="text-align: center">
+            <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+            <p>${_('You do not have any favorite, create one')}</p>
+          </div>
+          <div class="block block-strong">
+            <p class="row">
+              <a class="col button button-large" v-on:click="favoriteRoom()">{{ _('Create favorite') }}</a>
+            </p>
+          </div>
+        </div>
+        <div class="fab fab-right-bottom">
+          <a style="text-align: center" v-on:click="favoriteRoom()">
+            <i class="icon material-icons">save</i>
+          </a>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          favoriteList: [],
+          title: '',
+          applyForList: [],
+          subdevices: [],
+        },
+        computed: {},
+        mounted() {
+          //this.scan();
+          this.init();
+        },
+        methods: {
+          async onDeleted() {
+            //alert the confirm
+            app.dialog.confirm(
+              _('Confirm Deletion?'),
+              async () => {
+                try {
+                  await http2.request(encodeURI('/api/resource/User/' + users[users.current].user_id), {
+                    serializer: 'json',
+                    responseType: 'json',
+                    method: 'PUT',
+                    data: {
+                      interest: '',
+                    },
+                  });
+                  app.dialog.alert(_('Delete Successfully'));
+                  this.subdevices = [];
+                  this.init();
+                } catch (error) {
+                  app.dialog.alert(error);
+                }
+              },
+              () => {}
+            );
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          async init() {
+            this.favoriteList = [];
+            try {
+              let resData = await http2.request(encodeURI('/api/resource/User/' + users[users.current].user_id), {
+                responseType: 'json',
+                method: 'GET',
+              });
+              let interest = resData.data.data.interest;
+              if (interest) {
+                let interestMap = JSON.parse(interest);
+                let favoriteSubdevices = interestMap.subdevices;
+                this.subdevices = favoriteSubdevices?favoriteSubdevices:[];
+                let obj = cloneDeep(interestMap);
+                obj['image'] = 'https://dev.mob-mob.com/files/scene.jpg';
+                obj['applyFor'] = obj.applyFor;
+                obj['applyForStr'] = obj.applyFor
+                  .map((item) => {
+                    return tran(item.title);
+                  })
+                  .join(',');
+                this.applyForList = obj.applyFor;
+
+                obj['total'] = favoriteSubdevices.length;
+                this.title = obj['title'];
+                //count the device on differ room]
+                this.favoriteList.push(obj);
+                console.log('obj', obj);
+              } else {
+                this.favoriteList = [];
+              }
+            } catch (error) {
+              this.favoriteList = [];
+            }
+          },
+          async favoriteRoom() {
+            let inputTitle = `${_('This will overwrite the previous configuration. Do you wish to continue?')}`;
+            debugger
+            if (this.subdevices.length == 0) {
+              inputTitle = `Save the current profile configuration and enter a title.`;
+              //
+              
+            };
+            this.subdevices = window.favoriteSubdevices;
+            app.dialog.prompt(`${inputTitle}`, async (name) => {
+              if (name) {
+                let postObj = {
+                  subdevices: this.subdevices,
+                  title: name,
+                  source: erp.info.profile.name,
+                  applyFor: this.applyForList,
+                  date: dayjs().format(),
+                };
+                try {
+                  await http2.request(encodeURI('/api/resource/User/' + users[users.current].user_id), {
+                    serializer: 'json',
+                    responseType: 'json',
+                    method: 'PUT',
+                    data: {
+                      interest: JSON.stringify(postObj),
+                    },
+                  });
+                  app.dialog.alert(_('Save Successfully'));
+                  this.init();
+                } catch (error) {
+                  console.log(error);
+                }
+              } else {
+                app.dialog.alert(`${_('Title can not be empty. ')}`);
+              }
+            });
+            setTimeout(() => {
+              $(`.dialog-input-field .dialog-input`).attr('placeholder', _('Title'));
+              $(`.dialog-input-field .dialog-input`).val(this.title);
+            }, 0);
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none !important;
+  }
+  .template-info {
+    font-size: 12px;
+    text-align: right;
+    margin-bottom: 10px;
+  }
+  .radio-box {
+    height: 75px;
+    background-color: #fff;
+    margin-bottom: 10px;
+  }
+  .item-radio {
+    height: 100%;
+  }
+  .timer-item {
+    height: 100%;
+    padding-right: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .fab-right-bottom {
+    position: fixed;
+  }
+</style>

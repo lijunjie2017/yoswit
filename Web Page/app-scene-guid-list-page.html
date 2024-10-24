@@ -88,7 +88,7 @@
         <div class="device-null" v-if="sceneList.length == 0">
           <div class="block" style="text-align: center">
             <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-            <p>${_('You don\'t have any scene, create one')}</p>
+            <p>${_('You do not have any scene, create one')}</p>
           </div>
           <div class="block block-strong">
             <p class="row">
@@ -135,7 +135,7 @@
       let triggerCommand = `8f210000ff`;
       let actionCommand = `8f1100ff`;
       app.dialog.confirm(
-        `Confirm Deletion?`,
+        `${_('Confirm Deletion?')}`,
         () => {
           app.dialog.preloader();
           if (window.peripheral[guid].prop.connected) {
@@ -252,7 +252,7 @@
                   secondGuid = item.device;
                 }
               })
-              app.dialog.confirm(`${_('Are you ready to delete the '+firstRoomName+'/'+tran(firstTitle)+'?')}`,async()=>{
+              app.dialog.confirm(`${_('Are you ready to delete the ')}${firstRoomName+'/'+tran(firstTitle)+'?'}`,async()=>{
                 app.dialog.preloader();
                 let command = `02${core_utils_get_mac_address_from_guid(thisGuid,true)}81080${this_gang}00`;
                 try{
@@ -261,6 +261,7 @@
                     characteristic: 'ff81',
                     data: command,
                   }])
+                  //dele the subdevice the config
                   app.dialog.close();
                   app.dialog.confirm(`${_('Are you ready to delete the '+secondRoomName+'/'+tran(secondTitle)+'?')}`,async()=>{
                     app.dialog.preloader();
@@ -278,13 +279,31 @@
                         responseType: 'json',
                         data: {},
                       });
+                      let clone_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+                      clone_subdevices.forEach(zitem=>{
+                        if(zitem.name == subName){
+                          zitem.config = "";
+                        }
+                        if(zitem.name == secondSubName){
+                          zitem.config = "";
+                        }
+                      })
+                      let put_status = await http.request(encodeURI(`/api/resource/Profile/${erp.info.profile.name}`), {
+                        method: 'PUT',
+                        serializer: 'json',
+                        responseType: 'json',
+                        data: {
+                          profile_subdevice : clone_subdevices
+                        },
+                      });
                       app.dialog.close();
                       await ha_profile_ready();
                       this.init();
+                      window.globalUpdate = true;
                       app.dialog.alert(_('Deletion successful'));
                     }catch(errors){
                       app.dialog.close();
-                      app.dialog.alert(_(erp.get_log_description(error)));
+                      app.dialog.alert(_(erp.get_log_description(errors)));
                     }
                   },()=>{})
                 }catch(error){
@@ -382,7 +401,7 @@
                 (rs) => {
                   
                   console.log('rs', rs);
-                  if (rs.startsWith('8f22') && rs.length > 8) {
+                  if (rs.startsWith('8f20') && rs.length > 8) {
                     let thisSceneId = rs.slice(6, 8);
                     if (thisSceneId == '00') {
                       return;
@@ -394,7 +413,7 @@
                         command: rs,
                       });
                     }
-                  } else if (rs.startsWith('8f12') && rs.length > 8) {
+                  } else if (rs.startsWith('8f10') && rs.length > 8) {
                     //this means command is action
                     if (rs.slice(6, 8) == '00') {
                       return;
@@ -406,7 +425,7 @@
                         command: rs,
                       });
                     }
-                  } else if (rs.startsWith('8f1200ff')) {
+                  } else if (rs.startsWith('8f1000ff')) {
                     app.dialog.close();
                     debugger;
                     this.loadBleScene();

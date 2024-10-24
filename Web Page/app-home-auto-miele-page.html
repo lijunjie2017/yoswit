@@ -29,7 +29,8 @@
       <iframe id="myIframe" src="${targetUrl}" frameborder="0" style="height: 100%; width: 100%"></iframe>
       `: $h`
       <div class="steam-oven-micro">
-        <div class="card">
+        ${!deviceType.startsWith('Fridge') && $h`
+        <div class="card" >
           <div class="list list-strong-ios list-outline-ios list-dividers-ios">
             <ul>
               <li>
@@ -53,6 +54,30 @@
             </ul>
           </div>
         </div>
+        `}
+        ${deviceType.startsWith('Fridge') && $h`
+        <div class="card">
+          <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+            <ul>
+              <li>
+                <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                  <select name="target-temperature">
+                    ${target_temperature_list.map((kitem)=> $h`
+                    <option value="${kitem.value}" ${kitem.selected ? "selected" :''}>${kitem.value}</option>
+                    `)}
+                  </select>
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title">Target Temperature</div>
+                      <div class="item-after"></div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        `}
         ${modeConfigParams.map((item)=> $h` ${item.key !== "duration" ? $h`
         <div class="card">
           <div class="list list-strong-ios list-outline-ios list-dividers-ios">
@@ -220,9 +245,12 @@
     let pickObj = null;
     let modeConfigParams = [];
     let target_temperature_list = [];
+    let fridge_temperature_freezing_list = [];//freezing
+    let fridge_temperature_cooling_list = [];//cooling
     let miele_device_type = '';
     let currentProgram = [];
     let deviceState = 0;
+    let deviceType = '';
     window.addEventListener('message', (event) => {
       console.log('event', event);
       let data = JSON.parse(event.data);
@@ -237,6 +265,56 @@
         $update();
       }
     });
+    //init the api relaxtion
+    const deviceTypeLabel = {
+      "Washing Machine":{type : 1,programs:true},
+      "Tumble Dryer":{type : 2,programs:true},
+      "Dishwasher":{type : 7,programs:true},
+      "Oven":{type : 12,programs:true},
+      "Oven Microwave":{type : 13,programs:true},
+      "Hob Highlight":{type : 14,programs:false},
+      "Steam Oven":{type : 15,programs:true},
+      "Microwave":{type : 16,programs:true},
+      "Coffee System":{type : 17,programs:true},
+      "Hood":{type : 18,programs:false},
+      "Fridge":{type : 19,programs:false},
+      "Freezer":{type : 20,programs:false},
+      "Fridge /Freezer":{type : 21,programs:false},
+      "Robot Vacuum Cleaner":{type : 23,programs:true},
+      "Washer Dryer":{type : 24,programs:false},
+      "Dish Warmer":{type : 25,programs:true},
+      "Hob Induction":{type : 27,programs:false},
+      "Steam Oven Combi":{type : 31,programs:true},
+      "Wine Cabinet":{type : 32,programs:false},
+      "Wine Conditioning Unit":{type : 33,programs:false},
+      "Wine Storage Conditioning Unit":{type : 34,programs:false},
+      "Steam Oven Micro":{type : 45,programs:true},
+      "Dialogoven":{type : 67,programs:false},
+      "Wine Cabinet / Freezer":{type : 68,programs:false},
+      "Hob with vapour extraction":{type : 74,programs:false},
+    }
+    const deviceTypeAction = {
+      "START" : [1,2,7,12,14,15,16,24,31,45,67],
+      "STOP" : [1,2,7,12,14,15,16,18,24,31,45,67],
+      "PAUSE" : [1,2,7,24,],
+      "START SUPERFREEZING" : [20,21,68],
+      "STOP SUPERFREEZING" : [20,21,68],
+      "START SUPERCOOLING" : [19,21],
+      "STOP SUPERCOOLING" : [19,21],
+      "light" : [12,13,15,16,17,18,31,32,33,34,45,68],
+      "ambientLight" : [18],
+      "startTime" : [1,2,7,24,],
+      "ventilationStep" : [18],
+      "programId" : [23,25],
+      "targetTemperature" : [19,20,21,32,33,34,68],
+      "deviceName" : [1,2,7,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,31,32,33,34,45,67,68,74],
+      "powerOn" : [1,2,7,12,13,15,16,17,18,24,31,45,67],
+      "powerOff" : [1,2,7,12,13,15,16,17,18,24,31,45,67],
+      "colors" : [18],
+      "modes" : [19,20,21,68],
+      "runOnTime" : [18],
+    }
+
     const turnOff = async(type)=>{
       let postObj = {
         'powerOff': true
@@ -474,7 +552,7 @@
     const handleDevice = async (deviceObj) => {
       getWasherData();
       //set the target-temperature can set how
-      let deviceType = deviceObj.data.ident.type.value_localized;
+      deviceType = deviceObj.data.ident.type.value_localized;
       miele_device_type = deviceObj.data.ident.type.value_localized;
       console.log("deviceType",deviceType);
       if(deviceType != 'Warming drawer'){

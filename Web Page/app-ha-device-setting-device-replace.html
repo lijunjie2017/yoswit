@@ -1,0 +1,751 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${title}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in stepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                  v-on:click="toTab(item.id)"
+                >
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-0" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div
+                  class="card-header display-flex justify-content-space-between align-content-center"
+                  style="font-weight: 500; font-size: 18px"
+                >
+                  <a class="link" v-on:click="showDevices()"><i class="material-icons">refresh</i></a>
+                  <div class="">
+                    <a class="link show-more-button" v-on:click="toggle()" show-more="false"
+                      ><span style="font-size: 18px">{{_('more')}}</span>
+                      <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!moreStatus">toggle_off</i>
+                      <i class="material-icons text-color-theme" style="font-size: 50px" v-if="moreStatus">toggle_on</i>
+                    </a>
+                  </div>
+                </div>
+                <div class="card-content card-content-padding">
+                  <div class="list media-list" style="margin-top: 0px">
+                    <ul>
+                      <li
+                        v-for="(deviceItem,deviceIndex) in deviceList"
+                        :key="deviceItem.id"
+                        v-if="deviceIndex < 3 || (deviceIndex >= 3 && moreStatus) "
+                      >
+                        <div class="item-content" style="padding-left: 15px">
+                          <!--<div
+                            class="item-media"
+                            :style="{'width' : '75px','background-image' : 'url('+deviceItem.img+')','height' : '75px'}"
+                          ></div>-->
+                          <div class="item-inner">
+                            <div class="item-title-row">
+                              <div class="item-title">({{deviceItem.rssi}}) <b>{{deviceItem.model}}</b></div>
+                            </div>
+                            <div class="item-subtitle">{{deviceItem.name.substring(0,12)}}</div>
+                          </div>
+                          <div style="float: right; margin-right: 10px; width: 405px">
+                            <a
+                              v-on:click="coreDeviceReplaceDevice(deviceItem)"
+                              class="button button-raised button-round color-theme-bg-blue"
+                              style="width: 50px; float: right; margin-left: 10px"
+                            >
+                              <span class="material-icons"> upgrade </span>
+                            </a>
+                            <a
+                              v-on:click="coreDeviceFlashLed(deviceItem)"
+                              :class="{'button button-raised button-round button-preloader color-theme-bg-blue':true,'button-fill':deviceItem.flash?true:false}"
+                              style="width: 50px; float: right; margin-left: 10px"
+                            >
+                              <span class="material-icons"> flare </span>
+                            </a>
+                            <a
+                              v-on:click="iotResetPasswordPeripheral(deviceItem)"
+                              class="button button-raised button-round button-preloader color-theme-bg-blue"
+                              style="width: 50px; float: right"
+                            >
+                              <span class="material-icons"> restart_alt </span>
+                            </a>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="block" style="text-align: center; margin: 30px 0" v-if="deviceList.length == 0">
+                      <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+                      <p>${_('You do not have any devices')}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="list media-list" style="margin-top: 0px; padding: 15px; padding-bottom: 45px" v-if="settingList.length != 0">
+                <ul>
+                  <li v-for="(settingItem,settingIndex) in settingList" :key="settingItem.settingIndex">
+                    <div class="card margin-bottom-half mx-0 my-3">
+                      <div class="card-content card-content-padding">
+                        <div class="row">
+                          <div class="col-auto">
+                            <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                              <i class="material-icons">settings</i>
+                            </div>
+                          </div>
+                          <div class="col align-self-center no-padding-left">
+                            <h5
+                              class="no-margin-bottom"
+                              style="width: 215px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
+                            >
+                              {{ _(settingItem.title) }}
+                            </h5>
+                            <p class="setting-value text-muted size-12">{{_(settingItem.value)}}</p>
+                          </div>
+                          <div class="col-auto">
+                            <a
+                              id="action"
+                              href="#"
+                              class="button button-fill button-44 bg-color-gray button-raised"
+                              v-if="!settingItem.writeStatus"
+                            >
+                              <i class="material-icons">watch_later</i>
+                            </a>
+                            <a
+                              id="action"
+                              href="#"
+                              class="button button-fill button-44 color-theme button-raised"
+                              v-if="settingItem.writeStatus"
+                            >
+                              <i class="material-icons">check</i>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="block" style="text-align: center; margin: 30px 0" v-if="settingList.length == 0">
+                    <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+                    <p>${_('You do not have any settings.')}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px; position: fixed; bottom: 10px; z-index: 999">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("previous")}}</div>
+                </div>
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="updateSetting()">{{_("Mapping")}}</div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_('Device Network')}}</div>
+                <div class="card-content card-content-padding">
+                  <div class="list media-list" style="margin-top: 0px">
+                    <ul>
+                      <li class="device" v-for="(deviceItem,deviceIndex) in deviceNetworkList" :key="deviceItem.name">
+                        <div class="item-content" style="padding-left: 15px">
+                          <div
+                            class="item-media"
+                            :style="{'width' : '60px','background-image' : 'url('+deviceItem.image+')','height' : '60px'}"
+                          ></div>
+                          <div class="item-inner">
+                            <div class="item-title-row">
+                              <div class="item-title"><b>{{deviceItem.device_model}} </b>- {{deviceItem.device_name.substring(0,12)}}</div>
+                            </div>
+                            <div class="item-subtitle">{{deviceItem.roomInfo}}</div>
+                            <div class="signal-panel item-text height-21">
+                              <div>
+                                <div class="signal"></div>
+                                <div class="bluetooth"></div>
+                                <div class="mesh"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="block" style="text-align: center; margin: 30px 0" v-if="deviceNetworkList.length == 0">
+                      <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+                      <p>${_('You do not have any devices to mesh')}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px; position: fixed; bottom: 10px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("previous")}}</div>
+                </div>
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="updateDeviceNetwork()">{{_("COMPLETE")}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $update = ctx.$update,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, title } = $f7route.query;
+
+    console.log('title', title);
+    $update();
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          stepList: [
+            { id: 1, name: 1, isActive: true },
+            { id: 2, name: 2, isActive: false },
+            { id: 3, name: 3, isActive: false },
+          ],
+          index: 1,
+          deviceList: [],
+          moreStatus: false,
+          settingList: [],
+          deviceNetworkList: [],
+          targetGuid: '',
+          targetPosition: 0,
+          networkCount: 0,
+          targetNetworkCommandList: [],
+          blePostCommand: [],
+          gateway: '',
+        },
+        watch: {},
+        mounted() {
+          this.showDevices();
+        },
+        methods: {
+          toTab(id) {
+            this.index = id;
+            this.stepList.forEach((item) => {
+              if (item.id == id) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+            // if (id == 3) {
+            //   this.initDeviceNetwork();
+            // }
+          },
+          toggle() {
+            this.moreStatus = !this.moreStatus;
+          },
+          showDevices() {
+            //get the device model
+            let device_model = '';
+            let device_mode = '';
+            let profile_devices = cloneDeep(erp.info.profile.profile_device);
+            profile_devices.forEach((item) => {
+              if (item.device == guid) {
+                device_model = item.device_model;
+                device_mode = item.device_mode;
+              }
+            });
+            let devices = cloneDeep(peripheral);
+            let modeList = cloneDeep(erp.doctype.device_model);
+            let erp_device = cloneDeep(erp.info.device);
+            let map_device = Object.keys(erp_device);
+            let ps = [];
+            for (let guid in devices) {
+              let p = devices[guid].prop;
+              if (!p || !p.rssi || p.rssi >= 0) continue;
+              let p_model = Object.values(modeList).find((e) => e.hexid.toLowerCase() === p.hexModel.toLowerCase());
+              if (!p_model || device_mode != p_model.mode) continue;
+              if (map_device.indexOf(p.guid) != -1) continue;
+              ps.push(app.utils.extend({ model: p_model.model_code }, p));
+            }
+            let rssi_sort = function (a, b) {
+              if (a.rssi === b.rssi) {
+                return 0;
+              } else {
+                return a.rssi > b.rssi ? -1 : 1;
+              }
+            };
+            ps.sort(rssi_sort);
+            ps.forEach((item) => {
+              item.flash = false;
+            });
+            this.deviceList = ps;
+          },
+          async coreDeviceFlashLed(item) {
+            console.log(item);
+            if (item.flash) {
+              item.flash = false;
+            } else {
+              item.flash = true;
+            }
+            //command
+            let data = '8101';
+            if (item.flash) {
+              data = '812c01';
+            } else {
+              data = '812c00';
+            }
+            let guid = item.guid;
+
+            try {
+              await peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+            //this.activeDeviceList(item.id,"flash",item.flash);
+          },
+          activeDeviceList(id, type, value) {
+            this.deviceList.forEach((item) => {
+              if (item.id == id) {
+                item[type] = value;
+              }
+            });
+            console.log('this.deviceList', this.deviceList);
+          },
+          coreDeviceReplaceDevice(item) {
+            this.toTab(2);
+            this.targetGuid = item.guid;
+            this.initSettingList(item);
+          },
+          async initSettingList(kitem) {
+            //settingList
+            let settings = erp.info.device[guid].settings;
+            let thisList = [];
+            settings.forEach((item) => {
+              if (item.setting_type == 'Email Address') {
+                this.gateway = `${core_utils_get_mac_address_from_guid(this.targetGuid)}-${item.setting}`;
+              }
+              let list = iot_ble_device_setting_type_init(item.setting_type, item.setting, kitem.guid, guid);
+              //console.log("list",list);
+              thisList = thisList.concat(list);
+            });
+            thisList.forEach((item) => {
+              item.writeStatus = false;
+            });
+            this.settingList = thisList;
+            console.log('this.settingList', this.settingList);
+          },
+          async updateSetting() {
+            let commandList = [];
+            let mac_address = core_utils_get_mac_address_from_guid(this.targetGuid);
+            const hexid = guid.substring(guid.length - 6, guid.length - 2);
+            const model = erp.doctype.device_model[hexid.toUpperCase()];
+            let hex_batch = '1D';
+            let hex_model = hexid;
+
+            //first update the profile paw
+            if (guid.endsWith('12011A01') && this.targetGuid) {
+              let data = `88014B${mac_address.substr(9, 2)}${mac_address.substr(0, 2)}A16E95`;
+              let data_1 = `8100${mac_address.split(':').join('').convertToHex()}12${hex_model.toLowerCase()}${hex_batch.toLowerCase()}`;
+              //'8100'+core_device_replace_target_device.mac_address.split(':').join('').convertToHex()+'12'+core_device_replace_original_device.hex_model.toLowerCase()+core_device_replace_original_device.hex_batch.toLowerCase()
+              //'88014B'+core_device_replace_target_device.mac_address.substr(9,2)+core_device_replace_target_device.mac_address.substr(0,2)+'A16E95',
+              commandList.unshift(data, data_1);
+            }
+            let password = peripheral[this.targetGuid].prop.password;
+            let new_password = peripheral[guid].prop.password;
+            peripheral[this.targetGuid].prop.password = new_password;
+            commandList.push(82 + password.convertToHex() + new_password.convertToHex());
+            commandList.push('812A');
+
+            this.settingList.forEach((item) => {
+              //filter same item command
+              if (commandList.indexOf(item.command) == -1) {
+                commandList.push(item.command);
+              }
+            });
+            console.log('commandList', commandList);
+            this.blePostCommand = commandList;
+            this.updateBleCommand();
+          },
+          async updateBleCommand() {
+            app.dialog.preloader(_('Connecting...'));
+            let commands = this.blePostCommand;
+            for (let i in commands) {
+              try {
+                let bleList = [
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: commands[i],
+                  },
+                ];
+                console.log('bleList', bleList);
+                await peripheral[this.targetGuid].write(bleList);
+                this.settingList.forEach((item) => {
+                  if (item.command == commands[i]) {
+                    item.writeStatus = true;
+                  }
+                });
+                //this.blePostCommand.shift();
+                //check if all status is true,next
+                let nextStepStatus = true;
+                this.settingList.forEach((item) => {
+                  if (!item.writeStatus) {
+                    nextStepStatus = false;
+                  }
+                });
+                console.log('nextStepStatus', nextStepStatus);
+                if (nextStepStatus) {
+                  app.dialog.close();
+                  this.toTab(3);
+                  this.initDeviceNetwork();
+                }
+              } catch (error) {
+                app.dialog.close();
+                //if have error,should alert this error and tip
+                app.dialog.confirm(
+                  `${_(error)} ,${_('retry?')}`,
+                  () => {
+                    this.updateBleCommand();
+                  },
+                  () => {
+                    this.toTab(3);
+                    this.initDeviceNetwork();
+                  }
+                );
+                //app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            }
+          },
+          async initDeviceNetwork() {
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            let network_id = '';
+            let network_position = '';
+            profile_device.forEach((item) => {
+              if (item.device == guid) {
+                network_id = item.network_id;
+                network_position = item.network_position;
+                this.targetPosition = item.network_position;
+              }
+            });
+            let thisList = [];
+            //show the pre device and the next device
+            if (network_id) {
+              let networkIdList = profile_device
+                .filter((e) => e.network_id == network_id && e.network_id != 0)
+                .sort((a, b) => {
+                  return a.network_position - b.network_position;
+                });
+              this.networkCount = networkIdList.length;
+              let headBytes = '';
+              let tailBytes = '';
+              //if network_position in leader or end
+              if (network_position == 0) {
+                headBytes = `8500010000000000000000000000`;
+                tailBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position) + 1].device, true).toLowerCase()}0100000000`;
+                if (networkIdList.length > 1) {
+                  thisList.push(networkIdList[1]);
+                }
+              } else if (network_position == networkIdList.length - 1) {
+                headBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position) - 1].device, true).toLowerCase()}0000000000`;
+                tailBytes = `8500010000000000000100000000`;
+                thisList.push(networkIdList[network_position - 1]);
+              } else {
+                headBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position) - 1].device, true).toLowerCase()}0000000000`;
+                tailBytes = `850001${core_utils_get_mac_address_from_guid(networkIdList[parseInt(network_position) + 1].device, true).toLowerCase()}0100000000`;
+                thisList.push(networkIdList[network_position - 1]);
+                thisList.push(networkIdList[network_position + 1]);
+              }
+              this.targetNetworkCommandList = ['85000000', '850200', tailBytes, '850201', headBytes, '850200'];
+            } else {
+              thisList = [];
+            }
+            //show device info
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            thisList.forEach((item) => {
+              if (item.device) {
+                let guid = item.device;
+                if (isset(peripheral[guid])) {
+                  peripheral[guid].prop.password = item.password;
+                  const hexid = guid.substring(guid.length - 6, guid.length - 2);
+                  const model = erp.doctype.device_model[hexid.toUpperCase()];
+                  if (!model && !model.image) {
+                    item.image = model.image;
+                  } else {
+                    item.image = 'https://my.yoswit.com/files/products/YO2086-1G.svg';
+                  }
+                  //filter the room info
+                  item.roomInfo = '';
+                  subdevices.forEach((kitem) => {
+                    if (kitem.device == item.device && kitem.device) {
+                      item.roomInfo += `${tran(kitem.room_name)}-${tran(kitem.title)} `;
+                    }
+                  });
+                }
+              }
+            });
+            this.deviceNetworkList = thisList;
+            console.log('this.deviceNetworkList', this.deviceNetworkList);
+          },
+          async updateDeviceNetwork() {
+            let list = cloneDeep(this.deviceNetworkList);
+            if (list.length) {
+              app.dialog.preloader(_('Connecting...'));
+              //push this device
+              let count = 1;
+              for (let i in list) {
+                let network_position = list[i].network_position;
+                let headBytes = '';
+                let tailBytes = '';
+                let this_guid = list[i].device;
+                if (network_position == 0) {
+                  headBytes = `8500010000000000000000000000`;
+                  tailBytes = `850001${core_utils_get_mac_address_from_guid(this.targetGuid, true).toLowerCase()}0100000000`;
+                } else if (network_position == this.networkCount - 1) {
+                  headBytes = `850001${core_utils_get_mac_address_from_guid(this.targetGuid, true).toLowerCase()}0000000000`;
+                  tailBytes = `8500010000000000000100000000`;
+                } else {
+                  //if < targetPosition,update tail,if > targetPosition ,update headBytes
+                  if (network_position < this.targetPosition) {
+                    tailBytes = `850001${core_utils_get_mac_address_from_guid(this.targetGuid, true).toLowerCase()}0100000000`;
+                  } else {
+                    headBytes = `850001${core_utils_get_mac_address_from_guid(this.targetGuid, true).toLowerCase()}0000000000`;
+                  }
+                }
+                let meshCommands = ['85000000', '850200', tailBytes, '850201', headBytes, '850200'];
+                let bleList = [];
+                meshCommands.forEach((zitem) => {
+                  bleList.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: zitem,
+                  });
+                });
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '810e',
+                });
+                try {
+                  console.log('bleList', bleList);
+                  await peripheral[this_guid].write(bleList);
+                  this.updateSelfNetwork();
+                } catch (error) {
+                  app.dialog.close();
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              }
+            } else {
+              this.updateErpData();
+            }
+          },
+          async updateSelfNetwork() {
+            //update target device
+            let targetBleList = [];
+            this.targetNetworkCommandList.forEach((zitem) => {
+              targetBleList.push({
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: zitem,
+              });
+            });
+            targetBleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: '810e',
+            });
+            try {
+              console.log('targetBleList', targetBleList);
+              await peripheral[this.targetGuid].write(targetBleList);
+              this.updateErpData();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          async updateErpData() {
+            let mac_address = core_utils_get_mac_address_from_guid(this.targetGuid);
+            let this_firmware = peripheral[this.targetGuid].getProp().firmware;
+            let device_hex_model = peripheral[guid].getProp().hexModel.toUpperCase();
+            let model_name = erp.doctype.device_model[device_hex_model].name;
+            let mode_name = erp.doctype.device_model[device_hex_model].mode;
+            let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+
+            //init device setting
+            let settings = erp.info.device[guid].settings;
+            settings.forEach((item) => {
+              delete item.name;
+            });
+            let url = `/api/method/appv6.getOrUpdateDevice`;
+            let method = 'POST';
+            try {
+              let deviceData = await http2.request(url, {
+                method: method,
+                serializer: 'json',
+                debug: true,
+                data: {
+                  'guid': this.targetGuid,
+                  'password': peripheral[this.targetGuid].getProp().password,
+                  'device_mode': mode_name,
+                  'mac_address': mac_address,
+                  'device_model': model_name,
+                  'batch': isset(device_batch) ? device_batch.batch_id : 'YO0012',
+                  'firmware': isset(this_firmware) ? this_firmware : '----',
+                  'settings': settings,
+                  'parent': erp.info.profile.name,
+                  'old_guid': guid,
+                  'device_name': mac_address.replace(/:/g, ''),
+                  'gateway': this.gateway,
+                },
+              });
+              await ha_profile_ready();
+              app.dialog.close();
+              app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
+                window.globalUpdate = true;
+                mainView.router.back();
+              });
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          async iotResetPasswordPeripheral(item) {
+            console.log(item);
+            let guid = item.guid;
+            const mac = core_utils_get_mac_address_from_guid(guid, true);
+            const byte = mac.match(/.{1,2}/g);
+            const cmd = '880083' + byte[3] + byte[0] + '543e15';
+            const promisifyWrite = (device_id, service_uuid, characteristic_uuid, data) => {
+              return new Promise((resolve, reject) => {
+                ble.write(
+                  device_id,
+                  service_uuid,
+                  characteristic_uuid,
+                  data.convertToBytes(),
+                  () => {
+                    resolve();
+                  },
+                  (error) => {
+                    if (data === '810e') {
+                      resolve();
+                    } else {
+                      reject(error);
+                    }
+                  }
+                );
+              });
+            };
+            const promisifyConnect = (device_id) => {
+              return new Promise((resolve, reject) => {
+                ble.connect(
+                  device_id,
+                  () => {
+                    resolve();
+                  },
+                  (error) => {
+                    reject(error);
+                  }
+                );
+              });
+            };
+
+            const promisifyDisconnect = (device_id) => {
+              return new Promise((resolve, reject) => {
+                ble.disconnect(
+                  device_id,
+                  () => {
+                    resolve();
+                  },
+                  (error) => {
+                    reject(error);
+                  }
+                );
+              });
+            };
+            const sleep = (time) => {
+              return new Promise((resolve) => {
+                setTimeout(() => {
+                  resolve();
+                }, time);
+              });
+            };
+            try {
+              app.preloader.show();
+              const periperal = window.peripheral[guid].prop;
+
+              await promisifyConnect(periperal.id);
+              await promisifyWrite(periperal.id, 'ff80', 'ff81', cmd);
+              // ble.startNotification(periperal.id, 'ff80', 'ff82');
+              await promisifyDisconnect(periperal.id);
+
+              await sleep(2000);
+
+              await promisifyConnect(periperal.id);
+
+              await promisifyWrite(periperal.id, 'ff80', 'ff81', '812700');
+              // await promisifyWrite(periperal.id, 'ff80', 'ff81', '810e');
+
+              // 88ff00aa77
+              // 8e01
+
+              app.preloader.hide();
+              app.dialog.alert(_('Reset Success!'));
+            } catch (err) {
+              app.preloader.hide();
+              app.dialog.alert(_('Reset fail: ') + JSON.stringify(err));
+            }
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .empty-box + .list ul::before,
+  .empty-box + .list ul::after {
+    content: none;
+  }
+</style>

@@ -1,0 +1,117 @@
+{%- from "templates/print_formats/custom_macros.html" import tran -%}
+
+{% set guid = doc.filters['guid'] %}
+{% set _dummy = doc.filters.pop('guid') %}
+{% set model = doc.filters['model'] %}
+
+{%- set filters = doc.filters -%}
+{%- set new_filters = {"brand":doc.filters.brand,"device_type":doc.filters.device_type} -%}
+{% if doc.keyword != None and doc.keyword != "" %}
+    {% set _dummy = filters.update({'model':['like','%'~doc.keyword~'%']}) %}
+    {% set _ = new_filters.update({'model':['like','%'~doc.keyword~'%']}) %}
+{% else %}
+    {% set _filters = filters.update({'model':['!=','no_model']}) %}
+    {% set _new_filters = new_filters.update({'model':['!=','no_model']}) %}
+{% endif %}
+
+{%
+set groups = frappe.db.get_list('Device Button Group',
+    fields=['*'],
+    filters=new_filters,
+    order_by='model',
+    start=doc.start,
+    page_length=doc.limit,
+
+)
+%}
+{% if groups|length > 0 %}
+    {% if doc.start == 0 %}
+        <div class="list medium-inset no-chevron virtual-list searchbar-found search-list">
+            <ul class="dynamic-list-generated-from-jinja-APP_Yoswit_Device_Type_IR_Brand_Model">
+            </ul>
+        </div>
+        <!-- split -->
+        frappe-list2-right
+        <!-- equalto -->
+		<a class="link icon-only searchbar-enable" data-searchbar=".searchbar-demo2">
+			<i class="icon f7-icons if-not-md">search</i>
+			<i class="icon material-icons md-only">search</i>
+		</a>
+        <!-- split -->
+        dynamic-list-generated-from-jinja-APP_Yoswit_Device_Type_IR_Brand_Model
+        <!-- equalto -->
+    {% endif %}
+    
+    {%- for row in groups -%}
+    <li>
+    	<div class="swipeout-content">
+    		<a func="irLinkFunction" guid="{{guid}}" model="{{model}}" name="{{row.name}}" rowModel="{{row.model}}"  class="item-link item-content">
+    		    <div class="item-inner">
+    				<div class="item-title">
+        				<font lang="en" lang-packet="{{row.model}}">{{ tran(row.model, 'en') }}</font>
+    				</div>
+    		    </div>
+    		</a>
+    	</div>
+    </li>
+    {%- endfor -%}
+    
+    {% if groups|length < doc.limit|int %}
+        <!--no-more-class-->
+        <li>
+            <div class="swipeout-content">
+                <a href="/frappe/detail/YB0F2/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Custom_V5/Profile/Air Conditioner-Gree-YB0F2-26248/guid={{guid}}&model={{model}}&brand={{filters.brand}}/" class="item-link item-content">
+                    <div class="item-inner">
+                        <div class="item-title">
+                            <font lang="en" lang-packet="{{'Custom'}}">{{ tran('Custom', 'en') }}</font>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </li>
+        <li>
+            <div class="swipeout-content">
+                <a href="/frappe/detail/Others/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Others_V5/Profile/Others/guid={{guid}}&model={{model}}&brand={{filters.brand}}&device_type={{filters.device_type}}/" class="item-link item-content">
+                    <div class="item-inner">
+                        <div class="item-title">
+                            <font lang="en" lang-packet="{{'Others'}}">{{ tran('Others', 'en') }}</font>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </li>
+    {% endif %}
+
+{% elif doc.start != 0 and groups != None %}
+  <!--no-more-class-->
+{% else %}
+  <!--no-more-class-->
+  {% set empty = frappe.get_doc('Print Format', 'App_Core_No_Record_Found')%}
+  <!-- split -->
+  <div class="list medium-inset no-chevron virtual-list searchbar-found search-list">
+    <ul class="dynamic-list-generated-from-jinja-APP_Yoswit_Device_Type_IR_Brand_Model">
+        <li>
+            <div class="swipeout-content">
+                <a href="/frappe/detail/YB0F2/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Custom_V5/Profile/Air Conditioner-Gree-YB0F2-26248/guid={{guid}}&model={{model}}&brand={{filters.brand}}/" class="item-link item-content">
+                    <div class="item-inner">
+                        <div class="item-title">
+                            <font lang="en" lang-packet="{{'Custom'}}">{{ tran('Custom', 'en') }}</font>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </li>
+        <li>
+            <div class="swipeout-content">
+                <a href="/frappe/detail/Others/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Others_V5/Profile/Others/guid={{guid}}&model={{model}}&brand={{filters.brand}}&device_type={{filters.device_type}}/" class="item-link item-content">
+                    <div class="item-inner">
+                        <div class="item-title">
+                            <font lang="en" lang-packet="{{'Others'}}">{{ tran('Others', 'en') }}</font>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </li>
+        </ul>
+    </div>
+{% endif %}

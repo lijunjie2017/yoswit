@@ -13,12 +13,14 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
     const pairing_devices = [];
     params.obj.find("#network-group-device .device").forEach((e) => {
         const el = $(e);
-        pairing_devices.push({
-            mac_address: el.attr("button-group")+"|" + el.attr("mac-address"),
-            name: el.attr("name"),
-            button_group: el.attr("button-group"),
-            subdevice_name : el.attr("subdevice-name")
-        });
+        if(el.attr("guid") != guid){
+            pairing_devices.push({
+                mac_address: el.attr("button-group")+"|" + el.attr("mac-address"),
+                name: el.attr("name"),
+                button_group: el.attr("button-group"),
+                subdevice_name : el.attr("subdevice-name")
+            });
+        }
     });
 
     const update_setting_value = () => {
@@ -110,14 +112,38 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                     // })
                     .then(() => {
                         let data = "8108";
-
+                        let data_2 = "";
+                        let data_3 = "";//pause curtain switch
                         if (mac === "No Pairing") {
-                            data += `0${button_group.replace("ONOFF GANG","")*1}02`;
+                            //check if curtain switch
+                            if(button_group.startsWith("OPENCLOSE GANG")){
+                                let curtain_gang = button_group.replace("OPENCLOSE GANG","");
+                                data_3 = `81080502`;
+                                if(curtain_gang == '1_2'){
+                                    data = '81080102'
+                                    data_2 = `81080202`;
+                                }else if(curtain_gang == '3_4'){
+                                    data += '81080302'
+                                    data_2 = `81080402`;
+                                }
+                            }else if(button_group.startsWith("DIMMING")){
+                                data += `0502`;
+                            }else{
+                                data += `0${button_group.replace("ONOFF GANG","")*1}02`;
+                            }
                             let cmd = [];
                             let lock_data = `8111${(button_group.startsWith("ONOFF GANG") ? parseInt("1".padEnd((button_group.replace("ONOFF GANG", "") * 1) + 1, "0"), 2).toString(16).pad("00") : 'FF')}00`;
                             cmd.push({action: 'connect'});
                             cmd.push({action: 'write',data: data});
-                            cmd.push({action: 'write',data: lock_data});
+                            if(data_2){
+                                cmd.push({action: 'write',data: data_2});
+                            }
+                            if(data_3){
+                                cmd.push({action: 'write',data: data_3});
+                            }
+                            if(button_group.startsWith("ONOFF GANG")){
+                                cmd.push({action: 'write',data: lock_data});
+                            }
                             return ha_process_periperal_cmd(Object.values(scanned_periperals).find(item=>item.guid == guid && item.advertising).id, cmd,true);
                             target_data = {
                                 "virtual" : "",
@@ -143,6 +169,16 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                                 gang = g.toString(16).pad("00");
                             } else if (button_group.startsWith("DIMMING")) {
                                 gang = "05";
+                            }else if(button_group.startsWith("OPENCLOSE GANG")){
+                                let curtain_gang = button_group.replace("OPENCLOSE GANG","");
+                                data_3 = '81080520';
+                                if(curtain_gang == '1_2'){
+                                    gang = '01';
+                                    data_2 = `810802`
+                                }else if(curtain_gang == '3_4'){
+                                    gang = '03';
+                                    data_2 = `810804`
+                                }
                             }
 
                             data += gang;
@@ -151,14 +187,33 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                             if (target_info.button_group.startsWith("DIMMING")) {
                                 head = "";
                                 data += "20";
+                            }else if(target_info.button_group.startsWith("OPENCLOSE GANG")){
+                                head = "";
+                                data += "20";
+                                data_2+= "20";
                             }
 
                             data += head;
                             let new_mac = mac.split("|")[1]
                             data += reverseStringByLittleEndian(new_mac.replace(/:/g, ""));
-
+                            if(data_2){
+                                data_2 += reverseStringByLittleEndian(new_mac.replace(/:/g, ""));
+                            }
+                            if(data_3){
+                                data_3 += reverseStringByLittleEndian(new_mac.replace(/:/g, ""));
+                            }
                             if (target_info.button_group.startsWith("DIMMING")) {
                                 data += "2000";
+                            }else if(target_info.button_group.startsWith("OPENCLOSE GANG")){
+                                let target_gang = target_info.button_group.replace("OPENCLOSE GANG","");
+                                data_3 += `2000`;
+                                if(target_gang == "1_2"){
+                                    data += "0200";
+                                    data_2 += `0400`;
+                                }else if(target_gang == "3_4"){
+                                    data += "0800";
+                                    data_2 += `1000`
+                                }
                             } else {
                                 data += "00";
                                 
@@ -172,6 +227,8 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                             }
                             if(target_info.button_group.startsWith("DIMMING")){
                                 
+                            }else if(target_info.button_group.startsWith("OPENCLOSE GANG")){
+
                             }else{
                                 data += "00";
                             }
@@ -179,6 +236,12 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                             let cmd = [];
                             cmd.push({action: 'connect'});
                             cmd.push({action: 'write',data: data });
+                            if(data_2){
+                                cmd.push({action: 'write',data: data_2 });
+                            }
+                            if(data_3){
+                                cmd.push({action: 'write',data: data_3 });
+                            }
                             if(device_model == 'YO845m' || device_model == "YO843m" || device_model == 'YO2086s-2GM'){
                                 //fixed the two a bug;
                                 let new_mac = mac.split("|")[1];
@@ -190,11 +253,13 @@ window.iot_mode_setup_virtual_device_pairing_auto_init = function(params) {
                                 }
                                 if(g>2){
                                     cmd.push({action: 'write',data: `8108${g.toString(16).pad("00")}02${reverseStringByLittleEndian(new_mac.replace(/:/g, ""))}00${target_gang}00` });
-                                    cmd.push({action: 'write',data:'8111' + (button_group.startsWith("ONOFF GANG") ? parseInt("1".padEnd((button_group.replace("ONOFF GANG", "") * 1), "0"), 2).toString(16).pad("00") : 'FF')})
+                                    //cmd.push({action: 'write',data:'8111' + (button_group.startsWith("ONOFF GANG") ? parseInt("1".padEnd((button_group.replace("ONOFF GANG", "") * 1), "0"), 2).toString(16).pad("00") : 'FF')})
                                 }
                             }
                             if(target_info.button_group.startsWith("DIMMING")){
                                 
+                            }else if(target_info.button_group.startsWith("OPENCLOSE GANG")){
+
                             }else{
                                 cmd.push({action: 'write',data: '8111' + (button_group.startsWith("ONOFF GANG") ? parseInt("1".padEnd((button_group.replace("ONOFF GANG", "") * 1) + 1, "0"), 2).toString(16).pad("00") : 'FF')});
                             }

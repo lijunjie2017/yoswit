@@ -626,7 +626,7 @@ window.initSettingTemplate = ()=>{
             <div id="network-group-device" style="display: none;">
                 {% for row in subdevice_list %}
                     {% if network_id == row.network_id and row.network_id != "0"   %}
-                    <div class="device" button-group="{{ row.device_button_group }}" mac-address="{{ row.device_name }}" name="{{ _(row.title) }}" subdevice-name="{{row.profile_subdevice_name}}"></div>
+                    <div class="device" guid="{{ row.device }}" button-group="{{ row.device_button_group }}" mac-address="{{ row.device_name }}" name="{{ _(row.title) }}" subdevice-name="{{row.profile_subdevice_name}}"></div>
                     {% endif %}
                 {% endfor %}
             </div>
@@ -1139,6 +1139,29 @@ window.initSettingTemplate = ()=>{
                     <div class="col-auto">
                         <!-- href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Firmware_Upgrade_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" -->
                         <a href="/mobile-app/device-log?subdevice={{ profile_subdevice_name }}&guid={{guid}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Catch Log";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" ref="{{ device }}" init-func="iot_mode_setup_firmware_upgrade_auto_init" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">content_paste_go</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <!-- href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Firmware_Upgrade_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" -->
+                        <a href="/mobile-app/device-catch-log?subdevice={{ profile_subdevice_name }}&guid={{guid}}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>

@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Add Device Network') }}</div>
+        <div class="title">{{ _('Restore Device Network') }}</div>
       </div>
     </div>
 
@@ -17,44 +17,27 @@
       {% raw %}
       <div id="vue-app" v-cloak>
         <div class="main-box">
-          <div class="block mx-3 margin-top">
-            <p class="segmented segmented-strong">
-              <button class="button" :class="index == 0?'button-active button':'button'" v-on:click="toTab(0)">{{_('Step')}} 1</button>
-              <button class="button" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">{{_('Step')}} 2</button>
-              <!--<button class="button" :class="index == 2?'button-active button':'button'" v-on:click="toTab(2)">{{_('Step')}} 3</button>-->
-              <span class="segmented-highlight"></span>
-            </p>
-          </div>
           <div class="tabs">
-            <div
-              id="step-0"
-              class="view tab view-main"
-              :class="[index == 0 || index == 1 ? 'tab-active' : '']"
-              v-if="index == 0 || index == 1"
-            >
-              <!-- choose device div start -->
-              <div class="block-title" style="overflow: initial; margin-top: 0px; font-size: 18px">{{_(titleTip)}}</div>
-              <div class="title-tip" style="padding: 0px 0px 15px 15px" v-show="titleStatus">
-                <span class="text-muted">{{_('Please sort the device according to its physical location')}}</span>
-              </div>
+            <div id="step-1" class="view tab view-main tab-active">
               <div
                 class="list media-list no-margin list-group sortable sortable-network-wrapper"
                 v-on:sortable:sort="onSortableSort"
                 data-sortable-move-elements="false"
                 v-if="totalDevices != 0"
+                v-for="(kitem,kindex) in restoreList"
+                :key="kindex"
               >
                 <ul>
                   <li class="list-group-title display-flex justify-content-space-between">
-                    <span>{{_('Network')}} {{networkIndex}}</span>
-                    <div class="item-after"><span class="badge color-blue">{{totalDevices}}</span></div>
+                    <span>{{_('Network')}}{{kindex+1}}</span>
+                    <div class="item-after"><span class="badge color-blue">{{kitem.length}}</span></div>
                   </li>
                   <li
                     class="device home-scanned-peripheral mobmob-device swipeout"
                     :guid="item.device"
                     is-network="true"
-                    v-for="(item,index) in deviceList"
+                    v-for="(item,index) in kitem"
                     :key="item.name"
-                    v-if="dealwithShow(item)"
                   >
                     <div class="item-content swipeout-content">
                       <label class="checkbox" style="padding-left: 20px; padding-right: 20px"
@@ -98,43 +81,86 @@
                   </li>
                 </ul>
               </div>
-              <!-- unnasiggned start -->
-              <div class="list media-list no-margin list-group" v-if="uncatDevices != 0 && !sortStatus">
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="restoreList.length != 0">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="confirmDeviceNetwork()">{{_("Confirm")}}</div>
+                </div>
+              </div>
+            </div>
+            <div
+              id="step-0"
+              class="view tab view-main"
+              :class="[index == 0 || index == 1 ? 'tab-active' : '']"
+              v-if="showUncat"
+            >
+              <div class="title-tip" style="padding: 0px 0px 15px 15px" v-show="titleStatus">
+                <span class="text-muted">{{_('Please sort the device according to its physical location')}}</span>
+              </div>
+              <div
+                class="list media-list no-margin list-group sortable sortable-network-wrapper"
+                v-on:sortable:sort="onSortableSort"
+                data-sortable-move-elements="false"
+                v-if="totalDevices != 0"
+              >
                 <ul>
                   <li class="list-group-title display-flex justify-content-space-between">
                     <span>{{_('Unassigned')}}</span>
-                    <div class="item-after"><span class="badge color-blue">{{uncatDevices}}</span></div>
+                    <div class="item-after"><span class="badge color-blue">{{totalDevices}}</span></div>
                   </li>
-                  <div v-for="(item,index) in uncatDeviceList" :key="item.name" v-if="item.network_id == 0">
-                    <li class="device mobmob-device swipeout">
-                      <div class="item-content swipeout-content">
-                        <label class="checkbox" style="padding-left: 20px; padding-right: 20px" v-if="!sortStatus"
-                          ><input v-on:click="changeUcatVal(item)" type="checkbox" :checked="item.checked?true:false" /><i
-                            class="icon-checkbox"
-                          ></i
-                        ></label>
-                        <div
-                          class="item-media"
-                          :style="{'background-image' : 'url('+erp.get_url(item.image?item.image:imgError)+')'}"
-                        ></div>
-                        <div class="item-inner">
-                          <div class="item-title-row" style="margin-top: 10px">
-                            <div class="item-title">{{item.device_model}} - {{item.device_name.substring(0,12)}}</div>
-                          </div>
-                          <div class="item-subtitle text-muted">{{item.roomInfo}}</div>
-                        </div>
-                        <div class="control-panel-right"></div>
+                  <li
+                    class="device home-scanned-peripheral mobmob-device swipeout"
+                    :guid="item.device"
+                    is-network="true"
+                    v-for="(item,index) in deviceList"
+                    :key="item.name"
+                  >
+                    <div class="item-content swipeout-content">
+                      <label class="checkbox" style="padding-left: 20px; padding-right: 20px"
+                        ><input v-on:click="changeVal(item)" type="checkbox" :checked="item.checked?true:false" /><i
+                          class="icon-checkbox"
+                        ></i
+                      ></label>
+                      <div class="item-media" style="position: relative">
+                        <img :src="erp.get_url(item.image?item.image:imgError)" width="60" />
+                        <i
+                          class="material-icons mesh-head"
+                          :style="{'position':'absolute','left':'-5px','bottom':'-5px','font-size':'20px','display':item.meshHeadSet?'inline-block':'none','color':item.meshHeadConnect?'green':'red'}"
+                          >{{item.meshHeadConnect?'link':'link_off'}}</i
+                        >
+                        <i
+                          class="material-icons mesh-tail"
+                          :style="{'position':'absolute','right':'-5px','bottom':'-5px','font-size':'20px','display':item.meshTailSet?'inline-block':'none','color':item.meshTailConnect?'green':'red'}"
+                          >{{item.meshTailConnect?'link':'link_off'}}</i
+                        >
                       </div>
-                    </li>
-                  </div>
+                      <div class="item-inner">
+                        <div class="item-title-row">
+                          <div class="item-title">{{item.device_model}} - {{item.device_name.substring(0,12)}}</div>
+                        </div>
+                        <div class="item-subtitle text-muted">{{item.roomInfo}}</div>
+                        <div class="signal-panel item-text height-21">
+                          <div :signal="item.signal" :bluetooth="item.bluetooth" :mesh="item.meshSize?1:0">
+                            <div class="signal"></div>
+                            <div class="bluetooth"></div>
+                            <div class="mesh" :pos="calcMeshSize(item.network_id)">
+                              <span v-if="item.meshSize">{{item.meshSize?item.meshSize:0}}/{{calcMeshSize(item.network_id)}}</span>
+                            </div>
+                            <div class="mobmob"></div>
+                            <div class="iostatus"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="control-panel-right"></div>
+                    </div>
+                    <div class="sortable-handler"></div>
+                  </li>
                 </ul>
               </div>
-              <!-- unnasiggned end -->
               <!-- choose device div end -->
-              <div class="device-null" v-if="totalDevices == 0 && uncatDevices == 0">
+              <div class="device-null" v-if="totalDevices == 0">
                 <div class="block" style="text-align: center">
                   <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-                  <p>${_('You do not have any devices')}</p>
+                  <p>${_('You don not have any network batch, create one')}</p>
                 </div>
                 <div class="block block-strong">
                   <p class="row">
@@ -142,17 +168,11 @@
                   </p>
                 </div>
               </div>
-              <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="totalDevices != 0 || uncatDevices!= 0">
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="totalDevices">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="nextStep(1)" v-if="index == 0">{{_("NEXT STEP")}}</div>
-                  <div class="button button-fill button-save" v-on:click="nextStep(2)" v-if="index == 1">{{_("Configuring")}}</div>
+                  <div class="button button-fill button-save" v-on:click="updateDeviceNetwork()">{{_("Restore")}}</div>
                 </div>
               </div>
-            </div>
-            <div id="step-1" class="view tab view-main" :class="[index == 0 ? 'tab-active' : '']" v-if="index == 0">
-              <!-- sort device div start -->
-
-              <!-- sort device div end -->
             </div>
           </div>
         </div>
@@ -170,7 +190,7 @@
       $on = ctx.$on;
 
     let vueApp = null;
-    let { network_index, edit } = $f7route.query;
+    const { network_index, edit } = $f7route.query;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
@@ -186,6 +206,10 @@
           uncatDevices: 0,
           imgError: 'https://my.yoswit.com/files/products/YO2086-1G.svg',
           sortStatus: false,
+          restoreMap: {},
+          deviceRestoreMap: {},
+          restoreList: [], //[[network1],[network2]]
+          showUncat : true,
         },
         watch: {
           index: function (newVal) {
@@ -204,19 +228,11 @@
         mounted() {
           this.networkIndex = network_index && network_index != 'undefined' ? network_index : 1;
           this.init();
-          //this.scan();
+          this.scan();
           //this.startScan();
-          emitter.on('ha_network_update_status', (data) => {
-            //console.log(data)
-            let p = data.p;
-            if (isset(p)) {
-              this.updateDevices(p);
-            }
-          });
         },
         methods: {
           toTab(index) {
-            return
             this.index = index;
             if (index == 1) {
               this.sortStatus = true;
@@ -281,17 +297,13 @@
             //get the image
             devices.forEach((item) => {
               //choose status
-              item.checked = true;
+              item.checked = false;
               item.isUsed = true;
               item.signal = 0;
               item.bluetooth = 0;
               item.mesh = 0;
               if (item.device) {
                 let guid = item.device;
-                //update the paw
-                if(isset(peripheral[guid])){
-                  peripheral[guid].prop.password = item.password;
-                }
                 const hexid = guid.substring(guid.length - 6, guid.length - 2);
                 const model = erp.doctype.device_model[hexid.toUpperCase()];
                 item.deviceNetworkSize = model.device_network_size ? model.device_network_size : 1;
@@ -322,9 +334,6 @@
                   if (idList.indexOf(parseInt(this.networkIndex)) == -1 && idList.length == item.deviceNetworkSize) {
                     item.isUsed = false;
                   }
-                  if(idList.indexOf(parseInt(this.networkIndex)) == -1 && idList.length < item.deviceNetworkSize){
-                    item.network_id = 0;
-                  }
                 }
               }
             });
@@ -336,27 +345,8 @@
                 return a.network_id - b.network_id; // 否则比较 network_id
               }
             });
-            //if edit and add
-            console.log('edit', edit);
-            if (edit == 1) {
-              this.deviceList.forEach((item) => {
-                if (item.network_id != this.networkIndex) {
-                  item.checked = false;
-                }
-              });
-              this.uncatDeviceList = cloneDeep(this.deviceList).filter((item) => item.network_id == 0);
-              this.uncatDeviceList.forEach((item) => {
-                item.checked = false;
-              });
-              this.updateTotal();
-            } else {
-              let newDevices = cloneDeep(this.deviceList);
-              //fliter the device in uncat,if networl size be used
-              newDevices.forEach((kitem) => {
-                let usedSize = 0;
-              });
-              this.updateTotal();
-            }
+            this.deviceList = this.deviceList.filter((item) => item.network_id == 0);
+            this.updateTotal();
           },
           nextStep() {
             if (this.index == 0) {
@@ -372,7 +362,7 @@
           },
           dealwithShow(item) {
             if (edit == 1) {
-              return (item.network_id == this.networkIndex && item.isUsed);
+              return item.network_id == this.networkIndex;
             } else {
               if (this.index == 1) {
                 return item.network_id == this.networkIndex;
@@ -380,7 +370,7 @@
                 if (item.deviceNetworkSize > 1 && item.isUsed) {
                   return true;
                 } else {
-                  return item.network_id == this.networkIndex || (item.network_id == 0 && item.isUsed);
+                  return item.network_id == this.networkIndex || item.network_id == 0;
                 }
               }
             }
@@ -392,168 +382,278 @@
             item.checked = !item.checked;
             if (item.checked) {
               item.network_id = this.networkIndex;
-              this.deviceList.forEach((kitem) => {
-                if (kitem.device === item.device) {
-                  kitem.network_id = this.networkIndex;
-                  kitem.checked = true;
-                }
-              });
             } else {
               item.network_id = 0;
             }
+            this.deviceList.forEach((kitem) => {
+              if (kitem.device === item.device) {
+                kitem.network_id = this.networkIndex;
+                kitem.checked = true;
+              }
+            });
             console.log(item);
             this.updateTotal();
           },
           changeVal(item) {
             item.checked = !item.checked;
-            if (this.sortStatus) {
-              return;
-            }
-            if (edit == 1) {
-              if (!item.checked) {
-                if (item.deviceNetworkSize > 1) {
-                  app.dialog.confirm(
-                    `${_('Would you like to delete this networked device?')}`,
-                    async () => {
-                      app.dialog.preloader();
-                      this.clearNetworkForGateway(item)
-                        .then(() => {
-                          item.network_id = 0;
-                          if (cloneDeep(this.uncatDeviceList).filter((kitem) => item.device == kitem.device).length == 0) {
-                            this.uncatDeviceList.push(item);
-                          } else {
-                            this.uncatDeviceList.forEach((kitem) => {
-                              if (kitem.device == item.device) {
-                                kitem.network_id = 0;
-                                kitem.checked = false;
-                              }
-                            });
-                          }
-                          app.dialog.close();
-                        })
-                        .catch((error)=>{
-                          item.checked = !item.checked;
-                          app.dialog.close();
-                          app.dialog.alert(_('Can not delete device, please try again later'));
-                          return;
-                        });
-                    },
-                    () => {
-                      item.checked = !item.checked;
-                    }
-                  );
-                } else {
-                  item.network_id = 0;
-                  if (cloneDeep(this.uncatDeviceList).filter((kitem) => item.device == kitem.device).length == 0) {
-                    this.uncatDeviceList.push(item);
-                  } else {
-                    this.uncatDeviceList.forEach((kitem) => {
-                      if (kitem.device == item.device) {
-                        kitem.network_id = 0;
-                        kitem.checked = false;
-                      }
-                    });
-                  }
-                }
-              } else {
-                if (item.checked) {
-                  item.network_id = this.networkIndex;
-                } else {
-                  item.network_id = 0;
-                }
-              }
-              let totalList = cloneDeep(this.deviceList).filter((item) => item.checked === true);
-              console.log(totalList);
-            } else {
-              if (item.checked) {
-                item.network_id = this.networkIndex;
-              } else {
-                item.network_id = 0;
-              }
-            }
-            console.log('item', item);
-            this.updateTotal();
           },
           updateTotal() {
             if (edit == 1) {
-              this.totalDevices = cloneDeep(this.deviceList).filter((item) => item.network_id === this.networkIndex && item.isUsed).length;
+              this.totalDevices = cloneDeep(this.deviceList).filter((item) => item.network_id === this.networkIndex).length;
               this.uncatDevices = this.uncatDeviceList.filter((kitem) => kitem.network_id == 0).length;
             } else {
-              this.totalDevices = cloneDeep(this.deviceList).filter((item) => item.network_id == 0 || (item.deviceNetworkSize > 1 && item.isUsed)).length;
+              this.totalDevices = cloneDeep(this.deviceList).filter((item) => item.network_id == 0 || item.deviceNetworkSize > 1).length;
             }
-          },
-          connectRetryDefaultPaw(guid){
-            return new Promise((resolve,reject)=>{
-              peripheral[guid].connect().then(()=>{
-                resolve(1);
-              }).catch(error=>{
-                if(error == 7200){
-                  //retry default paw
-                  peripheral[guid].prop.password = '000000';
-                  peripheral[guid]
-                  .doConnect()
-                  .then(() => {
-                    resolve(1);
-                  }).catch(err=>{
-                    reject(err)
-                  })
-                }else{
-                  reject(error)
-                }
-              })
-            })
-          },
-          async clearNetworkForGateway(item) {
-            let head_group = 0;
-            let tail_group = 1;
-            if (item.deviceNetworkSize > 1) {
-              if (isset(item.network_1)) {
-                let networkMapList = JSON.parse(item.network_1);
-                let idList = networkMapList.map((kitem) => kitem.network_id);
-                let checkIndex = idList.indexOf(this.networkIndex);
-                if (checkIndex != -1) {
-                  if (checkIndex == 1) {
-                    head_group = 2;
-                    tail_group = 3;
-                  } else if (checkIndex == 2) {
-                    head_group = 4;
-                    tail_group = 5;
-                  }
-                  networkMapList.splice(checkIndex,1);
-                  item.network_1 = JSON.stringify(networkMapList);
-                }
-              }
-            }
-            let commands = [`8500010000000000000${head_group}00000000`, '850200', `8500010000000000000${tail_group}00000000`, '850201'];
-            let postCommand = [];
-            for (let i in commands) {
-              postCommand.push({
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: commands[i],
-              });
-            }
-            postCommand.push({
-              service: 'ff80',
-              characteristic: 'ff81',
-              data: '810e',
-            });
-            return peripheral[item.device].write(postCommand);
-          },
-          updateDialogConfirm(title){
-            return new Promise((resolve,reject)=>{
-              app.dialog.confirm(`${_(title)}`,()=>{
-                resolve(1);
-                mainView.router.back();
-              },()=>{
-                resolve(0)
-              })
-            })
           },
           async updateDeviceSettings() {},
+          connectRetryDefaultPaw(guid) {
+            return new Promise((resolve, reject) => {
+              peripheral[guid]
+                .connect()
+                .then(() => {
+                  resolve(1);
+                })
+                .catch((error) => {
+                  if (error == 7200) {
+                    //retry default paw
+                    peripheral[guid].prop.password = '000000';
+                    peripheral[guid]
+                      .doConnect()
+                      .then(() => {
+                        resolve(1);
+                      })
+                      .catch((err) => {
+                        reject(err);
+                      });
+                  } else {
+                    reject(error);
+                  }
+                });
+            });
+          },
+          revertStr(hexString) {
+            let bytes = [];
+            for (let i = 0; i < hexString.length; i += 2) {
+              bytes.push(hexString.substr(i, 2));
+            }
+            const reversedHex = bytes.reverse();
+            return reversedHex.join('');
+          },
+          async findNextDevice(macRever) {
+            let deviceMap = this.deviceList.find((d) => core_utils_get_mac_address_from_guid(d.device, true) === macRever);
+            if (deviceMap) {
+              try {
+                let guid = deviceMap.device;
+                await window.peripheral[guid].connect();
+                console.log(peripheral[guid].prop.id);
+                ble.startNotification(
+                  peripheral[guid].prop.id,
+                  'ff80',
+                  'ff82',
+                  (rs) => {
+                    console.log('start notify');
+                    console.log('rs', rs);
+                    let headStatus = rs.substring(16, 18);
+                    let macStr = rs.substring(4, 16);
+                    debugger;
+                    if (headStatus == '00') {
+                      if (macStr != '000000000000') {
+                        this.restoreMap['network_1'].unshift(this.revertStr(macStr));
+                        this.findNextDevice(macStr);
+                      }
+                      console.log(this.restoreMap['network_1']);
+                    } else if (headStatus == '01') {
+                      if (macStr != '000000000000') {
+                        this.restoreMap['network_1'].push(this.revertStr(macStr));
+                        this.findNextDevice(macStr);
+                      }
+                      console.log(this.restoreMap['network_1']);
+                    }
+                  },
+                  (notifyError) => {
+                    console.log('notifyError', notifyError);
+                  }
+                );
+                //850200 get the head,850201 get the tail
+                //8500 2efc168d3a08 00(00:head;01:tail) 0000000001
+                let bleList = [
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `850200`,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `850201`,
+                  },
+                ];
+                await window.peripheral[guid].write(bleList);
+              } catch (error) {
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            } else {
+            }
+          },
+          async findDeviceHeadAndTail(guid) {
+            let getHeadStatus = false;
+            let getTailStatus = false;
+            return new Promise(async (resolve, reject) => {
+              try {
+                let this_mac = core_utils_get_mac_address_from_guid(guid, true);
+                await window.peripheral[guid].connect();
+                ble.startNotification(
+                  peripheral[guid].prop.id,
+                  'ff80',
+                  'ff82',
+                  (rs) => {
+                    console.log('start notify');
+                    console.log('rs', rs);
+                    let headStatus = rs.substring(16, 18);
+                    let macStr = rs.substring(4, 16);
+                    if (headStatus == '00') {
+                      getHeadStatus = true;
+                      if (getTailStatus) {
+                        resolve(1);
+                      }
+                      if (macStr != '000000000000') {
+                        // this.restoreMap['network_1'].unshift(this.revertStr(macStr));
+                        // this.findNextDevice(macStr);
+                        this.deviceRestoreMap[this_mac]['head_be_connect'] = macStr;
+                      } else {
+                        this.deviceRestoreMap[this_mac]['head_be_connect'] = 'none';
+                      }
+                    } else if (headStatus == '01') {
+                      getTailStatus = true;
+                      if (getHeadStatus) {
+                        resolve(1);
+                      }
+                      //check if get the tailStatus
+                      if (macStr != '000000000000') {
+                        // this.restoreMap['network_1'].push(this.revertStr(macStr));
+                        // this.findNextDevice(macStr);
+                        this.deviceRestoreMap[this_mac]['tail_be_connect'] = macStr;
+                      } else {
+                        this.deviceRestoreMap[this_mac]['tail_be_connect'] = 'none';
+                      }
+                    } else {
+                      reject(0);
+                    }
+                  },
+                  (notifyError) => {
+                    reject(notifyError);
+                  }
+                );
+                //850200 get the head,850201 get the tail
+                //8500 2efc168d3a08 00(00:head;01:tail) 0000000001
+                let bleList = [
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `850200`,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `850201`,
+                  },
+                ];
+                await window.peripheral[guid].write(bleList);
+              } catch (error) {
+                reject(error);
+              }
+            });
+          },
           async updateDeviceNetwork() {
+            // for (let i = 1; i <= 20; i++) {
+            //   this.restoreMap[`network_${i}`] = [];
+            // }
+            //send the command to the target device
+            //form the list one start
+            let thisList = cloneDeep(this.deviceList);
+            //let deviceMap = thisList[0];
+            app.dialog.confirm(
+              `${_('Note: During the recovery process, the phone needs to scan the networking devices.')}`,
+              async () => {
+                const updateFun = async () => {
+                  for (let i in thisList) {
+                    if (thisList[i].updateStatus) {
+                      break;
+                    }
+                    try {
+                      let guid = thisList[i].device;
+                      //let this_mac = core_utils_get_mac_address_from_guid(guid).replace(/:/g, '');
+                      let this_mac = core_utils_get_mac_address_from_guid(guid, true);
+                      this.deviceRestoreMap[this_mac] = {};
+                      await this.findDeviceHeadAndTail(guid);
+                      thisList[i].updateStatus = true;
+                    } catch (error) {
+                      //show which device error
+                      let deviceInfo = `${thisList[i].roomInfo}`;
+                      thisList[i].updateStatus = false;
+                      app.dialog.confirm(
+                        `${_('Update')} ${thisList[i].roomInfo} ${_('failed,retry?')}`,
+                        () => {
+                          updateFun();
+                        },
+                        () => {}
+                      );
+                      //app.dialog.alert(_(erp.get_log_description(error)));
+                    }
+                  }
+                  let allUpdateStatus = true;
+                  thisList.forEach((item) => {
+                    if (!item.updateStatus) {
+                      allUpdateStatus = false;
+                    }
+                  });
+                  if (allUpdateStatus) {
+                    console.log('this.deviceRestoreMap', this.deviceRestoreMap);
+                    //tindy the device info
+                    let objMap = cloneDeep(this.deviceRestoreMap);
+                    const lookup = { ...objMap };
+                    const results = [];
+                    const headKeys = Object.keys(lookup).filter((key) => lookup[key].head_be_connect === 'none');
+                    for (const headKey of headKeys) {
+                      const connectedArray = [];
+                      let currentKey = headKey;
+                      while (currentKey) {
+                        connectedArray.push(currentKey);
+                        const tailBeConnect = lookup[currentKey].tail_be_connect;
+                        if (tailBeConnect === 'none') {
+                          break;
+                        }
+                        currentKey = Object.keys(lookup).find((key) => lookup[key].head_be_connect === currentKey);
+                      }
+                      results.push(connectedArray);
+                    }
+                    console.log('results', results);
+                    let resultsMap = cloneDeep(results);
+                    let showList = [];
+                    for (let i = 0; i < resultsMap.length; i++) {
+                      for (let j = 0; j < resultsMap[i].length; j++) {
+                        for (const z of thisList) {
+                          const guid = z.device;
+                          const macAddress = core_utils_get_mac_address_from_guid(guid, true);
+                          if (resultsMap[i][j] === macAddress) {
+                            resultsMap[i][j] = z;
+                          }
+                        }
+                      }
+                    }
+                    this.restoreList = resultsMap;
+                    this.showUncat = false;
+                    console.log('showList', resultsMap);
+                  }
+                };
+                updateFun();
+              },
+              () => {}
+            );
+
+            return;
             //get this network devices
-            let targetList = this.deviceList.filter((item) => this.dealwithShow(item));
+            let targetList = cloneDeep(this.deviceList);
             //await this.updateDeviceSettings();
             return new Promise(async (resolve, reject) => {
               // command bytes: [head, tail]
@@ -580,20 +680,8 @@
                     }
                   }
                 }
-                let headBytes =
-                  index === 0
-                    ? '8500010000000000000000000000'
-                    : '850001' +
-                      core_utils_get_mac_address_from_guid(targetList[index - 1].device, true).toLowerCase() +
-                      `0${head_group}` +
-                      '00000000';
-                let tailBytes =
-                  index === targetList.length - 1
-                    ? '8500010000000000000100000000'
-                    : '850001' +
-                      core_utils_get_mac_address_from_guid(targetList[index + 1].device, true).toLowerCase() +
-                      `0${tail_group}` +
-                      '00000000';
+                let headBytes = '8500010000000000000000000000';
+                let tailBytes = '8500010000000000000100000000';
                 meshCommands.push({
                   guid: e.device,
                   bytes: ['85000000', '850200', tailBytes, '850201', headBytes, '850200'],
@@ -615,6 +703,7 @@
                 toast.open();
                 try {
                   await this.connectRetryDefaultPaw(meshCommands[i].guid);
+                  //await peripheral[meshCommands[i].guid].connect();
                   let list = meshCommands[i].bytes;
                   let postCommandList = [];
                   for (let j in list) {
@@ -663,17 +752,6 @@
                             });
                             await peripheral[meshCommands[z].guid].write(postCommandList);
                             control_index++;
-                            app.toast.close();
-                            if (control_index >= meshCommands.length) {
-                              app.toast.show({
-                                position: 'center',
-                                text: _('Update Successfully'),
-                                closeTimeout: 2000,
-                              });
-                              setTimeout(()=>{
-                                this.updateDialogConfirm('Configuration successful. It will take some time for the devices to connect. Would you like to return?');
-                              },2001)
-                            }
                           } catch (errors) {
                             app.toast.close();
                             setTimeout(() => {
@@ -695,9 +773,6 @@
                   text: _('Update Successfully'),
                   closeTimeout: 2000,
                 });
-                setTimeout(()=>{
-                  this.updateDialogConfirm('Configuration successful. It will take some time for the devices to connect. Would you like to return?');
-                },2001)
                 // app.dialog.confirm(
                 //   `${_('The configuration is complete. It will take some time for the devices to network with each other. Do you want to go back?')}`,
                 //   () => {
@@ -749,9 +824,9 @@
               }
             });
             //in order to deal with the mutiway network save
-            let postList = this.deviceList;
+            let postList = cloneDeep(this.deviceList);
             postList.forEach((item) => {
-              if (item.deviceNetworkSize > 1 && item.network_id == this.networkIndex && item.isUsed) {
+              if (item.deviceNetworkSize > 1 && item.network_id == this.networkIndex) {
                 //check if have this network
                 if (isset(item.network_1)) {
                   let mapList = JSON.parse(item.network_1);
@@ -781,7 +856,6 @@
                 }
               }
             });
-            debugger;
             console.log('postList', postList);
             try {
               await http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
@@ -796,19 +870,16 @@
                 },
               });
               app.dialog.close();
-              erp.info.profile.profile_device = postList;
+              erp.info.profile.profile_device = this.deviceList;
               emitter.emit('device_network_update');
               console.log('this.deviceList', this.deviceList);
               let targetList = this.deviceList.filter((item) => this.dealwithShow(item));
               if (targetList.length == 0) {
-                app.dialog.alert(_('No devices need to be networked,please go back'));
-                mainView.router.back();
+                app.dialog.alert(_('No devices need to be networked'));
                 return;
               }
               this.index = 1;
               this.sortStatus = true;
-              edit = 1;
-              this.updateTotal();
               //app.dialog.alert('Successfully');
             } catch (error) {
               app.dialog.close();
@@ -824,10 +895,6 @@
           async tindyNetworkSize(item, p) {
             if (!isset(p)) {
               return;
-            }
-            if (p.guid == '3934623535353937353330651202191d') {
-              // console.log(item);
-              // console.log(p);
             }
             let manufactureData = isset(p.manufactureData) ? p.manufactureData : '000000000000000000';
             let connectedSize = 0x0f & parseInt(manufactureData.substring(2, 4), 16),
@@ -845,13 +912,11 @@
             item.meshTailSet = meshTailSet;
             item.meshTailConnect = meshTailConnect;
             item.meshSize = meshSize;
-            this.$forceUpdate();
           },
           async scan() {
             await bleManager.stopScan();
             await bleManager.wait(200);
             bleManager.scan(this.onDiscovery, async () => {
-              debugger;
               await bleManager.wait(5000);
               this.scan();
             });
@@ -874,9 +939,9 @@
             if (!isset(p)) {
               return;
             }
-            // if (p.guid == '3934623535353937353330651202191d') {
-            //   console.log(p)
-            // }
+            if (p.guid == '3934623535353937353330651202191d') {
+              //console.log(p)
+            }
             this.deviceList.forEach((item) => {
               if (item.device == p.guid) {
                 if (isset(p.rssi)) {
@@ -889,12 +954,10 @@
                     else if (p.rssi > -70) item.signal = 3;
                     else item.signal = 1;
                   }
-                  this.$forceUpdate();
                 }
                 this.tindyNetworkSize(item, p);
               }
             });
-            this.deviceList = [...this.deviceList];
           },
           startScan() {
             ble.stopScan(
@@ -927,9 +990,7 @@
           },
         },
         computed: {},
-        beforeDestroy() {
-          bleManager.stopScan();
-        },
+        beforeDestroy() {},
       });
     });
 

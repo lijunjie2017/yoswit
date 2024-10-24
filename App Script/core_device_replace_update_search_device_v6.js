@@ -137,7 +137,7 @@ window._core_device_replace_update_search_device = (device_obj) => {
 	    itemHtml = `
 	    <div class="block" style="text-align: center">
           <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-          <p>${_('You don\'t have any devices')}</p>
+          <p>${_('You do not have any devices')}</p>
         </div>
 	    `
 	    $(".replace-device-page-content .media-list").html(itemHtml);

@@ -291,10 +291,12 @@
         tempList.push(kitem.user.toLowerCase());
       })
       let nameList = tempList.join(',')
-      app.dialog.prompt(_('Share With'), _(`Share this ${tran(item.profile_name)} with`), (email) => {
+      let this_title = `${_(`Share this`)} ${tran(item.profile_name)} ${_('with')}`
+      app.dialog.prompt(this_title, (email) => {
         //check repeat email
         if (nameList.includes(email.toLowerCase())) {
-          app.dialog.alert(`Sorry,this email ${email.toLowerCase()} has been shared.`);
+          let tranTitle = `${_('Sorry,this email')} ${email.toLowerCase()} ${_('has been shared.')}`;
+          app.dialog.alert(tranTitle);
           return;
         }
         const re = /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
@@ -334,11 +336,13 @@
               },
               (error) => {
                 //print_r(error, TAG);
-                app.dialog.alert(`Sorry, this email (${email.toLowerCase()}) does not exist.`);
+                let error_title = `${_('Sorry, this email')} (${email.toLowerCase()}) ${_('does not exist.')}`;
+                app.dialog.alert(error_title);
               }
             );
         } else {
-          app.dialog.alert(`Sorry, this email (${email.toLowerCase()}) does not exist`);
+          let error_title = `${_('Sorry, this email')} (${email.toLowerCase()}) ${_('does not exist.')}`;
+          app.dialog.alert(error_title);
         }
       });
     };

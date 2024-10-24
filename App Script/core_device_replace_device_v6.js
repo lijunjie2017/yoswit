@@ -85,6 +85,26 @@ window.core_device_replace_device = async(params, fpassword) => {
         let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
         let erp_device_setting_obj = {};
         window.core_device_replace_settings = [];
+        //1.get the device setting config
+        //device setting sholud be distribution by list and show the tip
+        //2.get the network config
+        //show the UI step box
+        
+        let settings = erp.info.device[core_device_replace_original_device.guid].settings;
+        
+        settings.forEach((item)=>{
+            let list  = iot_ble_device_setting_type_init(item.setting_type,item.setting,core_device_replace_target_device.guid,core_device_replace_original_device.guid);
+            console.log("list",list);
+            core_device_replace_pending_cmds = core_device_replace_pending_cmds.concat(list);
+        });
+
+        //get the network info
+        let network_command = iot_ble_get_network_init(core_device_replace_original_device.guid);
+        if(network_command.length){
+            core_device_replace_pending_cmds = core_device_replace_pending_cmds.concat(network_command);
+        }
+        console.log("core_device_replace_pending_cmds",core_device_replace_pending_cmds);
+        
         // profile_device.forEach((item)=>{
 
         //     if(isset(item.default_manufacturing_setup)){
@@ -207,7 +227,145 @@ window.core_device_replace_device = async(params, fpassword) => {
 	//let profile_device_data = {idx:data.profile_device_idx,device:guid,password:password,parenttype:data.parenttype,parent:data.parent,parentfield:'profile_device',device_name:data.device_name,device_model:data.model};
 };
 
-window.core_device_replace_device_write_command = (guid) => {
+window.core_device_replace_device_write_command = async(guid) => {
+    let bleWriteStatus = true;
+    let ble_write_command = [];
+    core_device_replace_pending_cmds.forEach((item=>{
+        ble_write_command.push({
+            command : item,
+            status : 0
+        })
+    }))
+    let command_count = core_device_replace_pending_cmds.length; 
+    const iot_write_func = async()=>{
+        for(let i in ble_write_command){
+            try{
+                if(ble_write_command[i].status == 1){
+                    continue;
+                }
+                await peripheral[guid].write([{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: ble_write_command[i].command,
+                  }])
+                  ble_write_command[i].status = 1;
+                  let list = ble_write_command.filter((e)=>e.status == 1);
+                  if(list.length == command_count){
+                    iot_get_device_info()
+                  }
+            }catch(error){
+                app.dialog.confirm(`${_('Bluetooth command write interrupted, should retry?')}`,()=>{
+                    iot_write_func();
+                },()=>{
+    
+                })
+            }
+        }
+    };
+    const iot_get_device_info = async()=>{
+        let url = "/api/resource/Device/"+core_device_replace_target_device.guid;
+    	let method = "GET";
+        
+        http.request(url, {
+		    method: method
+    	}).then((rs)=>{
+    	    method = "PUT";
+    	    return http.request(url, {
+        		method: method,
+        		serializer: 'json',
+        		data:{data:core_device_replace_target_device},
+        	})
+    	}, (error)=>{
+    	    //app.dialog.alert(_("2222error="+guid));
+    	    //app.dialog.alert(_("2222error="+error));
+    	    url = "/api/resource/Device";
+    	    method = "POST";
+    	    return http.request(url, {
+        		method: method,
+        		serializer: 'json',
+        		data:{data:core_device_replace_target_device},
+        	});
+    	}).then((rs)=>{
+    	    url = "/api/resource/Profile/"+encodeURI(erp.info.profile.name);
+    	    method = "PUT";
+          let newData = Object.assign(core_device_replace_target_profile_device,{
+            parenttype:'Profile',
+            parent:erp.info.profile.name,
+            parentfield:'profile_device'
+          });
+          let devices = cloneDeep(erp.info.profile.profile_device);
+          devices.forEach(item=>{
+            if(item.name == core_device_replace_original_device.name){
+                item = newData
+            }
+          })
+    	    return http.request(url, {
+        		method: method,
+                dataType: 'json',
+        		serializer: 'json',
+        		data:{
+                    profile_device:devices,
+                },
+                contentType:'application/json',
+        	});
+    	}).then((rs)=>{
+            //in order to update the device setting
+            let url = "/api/resource/Device/"+core_device_replace_target_device.guid;
+            console.log(window.core_device_replace_settings.filter(item=>item.setting_type));
+    	    return http.request(encodeURI(url), {
+        		method: "PUT",
+        		serializer: 'json',
+        		data:{
+                    settings:window.core_device_replace_settings.filter(item=>item.setting_type)
+                },
+        	})
+            // return new Promise((resolve,reject)=>{
+            //     console.log(window.core_device_replace_settings);
+            //     resolve();                
+            // })
+        }).then((rs)=>{
+            /*app.toast.show({
+                text: _('Completing...'),
+                closeTimeout: 1000,
+                position: 'bottom'
+            });
+            setTimeout(function(){
+        	    mainView.router.refreshPage();
+        	    //app.dialog.alert(_("Replace Successfully2"));
+        	    app.preloader.hide();
+        	    //mainView.router.refreshPage();
+            }, 1000);
+            */
+            
+            //mainView.router.back()
+            app.toast.show({
+                text: _('Replace Successfully'),
+                closeTimeout: 2000,
+                position: 'bottom'
+            })
+            setTimeout(function(){
+                ha_profile_ready();
+                mainView.router.refreshPage();
+            }, 1000);
+            setTimeout(function(){
+                app.preloader.hide()
+            }, 3000);
+            
+    	}, (error)=>{
+            app.toast.show({
+                text: _('Checking...'),
+                closeTimeout: 1000,
+                position: 'bottom'
+            });
+            setTimeout(function(){
+        	    //app.dialog.alert(_("error="+error));
+        	    alert(_("error="+error));
+        	    app.preloader.hide();
+            }, 1000);
+    	});
+    }
+    iot_write_func(); 
+    return;
     app.toast.show({
         text: _('Writing ...'),
         position: 'bottom'

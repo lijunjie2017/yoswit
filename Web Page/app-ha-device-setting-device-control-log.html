@@ -1,0 +1,113 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Device Control Log') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="device-control-log-box" v-cloak>
+        <div class="list p-2">
+          <div class="timeline">
+            <div class="timeline-item" v-for="(log_item,log_index) in log_list" :key="log_index">
+              <div class="timeline-item-date" style="width: 80px;">
+                {{log_item.timestamp.substring(5,10)}}<small>{{'/'+log_item.timestamp.substring(0,4)}}</small>
+              </div>
+              <div class="timeline-item-divider" :style="{'backgroundColor':'var(--f7-theme-color)'}"></div>
+              <div class="timeline-item-content">
+                <div class="timeline-item-inner">
+                  {{log_item.owner}}
+                  <div>
+                    <span class="text-muted size-12">{{log_item.timestamp.substring(10,log_item.timestamp.lkength)}} Status:</span
+                    ><span class="text-muted size-12">{{log_item.status == 1?'ON':"OFF"}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-box display-flex justify-content-center align-items-center flex-direction-column" style="margin-top: 100px;" v-if="log_list.length == 0">
+          <div class="display-flex justify-content-center">
+            <i class="material-icons text-color-gray" style="font-size: 220px">find_in_page</i>
+          </div>
+          <h3 class="text-align-center mt-3">{{_('No Records Found')}}</h3>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let vueApp = null;
+    let profile_subdevice = $f7route.query.subdevice_name;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: '#device-control-log-box',
+        data: {
+          log_list: [],
+        },
+        mounted() {
+          this.getData();
+        },
+        methods: {
+          getData() {
+            // let reqUrl = encodeURI(
+            //   '/api/resource/Device Control Log?fields=["*"]&filters=[["profile_subdevice","=","' + profile_subdevice + '"]]'
+            // );
+            http2
+              .request({
+                url: encodeURI('/api/resource/Device Control Log'),
+                params: {
+                    fields: '["*"]',
+                    filters: JSON.stringify([['profile_subdevice', '=', profile_subdevice]])
+                },
+                method: 'GET',
+                responseType: 'json',
+              })
+              .then((log_data) => {
+                console.log(log_data);
+                this.log_list = log_data.data.data;
+              })
+              .catch((e) => {
+                console.log(e);
+              });
+          },
+        },
+        beforeDestroy() {},
+      });
+    });
+    $on('pageBeforeUnmount', (e, page) => {
+      vueApp.$destroy();
+      vueApp = null;
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .empty-box + .list ul::before,
+  .empty-box + .list ul::after {
+    content: none;
+  }
+</style>

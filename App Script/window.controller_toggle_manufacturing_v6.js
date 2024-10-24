@@ -56,12 +56,12 @@ window.controller_toggle_manufacturing = function(params){
             is_ble_scanning = true;
             ble.startScanWithOptions(["fff0","ff70","ffB0","ff80","1827","1828"],
                 { reportDuplicates: true, scanMode:"lowLatency" }, function(peripheral) {
-                    console.log(peripheral.id);
+                    //console.log(peripheral.id);
                     if(peripheral.id == "DCCDA9F1-0B97-A5DE-12FB-AEF8DD77461"){
                         console.log("peripheral",peripheral);
                     }
                     if(peripheral.hexModel == "011A"){
-                        console.log("peripheral",peripheral);
+                        //console.log("peripheral",peripheral);
                     }
                 manufacturing_did_found(peripheral);
             }, function(){
@@ -102,7 +102,7 @@ window.manufacturing_did_found = (peripheral) => {
         manufacturing_periperals[peripheral.id] = app.utils.extend(manufacturing_periperals[peripheral.id], peripheral);
     }else{
         manufacturing_periperals[peripheral.id] = peripheral;
-        console.log(JSON.stringify(peripheral));
+        //console.log(JSON.stringify(peripheral));
     }
     
     let args = {}
@@ -291,29 +291,30 @@ window.manufacturing_start_produce = (params) => {
     
     
     /* default config of model and batch */
-    if(isset(ble_model[p.hexModel]) && isset(ble_model[p.hexModel]['default']) && ble_model[p.hexModel]['default'].length){
-        for(let k in ble_model[p.hexModel]['default']){
-            cmd.push({action:"write",data:ble_model[p.hexModel]['default'][k].toLowerCase()});
+    if(isset(ble_model[model.toUpperCase()]) && isset(ble_model[model.toUpperCase()]['default']) && ble_model[model.toUpperCase()]['default'].length){
+        for(let k in ble_model[model.toUpperCase()]['default']){
+            cmd.push({action:"write",data:ble_model[model.toUpperCase()]['default'][k].toLowerCase()});
             
             console.log(k);
-            console.log(ble_model[p.hexModel]['default'][k]);
-            if(ble_model[p.hexModel]['default'][k].startsWith('82')){
-                manufacturing_password = ble_model[p.hexModel]['default'][k].substring(14).convertToAscii();
+            console.log(ble_model[model.toUpperCase()]['default'][k]);
+            if(ble_model[model.toUpperCase()]['default'][k].startsWith('82')){
+                manufacturing_password = ble_model[model.toUpperCase()]['default'][k].substring(14).convertToAscii();
             }
-            if(ble_model[p.hexModel]['default'][k].startsWith('88038354')){
-                manufacturing_default_password = ble_model[p.hexModel]['default'][k].substring(8).convertToAscii();
+            if(ble_model[model.toUpperCase()]['default'][k].startsWith('88038354')){
+                manufacturing_default_password = ble_model[model.toUpperCase()]['default'][k].substring(8).convertToAscii();
             }
         }
     }
-    if(isset(ble_batch[p.hexBatch]) && isset(ble_batch[p.hexBatch]['default']) && ble_batch[p.hexBatch]['default'].length){
-        for(let k in ble_batch[p.hexBatch]['default']){
-            cmd.push({action:"write",data:ble_batch[p.hexBatch]['default'][k].toLowerCase()});
+    let hexBatch = batch.toUpperCase();
+    if(isset(ble_batch[hexBatch]) && isset(ble_batch[hexBatch]['default']) && ble_batch[hexBatch]['default'].length){
+        for(let k in ble_batch[hexBatch]['default']){
+            cmd.push({action:"write",data:ble_batch[hexBatch]['default'][k].toLowerCase()});
             
-            if(ble_batch[p.hexBatch]['default'][k].startsWith('82')){
-                manufacturing_password = ble_batch[p.hexBatch]['default'][k].substring(14).convertToAscii();
+            if(ble_batch[hexBatch]['default'][k].startsWith('82')){
+                manufacturing_password = ble_batch[hexBatch]['default'][k].substring(14).convertToAscii();
             }
-            if(ble_batch[p.hexBatch]['default'][k].startsWith('88038354')){
-                manufacturing_default_password = ble_batch[p.hexBatch]['default'][k].substring(8).convertToAscii();
+            if(ble_batch[hexBatch]['default'][k].startsWith('88038354')){
+                manufacturing_default_password = ble_batch[hexBatch]['default'][k].substring(8).convertToAscii();
             }
         }
     }
@@ -375,7 +376,7 @@ window.manufacturing_start_produce_timer = (second) => {
 
 window.manufacturing_process_periperal = (id, cmd) => {
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    
+    debugger
     (function loop(i, repeat) {
         if (i >= cmd.length) return;
         if (!manufacturing_processing){

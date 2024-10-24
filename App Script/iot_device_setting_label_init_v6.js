@@ -36,6 +36,12 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
             if(isset(window.peripheral[guid].getProp().id)){
                 data.uuid = window.peripheral[guid].getProp().id;
             }
+            //if can not get the firmware,pass to the ble
+            if(!data.firmware || data.firmware == '----' ||  data.firmware == 'undefined'){
+                if(peripheral && isset(window.peripheral[guid])){
+                    data.firmware = window.peripheral[guid].prop.firmware;
+                }
+            }
             // if(!data.firmware || data.firmware == '----'){
             //     if(isset(window.scanned_periperals[data.uuid])){
             //         data.firmware = window.scanned_periperals[data.uuid].firmware?window.scanned_periperals[data.uuid].firmware:0;
@@ -139,16 +145,18 @@ window.initSettingData = (subdevice_name,profile_device_name,guid,device_mode)=>
     window.setting_profile_device.profile_device_name = profile_device_name;
     window.setting_profile_subdevice = profile_subdevice.find((item)=>item.name === subdevice_name);
     window.setting_profile_subdevice.profile_subdevice_name = subdevice_name;
-    window.setting_device = this_setting_device[guid];
-    window.setting_device.device_settings = window.setting_device.settings;
-    window.setting_settings = window.setting_device.settings;
+    window.setting_device = this_setting_device[guid]?this_setting_device[guid]:{};
+    window.setting_device.device_settings = window.setting_device?window.setting_device.settings:null;
+    window.setting_settings = window.setting_device?window.setting_device.settings:[];
     window.setting_mode = erp.doctype.device_mode[device_mode];
     window.setting_hexid = hexid;
     window.setting_model = erp.doctype.device_model[hexid];
     window.setting_model.model_name = window.setting_model.name;
     window.setting_batch = Object.values(erp.doctype.device_batch).find((item)=>item.batch_id === setting_device.batch);
     //debugger
-    window.setting_batch.batch_name = window.setting_batch.name;
+    if(window.setting_batch){
+        window.setting_batch.batch_name = window.setting_batch.name;
+    }
     window.setting_brand = erp.doctype.device_brand[setting_model.brand];
     //console.log(window.setting_mode);
 };

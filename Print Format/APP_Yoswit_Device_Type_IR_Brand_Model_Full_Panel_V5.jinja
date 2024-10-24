@@ -1,0 +1,79 @@
+{%- from "templates/print_formats/custom_macros.html" import tran -%}
+
+{% set group = None %}
+{% if doc.docname != "null" %}
+    {% set group = frappe.get_doc("Device Button Group", doc.docname) %}
+{% endif %}
+{% set w = {"value":0} %}
+
+frappe-detail-right
+<!-- equalto -->
+<a {{ 'style="display:none;"' if 'innocell' in doc.users.currentUsername.lower() }} href="/frappe/form/New Device/APP_Yoswit_Device_Form_V5/Profile%20Subdevice/null/guid={{doc.data.guid}}&device_button_group={{doc.docname}}&model={{doc.data.model}}/" class="link icon-only">
+	<i class="icon material-icons">check</i>
+</a>
+<!-- split -->
+
+<style>
+    .hidden{
+        display: none;
+    }
+</style>
+<div class="block">
+    {% if doc.docname.startswith("Air Conditioner") %}
+    <div class="row">
+        <div class="col-100 air-panel">
+            <a class="on_flag off_flag" ref="0">
+                <div class="button button-raised button-big onoff"></div>
+            </a>
+        </div>
+        <div class="col-100 display-flex justify-content-center align-items-center">
+            <div class="tempt">
+                <span class="control hidden tempt-set" style="font-size:60px;">25</span>
+                <span class="tempt-no-set" style="font-size:60px;">-/-</span>
+            </div>
+            <div class="mode control hidden">
+                <div>&deg;C</div>
+                <div>
+                    <img style="width:25px;height:25px;" src="view/default/style/img/air_condition/icon-mode-2.png">
+                </div>
+            </div>
+        </div>
+        <div class="col-100 display-flex justify-content-center align-items-center">
+            <div class="swing control hidden" style="width: 100%;text-align:center;">
+                <img style="width:25px;height:25px;" src="view/default/style/img/air_condition/icon-swing-1.png">
+            </div>
+            <div class="direction control hidden" style="width: 100%;text-align:center;">
+                <img style="width:25px;height:25px;" src="view/default/style/img/air_condition/icon-manual-1.png">
+            </div>
+            <div class="fan control hidden" style="width: 100%;text-align:center;">
+                <img style="width:25px;height:25px;" src="view/default/style/img/air_condition/icon-speed-1.png">
+            </div>
+        </div>
+    </div>
+    {%endif%}
+    <div class="row">
+	{% if group.button_group_sub_list|length > 0 %}
+		{%- for button in group.button_group_sub_list -%}
+		    {% set bw = (button.width | replace("%", "")) | int %}
+		    {% if (w.value + bw) > 100 %}
+                </div><div class="row" style="margin-top:15px;">
+		        {%- set _ = w.update({"value": bw}) -%}
+		    {% else %}
+		        {%- set _ = w.update({"value": (w.value + bw)}) -%}
+		    {% endif %}
+			{% set button_command = frappe.get_doc("Device Command", button.device_command) %}
+			<div class="col">
+			{% if button.button_type == "Normal" %}
+			    {% if button.button_name == "On / Off" %}
+    				<a href="#" func="controller_iot_device_ir_full_panel_click" guid="{{doc.data.guid}}" command-type="{{button_command.command_type}}" command="{{ button_command.function|safe }}" button-signal="{{button.button_signal}}" class="button button-large button-raised" style="padding:30px 0px;"><i class="icon material-icons">power_settings_new</i></a>
+    			{% else %}
+            		<a href="#" func="controller_iot_device_ir_full_panel_click" guid="{{doc.data.guid}}" command-type="{{button_command.command_type}}" command="{{ button_command.function|safe }}" button-signal="{{button.button_signal}}" class="button button-large button-raised" style="padding:30px 0px;">{{button.button_name}}</a>
+            	{% endif %}
+        	{% else %}
+        		<div class="button button-large" style="padding:30px 0px;">{{button.button_name}}</div>
+			{% endif %}
+        	</div>
+		{%- endfor -%}
+	{% endif %}
+	</div>
+</div>

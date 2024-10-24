@@ -1,0 +1,177 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Panel') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="display-flex justify-content-space-between" style="flex-wrap: wrap">
+                    <div
+                      :class="{'ir-item':true}"
+                      v-for="(configItem,configIndex) in panelConfig"
+                      :key="configItem.text"
+                      :style="{'position':'relative','width' : 'calc('+configItem.width+'%)','margin-top' : '15px','opacity' : configItem.buttonType == 4 ? '0' : '1'}"
+                      v-on:click="toTest(configItem.code)"
+                    >
+                      <a
+                        href="#"
+                        :class="{'button':true,'button-large':true,'button-raised':configItem.buttonType != 3}"
+                        style="padding: 30px 0px;"
+                      >
+                        <i class="icon material-icons" style="font-size: 30px" v-if="configItem.buttonType == 1">{{configItem.text}}</i>
+                        <span v-else>{{configItem.text}}</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let { subdevice } = $f7route.query;
+    let vueApp = null;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index : 1,
+          guid : '',
+          panelConfig: [],
+        },
+        watch: {},
+        computed: {},
+        mounted(){
+          this.initProfileData();
+        },
+        methods: {
+          initProfileData() {
+            let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+            profile_subdevice.forEach(item=>{
+              if(item.name === subdevice){
+                let config = item.config;
+                this.guid = item.device;
+                this.panelConfig = JSON.parse(config).list;
+              }
+            })
+          },
+          async toTest(code) {
+            const TAG = 'iot_ir_test';
+            
+            console.log(TAG);
+            let bytes_array = [];
+            let bytes_string = code;
+            let this_data = `3003${bytes_string.substring(2, bytes_string.length)}`;
+            let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+            let handle_data = iot_ir_learned_init(this_data);
+            let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+            console.log('ref', ref);
+            try {
+              await window.peripheral[this.guid].sendIR(ref);
+            } catch (err) {
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+        },
+        beforeDestroy() {
+          //emitter.off('disconnected');
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .ir-click-button {
+    display: inline-block;
+    height: 65px;
+    width: 65px;
+    border-radius: 50%;
+    line-height: 35px;
+  }
+  .bg-theme{
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .bg-theme a{
+    color: #fff;
+  }
+</style>

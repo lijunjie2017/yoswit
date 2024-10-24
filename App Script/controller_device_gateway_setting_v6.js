@@ -345,13 +345,14 @@ window.device_gateway_setting_component = {
     async postDataToErp(item,status){
         const action = item.checked;
         const gateway = !status ? this.gateway : '';
+        //alert(this.type==2?gateway:gateway.toLowerCase())
         try {
             app.preloader.show();
             await http.request(encodeURI('/api/resource/Profile Device/' + item.name), {
               method: 'PUT',
               serializer: 'json',
               data: {
-                gateway: gateway.toLowerCase(),
+                gateway: this.type==2?gateway:gateway.toLowerCase(),
               },
             });
     
