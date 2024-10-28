@@ -2,7 +2,7 @@ window.iot_ble_sync_clock = function(element) {
     const TAG = ">>>> iot_ble_sync_clock";
     const guid =  element;
     let data = "840001";
-
+    
     const date = new Date();
 
     data += date.getSeconds().toString(16).pad("00");
@@ -18,10 +18,39 @@ window.iot_ble_sync_clock = function(element) {
 
     console.log(TAG, data);
     app.dialog.preloader();
-    return window.peripheral[guid].write([{
-        service: 'ff80',
-        characteristic: 'ff81',
-        data: data,
-    }])
+    return new Promise(async(resolve,reject)=>{
+        try{
+            let bleList = [];
+            let service = 'ff80';
+            let characteristic = 'ff81';
+            await window.peripheral[guid].connect();
+            let firmware = window.peripheral[guid].prop.firmwareNo;
+            console.log("firmware",firmware);
+            if(firmware < 6){
+                service = 'fe00';
+                characteristic = 'fe01';
+                data = data.substring(6,data.length);
+                if(firmware < 3.8){
+                    bleList.push({
+                        service: service,
+                        characteristic: characteristic,
+                        data: data,
+                    })
+                }
+            }
+            console.log("service",service);
+            console.log("characteristic",characteristic);
+            console.log("data",data);
+            bleList.push({
+                service: service,
+                characteristic: characteristic,
+                data: data,
+            })
+            await peripheral[guid].write(bleList);
+            resolve(1)
+        }catch(error){
+            reject(error);
+        }
+    })
     
 }

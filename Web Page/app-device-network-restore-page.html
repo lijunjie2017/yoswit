@@ -40,11 +40,11 @@
                     :key="item.name"
                   >
                     <div class="item-content swipeout-content">
-                      <label class="checkbox" style="padding-left: 20px; padding-right: 20px"
+                      <!--<label class="checkbox" style="padding-left: 20px; padding-right: 20px"
                         ><input v-on:click="changeVal(item)" type="checkbox" :checked="item.checked?true:false" /><i
                           class="icon-checkbox"
                         ></i
-                      ></label>
+                      ></label> -->
                       <div class="item-media" style="position: relative">
                         <img :src="erp.get_url(item.image?item.image:imgError)" width="60" />
                         <i
@@ -115,11 +115,11 @@
                     :key="item.name"
                   >
                     <div class="item-content swipeout-content">
-                      <label class="checkbox" style="padding-left: 20px; padding-right: 20px"
+                      <!--<label class="checkbox" style="padding-left: 20px; padding-right: 20px"
                         ><input v-on:click="changeVal(item)" type="checkbox" :checked="item.checked?true:false" /><i
                           class="icon-checkbox"
                         ></i
-                      ></label>
+                      ></label> -->
                       <div class="item-media" style="position: relative">
                         <img :src="erp.get_url(item.image?item.image:imgError)" width="60" />
                         <i
@@ -438,6 +438,46 @@
             }
             const reversedHex = bytes.reverse();
             return reversedHex.join('');
+          },
+          async confirmDeviceNetwork(){
+            app.dialog.preloader();
+            //post the device info to erp
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            let networks = cloneDeep(this.restoreList);
+            networks.forEach((networkItem,networkIndex)=>{
+              let networkDevices = networkItem || [];
+              networkDevices.forEach((deviceItem,deviceIndex)=>{
+                devices.forEach(kitem=>{
+                  if(deviceItem.device == kitem.device){
+                    kitem.network_id = parseInt(networkIndex)+1;
+                    kitem.network_position = deviceIndex;
+                  }
+                })
+              })
+            });
+            //update the erp and change
+            try {
+              await http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+                method: 'PUT',
+                responseType: 'json',
+                dataType: 'json',
+                responseType: 'json',
+                serializer: 'json',
+                timeout: 60,
+                data: {
+                  profile_device: devices,
+                },
+              });
+              app.dialog.close();
+              erp.info.profile.profile_device = devices;
+              emitter.emit("device_network_update",{});
+              window.globalUpdate = true;
+              mainView.router.back();
+              //app.dialog.alert('Successfully');
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
           },
           async findNextDevice(macRever) {
             let deviceMap = this.deviceList.find((d) => core_utils_get_mac_address_from_guid(d.device, true) === macRever);

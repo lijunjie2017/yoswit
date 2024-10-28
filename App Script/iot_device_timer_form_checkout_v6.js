@@ -24,27 +24,28 @@ window.iot_device_timer_form_checkout = function() {
         repeat = "000000"
     }
 
-    app.preloader.show();
+    //app.preloader.show();
     iot_ble_check_enable(() => {
         return iot_ble_do_pre_action(formdata.guid);
     }).then(() => {
+        //alert(123)
         return iot_ble_set_timer(guid, timer_id ? parseInt(timer_id) : null, formdata.button_group, formdata.date, formdata.time + ":00", repeat, 1, action, timer_max_num);
     }).then(() => {
-        app.preloader.hide();
+        //app.preloader.hide();
         app.dialog.close();
         mainView.router.back();
         setTimeout(() => {
           app.ptr.refresh('.frappe-list-ptr-content');
         }, 200);
     }).catch((e) => {
-        app.preloader.hide();
+        //app.preloader.hide();
         app.dialog.close();
         if ((e + "").startsWith("BLE Connection Error:")) {
             app.dialog.alert(_("Sorry, the device cannot be connected right now. Please come close to the device to continue the setup!"), runtime.appInfo.name, () => {
                 mainView.router.back();
             });
         } else {
-            app.dialog.alert(e);
+            app.dialog.alert(_(erp.get_log_description(e)));
         }
     });
 }

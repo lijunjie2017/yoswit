@@ -1,6 +1,9 @@
-window.core_get_photo = async (params) => {
-  if (!isset(params.ref)) {
-    params.ref = params.obj.attr('ele');
+/**
+ * @param {import('types/listener').CommonListenerParams} params
+ */
+window.core_get_photo = (params) => {
+  if(!isset(params.ref)){
+      params.ref = params.obj.attr("ele");
   }
   console.log('core_get_photo=' + params.ref);
   var data = {};
@@ -36,17 +39,7 @@ window.core_get_photo = async (params) => {
     [
       {
         text: _('Take Photo'),
-        onClick: async function () {
-          //check the permission
-          const permissionState = await Capacitor.Plugins.Camera.requestPermissions({
-            permissions: ['camera'],
-          });
-          if (permissionState.camera !== 'granted') {
-            app.dialog.alert(_('Please grant the permission manually in the app settings'), () => {
-              Capacitor.Plugins.BarcodeScanner.openSettings();
-            });
-            return;
-          }
+        onClick: function () {
           Capacitor.Plugins.Camera.requestPermissions({
             permissions: ['camera'],
           })
@@ -112,249 +105,68 @@ window.core_get_photo = async (params) => {
       },
       {
         text: _('From Album'),
-        onClick: async function () {
-          //  try{
-          //      const permissionState = await Capacitor.Plugins.Camera.requestPermissions({
-          //     permissions: ['photos'],
-          //   });
-          //   if (permissionState.photos !== 'granted') {
-          //     app.dialog.alert(_('Please grant the permission manually in the app settings'), () => {
-          //       Capacitor.Plugins.BarcodeScanner.openSettings();
-          //     });
-          //     return;
-          //   }
-          //  }catch(error){
-          //      console.log(error)
-          //     app.dialog.alert(error);
-          //  }
-          try {
-            let permissions = cordova.plugins.permissions;
-            if (window.device.platform.toLowerCase() == 'android') {
-              //check the version
-              let sdkVersion = window.device.sdkVersion;
-              let list = [];
-              if (sdkVersion < 32) {
-                list = [permissions.READ_EXTERNAL_STORAGE];
-                permissions.checkPermission(
-                  permissions.READ_EXTERNAL_STORAGE,
-                  (status) => {
-                    console.log('status', status);
-                    if (!status.hasPermission) {
-                      // permissions.requestPermissions(list,(statuss)=>{
-                      //   console.log("statuss",statuss);
-                      // },(error)=>{
-                      //   console.log("error",error)
-                      // })
-                      app.dialog.alert(_('Please grant the permission manually in the app settings'), () => {
-                        Capacitor.Plugins.BarcodeScanner.openSettings();
-                      });
-                    } else {
-                      Capacitor.Plugins.Camera.getPhoto({
-                        quality: image_quality,
-                        allowEditing: true,
-                        resultType: 'base64',
-                        source: 'PHOTOS',
-                        saveToGallery: false,
-                      })
-                        .then((rs) => {
-                          const fileData = {};
-                          fileData.data = 'data:image/jpeg;base64,' + rs.base64String;
-                          fileData.name = md5(rs.base64String) + '.jpeg';
-
-                          app.preloader.show();
-                          http
-                            .uploadFileToServer(fileData, folder, 0, data)
-                            .then((rs) => {
-                              let json = JSON.parse(rs.data);
-                              let imglink = erp.setting.app_api_url + json.message.file_url;
-                              $('.' + params.ref).css({ 'background-image': "url('" + imglink + "')" });
-                              params.obj.find('input').val(json.message.file_url);
-                              params.obj.attr('has-image', '1');
-                              if (params.obj.find('i')) {
-                                params.obj.find('i').hide();
-                              }
-                              if (params.obj.find('.bg-input-image')) {
-                                params.obj
-                                  .find('.bg-input-image')
-                                  .css('background-image', 'url(' + erp.setting.app_api_url + json['message']['file_url'] + ')');
-                              }
-                              if (params.obj.find('img')) {
-                                params.obj
-                                  .find('img')
-                                  .attr('src', erp.setting.app_api_url + json['message']['file_url'])
-                                  .show();
-                              }
-
-                              app.preloader.hide();
-                            })
-                            .catch((error) => {
-                              app.preloader.hide();
-
-                              core_server_exception_message(error.error);
-
-                              console.log('error=' + JSON.stringify(error));
-                            });
-                        })
-                        .catch((error) => {});
-                    }
-                  },
-                  (error) => {
-                    console.log('error', error);
-                  }
-                );
+        onClick: function () {
+          Capacitor.Plugins.Camera.requestPermissions({
+            permissions: ['photos'],
+          })
+            .then((rs) => {
+              if (rs.photos === 'granted' || rs.photos === 'limited') {
+                return Promise.resolve(rs.photos);
               } else {
-                list = [permissions.READ_MEDIA_IMAGES];
-                //if input the list ,will be have bug
-                permissions.checkPermission(
-                  permissions.READ_MEDIA_IMAGES,
-                  (status) => {
-                    console.log('status', status);
-                    if (!status.hasPermission) {
-                      // permissions.requestPermissions(list,(statuss)=>{
-                      //   console.log("statuss",statuss);
-                      // },(error)=>{
-                      //   console.log("error",error)
-                      // })
-
-                      Capacitor.Plugins.Camera.getPhoto({
-                        quality: image_quality,
-                        allowEditing: true,
-                        resultType: 'base64',
-                        source: 'PHOTOS',
-                        saveToGallery: false,
-                      })
-                        .then((rs) => {})
-                        .catch((error) => {
-                          console.log('error', error.toString());
-                          console.log(error.toString().includes('User denied access to photos'));
-                          let deniedStatus = error.toString().includes('User denied access to photos');
-                          if (deniedStatus) {
-                            app.dialog.alert(_('Please grant the permission manually in the app settings'), () => {
-                              Capacitor.Plugins.BarcodeScanner.openSettings();
-                            });
-                          }
-                        });
-                    } else {
-                      Capacitor.Plugins.Camera.getPhoto({
-                        quality: image_quality,
-                        allowEditing: true,
-                        resultType: 'base64',
-                        source: 'PHOTOS',
-                        saveToGallery: false,
-                      })
-                        .then((rs) => {
-                          const fileData = {};
-                          fileData.data = 'data:image/jpeg;base64,' + rs.base64String;
-                          fileData.name = md5(rs.base64String) + '.jpeg';
-
-                          app.preloader.show();
-                          http
-                            .uploadFileToServer(fileData, folder, 0, data)
-                            .then((rs) => {
-                              let json = JSON.parse(rs.data);
-                              let imglink = erp.setting.app_api_url + json.message.file_url;
-                              $('.' + params.ref).css({ 'background-image': "url('" + imglink + "')" });
-                              params.obj.find('input').val(json.message.file_url);
-                              params.obj.attr('has-image', '1');
-                              if (params.obj.find('i')) {
-                                params.obj.find('i').hide();
-                              }
-                              if (params.obj.find('.bg-input-image')) {
-                                params.obj
-                                  .find('.bg-input-image')
-                                  .css('background-image', 'url(' + erp.setting.app_api_url + json['message']['file_url'] + ')');
-                              }
-                              if (params.obj.find('img')) {
-                                params.obj
-                                  .find('img')
-                                  .attr('src', erp.setting.app_api_url + json['message']['file_url'])
-                                  .show();
-                              }
-
-                              app.preloader.hide();
-                            })
-                            .catch((error) => {
-                              app.preloader.hide();
-
-                              core_server_exception_message(error.error);
-
-                              console.log('error=' + JSON.stringify(error));
-                            });
-                        })
-                        .catch((error) => {});
-                    }
-                  },
-                  (error) => {
-                    console.log('error', error);
-                  }
-                );
+                return Promise.reject();
               }
-            } else {
-              Capacitor.Plugins.Camera.requestPermissions({
-                permissions: ['photos'],
-              })
+            })
+            .then(() => {
+              return Capacitor.Plugins.Camera.getPhoto({
+                quality: image_quality,
+                allowEditing: true,
+                resultType: 'base64',
+                source: 'PHOTOS',
+                saveToGallery: false,
+              });
+            })
+            .then((rs) => {
+              const fileData = {};
+              fileData.data = 'data:image/jpeg;base64,' + rs.base64String;
+              fileData.name = md5(rs.base64String) + '.jpeg';
+
+              app.preloader.show();
+              http
+                .uploadFileToServer(fileData, folder, 0, data)
                 .then((rs) => {
-                  if (rs.photos === 'granted' || rs.photos === 'limited') {
-                    return Promise.resolve(rs.photos);
-                  } else {
-                    return Promise.reject();
+                  let json = JSON.parse(rs.data);
+                  let imglink = erp.setting.app_api_url + json.message.file_url;
+                  $('.' + params.ref).css({ 'background-image': "url('" + imglink + "')" });
+                  params.obj.find('input').val(json.message.file_url);
+                  params.obj.attr('has-image', '1');
+                  if (params.obj.find('i')) {
+                    params.obj.find('i').hide();
                   }
+                  if (params.obj.find('.bg-input-image')) {
+                    params.obj
+                      .find('.bg-input-image')
+                      .css('background-image', 'url(' + erp.setting.app_api_url + json['message']['file_url'] + ')');
+                  }
+                  if (params.obj.find('img')) {
+                    params.obj
+                      .find('img')
+                      .attr('src', erp.setting.app_api_url + json['message']['file_url'])
+                      .show();
+                  }
+
+                  app.preloader.hide();
                 })
-                .then(() => {
-                  return Capacitor.Plugins.Camera.getPhoto({
-                    quality: image_quality,
-                    allowEditing: true,
-                    resultType: 'base64',
-                    source: 'PHOTOS',
-                    saveToGallery: false,
-                  });
-                })
-                .then((rs) => {
-                  const fileData = {};
-                  fileData.data = 'data:image/jpeg;base64,' + rs.base64String;
-                  fileData.name = md5(rs.base64String) + '.jpeg';
+                .catch((error) => {
+                  app.preloader.hide();
 
-                  app.preloader.show();
-                  http
-                    .uploadFileToServer(fileData, folder, 0, data)
-                    .then((rs) => {
-                      let json = JSON.parse(rs.data);
-                      let imglink = erp.setting.app_api_url + json.message.file_url;
-                      $('.' + params.ref).css({ 'background-image': "url('" + imglink + "')" });
-                      params.obj.find('input').val(json.message.file_url);
-                      params.obj.attr('has-image', '1');
-                      if (params.obj.find('i')) {
-                        params.obj.find('i').hide();
-                      }
-                      if (params.obj.find('.bg-input-image')) {
-                        params.obj
-                          .find('.bg-input-image')
-                          .css('background-image', 'url(' + erp.setting.app_api_url + json['message']['file_url'] + ')');
-                      }
-                      if (params.obj.find('img')) {
-                        params.obj
-                          .find('img')
-                          .attr('src', erp.setting.app_api_url + json['message']['file_url'])
-                          .show();
-                      }
+                  core_server_exception_message(error.error);
 
-                      app.preloader.hide();
-                    })
-                    .catch((error) => {
-                      app.preloader.hide();
-
-                      core_server_exception_message(error.error);
-
-                      console.log('error=' + JSON.stringify(error));
-                    });
-                })
-                .catch((err) => {
-                  console.log(err);
+                  console.log('error=' + JSON.stringify(error));
                 });
-            }
-          } catch (error) {
-            console.log('error', error);
-          }
+            })
+            .catch((err) => {
+              console.log(err);
+            });
         },
       },
       /*{
@@ -455,6 +267,6 @@ window.core_get_photo = async (params) => {
       },
     });
   }
-
+  
   app.actions.create({ buttons: buttons }).open();
 };

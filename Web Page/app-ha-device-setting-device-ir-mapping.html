@@ -284,6 +284,7 @@
         data: {
           guid: guid,
           deviceType: device_type,
+          mappingCommand : '',
           stepList: [
             {
               name: 1,
@@ -2590,6 +2591,7 @@
             let tableName = this.returnTableName();
             let command = this.codeModel[this.countIndex - 1].code;
             let serial = this.codeModel[this.countIndex - 1].serial;
+            this.mappingCommand = command;
             let sql = `SELECT CODE,BRAND_EN,MODEL FROM ${tableName}_TABLE WHERE CODE like "${command.substr(0, 4)}%${command.substr(18, command.length)}" AND BRAND_EN IN ("${brand}","ALL");`;
             if (tableName != 'ARC') {
               sql = `SELECT CODE,BRAND_EN,MODEL FROM ${tableName}_TABLE WHERE CODE = "${command}";`;
@@ -2604,22 +2606,25 @@
                   this.mappingList.push(resultSet.rows.item(i));
                   console.log(resultSet.rows.item(i));
                 }
+                this.postDeviceButtonGroup = `IR-ALL-all_model-00001`;
+                this.postTitle = `IR-ALL-all_model-00001`;
                 if (this.mappingList.length == 0) {
                   let returnStatus = false;
-                  if (tableName == 'TV') {
-                    this.postDeviceButtonGroup = `Television-ALL-no_model-1321`;
-                    this.postTitle = `Television-ALL-no_model-1321`;
-                    returnStatus = true;
-                  }
+                  // if (tableName == 'TV') {
+                  //   this.postDeviceButtonGroup = `IR-ALL-all_model-00001`;
+                  //   this.postTitle = `Television-ALL-no_model-1321`;
+                  //   returnStatus = true;
+                  // }
                   if (returnStatus) return;
                 }
                 //this should be check the result
                 const foundKitem = this.mappingList.find((kitem) => kitem.MODEL !== 'no_model');
-                if (foundKitem) {
-                  this.getButtonGroupFromErp(foundKitem.MODEL, foundKitem.BRAND_EN, serial, command);
-                } else if (this.mappingList.length > 0) {
-                  this.getButtonGroupFromErp(this.mappingList[0].MODEL, this.mappingList[0].BRAND_EN, serial, command);
-                }
+                
+                // if (foundKitem) {
+                //   this.getButtonGroupFromErp(foundKitem.MODEL, foundKitem.BRAND_EN, serial, command);
+                // } else if (this.mappingList.length > 0) {
+                //   this.getButtonGroupFromErp(this.mappingList[0].MODEL, this.mappingList[0].BRAND_EN, serial, command);
+                // }
               },
               (error) => {
                 console.log(error);
@@ -2690,10 +2695,15 @@
             let hexid = window.peripheral[guid].prop.hexModel;
             let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
             let mode = erp.doctype.device_model[`${hexid}`.toUpperCase()].mode;
-            let device_button_group = this.postDeviceButtonGroup;
+            //let device_button_group = this.postDeviceButtonGroup;
+            let device_button_group = `IR-ALL-all_model-00001`;
+            let configMap = {
+              "device_type" : this.deviceType,
+              "command" : this.mappingCommand
+            }
             let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
             let postData = {
-              title: this.postTitle,
+              title: `${this.deviceType}`,
               guid: guid,
               model: model,
               device_mode: mode,
@@ -2705,6 +2715,7 @@
               profile_room: $('select[name="profile_room"]').val(),
               password: peripheral[guid].getProp().password,
               mac_address: core_utils_get_mac_address_from_guid(guid),
+              config : JSON.stringify(configMap)
             };
             try {
               let resData = await http2.request('/api/method/save.subdevice', {
