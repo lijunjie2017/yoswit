@@ -24,15 +24,15 @@
                   <div class="display-flex justify-content-space-between" style="flex-wrap: wrap">
                     <div
                       :class="{'ir-item':true}"
-                      v-for="(configItem,configIndex) in panelConfig"
+                      v-for="(configItem,configIndex) in panelConfig[deviceType]"
                       :key="configItem.text"
                       :style="{'position':'relative','width' : 'calc('+configItem.width+'%)','margin-top' : '15px','opacity' : configItem.buttonType == 4 ? '0' : '1'}"
-                      v-on:click="toTest(configItem.code)"
+                      v-on:click="toTest(configItem.params)"
                     >
                       <a
                         href="#"
                         :class="{'button':true,'button-large':true,'button-raised':configItem.buttonType != 3}"
-                        style="padding: 30px 0px;"
+                        style="padding: 30px 0px"
                       >
                         <i class="icon material-icons" style="font-size: 30px" v-if="configItem.buttonType == 1">{{configItem.text}}</i>
                         <span v-else>{{configItem.text}}</span>
@@ -56,43 +56,1601 @@
       $f7route = ctx.$f7route,
       $onUnmounted = ctx.$onUnmounted,
       $on = ctx.$on;
-    let { subdevice } = $f7route.query;
+    let { subdevice, device_type } = $f7route.query;
     let vueApp = null;
 
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
-          index : 1,
-          guid : '',
-          panelConfig: [],
+          index: 1,
+          guid: '',
+          deviceType: device_type,
+          command: '',
+          panelConfig: {
+            'Air Conditioner': [
+              { text: 'ON', width: '47', buttonType: 2, code: '' },
+              { text: 'OFF', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL1', width: '47', buttonType: 2, code: '' },
+              { text: 'MODEL2', width: '47', buttonType: 2, code: '' },
+            ],
+            'Television': [
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AV / TV',
+                width: '47',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CH',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '45',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '47',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '51',
+                buttonType: 2, //1-icon 2-text 3-no boder 4-hidden
+                text: 'HOME',
+                width: '30',
+              },
+              {
+                params: '49',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '--/-',
+                width: '30',
+              },
+            ],
+            'Audio': [
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'EJECT', //eject
+                width: '47',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '<<',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PLAY',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>>',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '|<',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'STOP',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>|',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ASPECT',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PAUSE',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TITLE',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+            ],
+            'Set-top boxes': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'GUIDE', //eject
+                width: '47',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CH',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '45',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Fan': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'WIND', //eject
+                width: '47',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SHAKE',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'LOW',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MIDDLE',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'HIGH',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMER',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SLEEP',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'Anion',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'LIGHT',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'Cold',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Projector': [
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ON',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OFF', //eject
+                width: '47',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'COMPUTER',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AV',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SOURCE',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'ZOOM',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'SCREEN',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AUTO',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PAUSE',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MCD',
+                width: '30',
+              },
+            ],
+            'Air Purifier': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'WIND', //eject
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AUTO',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMER',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ANION',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'COMFORT',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+            ],
+            'IPTV': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '100',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CH',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'VOL',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '45',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ENTER',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PLAY',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '8',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '43',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '0',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Dehumidifier': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'HEAT', //eject
+                width: '47',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'TEMP',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '47',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'CONFIRM',
+                width: '47',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMING',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'REVERSE',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+            ],
+            'Camera': [
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TAKE',
+                width: '100',
+              },
+            ],
+            'Robot Vacuum': [
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ON',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OFF', //eject
+                width: '47',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'HOME',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'RECHARGE',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+              {
+                params: '41',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AREA',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ALONG',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PART',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'AUTO',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'FIX',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BOW',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'CLEAR',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TIMER',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SPEED',
+                width: '30',
+              },
+            ],
+            'DVD': [
+              {
+                params: '11',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '47',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'EJECT', //eject
+                width: '47',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '<<',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PLAY',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>>',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '|<',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'STOP',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '>|',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'FORMAT',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'PAUSE',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TITLE',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MENU',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_up',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'BACK',
+                width: '30',
+              },
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_left',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '9',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_right',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'arrow_drop_down',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MUTE',
+                width: '30',
+              },
+            ],
+            'Lamp': [
+              {
+                params: '1',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ON',
+                width: '47',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OFF',
+                width: '47',
+              },
+              {
+                params: '9',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '47',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '47',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'light_mode',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'CCT',
+                width: '30',
+              },
+              {
+                params: '17',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 3, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+              {
+                params: '13',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '21',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '1',
+                width: '30',
+              },
+              {
+                params: '23',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '2',
+                width: '30',
+              },
+              {
+                params: '25',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '3',
+                width: '30',
+              },
+              {
+                params: '27',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '4',
+                width: '30',
+              },
+              {
+                params: '29',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '5',
+                width: '30',
+              },
+              {
+                params: '31',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '6',
+                width: '30',
+              },
+              {
+                params: '33',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'A',
+                width: '30',
+              },
+              {
+                params: '35',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'B',
+                width: '30',
+              },
+              {
+                params: '37',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'C',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '7',
+                width: '30',
+              },
+              {
+                params: '39',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'D',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '9',
+                width: '30',
+              },
+            ],
+            'Water Heater': [
+              {
+                params: '1',
+                buttonType: 1, //1-icon 2-text 3-no boder
+                text: 'power_settings_new',
+                width: '100',
+              },
+              {
+                params: '9',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'MODE',
+                width: '47',
+              },
+              {
+                params: '17',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: 'TIME',
+                width: '30',
+              },
+              {
+                params: '3',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'SETTING',
+                width: '30',
+              },
+              {
+                params: '15',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'ANT',
+                width: '30',
+              },
+              {
+                params: '7',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '-',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'TEMP',
+                width: '30',
+              },
+              {
+                params: '5',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: '+',
+                width: '30',
+              },
+              {
+                params: '',
+                buttonType: 4, //1-icon 2-text 3-no boder
+                text: '',
+                width: '30',
+              },
+              {
+                params: '11',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'OK',
+                width: '30',
+              },
+              {
+                params: '19',
+                buttonType: 2, //1-icon 2-text 3-no boder
+                text: 'STEM',
+                width: '30',
+              },
+            ],
+          },
         },
         watch: {},
         computed: {},
-        mounted(){
+        mounted() {
           this.initProfileData();
         },
         methods: {
           initProfileData() {
             let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
-            profile_subdevice.forEach(item=>{
-              if(item.name === subdevice){
-                let config = item.config;
+            profile_subdevice.forEach((item) => {
+              if (item.name === subdevice) {
+                let config = item.function;
                 this.guid = item.device;
-                this.panelConfig = JSON.parse(config).list;
+                try {
+                  let configMap = JSON.parse(item.function);
+                  console.log(configMap);
+                  if (configMap) {
+                    this.command = configMap.command;
+                  }
+                } catch (error) {
+                  app.dialog.alert(error);
+                }
+
+                //this.panelConfig = JSON.parse(config).list;
               }
-            })
+            });
           },
-          async toTest(code) {
+          async toTest(button_signal) {
             const TAG = 'iot_ir_test';
-            
+            let button_index = parseInt((parseInt(button_signal) - 1) / 2);
             console.log(TAG);
-            let bytes_array = [];
-            let bytes_string = code;
-            let this_data = `3003${bytes_string.substring(2, bytes_string.length)}`;
-            let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
-            let handle_data = iot_ir_learned_init(this_data);
-            let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+            let ref = iot_ble_generate_ir_code(this.command, button_index, null);
             console.log('ref', ref);
             try {
               await window.peripheral[this.guid].sendIR(ref);
@@ -167,11 +1725,11 @@
     border-radius: 50%;
     line-height: 35px;
   }
-  .bg-theme{
+  .bg-theme {
     background-color: var(--f7-theme-color);
     color: #fff;
   }
-  .bg-theme a{
+  .bg-theme a {
     color: #fff;
   }
 </style>

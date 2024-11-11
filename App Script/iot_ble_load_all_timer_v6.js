@@ -1,13 +1,15 @@
 window.iot_ble_load_all_timer = function (params) {
     const TAG = ">>>> iot_ble_load_timer";
-
+    
     const temp = params.ref.split("|");
     const profile_subdevice = temp[0];
     const guid = temp[1];
     const button_group = temp[2];
 
-    const p = runtime.peripherals[guid];
-
+    const p = window.peripheral[guid];
+    let hexModel = p?p.prop.hexModel:'';
+    
+    console.log("p",p)
     // port = 1 = GANG 1
     // 0 = IR
     // 6 = DIMMING
@@ -19,23 +21,33 @@ window.iot_ble_load_all_timer = function (params) {
     const BLE_TIMER_ALL = "FF";
     // const update_error_msg = "update server timer fail";
 
-    app.preloader.show();
+    //app.preloader.show();
 
     iot_ble_check_enable().then(() => {
-        return iot_ble_do_pre_action(guid);
-    }).then(() => {
-        // update device time
         return iot_ble_sync_clock(guid);
     }).then(() => {
+        while (true) {
+            try {
+              const dialog = app.dialog.close();
+              if (!dialog) {
+                break;
+              }
+            } catch (e) {
+              break;
+            }
+          }
         console.log(TAG, "pre action complete");
         // if (isset(runtime.peripherals[guid]["firmware"])) {
         //     p["firmwareNo"] = p["firmware"].toString().replace(/[^0-9.]/g, "") * 10000;
         // }
-
+        
         return new Promise((resolve, reject) => {
             let timers = [];
-
-            ble.startNotification(p.id, "ff80", "ff82",
+            if(hexModel == "021B"){
+                ///mobile-app/timer-form-page?subdevice={{subdevice.name}}
+                resolve([]);
+            }
+            ble.startNotification(p.prop.id, "ff80", "ff82",
                 (rs) => {
                     if (rs && rs.startsWith(BLE_TIMER_LOAD)) {
                         console.log(TAG, rs);
@@ -61,6 +73,7 @@ window.iot_ble_load_all_timer = function (params) {
         });
     }).then((timers) => {
         // reset
+        console.log(timers);
         p.timers = [];
 
         // COMMAND TYPE ID
@@ -125,9 +138,17 @@ window.iot_ble_load_all_timer = function (params) {
                 port: device_port,
                 ...repeat,
             });
+            console.log("p.timers",p.timers)
         }
-
-        return frappe.print.out("iot_refresh_timer_unsync", true, { peripheral: { timers: p.timers.filter((e) => e.port === port) }, profile_subdevice: profile_subdevice, refresh_mode: "unsync" }, "APP_HA_Device_Timer_Unsync_List_V3");
+        if(timers.length){
+            return frappe.print.out("iot_refresh_timer_unsync", true, { peripheral: { timers: p.timers.filter((e) => e.port === port) }, profile_subdevice: profile_subdevice, refresh_mode: "unsync" }, "APP_HA_Device_Timer_Unsync_List_V3");
+        }else{
+            return new Promise((reslove,reject)=>{
+                debugger
+                reslove()
+            })
+        }
+        
     }).then(() => {
         $('.device-timer ul li').removeClass("disabled");
         $('.fab-add-timer').removeClass("disabled");
@@ -154,7 +175,7 @@ window.iot_ble_load_all_timer = function (params) {
                     const erp_timer = server_timers[i];
                     const index = device_timers.findIndex((e) => e.timer_id === erp_timer.timer_id); 
 
-                    if (index === -1) {
+                    if (index === -1 && hexModel != "021B") {
                         $(".device-timer input[timer-id='" + erp_timer.timer_id + "']").removeAttr("checked");
                     }
                 }
@@ -260,7 +281,7 @@ window.iot_ble_load_all_timer = function (params) {
 
         $('.device-timer ul li').addClass("disabled");
         $('.fab-add-timer').addClass("disabled");
-        
+        app.dialog.close();
         app.preloader.hide();
 
         if ((e + "").startsWith("BLE Connection Error:")) {
@@ -268,7 +289,7 @@ window.iot_ble_load_all_timer = function (params) {
                 mainView.router.back();
             });
         } else {
-            app.dialog.alert(e, runtime.appInfo.name, () => {});
+            app.dialog.alert(e);
         }
     });
 }

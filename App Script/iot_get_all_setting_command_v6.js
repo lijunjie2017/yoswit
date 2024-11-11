@@ -22,7 +22,7 @@ window.iot_get_all_setting_command = async () => {
         characteristic: 'ff81',
         data: data,
       },
-    ]);
+    ]);''.toLowerCase()
   } catch (error) {
     console.log(error);
   }

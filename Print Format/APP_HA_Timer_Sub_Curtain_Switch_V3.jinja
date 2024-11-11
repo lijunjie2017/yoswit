@@ -1,0 +1,42 @@
+<li class="device py-2" style="box-sizing: content-box;">
+    <input type="hidden" name="initiate_execute" value="iot_device_timer_form_curtain_switch_initiate" />
+
+    <div class="item-content">
+        <div class="item-media" style="background-image:url({{(device_model.image if (device_model.image.startswith('http://') or device_model.image.startswith('https://')) else frappe.get_url()~device_model.image)}});">
+            <i class="material-icons icons-authfail">no_encryption</i>
+        </div>
+        <div class="item-inner">
+            <div class="item-title">
+                {{ subdevice.title }}
+                <div class="item-footer">{{ device_model.name }}-{{ profile_device.device_name }}</div>
+                <div class="item-footer">{{ device.firmware~'-' if device.firmware != 'undefined' else '' }}{{ device.mac_address }}</div>
+            </div>
+        </div>
+
+        <div class="control-panel-right">
+            <!-- <a
+                href="#"
+                id="action"
+                class="right"
+                ref="0"
+                func="iot_device_timer_form_onoff_toggle"
+            >
+                <div class="button button-raised button-big onoff" style="margin-top: 10px;"></div>
+            </a>-->
+            <a class="left off_flag">
+                <div func="iot_change_curtain_switch" class="button button-raised button-big openclose cl" style="width:57px;display:block!important;"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_less</i></div></div>
+            </a>
+            <a class="left off_flag">
+                <div func="iot_change_curtain_switch" class="button button-raised button-big openclose op openclose-bg" style="width:57px;display:block!important;"><div class="rotate-90" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;">unfold_more</i></div></div>
+            </a>
+            <input type="hidden" name="action" value="" />
+        </div>
+    </div>
+</li>
+
+<style>
+    .openclose-bg{
+        background-color: var(--f7-fab-bg-color, var(--f7-theme-color))!important;
+        color: #fff!important;
+    }
+</style>

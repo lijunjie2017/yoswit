@@ -14,12 +14,19 @@ window.app_set_device_hidden = function(params) {
 		params.obj.find(".material-icons").html("visibility");
 	}
 	app.swipeout.close(params.obj.closest('li.swipeout'));
-	var url = "/api/resource/Profile%20Subdevice/" + encodeURI(device_name);
+	//var url = "/api/resource/Profile%20Subdevice/" + encodeURI(device_name);
+    let url  = `/api/resource/Profile/${erp.info.profile.name}`;
+    let devices = erp.info.profile.profile_subdevice;
+    devices.forEach(device=>{
+        if(device.name == device_name){
+            device.hidden = data.hidden;
+        }
+    });
 	var method = "PUT";
 	http.request(url, {
 		method: method,
 		serializer: 'json',
-		data:{data:data},
+		data:{profile_subdevice:devices},
 	}).then(()=>{
         app.ptr.refresh('.frappe-list-ptr-content');
         ha_profile_ready();

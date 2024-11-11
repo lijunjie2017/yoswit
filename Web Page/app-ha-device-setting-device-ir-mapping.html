@@ -37,7 +37,7 @@
               <div class="card">
                 <div class="card-content card-content-padding">
                   <div class="auto-status-box">
-                    <div class="img-box display-flex justify-content-center" v-if="!autoStatus">
+                    <div class="img-box display-flex justify-content-center" v-if="!autoStatus" v-on:click="toNewManual()">
                       <svg
                         t="1726645152510"
                         class="icon"
@@ -1969,6 +1969,11 @@
               `/frappe/list-2/${brand}/APP_Yoswit_Device_Type_IR_Brand_Model_V5/Profile/null/20/brand=${brand}&device_type=${device_type}&guid=${guid}&model=${model}/`
             );
           },
+          toNewManual(){
+            mainView.router.navigate(
+              `/mobile-app/device-type-ir-brand-model?brand=${brand}&device_type=${device_type}&guid=${guid}&model=${model}`
+            );
+          },
           async toStudy() {
             //auto to matching
             console.log('toStudy');
@@ -2715,7 +2720,7 @@
               profile_room: $('select[name="profile_room"]').val(),
               password: peripheral[guid].getProp().password,
               mac_address: core_utils_get_mac_address_from_guid(guid),
-              config : JSON.stringify(configMap)
+              function : JSON.stringify(configMap)
             };
             try {
               let resData = await http2.request('/api/method/save.subdevice', {

@@ -277,6 +277,7 @@
           },
           async init() {
             let devices = cloneDeep(erp.info.profile.profile_device);
+            
             let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
             //get the image
             devices.forEach((item) => {
@@ -476,7 +477,7 @@
           },
           updateTotal() {
             if (edit == 1) {
-              this.totalDevices = cloneDeep(this.deviceList).filter((item) => item.network_id === this.networkIndex && item.isUsed).length;
+              this.totalDevices = cloneDeep(this.deviceList).filter((item) => parseInt(item.network_id)  === parseInt(this.networkIndex)  && item.isUsed).length;
               this.uncatDevices = this.uncatDeviceList.filter((kitem) => kitem.network_id == 0).length;
             } else {
               this.totalDevices = cloneDeep(this.deviceList).filter((item) => item.network_id == 0 || (item.deviceNetworkSize > 1 && item.isUsed)).length;

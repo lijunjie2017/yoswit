@@ -23,6 +23,15 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
     setting_list = setting_mode.device_setup_template;
     setting_list.forEach((setting_item,setting_index) => {
         let setting_template = window.setting_label_template[setting_item.label];
+        let rolesList = erp.info.user.roles;
+        rolesList.forEach(item=>{
+            if(item.role === 'App Developer' || item.role === 'Custom Host'){
+                window.developer = true;
+            }
+        })
+        if((setting_item.role == 'App Developer') && !window.developer){
+            return;
+        }
         if(isset(setting_template) && setting_item.type != 'Section Break'){
             let data = Object.assign({},window.setting_profile_device,window.setting_profile_subdevice,window.setting_device,window.setting_batch,window.setting_brand);
             data.settings = window.setting_settings.join(",");
@@ -98,15 +107,7 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
             })
             //check if developer
             //console.log("data",data)
-            let rolesList = erp.info.user.roles;
-            rolesList.forEach(item=>{
-                if(item.role === 'App Developer'){
-                    window.developer = true;
-                }
-            })
-            if(setting_item.role == 'App Developer' && !window.developer){
-              return;
-            }
+            
             let html = jinja2.render(setting_template, {
                 ...data,
                 _: _,

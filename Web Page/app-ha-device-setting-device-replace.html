@@ -145,7 +145,7 @@
                   </li>
                 </ul>
               </div>
-              <div class="card">
+              <div class="card" v-if="settingList.length == 0">
                 <div class="card-content card-content-padding">
                   <div class="block" style="text-align: center; margin: 30px 0" v-if="settingList.length == 0">
                     <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
@@ -245,6 +245,7 @@
           targetPosition: 0,
           networkCount: 0,
           targetNetworkCommandList: [],
+          targetPairingCommandList: [],
           blePostCommand: [],
           gateway: '',
         },
@@ -308,6 +309,11 @@
           },
           async coreDeviceFlashLed(item) {
             console.log(item);
+            let guid = item.guid;
+            let connectStatus = peripheral[guid].prop.connected;
+            if (!connectStatus) {
+              app.dialog.preloader();
+            }
             if (item.flash) {
               item.flash = false;
             } else {
@@ -320,8 +326,6 @@
             } else {
               data = '812c00';
             }
-            let guid = item.guid;
-
             try {
               await peripheral[guid].write([
                 {
@@ -330,7 +334,9 @@
                   data: data,
                 },
               ]);
+              app.dialog.close();
             } catch (error) {
+              app.dialog.close();
               app.dialog.alert(_(erp.get_log_description(error)));
             }
             //this.activeDeviceList(item.id,"flash",item.flash);
@@ -360,6 +366,35 @@
               //console.log("list",list);
               thisList = thisList.concat(list);
             });
+            //select the device pairing
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            profile_subdevices.forEach((item) => {
+              if (item.device == guid) {
+                if (item.config) {
+                  let config = JSON.parse(item.config);
+                  let this_button_group = item.device_button_group;
+                  let mapping = config.mapping;
+                  let subdeviceItem = profile_subdevices.find((e) => e.name == mapping);
+                  let targer_button_group = subdeviceItem.device_button_group;
+                  let paramsMap = {
+                    mapping: mapping,
+                    virtual: config.virtual,
+                    pairing_guid: config.pairing_guid,
+                    be_pairing: config.be_pairing,
+                    this_button_group: this_button_group,
+                    target_button_group: targer_button_group,
+                    this_gang: this_button_group.replace('ONOFF GANG', ''),
+                    targer_gang: targer_button_group.replace('ONOFF GANG', ''),
+                  };
+                  let list = iot_ble_device_setting_type_init('Device Pairing', paramsMap, kitem.guid, guid);
+                  thisList = thisList.concat(list);
+                  //should change to command: title: value:
+                  //tindy the command
+                  //should params the obj like {"mapping":"vj33epcikm","virtual":"","pairing_guid":"66326262633362663264346412020f1d","be_pairing":"1",this_gang,targer_gang}
+                  // {"mapping":"vj33epcikm","virtual":"","pairing_guid":"66326262633362663264346412020f1d","be_pairing":"1"}
+                }
+              }
+            });
             thisList.forEach((item) => {
               item.writeStatus = false;
             });
@@ -368,6 +403,7 @@
           },
           async updateSetting() {
             let commandList = [];
+            this.targetPairingCommandList = [];
             let mac_address = core_utils_get_mac_address_from_guid(this.targetGuid);
             const hexid = guid.substring(guid.length - 6, guid.length - 2);
             const model = erp.doctype.device_model[hexid.toUpperCase()];
@@ -393,15 +429,25 @@
               if (commandList.indexOf(item.command) == -1) {
                 commandList.push(item.command);
               }
+              if (isset(item.targetPairingCommand)) {
+                this.targetPairingCommandList.push({
+                  command: item.targetPairingCommand,
+                  guid: item.targetGuid,
+                });
+              }
             });
             console.log('commandList', commandList);
             this.blePostCommand = commandList;
             this.updateBleCommand();
+            console.log("this.targetPairingCommandList",this.targetPairingCommandList)
           },
           async updateBleCommand() {
             app.dialog.preloader(_('Connecting...'));
             let commands = this.blePostCommand;
             for (let i in commands) {
+              if (commands[i].writeStatus) {
+                continue;
+              }
               try {
                 let bleList = [
                   {
@@ -415,10 +461,9 @@
                 this.settingList.forEach((item) => {
                   if (item.command == commands[i]) {
                     item.writeStatus = true;
+                    commands[i].writeStatus = true;
                   }
                 });
-                //this.blePostCommand.shift();
-                //check if all status is true,next
                 let nextStepStatus = true;
                 this.settingList.forEach((item) => {
                   if (!item.writeStatus) {
@@ -567,7 +612,18 @@
                 }
               }
             } else {
-              this.updateErpData();
+              try {
+                await peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '810e',
+                  },
+                ]);
+                this.updateErpData();
+              } catch (error) {
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
             }
           },
           async updateSelfNetwork() {
@@ -588,6 +644,28 @@
             try {
               console.log('targetBleList', targetBleList);
               await peripheral[this.targetGuid].write(targetBleList);
+              //this.blePostCommand.shift();
+              //check if all status is true,next
+              if (this.targetPairingCommandList.length) {
+                for (let i in this.targetPairingCommandList) {
+                  let command = this.targetPairingCommandList[i].command;
+                  console.log('command', command);
+                  let post_guid = this.targetPairingCommandList[i].guid;
+                  console.log('guid', post_guid);
+                  try {
+                    await peripheral[post_guid].write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: command,
+                      },
+                    ]);
+                  } catch (error) {
+                    app.dialog.close();
+                    app.dialog.alert(_(erp.get_log_description(error)));
+                  }
+                }
+              }
               this.updateErpData();
             } catch (error) {
               app.dialog.close();
@@ -699,31 +777,37 @@
                 }, time);
               });
             };
-            try {
-              app.preloader.show();
-              const periperal = window.peripheral[guid].prop;
+            app.dialog.confirm(
+              _('Reset Password?'),
+              async () => {
+                try {
+                  app.preloader.show();
+                  const periperal = window.peripheral[guid].prop;
 
-              await promisifyConnect(periperal.id);
-              await promisifyWrite(periperal.id, 'ff80', 'ff81', cmd);
-              // ble.startNotification(periperal.id, 'ff80', 'ff82');
-              await promisifyDisconnect(periperal.id);
+                  await promisifyConnect(periperal.id);
+                  await promisifyWrite(periperal.id, 'ff80', 'ff81', cmd);
+                  // ble.startNotification(periperal.id, 'ff80', 'ff82');
+                  await promisifyDisconnect(periperal.id);
 
-              await sleep(2000);
+                  await sleep(2000);
 
-              await promisifyConnect(periperal.id);
+                  await promisifyConnect(periperal.id);
 
-              await promisifyWrite(periperal.id, 'ff80', 'ff81', '812700');
-              // await promisifyWrite(periperal.id, 'ff80', 'ff81', '810e');
+                  await promisifyWrite(periperal.id, 'ff80', 'ff81', '812700');
+                  // await promisifyWrite(periperal.id, 'ff80', 'ff81', '810e');
 
-              // 88ff00aa77
-              // 8e01
+                  // 88ff00aa77
+                  // 8e01
 
-              app.preloader.hide();
-              app.dialog.alert(_('Reset Success!'));
-            } catch (err) {
-              app.preloader.hide();
-              app.dialog.alert(_('Reset fail: ') + JSON.stringify(err));
-            }
+                  app.preloader.hide();
+                  app.dialog.alert(_('Reset Success!'));
+                } catch (err) {
+                  app.preloader.hide();
+                  app.dialog.alert(_('Reset fail: ') + JSON.stringify(err));
+                }
+              },
+              () => {}
+            );
           },
         },
         computed: {},

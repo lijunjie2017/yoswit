@@ -168,10 +168,11 @@ window.device_wifi_setting_component = {
   },
   mounted() {
     this.init();
-    this.checkIfOnline();
   },
   beforeDestroy() {
-    clearTimeout(this.mqttTimer);
+    console.log("beforeDestroy");
+    clearTimeout(this.$preloaderHide);
+    clearTimeout(this.$subscribeTimer);
     emitter.off(this.$wifiTopic,this.$wifiTopicFun);
   },
   methods: {
@@ -215,6 +216,7 @@ window.device_wifi_setting_component = {
               console.log(TAG, err);
             });
         }
+        this.checkIfOnline();
       } catch (err) {
         console.log(err);
       }
@@ -229,19 +231,29 @@ window.device_wifi_setting_component = {
           topic_self = item.gateway;
         }
       });
+      //this should depend on the setting username
+
       if (!topic_self) {
-        topic_self = `${mac.toLowerCase()}-${users[users.current].usr}`;
+        if(this.originalEmail){
+          topic_self = `${mac.toLowerCase()}-${this.originalEmail.toLowerCase()}`;
+        }else{
+          topic_self = `${mac.toLowerCase()}-${users[users.current].usr.toLowerCase()}`;
+        }
       }
       window.topic_self = topic_self;
       //check if online
       let will_topic = `will/${md5(md5(topic_self.toLowerCase()))}`;
       mqtt.subscribe(will_topic);
-      setTimeout(()=>{
+      this.$subscribeTimer =  setTimeout(()=>{
         mqtt.subscribe(will_topic);
-      },15*1000)
-      setTimeout(() => {
+      },10*1000)
+      this.$preloaderHide = setTimeout(() => {
+        if(this.$preloaderHide){
+          clearTimeout(this.$preloaderHide);
+        }
         app.preloader.hide();
-      }, 1000 * 60 * 2);
+        app.dialog.alert(_('Connection timeout.Please check the SSID and password.'));
+      }, 1000 * 60);
       //emitter.off(will_topic);
       if(this.$wifiTopicFun){
         emitter.off(will_topic,this.$wifiTopicFun);
@@ -249,9 +261,10 @@ window.device_wifi_setting_component = {
       this.$wifiTopicFun = async(res)=>{
         console.log('component res', res);
         let message = res.message;
-        debugger
+        //debugger
         if (message == 'Online') {
-          clearTimeout(this.mqttTimer);
+          clearTimeout(this.$subscribeTimer);
+          clearTimeout(this.$preloaderHide);
           this.connectTemp = 3;//control the mqtt connect count;
           //check the state of the connect status
           app.preloader.hide();
@@ -321,16 +334,19 @@ window.device_wifi_setting_component = {
         db.set('wifiList', JSON.stringify(list));
       }
     },
-    iot_device_wifi_form_save() {
+    async iot_device_wifi_form_save() {
       //save the wifi data
       let guid = this.guid;
       console.log('guid', guid);
 
       app.preloader.show();
-      let this_timer = setTimeout(()=>{
+      this.$this_timer = setTimeout(()=>{
+        if(this.$this_timer){
+          clearTimeout(this.$this_timer);
+        }
         app.preloader.hide();
-        app.dialog.alert('Timeout, please try again.')
-      },20*1000)
+        app.dialog.alert(_('Connection timeout.Please check the SSID and password.'));
+      },40*1000)
       this.saveLocalWifi();
       //check the input data
       if (this.setting.ssid === '' || this.setting.ssid_password === '') {
@@ -340,8 +356,8 @@ window.device_wifi_setting_component = {
         return;
       }
       //check if the ssid and the password and the topic have no save,break this step and next step
-      if(this.setting.ssid === this.originalSsid && this.setting.ssid_password === this.originalSsidPassword && this.setting.email === this.originalEmail){  
-        clearTimeout(this_timer);
+      if(this.setting.ssid === this.originalSsid && this.setting.ssid_password === this.originalSsidPassword && this.setting.email === this.originalEmail && this.wifiStatus == 1){  
+        clearTimeout(this.$this_timer);
           emitter.emit('refresh', {});
           window.globalUpdate = true;
           if (this.type == 2) {
@@ -358,13 +374,157 @@ window.device_wifi_setting_component = {
       //   this.setting.email = users[users.current].usr;
       // }
       console.log('!!!', this.setting.email);
+      const saveSsid = ()=>{
+        const data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
+        return window.peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: data,
+        }]);
+      }
+      const saveSsidPassword = ()=>{
+        const data = '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
 
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
+      }
+      const saveEmail = ()=>{
+        const data = '932200' + this.setting.email.length.toString(16).pad('0000') + this.setting.email.convertToHex();
+
+          return window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: data,
+          }]);
+      }
+      const savePort = ()=>{
+        const data = '9301000002' + (this.setting.port * 1).toString(16).pad('0000');
+
+        return window.peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: data,
+        }]);
+      }
+      const resetDevice = ()=>{
+        const data = '8110';
+        return window.peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: data,
+        }]);
+      }
+      const saveServerUrl = ()=>{
+        const data = '930000' + this.setting.server_url.length.toString(16).pad('0000') + this.setting.server_url.convertToHex();
+
+        return window.peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: data,
+        }]);
+      }
+      const restartDevice = ()=>{
+        return window.peripheral[guid].write([{
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: '810E',
+        }]);
+      }
+      const sleep = (ms)=>{
+        return new Promise((resolve, reject)=>{
+          setTimeout(() => {
+            resolve();
+          }, ms);
+        })
+      }
+      const updateSetting = ()=>{
+        return iot_device_setting_sync_server(guid, null, null, true, {
+          'Wifi SSID': this.setting.ssid,
+          'Wifi Password': this.setting.ssid_password,
+          'Email Address': this.setting.email || 'null',
+          'Server Port': this.setting.port || 'null',
+          'Server URI': this.setting.server_url || 'null',
+        });
+      }
+      const updateDeviceGateway = ()=>{
+        let mac = core_utils_get_mac_address_from_guid(guid, false);
+          return http.request(`/api/method/appv6.checkDeviceGateways`, {
+            method: 'POST',
+            dataType: 'json',
+            serializer: 'json',
+            data: {
+              guid: guid,
+              platform: 'YO105',
+              title: mac.toUpperCase(),
+            },
+            contentType: 'application/json',
+          });
+      }
+      const updateErp = ()=>{
+        let mac = core_utils_get_mac_address_from_guid(guid, false);
+        let devices = erp.info.profile.profile_device;
+        devices.forEach(item=>{
+          if(item.name == this.device_name){
+            item.gateway = `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`;
+          }
+        })
+        let url = `/api/resource/Profile/${erp.info.profile.name}`;
+        let method = 'PUT';
+        let data = {
+          profile_device : devices
+        };
+        return http.request(url, {
+          method: method,
+          dataType: 'json',
+          serializer: 'json',
+          data: data,
+          contentType: 'application/json',
+        });
+      }
+      try{
+        await window.peripheral[guid].connect();
+        // await resetDevice();
+        // await sleep(10*1000);
+        await window.peripheral[guid].connect();
+        await saveSsid();
+        await saveSsidPassword();
+        await saveEmail();
+        await savePort();
+        await saveServerUrl();
+        //debugger
+        await updateErp();
+        await updateSetting();
+        await updateDeviceGateway();
+        await restartDevice();
+        await sleep(10*1000);
+        clearTimeout(this.$this_timer);
+        window.globalUpdate = true;
+        this.settingStatus = true;
+        if (this.type == 2) {
+          app.preloader.show();
+          this.checkIfOnline();
+        } else {
+          mainView.router.back();
+        }
+      }catch(error){
+        app.preloader.hide();
+        if (this.type == 2) {
+          emitter.emit('wifi/set', { code: 0 });
+        }
+        //clearTimeout(this_timer);
+        clearTimeout(this.$this_timer);
+        app.dialog.alert(_(erp.get_log_description(error)));
+      }
+      return
       iot_ble_check_enable()
         .then(() => {
           return window.peripheral[guid].connect();
         })
         .catch((error) => {
-          debugger
+          //debugger
           console.log(error);
           app.preloader.hide();
           app.dialog.alert(`Connect Failed`);
@@ -466,7 +626,7 @@ window.device_wifi_setting_component = {
           });
         })
         .catch((err) => {
-          debugger
+          //debugger
           app.preloader.hide();
           console.log(err);
           clearTimeout(this_timer);
@@ -491,7 +651,7 @@ window.device_wifi_setting_component = {
           });
         })
         .catch((err) => {
-          debugger
+          //debugger
           console.log(err);
           clearTimeout(this_timer);
           //app.preloader.hide();
@@ -500,7 +660,7 @@ window.device_wifi_setting_component = {
           });
         })
         .then(()=>{
-          debugger
+          //debugger
           return new Promise((resolve, reject)=>{
             setTimeout(() => {
               resolve();
@@ -520,7 +680,7 @@ window.device_wifi_setting_component = {
           this.settingStatus = true;
         })
         .catch((err) => {
-          debugger
+          //debugger
           console.error(err);
           clearTimeout(this_timer);
           app.preloader.hide();

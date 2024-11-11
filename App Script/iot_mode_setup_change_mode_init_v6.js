@@ -413,7 +413,10 @@ window.iot_mode_setup_change_mode_init = function(params) {
                                     });
                             }  
                         }
-                        let url = `/api/resource/Profile Subdevice/${subdevice_name}`;
+                        //let url = `/api/resource/Profile Subdevice/${subdevice_name}`;
+                        let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+                        
+                        let url = `/api/resource/Profile/${erp.info.profile.name}`;
                         let method = 'PUT';
                         let post_data = {
                             "device_mode": selected,
@@ -423,16 +426,24 @@ window.iot_mode_setup_change_mode_init = function(params) {
                         }else if(selected == 'Curtain Motor Reverse Ac' || selected == 'Curtain Motor Reverse'){
                             post_data['device_button_group'] = 'OPENCLOSE UART REVERSE';
                         }
+                        subdevices.forEach(item=>{
+                            if(subdevice_name == item.name){
+                                item.device_mode = selected;
+                                item.device_button_group = post_data['device_button_group'];
+                            }
+                        })
                         return http.request(encodeURI(url), {
                             method: method,
                             serializer: 'json',
                             responseType: 'json',
-                            data: post_data,
+                            data: {
+                                profile_subdevice : subdevices
+                            },
                             debug: true,
                         });
                     }).then(() => {
                         app.preloader.hide();
-                        return ha_profile_ready();
+                        return ha_profile_ready(2);
                     }).then(()=>{
                         app.dialog.alert(_('Change Mode successfully'));
                     }).catch((err) => {

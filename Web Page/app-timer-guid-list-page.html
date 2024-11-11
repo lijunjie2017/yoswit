@@ -324,7 +324,7 @@
                 () => {}
               );
               return;
-            } else if (item.scene_template == 'Scene Banner' || item.scene_template == 'Room Scene Button') {
+            } else if (item.scene_template == 'Normal Scene') {
               app.dialog.confirm(
                 `${_('Confirm Deletion?')}`,
                 async () => {
@@ -362,59 +362,6 @@
               );
               return
             }
-            app.dialog.confirm(
-              `${_('Confirm Deletion?')}`,
-              async () => {
-                //get the sceneId
-                app.dialog.preloader();
-                setTimeout(() => {
-                  app.dialog.close();
-                }, 15 * 1000);
-                let scenes = cloneDeep(erp.info.scene);
-                let list = [];
-                for (let i in scenes) {
-                  if (item.name == scenes[i].name) {
-                    list = scenes[i].scene_device_location;
-                  }
-                }
-                try {
-                  for (let i in list) {
-                    let delActionCommand = `8F1100${parseInt(list[i].storage_id).toString(16).pad('00')}`;
-                    let delTriggerCommand = `8F210000${parseInt(list[i].storage_id).toString(16).pad('00')}`;
-                    console.log('device', list[i].device);
-                    console.log('delActionCommand', delActionCommand);
-                    console.log('delTriggerCommand', delTriggerCommand);
-                    await window.peripheral[list[i].device].write([
-                      {
-                        service: 'ff80',
-                        characteristic: 'ff81',
-                        data: delActionCommand,
-                      },
-                      {
-                        service: 'ff80',
-                        characteristic: 'ff81',
-                        data: delTriggerCommand,
-                      },
-                    ]);
-                  }
-                  let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
-                    method: 'DELETE',
-                    serializer: 'json',
-                    responseType: 'json',
-                    data: {},
-                  });
-                  app.dialog.close();
-                  await ha_profile_ready();
-                  this.init();
-                  app.dialog.alert(_('Deletion successful'));
-                } catch (error) {
-                  app.dialog.close();
-                  console.log(error);
-                  app.dialog.alert(_('Permission Error'));
-                }
-              },
-              () => {}
-            );
           },
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
@@ -598,33 +545,13 @@
                   this.sceneList.push(scenes[i]);
                 }
                 //if normal scene
-                if (scenes[i].scene_template == 'Scene Banner' || scenes[i].scene_template == 'Room Scene Button') {
+                if (scenes[i].scene_template == 'Normal Scene') {
                   this.sceneList.push(scenes[i]);
                 }
               } else {
                 this.sceneList.push(scenes[i]);
               }
             }
-          },
-          async scan() {
-            await bleManager.stopScan();
-            await bleManager.wait(200);
-            bleManager.scan(this.onDiscovery, async () => {
-              await bleManager.wait(5000);
-              this.scan();
-            });
-          },
-          async onDiscovery(p) {
-            setTimeout(() => {
-              delete p.password;
-              delete p.connected;
-              delete p.connecting;
-              if (!isset(peripheral[p.guid])) {
-                peripheral[p.guid] = new Peripheral(p);
-              } else {
-                peripheral[p.guid].update(p);
-              }
-            }, 10);
           },
           toScene() {
             mainView.router.navigate(`/mobile-app/scene-guid-operate-page?sub_name=${subdevice_name}`);

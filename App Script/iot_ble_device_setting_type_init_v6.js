@@ -57,6 +57,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     'Maximum': {},
     'Manual Dim Steps': {},
     'Delay Lastfor': {},
+    'Device Mapping': {},
   };
   let commandList = [];
 
@@ -123,6 +124,28 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     }
     const hexString = byteArray.map((byte) => ('0' + byte.toString(16)).slice(-2)).join('');
     return hexString;
+  };
+  const get_device_mapping_command = (value) => {
+    //1.check firmware version
+    //2.get device button group
+    //3.tindy the command
+    //4.update the config
+    //this value is object
+    //command_data = `02${ower_mac}81080${this_gang}fe${new_mac}ff0${targer_gang}00`;
+    let firmware = window.peripheral[guid].prop.firmware;
+    let ower_mac = core_utils_get_mac_address_from_guid(guid, true);
+    let new_mac = core_utils_get_mac_address_from_guid(value.pairing_guid, true);
+    let this_gang = value.this_gang;
+    let targer_gang = value.targer_gang;
+    let data = `02${ower_mac}81080${this_gang}fe${new_mac}ff0${targer_gang}00`;
+    //tindy other command
+    let pairing_command = `02${new_mac}81080${targer_gang}fe${ower_mac}ff0${this_gang}00`;
+    let targetGuid = value.pairing_guid;
+    return {
+      data: data,
+      targetPairingCommand: pairing_command,
+      targetGuid: targetGuid,
+    };
   };
   const get_set_time_command = () => {
     let data = '840001';
@@ -667,8 +690,8 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
             data += '00';
           }
           command_list.push({
-            button_group : button_group,
-            command : data
+            button_group: button_group,
+            command: data,
           });
         }
       });
@@ -814,20 +837,32 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       break;
     case 'Virtual Device Pairing':
       let list = get_virtual_device_pairing_command(value);
-      list.forEach(item=>{
+      list.forEach((item) => {
         commandList.push({
-          command : item.command,
+          command: item.command,
           title: type,
-          value : item.button_group
+          value: item.button_group,
         });
-        if(item.button_group.startsWith("ONOFF GANG")){
+        if (item.button_group.startsWith('ONOFF GANG')) {
           commandList.push({
-            command : `8111${parseInt("1".padEnd((item.button_group.replace("ONOFF GANG", "") * 1) + 1, "0"), 2).toString(16).pad("00")}`,
+            command: `8111${parseInt('1'.padEnd(item.button_group.replace('ONOFF GANG', '') * 1 + 1, '0'), 2)
+              .toString(16)
+              .pad('00')}`,
             title: 'Physical Switch Lock',
-            value : item.button_group
+            value: item.button_group,
           });
         }
-      })
+      });
+      break;
+    case 'Device Pairing':
+      let obj = get_device_mapping_command(value);
+      commandList.push({
+        command: obj.data,
+        title: type,
+        value: `${value.this_button_group} - ${value.target_button_group}`,
+        targetPairingCommand : obj.targetPairingCommand,
+        targetGuid : obj.targetGuid,
+      });
       break;
     default:
       if (type.includes('Delay Lastfor')) {

@@ -1,0 +1,364 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${_(titles)}</div>
+        <div class="right frappe-list-right">
+          <a class="link icon-only searchbar-enable" data-searchbar=".searchbar-demo">
+            <i class="icon f7-icons if-not-md">search</i>
+            <i class="icon material-icons md-only">search</i>
+          </a>
+        </div>
+        <form
+          data-search-container=".search-list"
+          data-search-in=".item-title"
+          class="searchbar searchbar-expandable searchbar-demo searchbar-init"
+          id="list-search-form"
+          @submit="${search}"
+        >
+          <div class="searchbar-inner">
+            <div class="searchbar-input-wrap">
+              <input type="search" name="ir-search" placeholder="Search" @blur="${search}" />
+              <i class="searchbar-icon"></i>
+              <span class="input-clear-button"></span>
+            </div>
+            <span class="searchbar-disable-button">Cancel</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="list medium-inset no-chevron virtual-list searchbar-found search-list" v-if="!searchStatus">
+            <ul class="dynamic-list-generated-from-jinja-APP_Yoswit_Device_Type_IR_Brand_Model">
+              <li v-for="(item,index) in typeList" :key="item.ID">
+                <div class="swipeout-content">
+                  <a
+                    func="irLinkFunction"
+                    guid="{{guid}}"
+                    model="{{item.MODEL}}"
+                    name="{{item.MODEL}}"
+                    rowModel="{{item.MODEL}}"
+                    class="item-link item-content"
+                  >
+                    <div class="item-inner">
+                      <div class="item-title">
+                        <font lang="en" lang-packet="{{item.MODEL}}">{{ tran(item.MODEL, 'en') }}</font>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </li>
+              <li>
+                <div class="swipeout-content">
+                  <a
+                    :href="'/frappe/detail/YB0F2/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Custom_V5/Profile/Air Conditioner-Gree-YB0F2-26248/guid='+guid+'&model='+model+'&brand='+brand+'/'"
+                    class="item-link item-content"
+                  >
+                    <div class="item-inner">
+                      <div class="item-title">
+                        <font lang="en" lang-packet="{{'Custom'}}">{{ tran('Custom', 'en') }}</font>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </li>
+              <li>
+                <div class="swipeout-content">
+                  <a
+                    :href="'/frappe/detail/Others/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Others_V5/Profile/Others/guid='+guid+'&model='+model+'&brand='+brand+'&device_type='+deviceType+'/'"
+                    class="item-link item-content"
+                  >
+                    <div class="item-inner">
+                      <div class="item-title">
+                        <font lang="en" lang-packet="{{'Others'}}">{{ tran('Others', 'en') }}</font>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="list medium-inset no-chevron virtual-list searchbar-found search-list" v-if="searchStatus">
+            <ul class="dynamic-list-generated-from-jinja-APP_Yoswit_Device_Type_IR_Brand_Model">
+              <li v-for="(item,index) in searchList" :key="item.ID">
+                <div class="swipeout-content">
+                  <a
+                    func="irLinkFunction"
+                    guid="{{guid}}"
+                    model="{{item.MODEL}}"
+                    name="{{item.MODEL}}"
+                    rowModel="{{item.MODEL}}"
+                    class="item-link item-content"
+                  >
+                    <div class="item-inner">
+                      <div class="item-title">
+                        <font lang="en" lang-packet="{{item.MODEL}}">{{ tran(item.MODEL, 'en') }}</font>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </li>
+              <li>
+                <div class="swipeout-content">
+                  <a
+                    :href="'/frappe/detail/YB0F2/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Custom_V5/Profile/Air Conditioner-Gree-YB0F2-26248/guid='+guid+'&model='+model+'&brand='+brand+'/'"
+                    class="item-link item-content"
+                  >
+                    <div class="item-inner">
+                      <div class="item-title">
+                        <font lang="en" lang-packet="{{'Custom'}}">{{ tran('Custom', 'en') }}</font>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </li>
+              <li>
+                <div class="swipeout-content">
+                  <a
+                    :href="'/frappe/detail/Others/APP_Yoswit_Device_Type_IR_Brand_Model_Full_Panel_Others_V5/Profile/Others/guid='+guid+'&model='+model+'&brand='+brand+'&device_type='+deviceType+'/'"
+                    class="item-link item-content"
+                  >
+                    <div class="item-inner">
+                      <div class="item-title">
+                        <font lang="en" lang-packet="{{'Others'}}">{{ tran('Others', 'en') }}</font>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $update = ctx.$update,
+      $on = ctx.$on;
+    let titles = '123';
+    let { subdevice, device_type, brand } = $f7route.query;
+    titles = brand;
+    $update();
+    let vueApp = null;
+    const search = () => {
+      vueApp.$search();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1,
+          guid: '',
+          brand : brand,
+          model: '',
+          fileName: '8.b.ac_jj_all.db',
+          dbMap: null,
+          deviceType: device_type,
+          typeList: [],
+          searchList: [],
+          searchStatus: false,
+        },
+        watch: {},
+        computed: {},
+        mounted() {
+          Vue.prototype.$search = this.search;
+          this.init();
+        },
+        methods: {
+          async init() {
+            await this.initDataBase();
+            let dataBaseName = this.returnTableName();
+            console.log(dataBaseName);
+            let sql = `
+            SELECT * FROM ${dataBaseName + '_TABLE'} WHERE BRAND_EN = '${brand}' AND MODEL != 'no_model' ORDER BY MODEL ASC;
+            `;
+            let selectList = await this.packageSqliteExecuteSql(sql);
+            this.typeList = selectList;
+            console.log('selectList', selectList);
+            let sudevices = cloneDeep(erp.info.profile.profile_subdevice);
+            sudevices.forEach((item) => {
+              if (item.name == subdevice) {
+                this.guid = item.device;
+              }
+            });
+          },
+          initDataBase() {
+            return new Promise((resolve, reject) => {
+              try {
+                this.dbMap = window.sqlitePlugin.openDatabase({ name: this.fileName, location: 'default' });
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            });
+          },
+          async search() {
+            let this_keyword = $(`input[type="search"][name="ir-search"]`).val();
+            console.log(this_keyword);
+            let list = cloneDeep(this.typeList);
+            const lowerPattern = this_keyword.replace(/%/g, '').toLowerCase();
+            let resultList = list.filter((item) => item.MODEL.toLowerCase().includes(lowerPattern));
+            console.log(resultList);
+            if (this_keyword) {
+              this.searchStatus = true;
+            } else {
+              this.searchStatus = false;
+            }
+
+            this.searchList = resultList;
+          },
+          returnTableName() {
+            let tableName = `ARC`;
+            if (device_type == 'Television') {
+              tableName = `TV`;
+            } else if (device_type == 'Audio') {
+              tableName = `ADO`;
+            } else if (device_type == 'Set-top boxes') {
+              tableName = `TVBOX`;
+            } else if (device_type == 'Fan') {
+              tableName = `FAN`;
+            } else if (device_type == 'Projector') {
+              tableName = `PJT`;
+            } else if (device_type == 'Air Purifier') {
+              tableName = `AIR`;
+            } else if (device_type == 'IPTV') {
+              tableName = `IPTV`;
+            } else if (device_type == 'Dehumidifier') {
+              tableName = ``;
+            } else if (device_type == 'Camera') {
+              tableName = `SLR`;
+            } else if (device_type == 'Robot Vacuum') {
+              tableName = `Sweeper`;
+            } else if (device_type == 'DVD') {
+              tableName = `DVD`;
+            } else if (device_type == 'Lamp') {
+              tableName = `Lamp`;
+            } else if (device_type == 'Water Heater') {
+              tableName = `WATER`;
+            }
+            return tableName;
+          },
+          packageSqliteExecuteSql(sql) {
+            return new Promise((resolve, reject) => {
+              this.dbMap.executeSql(
+                sql,
+                [],
+                (resultSet) => {
+                  console.log(resultSet);
+                  let list = [];
+                  for (let i = 0; i < resultSet.rows.length; i++) {
+                    list.push(resultSet.rows.item(i));
+                  }
+                  resolve(list);
+                },
+                (error) => {
+                  reject(error);
+                }
+              );
+            });
+          },
+          async toTest(button_signal) {
+            const TAG = 'iot_ir_test';
+            let button_index = parseInt((parseInt(button_signal) - 1) / 2);
+            console.log(TAG);
+            let ref = iot_ble_generate_ir_code(this.command, button_index, null);
+            console.log('ref', ref);
+            try {
+              await window.peripheral[this.guid].sendIR(ref);
+            } catch (err) {
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+        },
+        beforeDestroy() {
+          //emitter.off('disconnected');
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .ir-click-button {
+    display: inline-block;
+    height: 65px;
+    width: 65px;
+    border-radius: 50%;
+    line-height: 35px;
+  }
+  .bg-theme {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .bg-theme a {
+    color: #fff;
+  }
+</style>

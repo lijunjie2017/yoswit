@@ -98,8 +98,8 @@ window.iot_device_thermostat_form_init = function (json) {
     fan_mode_when_unoccupied: unoccupied_fan_mode_default,
     setpoint_limit_lower: setpoint_limit_lower_default,
     setpoint_limit_upper: setpoint_limit_upper_default,
-    setpoint_limit_lower_heat : setpoint_limit_lower_heat_default,
-    setpoint_limit_upper_heat : setpoint_limit_upper_heat_default,
+    setpoint_limit_lower_heat: setpoint_limit_lower_heat_default,
+    setpoint_limit_upper_heat: setpoint_limit_upper_heat_default,
     frost_protection: frost_protection_default,
     frost_protection_setpoint: frost_protection_setpoint_default,
     restart_after_power_failure: restart_after_power_failure_default,
@@ -278,7 +278,7 @@ window.iot_device_thermostat_form_init = function (json) {
     min: 1,
     max: 35,
     step: 1,
-    dual : true,
+    dual: true,
     scale: true,
     label: true,
     scaleSteps: 1,
@@ -301,7 +301,7 @@ window.iot_device_thermostat_form_init = function (json) {
         window.iot_device_thermostat_set_lower_tem = lower;
         window.iot_device_thermostat_set_upper_tem = upper;
         if (lower >= upper) {
-          range.setValue([(upper - 3),upper]);
+          range.setValue([upper - 3, upper]);
           window.iot_device_thermostat_set_lower_tem = upper - 3;
           window.iot_device_thermostat_set_upper_tem = upper;
         }
@@ -314,7 +314,7 @@ window.iot_device_thermostat_form_init = function (json) {
     min: 3,
     max: 40,
     step: 1,
-    dual : true,
+    dual: true,
     scale: true,
     label: true,
     scaleSteps: 1,
@@ -337,7 +337,7 @@ window.iot_device_thermostat_form_init = function (json) {
         window.iot_device_thermostat_set_lower_tem_heat = lower;
         window.iot_device_thermostat_set_upper_tem_heat = upper;
         if (lower >= upper) {
-          range.setValue([(upper - 3),upper]);
+          range.setValue([upper - 3, upper]);
           window.iot_device_thermostat_set_lower_tem_heat = upper - 3;
           window.iot_device_thermostat_set_upper_tem_heat = upper;
         }
@@ -453,8 +453,14 @@ window.iot_device_thermostat_form_init = function (json) {
   // range value must use api update
   iot_device_thermostat_cooling_setpoint_unoccupied_slider.setValue(default_data.cooling_setpoint_unoccupied);
   iot_device_thermostat_heating_setpoint_unoccupied_slider.setValue(default_data.heating_setpoint_unoccupied);
-  iot_device_thermostat_setpoint_limit_lower_slider.setValue([default_data.setpoint_limit_lower,parseInt(default_data.setpoint_limit_upper)]);
-  iot_device_thermostat_setpoint_limit_upper_slider.setValue([parseInt(default_data.setpoint_limit_lower_heat),parseInt(default_data.setpoint_limit_upper_heat)]);
+  iot_device_thermostat_setpoint_limit_lower_slider.setValue([
+    default_data.setpoint_limit_lower,
+    parseInt(default_data.setpoint_limit_upper),
+  ]);
+  iot_device_thermostat_setpoint_limit_upper_slider.setValue([
+    parseInt(default_data.setpoint_limit_lower_heat),
+    parseInt(default_data.setpoint_limit_upper_heat),
+  ]);
   iot_device_thermostat_frost_protection_setpoint_slider.setValue(default_data.frost_protection_setpoint);
 
   window.iot_device_thermostat_fan_speed_picker.setValue([default_data.fan_speed]);
@@ -485,11 +491,11 @@ window.iot_device_thermostat_form_save = function (params) {
   if (parseInt(iot_device_thermostat_set_lower_tem) >= parseInt(iot_device_thermostat_set_upper_tem)) {
     return false;
   }
-  formdata["setpoint_limit_lower"] = iot_device_thermostat_set_lower_tem;
-  formdata["setpoint_limit_upper"] = iot_device_thermostat_set_upper_tem;
+  formdata['setpoint_limit_lower'] = iot_device_thermostat_set_lower_tem;
+  formdata['setpoint_limit_upper'] = iot_device_thermostat_set_upper_tem;
 
-  formdata["setpoint_limit_lower_heat"] = iot_device_thermostat_set_lower_tem_heat;
-  formdata["setpoint_limit_upper_heat"] = iot_device_thermostat_set_upper_tem_heat;
+  formdata['setpoint_limit_lower_heat'] = iot_device_thermostat_set_lower_tem_heat;
+  formdata['setpoint_limit_upper_heat'] = iot_device_thermostat_set_upper_tem_heat;
   const fan_speed_command = {
     'Disable': 0,
     '1 Speed': 1,
@@ -544,13 +550,13 @@ window.iot_device_thermostat_form_save = function (params) {
 
   iot_ble_check_enable()
     .then(() => {
-      return iot_ble_do_pre_action(guid);
+      return window.peripheral[guid].connect();
     })
     .then(() => {
       let data = '9402000013';
       //check firmware
-      if(window.peripheral && isset(window.peripheral[guid])){
-        if(window.peripheral[guid].prop.firmware >= 12.3){
+      if (window.peripheral && isset(window.peripheral[guid])) {
+        if (window.peripheral[guid].prop.firmware >= 12.3) {
           data = '9402000015';
         }
       }
@@ -600,17 +606,23 @@ window.iot_device_thermostat_form_save = function (params) {
       data += parseInt(`${on_off_command[formdata['keypad_lock_after_backlight_off']]}`).toString(16).pad('00');
       data += parseInt(`${formdata['backlight_brightness']}`).toString(16).pad('00');
       data += `01`;
-      //   data += parseInt(`${on_off_command[formdata['push_mqtt_message_after_state_change']]}`).toString(16).pad('00');
       const humidity_offset = parseInt(`${formdata['humidity_offset']}`);
-      debugger
+      //debugger
       if (humidity_offset < 0) {
         const unsignedInt = humidity_offset & 0xff; // 通过位与运算将有符号整数转换为无符号整数
         data += unsignedInt.toString(16).pad('00');
       } else {
         data += humidity_offset.toString(16).pad('00');
       }
-      data += parseInt(`${iot_device_thermostat_set_lower_tem_heat}`).toString(16).pad('00');
-      data += parseInt(`${iot_device_thermostat_set_upper_tem_heat}`).toString(16).pad('00');
+      //   data += parseInt(`${on_off_command[formdata['push_mqtt_message_after_state_change']]}`).toString(16).pad('00');
+      if (window.peripheral && isset(window.peripheral[guid])) {
+        if (window.peripheral[guid].prop.firmware >= 12.3) {
+          
+          data += parseInt(`${iot_device_thermostat_set_lower_tem_heat}`).toString(16).pad('00');
+          data += parseInt(`${iot_device_thermostat_set_upper_tem_heat}`).toString(16).pad('00');
+        }
+      }
+
       console.log('>>>> thermostat ble data: ' + data);
 
       // ha_process_periperal_cmd(runtime.peripherals[guid].id, [
@@ -622,8 +634,14 @@ window.iot_device_thermostat_form_save = function (params) {
       //     data: data
       //   }
       // ]);
-
-      return iot_ble_write(guid, 'ff80', 'ff81', data, false);
+      return window.peripheral[guid].write([
+        {
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: data,
+        },
+      ]);
+      //return iot_ble_write(guid, 'ff80', 'ff81', data, false);
     })
     .then(() => {
       return iot_device_setting_sync_server(guid, null, null, true, formdata);
@@ -635,14 +653,11 @@ window.iot_device_thermostat_form_save = function (params) {
     })
     .catch((err) => {
       app.preloader.hide();
-
-      if (!iot_ble_exception_message(err, false) && !core_server_exception_message(err)) {
-        app.dialog.alert(err, runtime.appInfo.name);
-      }
+      app.dialog.alert(_(erp.get_log_description(err)));
     });
 };
 
-window.onPriceChange = (e)=>{
+window.onPriceChange = (e) => {
   const range = app.range.get(e.target);
   console.log(range);
-}
+};

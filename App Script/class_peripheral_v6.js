@@ -272,7 +272,7 @@ window.Peripheral = (function() {
 				// 		})
 				// 	}
 				    //rcu can not support the scan data
-				    if(self.prop.hexModel.toUpperCase() == '0346'){
+				    if(self.prop.hexModel.toUpperCase() == '0346' || self.prop.hexModel.toUpperCase() == '0179'){
 				        self.prop.status.bluetooth[1] = '1970-01-01 00:00:00';
 				    }else{
 				        self.prop.status.bluetooth[1] =DateFormatter.format((new Date(new Date().getTime() - 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
@@ -539,6 +539,7 @@ window.Peripheral = (function() {
         // alert("onCharRead data="+data);
         const self = this;
         //alert(data)
+				console.log("data",data);
         if(data.startsWith("80")){
             // io status    
             let io = parseInt(data.substring(2, 4), 16);
@@ -577,8 +578,13 @@ window.Peripheral = (function() {
 			self.prop.status.bluetooth[0][46] = thermostat.room_temp;
 			self.prop.status.bluetooth[0][47] = thermostat.humidity;
 			
-			self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-			self.onPropChanged();
+			
+			self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+			//compare the time
+			console.log("self.prop.status.bluetooth[1] > self.prop.status.control[1]",self.prop.status.bluetooth[1] > self.prop.status.control[1])
+			if(	self.prop.status.bluetooth[1] > self.prop.status.control[1]){
+			      self.onPropChanged();
+			}
         }else if(data.startsWith("9502000009") || data.startsWith("95FF000001")){
 					const byteStrings = data.match(/.{1,2}/g);
           const targetStatus = parseInt(byteStrings[5], 16);
@@ -625,6 +631,7 @@ window.Peripheral = (function() {
 					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
 					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score").text(parseInt(score,16));
 				}else if(data.startsWith("87")){
+					console.log("87 data is",data);
 					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
 					let temp_v = parseInt(data.substr(16,2)+data.substr(14,2)+data.substr(12,2)+data.substr(10,2), 16);
 					let temp_i = parseInt(data.substr(24,2)+data.substr(22,2)+data.substr(20,2)+data.substr(18,2), 16);
@@ -751,7 +758,11 @@ window.Peripheral = (function() {
 			self.prop.status.mobmob[0][i+temp] = parseInt(value);
 		}
 		//iaq
-
+		//if ti curtain motor can not scan the value
+		if(self.prop.hexModel == '0179'){
+			//change the time
+			self.prop.status.bluetooth[1] = '1970-01-01 00:00:00';
+		}
 		//console.log("p.date",p.date)
 		self.prop.status.mobmob[1] = isset(p.date)?p.date:'1970-01-01 00:00:00';
 		if(!isset(p.date)){
@@ -3267,8 +3278,14 @@ const doMOBMOB = (gangs) => {
                 ];
         }
     };
-	Peripheral.prototype.getAttachmentStatus = function(button_group){
-			let gangs = this.getLatestStatus();
+	Peripheral.prototype.getAttachmentStatus = function(button_group,type){
+	    //if type is true,get the local status
+			let gangs;
+			if(type){
+			    gangs = this.prop.status['control'];
+			}else{
+			    gangs = this.getLatestStatus();
+			}
 			let gang_id = bleHelper.getGangId(button_group);
 			let status_list = [];
 			if(gang_id ==42){ //theromasta
@@ -3528,6 +3545,11 @@ const doMOBMOB = (gangs) => {
                         });
                         
                         let data = ((self.prop.password+self.prop.password).convertToHex()).convertToBytes();
+												// ble.writeWithoutResponse(self.prop.id,"ffc0", "ffc1",data,function(rs){
+												// 	console.log("rs",rs)
+												// },function(rs){
+												// 	reject("Failed to submit password for firmware v3.x to v5.x (Error: "+rs+")");
+												// });
                         ble.write(self.prop.id, "ffc0", "ffc1", data, function(rs){
 														console.log("rs",rs)
                             //nothing to do, instead, need notify

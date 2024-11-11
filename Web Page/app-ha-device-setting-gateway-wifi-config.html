@@ -347,7 +347,9 @@
               }
             })
           },
-          backForHome(){
+          async backForHome(){
+            //await ha_profile_ready();
+            window.globalUpdate = true;
             mainView.router.back();
           },
           handleChildEvent(data){
@@ -817,7 +819,12 @@
         },
       });
     });
-    $on('pageBeforeUnmount', (e, page) => {
+    // $on('pageBeforeUnmount', (e, page) => {
+    //   if (vueApp) {
+    //     vueApp.$destroy();
+    //   }
+    // });
+    $onUnmounted(() => {
       if (vueApp) {
         vueApp.$destroy();
       }

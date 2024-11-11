@@ -147,7 +147,7 @@ window.device_network_component = {
      let list = cloneDeep(this.profileDevice);
      let checkStatus = false;
      list.forEach(item=>{
-      if(item.isGroup && item.groupName != 'New Network' && item.network_id != 0){
+      if(item.isGroup && item.groupName != _('New Network') && item.network_id != 0){
         checkStatus = true;
       }
      })
@@ -158,7 +158,7 @@ window.device_network_component = {
         emitter.emit('network/sort',{code : 1});
       }
       this.profileDevice.splice(1,0,{
-        groupName : "Network 1",
+        groupName : _("Network")+"1",
         isGroup : true,
         network_id : '1',
       })
@@ -168,14 +168,14 @@ window.device_network_component = {
           item.network_id = '1';
           item.checked = true;
         }
-        if(item.groupName == 'New Network'){
+        if(item.groupName == _('New Network')){
           item.network_id = '2';
         }
-        if(item.groupName == "Unassigned"){
+        if(item.groupName == _("Unassigned")){
           item.network_id = '0';
         }
       })
-      const unassignedIndex = this.profileDevice.findIndex(item => item.groupName === 'Unassigned');
+      const unassignedIndex = this.profileDevice.findIndex(item => item.groupName === _('Unassigned'));
       const unassignedElement = this.profileDevice.splice(unassignedIndex, 1)[0];  
       this.profileDevice.push(unassignedElement);
       const zeroNetworkElements = this.profileDevice
@@ -701,6 +701,7 @@ window.device_network_component = {
         // }
 
         // update server
+        //console.log("this.profileDevice.filter((e) => !e.isGroup)",this.profileDevice.filter((e) => !e.isGroup));
         http
           .request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
             method: 'PUT',
@@ -713,7 +714,10 @@ window.device_network_component = {
               profile_device: this.profileDevice.filter((e) => !e.isGroup),
             },
           })
-          .then(resolve)
+          .then(()=>{
+            erp.info.profile.profile_device = this.profileDevice.filter((e) => !e.isGroup);
+            resolve()
+          })
           .catch(reject);
       })
         .then(() => {

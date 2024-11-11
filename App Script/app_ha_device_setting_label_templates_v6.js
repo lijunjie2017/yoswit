@@ -196,6 +196,75 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Device Test";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            device-mode="{{device_mode }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            subdevice-name="{{profile_subdevice_name}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="rcu_retry_time" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">bolt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        
+                    </div>
+                    <div class="col-auto">
+                        <a func="iot_device_test" ref="{{ device }}" button-group="{{device_button_group }}" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Device Test Log";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            device-mode="{{device_mode }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            subdevice-name="{{profile_subdevice_name}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="rcu_retry_time" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">bolt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/mobile-app/device-connect-log?guid={{ device }}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Change Password";
     setting_label_template[setting_label] = `
         <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
@@ -481,7 +550,7 @@ window.initSettingTemplate = ()=>{
                                 device-mode="{{device_mode }}"
                                 ref="{{ device }}"
                                 changefunc="iot_mode_setup_pvi_status_change"
-                                {% if self_setting_data.setting != 'Off' and self_setting_data.setting !="" %}checked{% endif %}
+                                {% if self_setting_data.setting != 'false' and self_setting_data.setting !="" %}checked{% endif %}
                             />
                             <span class="toggle-icon"></span>
                         </label>
@@ -1171,7 +1240,7 @@ window.initSettingTemplate = ()=>{
     `;
     setting_label = "Timezone";
     setting_label_template[setting_label] = `
-        <div class="card margin-bottom-half mx-0 my-3" 
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
         ref="{{ device }}" 
         init-func="iot_mode_setup_timezone_auto_init" 
         dependencies="{{self_setting_data.dependencies}}"
@@ -1179,6 +1248,7 @@ window.initSettingTemplate = ()=>{
         setting-name="{{ self_setting_data.name }}"
         setting-value="{{ self_setting_data.setting }}"
         >
+            <input name="timezone" type="hidden" value="" />
             <div class="card-content card-content-padding">
                 <div class="row">
                     <div class="col-auto">

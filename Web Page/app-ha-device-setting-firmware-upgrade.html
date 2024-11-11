@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div class="page" style="background-color: var(--fimobile-card-color) !important">
     <div class="navbar active">
       <div class="navbar-bg"></div>
       <div class="navbar-inner sliding">
@@ -13,86 +13,99 @@
       </div>
     </div>
 
-    <div class="page-content">
-      <div class="card">
-        <div class="card-content card-content-padding">
-          <div style="height: 30px"></div>
-          <div class="display-flex align-items-center justify-content-center">
-            <!-- normal -->
-            ${status === 'Normal' && $h`
-            <i class="state-normal f7-icons text-color-primary" style="font-size: 90px">arrow_up_circle</i>
-            `}
+    <div class="page-content" style="background-color: var(--fimobile-card-color) !important">
+      <yo-skeleton loading="${isIniting.value}">
+        <div style="height: 20px"></div>
+        <div class="card no-border no-shadow no-padding no-margin" style="background: none">
+          <div class="card-content card-content-padding">
+            <div style="height: 30px"></div>
+            <div class="display-flex align-items-center justify-content-center">
+              <!-- normal -->
+              ${status === 'Normal' && $h`
+              <i class="state-normal f7-icons text-color-primary" style="font-size: 90px">arrow_up_circle</i>
+              `}
 
-            <!-- upgrading -->
-            ${status === 'Upgrading' && $h`
-            <div class="state-upgrading text-color-primary position-relative" style="height: 180px; width: 180px">
-              <div class="loader"></div>
-              <div class="display-flex flex-direction-column align-items-center justify-content-center" style="width: 100%; height: 100%">
-                <span class="position-relative" style="font-size: 90px; font-weight: 200; line-height: 1; vertical-align: baseline">
-                  <span class="current-progress" style="transition: all 0.5s ease-out">${ percent }</span>
-                  <span style="font-size: 20px; position: absolute; bottom: 14px; right: -20px">%</span>
-                </span>
-                <div style="height: 10px"></div>
-                <div class="current-step" style="font-size: 16px"></div>
+              <!-- upgrading -->
+              ${status === 'Upgrading' && $h`
+              <div class="state-upgrading text-color-primary position-relative" style="height: 180px; width: 180px">
+                <div class="loader"></div>
+                <div class="display-flex flex-direction-column align-items-center justify-content-center" style="width: 100%; height: 100%">
+                  <span class="position-relative" style="font-size: 90px; font-weight: 200; line-height: 1; vertical-align: baseline">
+                    <span class="current-progress" style="transition: all 0.5s ease-out">${ percent }</span>
+                    <span style="font-size: 20px; position: absolute; bottom: 14px; right: -20px">%</span>
+                  </span>
+                  <div style="height: 10px"></div>
+                  <div class="current-step" style="font-size: 16px"></div>
+                </div>
               </div>
+              `}
+
+              <!-- success -->
+              ${status === 'Success' && $h`
+              <div class="state-success">
+                <div class="display-flex flex-direction-column align-items-center">
+                  <i class="f7-icons text-color-green" style="font-size: 90px">checkmark_alt_circle</i>
+                  <div style="height: 10px"></div>
+                  <div class="text-color-green" style="font-size: 16px">{{ _("Update Successfully") }}</div>
+                </div>
+              </div>
+              `}
+
+              <!-- fail -->
+              ${status === 'Fail' && $h`
+              <div class="state-fail">
+                <div class="display-flex flex-direction-column align-items-center">
+                  <i class="f7-icons text-color-red" style="font-size: 90px">exclamationmark_circle</i>
+                  <div style="height: 10px"></div>
+                  <div class="text-color-red" style="font-size: 16px">{{ _("Update Fail") }}: ${ _(fail_msg) }</div>
+                </div>
+              </div>
+              `}
+            </div>
+
+            <div style="height: 20px"></div>
+
+            ${(!latest_firmware || (latest_firmware === current_firmware)) ? $h`
+            <div class="text-align-center mb-1 is-latest" style="font-size: 16px; font-weight: bold">
+              {{ _("This is the latest version") }}
+            </div>
+            ` : $h`
+            <div class="text-align-center mb-1 latest-version" style="font-size: 16px; font-weight: bold">
+              {{ _("Latest Version") }}: <span>${ latest_firmware }</span>
             </div>
             `}
-
-            <!-- success -->
-            ${status === 'Success' && $h`
-            <div class="state-success">
-              <div class="display-flex flex-direction-column align-items-center">
-                <i class="f7-icons text-color-green" style="font-size: 90px">checkmark_alt_circle</i>
-                <div style="height: 10px"></div>
-                <div class="text-color-green" style="font-size: 16px">{{ _("Update Successfully") }}</div>
-              </div>
+            <div class="text-align-center text-muted current-version" style="font-size: 12px">
+              {{ _("Current Version") }}: <span>${ current_firmware }</span>
             </div>
+            <!------->
+            ${isUpgrading && $h`
+            <div class="text-align-center text-color-primary mt-4" style="font-size: 18px">Upgrading...</div>
             `}
 
-            <!-- fail -->
-            ${status === 'Fail' && $h`
-            <div class="state-fail">
-              <div class="display-flex flex-direction-column align-items-center">
-                <i class="f7-icons text-color-red" style="font-size: 90px">exclamationmark_circle</i>
-                <div style="height: 10px"></div>
-                <div class="text-color-red" style="font-size: 16px">{{ _("Update Fail") }}: ${ fail_code }</div>
-              </div>
-            </div>
-            `}
+            <div style="height: 20px"></div>
           </div>
-
-          <div style="height: 20px"></div>
-
-          ${(!latest_firmware || (latest_firmware === current_firmware)) ? $h`
-          <div class="text-align-center mb-1 is-latest" style="font-size: 16px; font-weight: bold">
-            {{ _("This is the latest version") }}
-          </div>
-          ` : $h`
-          <div class="text-align-center mb-1 latest-version" style="font-size: 16px; font-weight: bold">
-            {{ _("Latest Version") }}: <span>${ latest_firmware }</span>
-          </div>
-          `}
-          <div class="text-align-center text-muted current-version" style="font-size: 12px">
-            {{ _("Current Version") }}: <span>${ current_firmware }</span>
-          </div>
-          {######################################################################################################################################################}
-          ${isUpgrading && $h`
-          <div class="text-align-center text-color-primary mt-4" style="font-size: 18px">Upgrading...</div>
-          `}
-
-          <div style="height: 20px"></div>
         </div>
-      </div>
 
-      ${(latest_firmware && (latest_firmware !== current_firmware || isDeveloper) && !isUpgrading) && $h`
-      <div class="row mt-4">
-        <div class="col-100">
-          <a href="#" class="upgrade-action button button-fill color-theme button-raised" @click="${() => startUpdateFirmware()}">
-            <span class="size-16">{{ _('Update Now') }}</span>
-          </a>
+        <!------->
+        ${status === 'Normal' && latest_firmware && current_firmware && (isCanUpgradeVer(current_firmware, latest_firmware)) &&
+        firmwareDescRef.value && $h`
+        <div style="height: 50px"></div>
+        <h3 style="font-weight: bold; padding: 20px; font-size: 16px">${ _('Update Logs') }</h3>
+        <p class="text-muted" style="padding: 0 20px; font-size: 12px" innerHTML="${firmwareDescRef.value}"></p>
+        `}
+
+        <!------->
+        ${current_firmware && (latest_firmware && (isCanUpgradeVer(current_firmware, latest_firmware) || isDeveloper) && !isUpgrading) &&
+        $h`
+        <div class="row mt-4" style="position: fixed; bottom: calc(10px + var(--f7-safe-area-top))">
+          <div class="col-100">
+            <a href="#" class="upgrade-action button button-fill color-theme button-raised" @click="${() => startUpdateFirmware()}">
+              <span class="size-16">{{ _('Update Now') }}</span>
+            </a>
+          </div>
         </div>
-      </div>
-      `}
+        `}
+      </yo-skeleton>
     </div>
   </div>
 </template>
@@ -103,6 +116,7 @@
       $f7route = ctx.$f7route,
       $update = ctx.$update,
       $on = ctx.$on,
+      $ref = ctx.$ref,
       $onBeforeMount = ctx.$onBeforeMount,
       $onMounted = ctx.$onMounted,
       $onBeforeUpdate = ctx.$onBeforeUpdate,
@@ -145,6 +159,23 @@
       });
     };
 
+    const promisifyWriteWithoutResponse = (device_id, service_uuid, characteristic_uuid, data) => {
+      return new Promise((resolve, reject) => {
+        ble.writeWithoutResponse(
+          device_id,
+          service_uuid,
+          characteristic_uuid,
+          data.convertToBytes(),
+          () => {
+            resolve();
+          },
+          (error) => {
+            reject(error);
+          }
+        );
+      });
+    };
+
     const promisifyConnect = (device_id) => {
       let isConnect = false;
 
@@ -166,7 +197,7 @@
           if (isConnect) return;
 
           // promisifyDisconnect(device_id).catch(() => {});
-          reject(new Error('Connect timeout'));
+          reject('7001');
         }, 6000);
       });
     };
@@ -209,33 +240,71 @@
       });
     };
 
-    const profile_subdevice_name = $f7route.query.subdevice;
-    const profile_subdevice = erp.info.profile.profile_subdevice.find((e) => e.name === profile_subdevice_name);
+    const arrayBufferToHex = (arrayBuffer) => {
+      const uint8Array = new Uint8Array(arrayBuffer);
+      return Array.from(uint8Array)
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+    };
 
-    const profile_device = erp.info.profile.profile_device.find((e) => e.name === profile_subdevice.profile_device);
-    const guid = profile_device.device;
+    const hexToBuffer = (hexString) => {
+      // 假设 hexString 是一个表示十六进制数据的字符串，例如 "4A2F7C"
+      // 首先将 hexString 解析为字节数组
+      var bytes = new Uint8Array(Math.ceil(hexString.length / 2));
+      for (var i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(hexString.substr(i * 2, 2), 16);
+      }
 
-    const device_model_name = profile_device.device_model;
+      // 然后创建一个 ArrayBuffer 对象并将字节数组复制到这个缓冲区中
+      var buffer = bytes.buffer;
+
+      return buffer;
+    };
+
+    const bytesToString = function (buffer) {
+      return String.fromCharCode.apply(null, new Uint8Array(buffer));
+    };
+
+    const guid = $f7route.query.guid;
 
     const hexid = guid.substring(guid.length - 6, guid.length - 2);
     const device_model = erp.doctype.device_model[hexid.toUpperCase()];
+    const device_model_name = device_model.name;
 
     const mode_type = device_model.mode_type;
 
     let isLogged = !!users.current && users.current !== 'Guest';
     let isDeveloper = false;
 
-    let latest_firmware = '';
-    let current_firmware = '--';
+    let latest_firmware = ''; // 仅版本号
+    let latest_full_firmware = ''; // 完整固件名
+    let current_firmware = '';
     let percent = 0;
-    let fail_code = -1;
+    let fail_msg = '';
     let isUpgrading = false;
     let status = 'Normal'; // Normal / Upgrading / Success / Fail
+    let isIniting = $ref(true);
+
+    const firmwareDescRef = $ref('');
+    let downloadLink = '';
 
     const fake_progress = core_utils_fake_progress({
       timeConstant: 8000 + (Math.floor(Math.random() * (3000 - 0 + 1)) + 0),
       autoStart: false,
     });
+
+    // const getFailCodeMsg = (code) => {
+    //   switch (code) {
+    //     // case -8:
+    //     //   return 'Firmware not match';
+    //     case -10:
+    //       return 'Download firmware timeout';
+    //     case -9:
+    //       return 'Firmware transfer failed';
+    //     default:
+    //       return 'Unknown error';
+    //   }
+    // };
 
     const updatePercent = () => {
       percent = parseInt(fake_progress.progress * 100);
@@ -255,13 +324,20 @@
     };
 
     const getUUID = () => {
-      const key = Object.keys(window.scanned_periperals).find((k) => window.scanned_periperals[k].guid === guid);
-      if (!key) {
+      let uuid = '';
+      try {
+        uuid = window.peripheral[guid].prop.id;
+      } catch (error) {
+        // ignore
+      }
+
+      // const key = Object.keys(window.scanned_periperals).find((k) => window.scanned_periperals[k].guid === guid);
+      if (!uuid) {
         app.dialog.alert('Device not here!');
         return '';
       }
 
-      return window.scanned_periperals[key].id;
+      return uuid;
     };
 
     const readFirmware = async (uuid) => {
@@ -271,10 +347,9 @@
     };
 
     async function init() {
+      await getFirmwareInfomation();
+
       try {
-        if (device_model.latest_firmware) {
-          latest_firmware = extractVersion(device_model.latest_firmware);
-        }
         if (isLogged) {
           isDeveloper = erp.info.user.roles.some((e) => e.role.includes('Developer'));
         }
@@ -328,14 +403,65 @@
     // init
     init();
 
-    function startUpdateFirmware() {
-      percent = 0;
-      fail_code = -1;
+    async function startUpdateFirmware() {
+      if (!latest_firmware) return;
 
-      if (mode_type === 'Wifi') {
+      percent = 0;
+
+      // if (latest_full_firmware.endsWith('N')) {
+      //   updateNordicFirmware();
+      // } else if (latest_full_firmware.endsWith('E')) {
+      //   if (Number(current_firmware.split('.')[0]) >= 12) {
+      //     updateBleFirmware();
+      //   } else {
+      //     updateWifiFirmware();
+      //   }
+      // }
+
+      if (latest_full_firmware.endsWith('N')) {
+        updateNordicFirmware();
+      } else if (latest_full_firmware.endsWith('E')) {
         updateWifiFirmware();
-      } else if (mode_type === 'Bluetooth') {
-        updateBleFirmware();
+      }
+    }
+
+    async function getFirmwareInfomation() {
+      try {
+        isIniting.value = true;
+
+        const firmwareResponse = await http2.request({
+          url: encodeURI(`/api/method/appv6.getFirmware`),
+          method: 'GET',
+          responseType: 'json',
+          serializer: 'json',
+          params: {
+            model: device_model_name,
+          },
+        });
+
+        if (firmwareResponse.data.firmware) {
+          const firmware = firmwareResponse.data.firmware;
+          latest_full_firmware = firmware.name;
+          latest_firmware = extractVersion(firmware.name);
+          downloadLink = firmware.download_link;
+
+          const translated = _tran(firmware.description);
+          let value = '';
+          translated.split('\n').forEach((e) => {
+            value += `<p>${e}</p>`;
+          });
+
+          firmwareDescRef.value = value;
+        } else {
+          latest_firmware = '';
+          latest_full_firmware = '';
+        }
+
+        isIniting.value = false;
+      } catch (error) {
+        console.error(error);
+
+        isIniting.value = false;
       }
     }
 
@@ -343,25 +469,30 @@
      * Wifi Action
      */
     async function updateWifiFirmware() {
-      const uuid = getUUID();
-      if (!uuid) return;
-
-      const version = parseInt(current_firmware.split('.')[0]);
-
-      let full_firmware_name = device_model_name + '-' + device_model.latest_firmware;
-      // IAQ / YO105
-      if ((device_model_name === 'YO105' || device_model_name === 'YO161') && version < 10) {
-        full_firmware_name = full_firmware_name + 'D';
-      }
-      full_firmware_name = full_firmware_name + '.bin';
-
-      updateStatus('Upgrading');
-
-      // send command
-      const command = '93300000' + full_firmware_name.length.toString(16).pad('00') + full_firmware_name.convertToHex();
-      console.log('Upgrade Firmware: ' + full_firmware_name);
-      console.log('Upgrade Command: ' + command);
       try {
+        const uuid = getUUID();
+        if (!uuid) {
+          throw '6300';
+        }
+
+        updateStatus('Upgrading');
+
+        const version = parseInt(current_firmware.split('.')[0]);
+        let full_firmware_name = latest_full_firmware;
+        // IAQ / YO105
+        if ((device_model_name === 'YO105' || device_model_name === 'YO161') && version < 10) {
+          full_firmware_name = full_firmware_name + 'D';
+        }
+        full_firmware_name = full_firmware_name + '.bin';
+
+        // check wifi connect
+        // TODO
+
+        // send command
+        const command = '93300000' + full_firmware_name.length.toString(16).pad('00') + full_firmware_name.convertToHex();
+        console.log('Upgrade Firmware: ' + full_firmware_name);
+        console.log('Upgrade Command: ' + command);
+
         // await promisifyWrite(uuid, 'ff80', 'ff81', command);
         await promisifyConnect(uuid);
 
@@ -386,10 +517,7 @@
         updatePercent();
 
         // sdk connect
-        window.scanned_periperals[uuid].reconnect = false;
-        window.scanned_periperals[uuid].connected = false;
-        window.scanned_periperals[uuid].connecting = false;
-        await ha_process_periperal_cmd(uuid, [{ action: 'connect' }], true);
+        await window.peripheral[guid].connect();
         fake_progress.setProgress(0.3);
         updatePercent();
 
@@ -405,7 +533,21 @@
 
         await sleep(8000);
 
+        fake_progress.setProgress(0.87);
+        updatePercent();
+
+        await retryConnect(uuid);
+
+        await sleep(4000);
+
+        fake_progress.setProgress(0.89);
+        updatePercent();
+
         const firmware = await readFirmware(uuid);
+        if (firmware !== latest_firmware) {
+          throw '6403';
+        }
+
         current_firmware = firmware;
 
         fake_progress.setProgress(0.9);
@@ -413,17 +555,33 @@
 
         await uploadFirmwareToServer();
 
+        fake_progress.setProgress(0.95);
+        updatePercent();
+        await sleep(1000);
+
+        emitter.emit('ha:device:firmware:upgrade', { guid: guid });
+
         updateStatus('Success');
       } catch (err) {
+        if (typeof err === 'string') {
+          fail_msg = erp.get_log_description(err);
+        } else {
+          try {
+            fail_msg = JSON.stringify(err);
+          } catch (e) {
+            fail_msg = `${err}`;
+          }
+        }
+
         // device maybe restart
-        console.error('upgrade fail: ' + err);
+        console.error('upgrade fail', err);
 
         updateStatus('Fail');
       }
     }
 
     /**
-     * BLE Action (Nordic DFU)
+     * BLE Action (ESP Firmware > 12 support)
      */
     async function updateBleFirmware() {
       const uuid = getUUID();
@@ -432,23 +590,116 @@
       try {
         updateStatus('Upgrading');
 
-        const firmwareResponse = await http.request(`/api/resource/Device Firmware/${device_model.latest_firmware}`, {
-          method: 'GET',
-          responseType: 'json',
-          serializer: 'json',
-        });
+        let filename = latest_full_firmware + '.bin';
+        if (device_model_name.includes('YO780')) {
+          filename = 'S3-' + filename;
+        }
+        const downloadLink = `https://ota.mob-mob.com/wifi/${filename}`;
+        console.log('downloadLink: ' + downloadLink);
 
-        const download_link = firmwareResponse.data.data.download_link;
+        const fileBlob = await downloadOTAFileToBlob(downloadLink);
+        fake_progress.setProgress(0.05);
+        updatePercent();
 
-        if (!download_link) {
-          throw new Error('Unset Download Link');
+        const calculateBlobMD5 = (blob) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              const arrayBuffer = e.target.result;
+              const dataString = Array.from(new Uint8Array(arrayBuffer))
+                .map((byte) => String.fromCharCode(byte))
+                .join('');
+              const md5Hash = md5(dataString);
+              resolve([md5Hash, arrayBuffer]);
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(blob);
+          });
+        };
+
+        const [md5Hash, arrayBuffer] = await calculateBlobMD5(fileBlob);
+
+        await requestMtu(uuid);
+        fake_progress.setProgress(0.1);
+        updatePercent();
+
+        // preversion: https://dev.mob-mob.com/app/app-script/iot_update_file_v6
+        const convertToFixedSizeHex = (inputString, sizeInBytes) => {
+          const byteSize = sizeInBytes * 2; // 每个字节对应两个十六进制字符
+          const hexString = inputString.convertToHex(); // 将字符串转换为十六进制表示
+          const paddedHexString = hexString.padEnd(byteSize, '0'); // 在结果前面填充零，使其达到指定的字节大小
+          return paddedHexString.toLowerCase(); // 转换为大写形式并返回
+        };
+
+        const fileType = '01';
+        const sizeHex = iot_utils_to_little_endian_hex(fileBlob.size, 4);
+        const nameHex = convertToFixedSizeHex(filename, 31);
+        const startOTACommand = `9333000034${fileType}${sizeHex}${md5Hash}${nameHex}`;
+
+        await promisifyConnect(uuid);
+        await window.peripheral[guid].connect();
+        fake_progress.setProgress(0.15);
+        updatePercent();
+
+        await sendUpgradePacketFile(uuid, arrayBuffer, startOTACommand);
+
+        await sleep(3000);
+
+        await retryConnect(uuid);
+
+        const firmware = await readFirmware(uuid);
+        if (firmware !== latest_firmware) {
+          throw '6403';
+        }
+
+        current_firmware = firmware;
+
+        fake_progress.setProgress(0.9);
+        updatePercent();
+
+        await uploadFirmwareToServer();
+
+        fake_progress.setProgress(0.95);
+        updatePercent();
+        await sleep(1000);
+
+        emitter.emit('ha:device:firmware:upgrade', { guid: guid });
+
+        updateStatus('Success');
+      } catch (err) {
+        if (typeof err === 'string') {
+          fail_msg = erp.get_log_description(err);
+        } else {
+          fail_msg = `${err}`;
+        }
+
+        console.error(err);
+
+        updateStatus('Fail');
+      }
+    }
+
+    /**
+     * BLE Action (Nordic DFU)
+     */
+    async function updateNordicFirmware() {
+      try {
+        const uuid = getUUID();
+        if (!uuid) {
+          throw '6300';
+        }
+
+        updateStatus('Upgrading');
+
+        if (!downloadLink) {
+          throw '6404';
         }
 
         fake_progress.setProgress(0.1);
         updatePercent();
 
         // Download file
-        const downloaded_path = await downloadOTAFile(download_link);
+        const downloaded_path = await downloadOTAFileToPath(downloadLink);
         console.log(downloaded_path);
 
         fake_progress.setProgress(0.3);
@@ -461,6 +712,10 @@
         await retryConnect(uuid);
 
         const firmware = await readFirmware(uuid);
+        if (firmware !== latest_firmware) {
+          throw '6403';
+        }
+
         current_firmware = firmware;
 
         fake_progress.setProgress(0.9);
@@ -468,8 +723,20 @@
 
         await uploadFirmwareToServer();
 
+        fake_progress.setProgress(0.95);
+        updatePercent();
+        await sleep(1000);
+
+        emitter.emit('ha:device:firmware:upgrade', { guid: guid });
+
         updateStatus('Success');
       } catch (err) {
+        if (typeof err === 'string') {
+          fail_msg = erp.get_log_description(err);
+        } else {
+          fail_msg = `${err}`;
+        }
+
         console.error(err);
 
         updateStatus('Fail');
@@ -485,7 +752,7 @@
         setTimeout(() => {
           isStop = true;
 
-          reject(new Error('Connect timeout'));
+          reject('7001');
         }, 20000);
 
         while (true) {
@@ -518,6 +785,113 @@
       });
     }
 
+    async function sendUpgradePacketFile(uuid, buffer, startCommand) {
+      // TODO
+      let subProgress = null;
+      const status = { isFail: false };
+      let isStarted = false;
+      const queue = core_utils_create_queue('sendUpgradePacketFile', false);
+
+      return new Promise(async (resolve, reject) => {
+        const mainChunkSizeInBytes = 4096;
+        const subChunkSizeInBytes = 504;
+
+        const start = () => {
+          const sliceArr = [];
+          for (let i = 0; i < buffer.byteLength; i += mainChunkSizeInBytes) {
+            const subChunk = buffer.slice(i, Math.min(i + mainChunkSizeInBytes, buffer.byteLength));
+            const fileString = arrayBufferToHex(subChunk);
+            const crc16 = core_util_calculate_crc16_modbus_for_doa(fileString);
+
+            const dataString = Array.from(new Uint8Array(subChunk))
+              .map((byte) => String.fromCharCode(byte))
+              .join('');
+            const md5Hash = md5(dataString);
+            const slice = hexToBuffer(fileString + md5Hash);
+            sliceArr.push(slice);
+          }
+
+          const subChunks = [];
+          for (let i = 0; i < sliceArr.length; i++) {
+            for (let j = 0; j < sliceArr[i].byteLength; j += subChunkSizeInBytes) {
+              const subChunk = sliceArr[i].slice(j, Math.min(j + subChunkSizeInBytes, sliceArr[i].byteLength));
+              subChunks.push(subChunk);
+            }
+          }
+
+          for (let i = 0; i < subChunks.length; i++) {
+            const hexString = arrayBufferToHex(subChunks[i]);
+            const commandLength = (hexString.length / 2).toString(16).padStart(4, '0');
+            const command = `933400${commandLength}${hexString}`;
+
+            setTimeout(() => {
+              if (status.isFail) return;
+
+              promisifyWriteWithoutResponse(uuid, 'ff80', 'ff85', command).then(() => console.log('command', command));
+            }, 500);
+          }
+
+          setTimeout(() => {
+            if (status.isFail) return;
+
+            promisifyWriteWithoutResponse(uuid, 'ff80', 'ff85', '9335');
+          }, 500);
+
+          queue.start();
+        };
+
+        // start notify
+        ble.startNotification(
+          uuid,
+          'ff80',
+          'ff85',
+          (rs) => {
+            if (!rs.startsWith('933000')) return;
+            console.log('sendUpgradePacketFile', rs);
+
+            const status = parseInt(rs.substring(10, 12), 16);
+            console.log('status', status);
+
+            if (status > 100) {
+              status.isFail = true;
+              queue.cancel();
+              return reject('6402');
+            }
+
+            if (status === 100) {
+              subProgress.setProgress(1);
+              updatePercent();
+              resolve(true);
+              return;
+            }
+
+            if (status === 0 && !isStarted) {
+              isStarted = true;
+              start();
+              return;
+            }
+
+            subProgress.setProgress(status / 100);
+            updatePercent();
+          },
+          (error) => {
+            reject(error);
+          }
+        );
+
+        try {
+          await promisifyWriteWithoutResponse(uuid, 'ff80', 'ff85', startCommand);
+          fake_progress.setProgress(0.2);
+          updatePercent();
+
+          // subprogress
+          subProgress = fake_progress.createSubProgress({ timeConstant: 5000, end: 0.8, autoStart: false });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
     async function receiveUpgradingPercentNotify(uuid) {
       let isHandling = false;
       let timeoutId = null;
@@ -528,8 +902,7 @@
           clearTimeout(timeoutId);
 
           timeoutId = setTimeout(() => {
-            fail_code = -10;
-            reject(new Error('Download fail'));
+            reject('6401'); // download timeout
           }, 1000 * 30);
         };
 
@@ -539,8 +912,8 @@
           'ff82',
           (rs) => {
             console.log('receiveUpgradingPercentNotify: ' + rs);
-            // 933000 v10
-            // 932200 v3
+            // 933000 v10 firmware
+            // 932200 v3 firmware
             if (rs.startsWith('933000') || rs.startsWith('932200')) {
               isHandling = true;
 
@@ -549,8 +922,8 @@
               clearTimeout(timeoutId);
 
               if (command > 100) {
-                fail_code = command;
-                reject(new Error('Device fail'));
+                console.log('status: ' + command);
+                reject('6402'); // Abnormal progress INTERRUPTION
               } else {
                 subProgress.setProgress(command / 100);
                 updatePercent();
@@ -564,8 +937,7 @@
           },
           (error) => {
             clearTimeout(timeoutId);
-            fail_code = -2;
-            reject(error);
+            reject('6001');
           }
         );
 
@@ -573,7 +945,16 @@
       });
     }
 
-    async function downloadOTAFile(download_link) {
+    async function downloadOTAFileToBlob(download_link) {
+      const response = await http.request(download_link, {
+        method: 'GET',
+        responseType: 'blob',
+      });
+
+      return response.data;
+    }
+
+    async function downloadOTAFileToPath(download_link) {
       const blob = await http.request(download_link, {
         method: 'GET',
         responseType: 'blob',
@@ -654,6 +1035,36 @@
       });
     }
 
+    function requestMtu(uuid) {
+      return new Promise((resolve, reject) => {
+        if (Capacitor.getPlatform() === 'android') {
+          ble.requestMtu(
+            uuid,
+            512,
+            () => {
+              resolve(true);
+            },
+            (error) => {
+              reject(error);
+            }
+          );
+        } else {
+          resolve(true);
+        }
+      });
+    }
+
+    function isCanUpgradeVer(cur, remote) {
+      try {
+        const curV = cur.split('.').join('');
+        const remoteV = remote.split('.').join('');
+
+        return parseInt(curV) < parseInt(remoteV);
+      } catch (err) {
+        return false;
+      }
+    }
+
     $onUnmounted(() => {
       destory();
     });
@@ -672,11 +1083,14 @@
     right: 0;
     aspect-ratio: 1;
     border-radius: 50%;
-    background: radial-gradient(farthest-side, #ffa516 94%, #0000) top/8px 8px no-repeat, conic-gradient(#0000 30%, #ffa516);
+    background:
+      radial-gradient(farthest-side, #ffa516 94%, #0000) top/8px 8px no-repeat,
+      conic-gradient(#0000 30%, #ffa516);
     -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
     mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
     animation: l13 1s infinite linear;
   }
+
   @keyframes l13 {
     100% {
       transform: rotate(1turn);

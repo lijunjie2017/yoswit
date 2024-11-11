@@ -86,20 +86,18 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
             let firmware = window.peripheral[guid].prop.firmwareNo;
             console.log("firmware",firmware);
             if(firmware < 6){
-                //check if repeat: fe02
-                bleList.push({
-                    service: service,
-                    characteristic: 'fe02',
-                    data: `${parseInt(rs.new_timer_id).toString(16).pad("00")}`,
-                })
-                
-                
                 service = 'fe00';
                 characteristic = 'fe03';
-                data = data.substring(6, data.length);
+                data = data.substring(6,data.length);
                 data += parseInt(action).toString(16).pad("00");
                 data += status.toString(16).pad("00");
                 if(firmware < 3.8){
+                    //check if repeat
+                    bleList.push({
+                        service: service,
+                        characteristic: 'fe02',
+                        data: `${parseInt(rs.new_timer_id).toString(16).pad("00")}`,
+                    })
                     let dataList = data.match(/.{1,2}/g);
                     let repeat = binaryRepeat == '00000000'?false:true;
                     if(repeat){
@@ -127,7 +125,7 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
                     bleList.push({
                         service: `fe00`,
                         characteristic: `fe05`,
-                        data: `${port.toString(16).pad("00")}ffffffff`,
+                        data: ``,
                     })
                     bleList.push({
                         service: `fe00`,
@@ -151,31 +149,9 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
             console.log("service",service);
             console.log("characteristic",characteristic);
             console.log(bleList);
-            // if(firmware < 3.8){
-            //     try{
-            //         for(let j in bleList){
-            //             console.log("data",bleList[j].data);
-            //             await ble.writeWithoutResponse(peripheral[guid].prop.id,bleList[j].service,bleList[j].characteristic,service,bleList[j].data.convertToBytes())
-            //         }
-            //         resolve(rs);
-            //     }catch(error){
-            //         reject(error);
-            //     }
-            // }else{
-            //     window.peripheral[guid].write(bleList).then(() => {
-            //         resolve(rs);
-            //     }).catch(reject);
-            // }
             window.peripheral[guid].write(bleList).then(() => {
                 resolve(rs);
             }).catch(reject);
-            // ble.writeWithoutResponse(peripheral[guid].prop.id,'fff0','fff2',`${'ff'}`.convertToBytes(),(res)=>{
-            //     console.log(res)
-            //     resolve(rs);
-            // },(error)=>{
-            //     console.log("error",error)
-            //     reject(error);
-            // })
         });
     }).then((rs) => {
         debugger

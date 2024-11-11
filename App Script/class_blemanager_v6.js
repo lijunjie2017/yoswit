@@ -203,18 +203,19 @@ window.bleHelper = {
             return button_group.replaceAll('RCU DIMMING', '')*1 + 31;
             
         }else if(button_group.startsWith('OPENCLOSE GANG')){ // OPENCLOSE, no status, but for control, gang 1= 1_2, gang 2= 2_2, gang 3= 3_4, gang 4= 4_3
-            let gang = button_group.replaceAll('OPENCLOSE GANG', '');
-            let nature_gang = 12
-            if(gang = '1_2'){
-                nature_gang = 12;
-            }else if(gang = '2_1'){
-                nature_gang = 13;
-            }else if(gang = '3_4'){
-                nature_gang = 14;
-            }else if(gang = '4_3'){
-                nature_gang = 15;
-            }
-            return nature_gang;
+            // let gang = button_group.replaceAll('OPENCLOSE GANG', '');
+            // let nature_gang = 12
+            // if(gang = '1_2'){
+            //     nature_gang = 12;
+            // }else if(gang = '2_1'){
+            //     nature_gang = 13;
+            // }else if(gang = '3_4'){
+            //     nature_gang = 14;
+            // }else if(gang = '4_3'){
+            //     nature_gang = 15;
+            // }
+            // return nature_gang;
+            return button_group.replaceAll('OPENCLOSE GANG', '');
         }else if(button_group.startsWith('RCU OPENCLOSE GANG')){ // OPENCLOSE, no status, but for control, gang 1= 1_2, gang 2= 2_2, gang 3= 3_4, gang 4= 4_3
             return button_group.replaceAll('RCU OPENCLOSE GANG', '');
             
@@ -222,6 +223,8 @@ window.bleHelper = {
             return 42;
         }else if(button_group.startsWith('RCU OUTPUT')){
             return button_group.replaceAll('RCU OUTPUT', '')*1 + 49;
+        }else if(button_group.startsWith('RCU INPUT')){
+            return button_group.replaceAll('RCU INPUT', '')*1 + 49;
         }else if(button_group.startsWith('OPENCLOSE UART')){
             return 48;
         }else if(button_group.startsWith('4in1 Sensor')){

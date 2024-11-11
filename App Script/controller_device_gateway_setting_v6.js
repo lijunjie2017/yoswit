@@ -242,12 +242,15 @@ window.device_gateway_setting_component = {
       //const action = item.checked;
       if(action){
         app.dialog.confirm('Do you confirm to remove the device from the gateway '+this.gateway+'?', ()=>{
-            this.postDataToErp(item,action);
+            //this.postDataToErp(item,action);
+            item.gateway = '';
         }, function(){
             item.checked = true;
         });
       }else{
-        this.postDataToErp(item,action);
+        item.checked = false;
+        item.gateway = this.gateway;
+        //this.postDataToErp(item,action);
       }
     },
     async handleChangeAllGateway(){
@@ -256,7 +259,7 @@ window.device_gateway_setting_component = {
       let this_profile_devices = cloneDeep(erp.info.profile.profile_device);
       let isallChecked = true;
       this_profile_devices.forEach(kitem=>{
-        if(isset(kitem.gateway) && kitem.gateway){
+        if(isset(kitem.gateway) && kitem.gateway && kitem.gateway == this.gateway && kitem.device_mode != "Gateway"){
           isallChecked = false;
         }
       })
@@ -267,7 +270,13 @@ window.device_gateway_setting_component = {
       let default_connect_count = 0;
       this.profileDevice.forEach(item=>{
         item.checked = true;
-        item.gateway = this.gateway
+        if(item.network_id == "0"){
+          if(!item.gateway){
+            item.gateway = "";
+          }
+        }else{
+          item.gateway = this.gateway
+        }
         //can not choose the unasigned devices
         if(item.network_id == "0"){
           item.checked = false;
@@ -303,7 +312,8 @@ window.device_gateway_setting_component = {
           }else if(item.network_id == "0"){
             //item.default_connect = 1;
           }
-        })
+        });
+        this.profileData.profile_device = this.profileDevice.filter(item=>!item.isGroup);
       }
       //check num of default network
       default_connect_count = this.profileDevice.filter(item=>item.default_connect == 1 && !item.isGroup && item.device_model == "YO105");
@@ -328,8 +338,13 @@ window.device_gateway_setting_component = {
             item.gateway = kitem.gateway;
             item.default_connect = kitem.default_connect;
           }
+          if(kitem.name == item.name && !kitem.checked && !kitem.gateway){
+            item.gateway = "";
+            item.default_connect = 0;
+          }
         })
-      })
+      });
+      //this.profileData.profile_device = list;
       console.log('this.profileData',this.profileData);
       try{
         await http.request(encodeURI('/api/resource/Profile/' + this.profileData.name), {
@@ -348,17 +363,24 @@ window.device_gateway_setting_component = {
         //alert(this.type==2?gateway:gateway.toLowerCase())
         try {
             app.preloader.show();
-            await http.request(encodeURI('/api/resource/Profile Device/' + item.name), {
+            let url = `/api/resource/Profile/${erp.info.profile.name}`;
+            let postDevice = cloneDeep(erp.info.profile.profile_device);
+            postDevice.forEach(kitem=>{
+              if(kitem.name == item.name){
+                kitem.gateway = this.type==2?gateway:gateway.toLowerCase()
+              }
+            })
+            await http.request(encodeURI(url), {
               method: 'PUT',
               serializer: 'json',
               data: {
-                gateway: this.type==2?gateway:gateway.toLowerCase(),
+                profile_device: postDevice,
               },
             });
     
             item.gateway = gateway;
             item.checked = !status;
-    
+            erp.info.profile.profile_device = postDevice;
             app.preloader.hide();
           } catch (err) {
             app.preloader.hide();
@@ -377,18 +399,27 @@ window.device_gateway_setting_component = {
         if(default_connect_count){
             return
         }
-        let url = "/api/resource/Profile%20Device/" + encodeURI(item.name);
-        http.request(url, {
-            method: 'PUT',
-            serializer: 'json',
-            data: {
-                default_connect: item.default_connect === 0 ? 1 : 0
-            },
-        }).then(()=>{
-            item.default_connect = item.default_connect === 0 ? 1 : 0;
-        }).catch((err)=>{
-            alert(err);
-        })
+        console.log(item);
+        item.default_connect = item.default_connect === 0 ? 1 : 0;
+        //let url = "/api/resource/Profile%20Device/" + encodeURI(item.name);
+        // let url = `/api/resource/Profile/${erp.info.profile.name}`;
+        // let postDevice = cloneDeep(erp.info.profile.profile_device);
+        // postDevice.forEach(kitem=>{
+        //   if(kitem.name == item.name){
+        //     kitem.default_connect = item.default_connect === 0 ? 1 : 0
+        //   }
+        // })
+        // http.request(url, {
+        //     method: 'PUT',
+        //     serializer: 'json',
+        //     data: {
+        //         profile_device: postDevice
+        //     },
+        // }).then(()=>{
+        //     item.default_connect = item.default_connect === 0 ? 1 : 0;
+        // }).catch((err)=>{
+        //     alert(err);
+        // })
       
     },
     //sync gateways to erp
@@ -434,7 +465,7 @@ window.device_gateway_setting_component = {
             }
         })
         if(default_connect_count>5){
-            app.dialog.alert(tran(`Exceeds the default connection limit.`));
+            app.dialog.alert(_(`Exceeds the default connection limit.`));
             return
         }
         group_list.forEach(zitem=>{

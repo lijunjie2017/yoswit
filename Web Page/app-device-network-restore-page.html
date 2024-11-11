@@ -618,17 +618,26 @@
                 const updateFun = async () => {
                   for (let i in thisList) {
                     if (thisList[i].updateStatus) {
-                      break;
+                      continue;
                     }
                     try {
                       let guid = thisList[i].device;
                       //let this_mac = core_utils_get_mac_address_from_guid(guid).replace(/:/g, '');
                       let this_mac = core_utils_get_mac_address_from_guid(guid, true);
+                      this.$toast = app.toast.create({
+                        position: 'center',
+                        text: `${_('Update')} ${thisList[i].device_model} <br /> ${thisList[i].roomInfo} ${this_mac}...`,
+                      });
+                      this.$toast.open();
                       this.deviceRestoreMap[this_mac] = {};
                       await this.findDeviceHeadAndTail(guid);
+                      await window.peripheral[guid].disconnect();
                       thisList[i].updateStatus = true;
+                      this.$toast.close();
                     } catch (error) {
                       //show which device error
+                      console.log("error",error)
+                      this.$toast.close();
                       let deviceInfo = `${thisList[i].roomInfo}`;
                       thisList[i].updateStatus = false;
                       app.dialog.confirm(
@@ -638,6 +647,7 @@
                         },
                         () => {}
                       );
+                      break;
                       //app.dialog.alert(_(erp.get_log_description(error)));
                     }
                   }
@@ -651,24 +661,54 @@
                     console.log('this.deviceRestoreMap', this.deviceRestoreMap);
                     //tindy the device info
                     let objMap = cloneDeep(this.deviceRestoreMap);
+                    //check if results length is diff to the deviceList length
+                    console.log("Object.keys(resultsMap)",Object.keys(objMap))
+                    //check if missing other device
+
+                    if(Object.keys(objMap).length != thisList.length){
+                      app.dialog.alert(_('The network is incomplete, please check the network again.'));
+                      return 
+                    }
                     const lookup = { ...objMap };
+                    console.log("lookup",lookup)
                     const results = [];
-                    const headKeys = Object.keys(lookup).filter((key) => lookup[key].head_be_connect === 'none');
+                    const headKeys = Object.keys(lookup).filter((key) => lookup[key].head_be_connect === 'none' && lookup[key].tail_be_connect != 'none');
+                    //if no find the headKeys,error
+                    if(headKeys.length == 0){
+                      debugger
+                      app.dialog.alert(_('The network is incomplete, please check the network again.'));
+                      return 
+                    }
+                    console.log("headKeys",headKeys)
+                    let missNetwork = [];
                     for (const headKey of headKeys) {
                       const connectedArray = [];
                       let currentKey = headKey;
                       while (currentKey) {
                         connectedArray.push(currentKey);
                         const tailBeConnect = lookup[currentKey].tail_be_connect;
+                        if(!isset(lookup[tailBeConnect])){
+                          if(tailBeConnect !='none'){
+                            missNetwork.push(tailBeConnect);
+                          }
+                        }
+                        console.log("tailBeConnect",tailBeConnect)
                         if (tailBeConnect === 'none') {
                           break;
                         }
                         currentKey = Object.keys(lookup).find((key) => lookup[key].head_be_connect === currentKey);
+                        console.log("currentKey",currentKey);
                       }
                       results.push(connectedArray);
                     }
                     console.log('results', results);
                     let resultsMap = cloneDeep(results);
+                    console.log("missNetwork",missNetwork);
+                    if(missNetwork.length){
+                      let missStr = missNetwork.map(item=>this.invertBytes(item)).join(',');
+                      app.dialog.alert(_('The network is incomplete.Device with mac address ')+missStr +_(' is missing,please check the network again.'));
+                      return 
+                    }
                     let showList = [];
                     for (let i = 0; i < resultsMap.length; i++) {
                       for (let j = 0; j < resultsMap[i].length; j++) {
@@ -925,6 +965,13 @@
               app.dialog.close();
               app.dialog.alert(error);
             }
+          },
+          invertBytes(str){
+            const result = [];
+            for(let i = 0;i<str.length;i+=2){
+              result.push(str.substring(i,i+2));
+            }
+            return result.reverse().join('');
           },
           dealMeshHeadSet(item) {
             //console.log(item);
