@@ -20,15 +20,37 @@
           <div class="timeline">
             <div class="timeline-item" v-for="(log_item,log_index) in log_list" :key="log_index">
               <div class="timeline-item-date" style="width: 80px;">
-                {{log_item.timestamp.substring(5,10)}}<small>{{'/'+log_item.timestamp.substring(0,4)}}</small>
+                <div>{{log_item.timestamp.substring(5,10)}}<small>{{'/'+log_item.timestamp.substring(0,4)}}</small></div>
+                <div class="text-muted" style="font-size: 12px;">{{log_item.timestamp.substring(10,16)}}</div>
               </div>
               <div class="timeline-item-divider" :style="{'backgroundColor':'var(--f7-theme-color)'}"></div>
               <div class="timeline-item-content">
                 <div class="timeline-item-inner">
                   {{log_item.owner}}
-                  <div>
-                    <span class="text-muted size-12">{{log_item.timestamp.substring(10,log_item.timestamp.lkength)}} Status:</span
-                    ><span class="text-muted size-12">{{log_item.status == 1?'ON':"OFF"}}</span>
+                  <div :bluetooth="log_item.control_source == 'Bluetooth'?1:0" :mobmob="log_item.control_source == 'MobMob'?1:0" :mesh="log_item.control_source == 'Network'?1:0" :http="log_item.control_source == 'Http'?1:0">
+                    <div v-if="log_item.control_source == 'Bluetooth'" class="bluetooth"></div>
+                    <div v-else-if="log_item.control_source == 'MobMob'" class="mobmob"></div>
+                    <div v-else-if="log_item.control_source == 'Network'" class="mesh"></div>
+                    <div v-else class="http"></div>
+                    <span class="text-muted size-12" v-if="log_item.is_show_status">{{_("STATUS")}}: </span>
+                    <span class="text-muted size-12" v-if="log_item.is_show_status">{{log_item.status > 0?_('ON'):_("OFF")}}</span>
+                    <span class="text-muted size-12" style="margin-left: 5px;" v-if="log_item.is_show_status && log_item.status>1">({{log_item.status}}%)</span>
+                    <span class="text-muted size-12"  v-if="log_item.device_model == 'YO360' && (log_item.command_type == 'add' || log_item.command_type == 'reduce')">{{_("TEMPERATURE")}}: </span>
+                    <span class="text-muted size-12" style="margin-left: 5px;" v-if="log_item.device_model == 'YO360' && (log_item.command_type == 'add' || log_item.command_type == 'reduce')">
+                      {{log_item.temperature}}°C
+                    </span>
+                    <span class="text-muted size-12"  v-if="log_item.device_model == 'YO360' && log_item.command_type == 'mode'">{{_("MODE")}}: </span>
+                    <span class="text-muted size-12" style="margin-left: 5px;" v-if="log_item.device_model == 'YO360' && log_item.command_type == 'mode'">
+                      {{_(getModeInfo(log_item.mode))}}
+                    </span>
+                    <span class="text-muted size-12"  v-if="log_item.device_model == 'YO360' && log_item.command_type == 'fan'">{{_("FAN")}}: </span>
+                    <span class="text-muted size-12" style="margin-left: 5px;" v-if="log_item.device_model == 'YO360' && log_item.command_type == 'fan'">
+                      {{_(getSpeedInfo(log_item.speed))}}
+                    </span>
+                    <span class="text-muted size-12" v-if="log_item.device_mode == 'Curtain Switch'">{{_("STATUS")}}: </span>
+                    <span class="text-muted size-12" style="margin-left: 5px;" v-if="log_item.device_mode == 'Curtain Switch'">
+                      {{log_item.command_type.toUpperCase()}}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -80,19 +102,90 @@
                 url: encodeURI('/api/resource/Device Control Log'),
                 params: {
                     fields: '["*"]',
-                    filters: JSON.stringify([['profile_subdevice', '=', profile_subdevice]])
+                    filters: JSON.stringify([['profile_subdevice', '=', profile_subdevice]]),
+                    order_by: 'timestamp desc',
                 },
                 method: 'GET',
                 responseType: 'json',
               })
               .then((log_data) => {
                 console.log(log_data);
+                let list = log_data.data.data;
+                //check if the device is attached
+                list.forEach(item=>{
+                  item.is_show_status = true;
+                  let deviceMap = peripheral[item.device];
+                  if(isset(deviceMap) && isset(deviceMap.prop.device_mode)){
+                    item.device_mode = deviceMap.prop.device_mode;
+                    if(item.device_mode == 'Triac Dimming' || item.device_mode == '0-10V Dimming' || item.device_mode == '1-10V Dimming'){
+                      item.status = Math.ceil(item.status/255*100);
+                    }
+                    
+                  }
+                  if(isset(item.details) && item.details){
+                    let device_type_map = JSON.parse(item.details);
+                    let device_model = device_type_map.device_type;
+                    item.command_type = device_type_map.command_type;
+                    if(device_model == 'YO360'){
+                      console.log(item.device_attachment_status);
+                      let objMap = this.fliterThermostatData(device_type_map.device_attachment_status || '');
+                      if(!isset(objMap)){
+                        return;
+                      }
+                      item.is_show_status = false;
+                      item.mode = objMap.mode;
+                      item.speed = objMap.speed;
+                      item.temperature = objMap.temperature;
+                      item.room_temperature = objMap.room_temperature;
+                    }
+                    if(item.device_mode == 'Curtain Switch'){
+                      item.is_show_status = false;
+                    }
+                    item.device_model = device_type_map.device_type;
+                  }
+                })
                 this.log_list = log_data.data.data;
               })
               .catch((e) => {
                 console.log(e);
               });
           },
+          getModeInfo(mode){
+            let mode_map = {
+              0:'FAN',
+              1:'HEATING',
+              2:'COOLING',
+            }
+            return mode_map[mode];
+          },
+          getSpeedInfo(speed){
+            let speed_map = {
+              0:'LOW',
+              1:'AUTO',
+              2:'1 SPEED',
+              3:'2 SPEED',
+              4:'3 SPEED'
+            }
+            return speed_map[speed];
+          },
+          fliterThermostatData(str){
+            if(!str){
+              return null;
+            }
+            //status,mode,speed,temperature,room_temperature,0
+            let status = str.split(',')[0];
+            let mode = str.split(',')[1];
+            let speed = str.split(',')[2];
+            let temperature = str.split(',')[3];
+            let room_temperature = str.split(',')[4];
+            return {
+              status,
+              mode,
+              speed,
+              temperature,
+              room_temperature
+            }
+          }
         },
         beforeDestroy() {},
       });

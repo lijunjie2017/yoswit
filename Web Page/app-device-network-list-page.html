@@ -11,9 +11,6 @@
         </div>
         <div class="title">{{ _('Network List') }}</div>
         <div class="right scene-list-right">
-          <a href="/mobile-app/device-network-unassigned-detail" class="link icon-only">
-            <i class="icon material-icons md-only">restart_alt</i>
-          </a>
           <a href="/mobile-app/device-network-restore" class="link icon-only">
             <i class="icon material-icons md-only">history</i>
           </a>
@@ -46,9 +43,7 @@
                         0 0 2px black,
                         0 0 2px grey;
                     "
-                  >
-                    
-                  </div>
+                  ></div>
                   <div class="item-content">
                     <div class="item-inner">
                       <div
@@ -149,12 +144,11 @@
           emitter.on('refresh', (data) => {
             this.initNetwork();
           });
-          setTimeout(()=>{
+          setTimeout(() => {
             emitter.on('device_network_update', (data) => {
-            
               this.initNetwork();
             });
-          },500)
+          }, 500);
         },
         methods: {
           async onDeleted(index) {
@@ -162,56 +156,140 @@
             let devices = cloneDeep(erp.info.profile.profile_device);
             let networkMap = this.networkList[index];
             let network_id = networkMap.index;
-            let delStatus = true;
-            devices.forEach(item=>{
-              if(isset(item.network_1)){
-                let mapList = JSON.parse(item.network_1);
-                 if(mapList.length){
-                  let idList = mapList.map((zitem) => parseInt(zitem.network_id));
-                  let checkIndex = idList.indexOf(parseInt(network_id));
-                  if(checkIndex != -1){
-                    delStatus = false;
-                  }
-                 }
-              }
-            })
-            if(!delStatus){
-              app.dialog.alert(`${_('The network includes gateway devices and cannot be deleted in bulk')}`)
-              return
-            }
+            const action = app.actions.create({
+              buttons: [
+                {
+                  text: _('Delete Only'),
+                  onClick: async () => {
+                    app.dialog.preloader();
+                    devices.forEach((item) => {
+                      if (parseInt(item.network_id) == parseInt(network_id)) {
+                        item.network_id = 0;
+                      }
+                    });
+                    try {
+                      await http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+                        method: 'PUT',
+                        responseType: 'json',
+                        dataType: 'json',
+                        responseType: 'json',
+                        serializer: 'json',
+                        timeout: 60,
+                        data: {
+                          profile_device: devices,
+                        },
+                      });
+                      app.dialog.close();
+                      erp.info.profile.profile_device = devices;
+                      //save the ble command
+                      mainView.router.refreshPage();
+
+                      //this.initNetwork();
+                    } catch (error) {
+                      app.dialog.close();
+                      app.dialog.alert(error);
+                    }
+                    this.networkList.splice(index, 1);
+                  },
+                },
+                {
+                  text: _('Delete and Reset'),
+                  onClick: async () => {
+                    app.dialog.preloader();
+                    let delStatus = true;
+                    let targetDevices = devices.filter((item) => parseInt(item.network_id) == parseInt(network_id));
+                    for (let i in targetDevices) {
+                      let headBytes = '8500010000000000000000000000';
+                      let tailBytes = '8500010000000000000100000000';
+                      let commandList = ['85000000', '850200', tailBytes, '850201', headBytes, '850200'];
+                      try {
+                        let bleList = [];
+                        for (let j in commandList) {
+                          bleList.push({
+                            service: 'ff80',
+                            characteristic: 'ff81',
+                            data: commandList[j],
+                          });
+                        }
+                        await peripheral[targetDevices[i].device].write(bleList);
+                      } catch (error) {
+                        delStatus = false;
+                        console.log(error);
+                      }
+                    }
+                    if (!delStatus) {
+                      app.dialog.close();
+                      app.dialog.alert(_('Failed to delete the network.'));
+                      return;
+                    }
+                    devices.forEach((item) => {
+                      if (parseInt(item.network_id) == parseInt(network_id)) {
+                        item.network_id = 0;
+                      }
+                    });
+                    try {
+                      await http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+                        method: 'PUT',
+                        responseType: 'json',
+                        dataType: 'json',
+                        responseType: 'json',
+                        serializer: 'json',
+                        timeout: 60,
+                        data: {
+                          profile_device: devices,
+                        },
+                      });
+                      app.dialog.close();
+                      erp.info.profile.profile_device = devices;
+                      //save the ble command
+                      mainView.router.refreshPage();
+
+                      //this.initNetwork();
+                    } catch (error) {
+                      app.dialog.close();
+                      app.dialog.alert(error);
+                    }
+                    this.networkList.splice(index, 1);
+                  },
+                },
+                {
+                  text: _('Cancel'),
+                  color: 'red',
+                  onClick: () => {
+                    action.close();
+                  },
+                },
+              ],
+            });
+            action.open();
+            return;
+            // devices.forEach(item=>{
+            //   if(isset(item.network_1)){
+            //     let mapList = JSON.parse(item.network_1);
+            //      if(mapList.length){
+            //       let idList = mapList.map((zitem) => parseInt(zitem.network_id));
+            //       let checkIndex = idList.indexOf(parseInt(network_id));
+            //       if(checkIndex != -1){
+            //         delStatus = false;
+            //       }
+            //      }
+            //   }
+            // })
+            // if(!delStatus){
+            //   app.dialog.alert(`${_('The network includes gateway devices and cannot be deleted in bulk')}`)
+            //   return
+            // }
             app.dialog.confirm(
-              `${_('Confirm Deletion?')}`,
+              `${_('Confirm Deletion? Please ensure the device is near you.')}`,
               async () => {
                 app.dialog.preloader();
-                console.log(index);
-                devices.forEach((item) => {
-                  if (parseInt(item.network_id) == parseInt(network_id)) {
-                    item.network_id = 0;
-                  }
-                });
-                try {
-                  await http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
-                    method: 'PUT',
-                    responseType: 'json',
-                    dataType: 'json',
-                    responseType: 'json',
-                    serializer: 'json',
-                    timeout: 60,
-                    data: {
-                      profile_device: devices,
-                    },
-                  });
-                  app.dialog.close();
-                  erp.info.profile.profile_device = devices;
-                  //save the ble command
-                  mainView.router.refreshPage();
+                let targetDevices = devices.filter((item) => parseInt(item.network_id) == parseInt(network_id));
 
-                  //this.initNetwork();
-                } catch (error) {
+                if (!delStatus) {
                   app.dialog.close();
-                  app.dialog.alert(error);
+                  app.dialog.alert(_('Failed to delete the network.'));
+                  return;
                 }
-                this.networkList.splice(index, 1);
               },
               () => {}
             );
@@ -273,7 +351,7 @@
               if (!isset(peripheral[p.guid])) {
                 peripheral[p.guid] = new Peripheral(p);
               }
-              emitter.emit('ha_network_update_status',{p:p});
+              emitter.emit('ha_network_update_status', { p: p });
             }, 10);
           },
         },

@@ -35,7 +35,8 @@
             <!--choose tempalte-->
             <div id="step-0" class="view tab view-main" :class="[index == 0 ? 'tab-active' : '']" v-if="index == 0">
               <div class="card" v-for="(kitem,index) in templateList">
-                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_(kitem.title)}}
+                <div class="card-header" style="font-weight: 500; font-size: 18px">
+                  {{_(kitem.title)}}
                   <div class="scnen-template-intro" style="font-weight: 300; font-size: 14px">{{_(kitem.des)}}</div>
                 </div>
                 <div class="card-content card-content-padding">
@@ -98,7 +99,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="rcuList.length != 0">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="chooseRcuDevice()">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="chooseRcuDevice()">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -141,7 +142,9 @@
                     <ul>
                       <li class="item-content item-input no-padding-left">
                         <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Scene Name")}}</div>
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Scene Name")}}
+                            <span class="text-color-red" style="font-size: 14px;" v-if="templateName == 'Room Scene Button'"> {{_('(Only three letters or characters)')}}</span>
+                          </div>
                           <div class="item-input-wrap">
                             <input type="text" name="sceneName" v-model="sceneName" :placeholder="SceneNameTip" required validate />
                           </div>
@@ -152,7 +155,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -195,7 +198,9 @@
                     <ul>
                       <li class="item-content item-input no-padding-left">
                         <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Scene Name")}}</div>
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">
+                            {{_("Scene Name")}}
+                          </div>
                           <div class="item-input-wrap">
                             <input
                               type="text"
@@ -213,7 +218,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -267,7 +272,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -321,7 +326,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(8)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(8)">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -376,7 +381,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(3)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(3)">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -427,7 +432,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(5)">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(5)">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -585,9 +590,7 @@
                 </div>
               </div>
             </div>
-            <div id="step-10" class="view tab view-main" :class="[index == 11 ? 'tab-active' : '']" v-if="index == 11">
-              
-            </div>
+            <div id="step-10" class="view tab view-main" :class="[index == 11 ? 'tab-active' : '']" v-if="index == 11"></div>
             <div id="step-12" class="view tab view-main" :class="[index == 12 ? 'tab-active' : '']" v-if="index == 12">
               <div class="card">
                 <div class="card-content card-content-padding">
@@ -598,9 +601,7 @@
                     :style="{'background-color':'#253b4f'}"
                   >
                     <div class="scnen-template-title">
-                      <p>
-                        {{tran(item.title)}}
-                      </p>
+                      <p>{{tran(item.title)}}</p>
                     </div>
                     <div class="check-box display-flex justify-content-center align-items-center">
                       <i
@@ -626,7 +627,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="roomList.length != 0">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="chooseRoom()">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="chooseRoom()">{{_("NEXT")}}</div>
                   </div>
                 </div>
               </div>
@@ -1186,7 +1187,7 @@
               ],
             },
             rcu_click_and_stop: {
-              name: 'Click And Stop',
+              name: 'RCU Curtain',
               step: [
                 {
                   id: 1,
@@ -1220,7 +1221,7 @@
                 },
               ],
             },
-            room_scene_button:{
+            room_scene_button: {
               name: 'Room Scene Button',
               step: [
                 {
@@ -1237,10 +1238,10 @@
                   id: 3,
                   relatedIndex: 10,
                   name: '3',
-                }
+                },
               ],
             },
-            timer:{
+            timer: {
               name: 'Timer',
               step: [
                 {
@@ -1252,7 +1253,7 @@
                   id: 2,
                   relatedIndex: 11,
                   name: '2',
-                }
+                },
               ],
             },
             scene_button: {},
@@ -1268,7 +1269,7 @@
                   id: 2,
                   relatedIndex: 10,
                   name: '2',
-                }
+                },
               ],
             },
             multiway_switch: {
@@ -1293,57 +1294,71 @@
             },
             timmer: {},
           },
-          templateList:[{
-            title : 'Mobile App',
-            icon : 'phone_iphone',
-            des : 'Scene store in mobile app.',
-            list : [{
-              name: 'Scene Banner',
-              desription: '',
-              icon: 'batch_prediction',
-              color: '#7aB2d3',
-            },{
-              name: 'Room Scene Button',
-              desription: '',
-              icon: 'bed',
-              color: '#BC7C7C',
-            }]
-          },{
-            title : 'Device',
-            icon : 'phone_iphone',
-            des : 'Scene store in the device.',
-            list : [{
-              name: 'Multiway Switch',
-              desription: '',
-              icon: 'read_more',
-              color: '#8fd1cb',
-            }]
-          },{
-            title : 'RCU',
-            icon : 'phone_iphone',
-            des : 'Scene store in RCU.',
-            list : [{
-              name: 'RCU Scene Button',
-              desription: '',
-              icon: 'motion_photos_auto',
-              color: '#5855e0',
-            },{
-              name: 'RCU Scene Toggle',
-              desription: '',
-              icon: 'touch_app',
-              color: '#A85F32',
-            },{
-              name: 'RCU Radar',
-              desription: '',
-              icon: 'radar',
-              color: '#3e3936',
-            },{
-              name: 'Click And Stop',
-              desription: '',
-              icon: 'stop_circle',
-              color: '#744020',
-            }]
-          }],
+          templateList: [
+            {
+              title: 'Mobile App',
+              icon: 'phone_iphone',
+              des: 'Scene store in mobile app.',
+              list: [
+                {
+                  name: 'Scene Banner',
+                  desription: '',
+                  icon: 'batch_prediction',
+                  color: '#7aB2d3',
+                },
+                {
+                  name: 'Room Scene Button',
+                  desription: '',
+                  icon: 'bed',
+                  color: '#BC7C7C',
+                },
+              ],
+            },
+            {
+              title: 'Device',
+              icon: 'phone_iphone',
+              des: 'Scene stores in the device.',
+              list: [
+                {
+                  name: 'Multiway Switch',
+                  desription: '',
+                  icon: 'read_more',
+                  color: '#8fd1cb',
+                },
+              ],
+            },
+            {
+              title: 'RCU',
+              icon: 'phone_iphone',
+              des: 'Scene store in RCU.',
+              list: [
+                {
+                  name: 'RCU Scene Button',
+                  desription: '',
+                  icon: 'motion_photos_auto',
+                  color: '#5855e0',
+                },
+                {
+                  name: 'RCU Scene Toggle',
+                  desription: '',
+                  icon: 'touch_app',
+                  color: '#A85F32',
+                },
+                {
+                  name: 'RCU Radar',
+                  desription: '',
+                  icon: 'radar',
+                  color: '#3e3936',
+                },
+                {
+                  name: 'RCU Curtain',
+                  desription: '',
+                  icon: 'stop_circle',
+                  color: '#744020',
+                },
+              ],
+            },
+          ],
           // templateList: [
           //   {
           //     name: 'RCU Scene Button',
@@ -1429,7 +1444,6 @@
         },
         mounted() {
           this.init();
-          this.initMutiwayDevices();
           emitter.on('trigger_save', (data) => {
             console.log(data);
             //if exist the same trigger, warn it
@@ -1662,18 +1676,18 @@
             //check if have the room check
             let roomName;
 
-            if(this.scenePostId){
-              this.conditionsMap.forEach(item=>{
-                if(item.ischeck){
+            if (this.scenePostId) {
+              this.conditionsMap.forEach((item) => {
+                if (item.ischeck) {
                   roomName = item.name;
                 }
-              })
+              });
             }
-            roomList.forEach(roomItem=>{
-              if(roomName == roomItem.name){
+            roomList.forEach((roomItem) => {
+              if (roomName == roomItem.name) {
                 roomItem.ischeck = true;
                 roomItem.isHidden = false;
-              }else{
+              } else {
                 roomItem.ischeck = false;
                 roomItem.isHidden = true;
               }
@@ -1683,12 +1697,12 @@
             let scenes = cloneDeep(erp.info.scene);
             let sceneMap;
             let tem_devices = [];
-            for(let i in scenes){
+            for (let i in scenes) {
               if (scenes[i].name == this.scenePostId) {
                 sceneMap = scenes[i];
               }
             }
-            
+
             //init the profile_device
             let profile_devices = cloneDeep(erp.info.profile.profile_device);
             devices.forEach((item) => {
@@ -1711,85 +1725,92 @@
               tem_devices = JSON.parse(sceneMap.action);
             }
             devices.forEach((item) => {
-                item.isload = false;
-                tem_devices.forEach(kitem=>{
-                  if(kitem.name == item.name){
-                    Object.assign(item,kitem);
-                    item.isload = true;
-                    console.log("item.mainType",item.mainType);
-                    if(item.mainType == 7 || item.mainType == 2){
-                      setTimeout(()=>{
-                        this.initRangeBar(item.device, item.device_button_group, item.ref);
-                      },500)
-                    }
-                  }
-                })
-                if(item.isload)return;
-                item.mainType = 0;
-                item.buttonBoxType = 0;
-                item.ref = 1;
-                item.chooseStatus = false;
-                //filter the device not show in the page
-                item.isHidden = false;
-                //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
-                let fliterList = [
-                  'YO780',
-                  'YO780-Scene-12G',
-                  'YO780-Scene-6G',
-                  'YO780-Scene-4G',
-                  'YO780-Scene-1G',
-                  'YO105',
-                  'YO790DC',
-                  'YO205DC',
-                  'YO203DC',
-                  'YO202DS',
-                  'YO201',
-                  'YO161-H',
-                  'YO161',
-                ];
-                let fliterButtonGroup = ['RCU INPUT', 'ONOFF GANG'];
-                // if(type == 2){
-                //   if(fliterList.indexOf(item.device_model) > -1){
-                //     item.isHidden = true;
-                //     //check if the button group is in the fliterButtonGroup
-                //     if(item.device_model == 'YO780'){
-                //       if(item.device_button_group != 'ONOFF GANG1'){
-                //         item.isHidden = false;
-                //       }
-                //     }
-                //   }
-                // }
-                let triggerFliterList = ['YO105', 'YO121-BLE-LE', 'YO121-AC'];
-                // if(type == 1){
-                //   if(triggerFliterList.indexOf(item.device_model) > -1){
-                //     item.isHidden = true;
-                //   }
-                //   if(item.device_model == 'YO780' && item.device_button_group != 'SCENE MUTIWAY ONOFF GANG1' && !item.device_button_group.startsWith('RCU INPUT')){
-                //     item.isHidden = true;
-                //   }
-                // }
-                //rcu
-                if (item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1') {
-                  item.isHidden = true;
-                }
-                //choose status
-                item.chooseStatus = false;
-                let model = item.device_model;
-                if (model == 'YO360') {
-                  item.modeStr = 2;
-                  item.speedVaule = 4;
-                  item.temperature = 26;
-                }
-                for (let i in models) {
-                  if (models[i].model_code === model) {
-                    if (isset(models[i].image)) {
-                      item.imgUrl = models[i].image;
-                    } else {
-                      item.imgUrl = 'https://my.yoswit.com/files/products/YO815.svg';
-                    }
+              item.isload = false;
+              tem_devices.forEach((kitem) => {
+                if (kitem.name == item.name) {
+                  Object.assign(item, kitem);
+                  item.isload = true;
+                  console.log('item.mainType', item.mainType);
+                  if (item.mainType == 7 || item.mainType == 2) {
+                    setTimeout(() => {
+                      this.initRangeBar(item.device, item.device_button_group, item.ref);
+                    }, 500);
                   }
                 }
               });
+              if (item.isload) return;
+              item.mainType = 0;
+              item.buttonBoxType = 0;
+              item.ref = 1;
+              if (item.device_button_group.startsWith('OPENCLOSE UART') || item.device_button_group.startsWith('DIMMING')) {
+                item.ref = 100;
+              }
+              item.chooseStatus = false;
+              //filter the device not show in the page
+              item.isHidden = false;
+              //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
+              let fliterList = [
+                'YO780',
+                'YO780-Scene-12G',
+                'YO780-Scene-6G',
+                'YO780-Scene-4G',
+                'YO780-Scene-1G',
+                'YO105',
+                'YO790DC',
+                'YO205DC',
+                'YO203DC',
+                'YO202DS',
+                'YO201',
+                'YO161-H',
+                'YO161',
+              ];
+              let fliterButtonGroup = ['RCU INPUT', 'ONOFF GANG'];
+              //check if the button group is in the fliterButtonGroup
+              if (fliterList.indexOf(item.device_model) > -1) {
+                item.isHidden = true;
+              }
+              // if(type == 2){
+              //   if(fliterList.indexOf(item.device_model) > -1){
+              //     item.isHidden = true;
+              //     //check if the button group is in the fliterButtonGroup
+              //     if(item.device_model == 'YO780'){
+              //       if(item.device_button_group != 'ONOFF GANG1'){
+              //         item.isHidden = false;
+              //       }
+              //     }
+              //   }
+              // }
+              let triggerFliterList = ['YO105', 'YO121-BLE-LE', 'YO121-AC'];
+              // if(type == 1){
+              //   if(triggerFliterList.indexOf(item.device_model) > -1){
+              //     item.isHidden = true;
+              //   }
+              //   if(item.device_model == 'YO780' && item.device_button_group != 'SCENE MUTIWAY ONOFF GANG1' && !item.device_button_group.startsWith('RCU INPUT')){
+              //     item.isHidden = true;
+              //   }
+              // }
+              //rcu
+              if (item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1') {
+                item.isHidden = true;
+              }
+              //choose status
+              item.chooseStatus = false;
+              let model = item.device_model;
+              if (model == 'YO360') {
+                item.modeStr = 2;
+                item.speedVaule = 4;
+                item.temperature = 26;
+              }
+              for (let i in models) {
+                if (models[i].model_code === model) {
+                  if (isset(models[i].image)) {
+                    item.imgUrl = models[i].image;
+                  } else {
+                    item.imgUrl = 'https://my.yoswit.com/files/products/YO815.svg';
+                  }
+                }
+              }
+            });
             this.subdevices = devices;
             //filter the room devices
             let roomMap = {};
@@ -1984,30 +2005,30 @@
             console.log('item', item);
             item.ischeck = !item.ischeck;
           },
-          changeRoomStatus(item){
-            this.roomList.forEach(kitem=>{
+          changeRoomStatus(item) {
+            this.roomList.forEach((kitem) => {
               kitem.ischeck = false;
             });
             item.ischeck = true;
           },
-          chooseRoom(){
+          chooseRoom() {
             //hide the other room,show choose room
             let roomItem;
             let checkIsClick = false;
-            this.roomList.forEach(kitem=>{
-              if(kitem.ischeck){
+            this.roomList.forEach((kitem) => {
+              if (kitem.ischeck) {
                 roomItem = kitem;
                 checkIsClick = true;
-              }else{
+              } else {
                 kitem.isHidden = true;
               }
             });
-            if(!checkIsClick){
+            if (!checkIsClick) {
               app.dialog.alert(_('Please choose a room.'));
               return;
             }
-            this.subdevices.forEach(kitem=>{
-              if(kitem.profile_room != roomItem.name){
+            this.subdevices.forEach((kitem) => {
+              if (kitem.profile_room != roomItem.name) {
                 kitem.isHidden = true;
               }
             });
@@ -2253,7 +2274,6 @@
                 //init the action name and the list
                 let actionMap = JSON.parse(scenes[i].action);
                 this.actionId = actionMap.actionId;
-                debugger;
                 this.actionName = actionMap.title;
                 this.actionList = actionMap.actionList;
                 this.trigger = JSON.parse(scenes[i].trigger) || [];
@@ -2264,7 +2284,7 @@
                   });
                 }
                 //this.virtualStatus = actionMap.isVirtual;
-                if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'Click And Stop') {
+                if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Curtain') {
                   this.actionList = actionMap.actionList;
                   this.actionList_2 = actionMap.actionList_2;
 
@@ -2280,7 +2300,7 @@
                     //if mutiway template
                     if (this.templateName == 'Multiway Switch') {
                       this.mutiwayPostConfig = condition;
-                      return;
+                      //return;
                     }
                     //this.virtualList = condition;
                     this.conditionsMap = condition;
@@ -2298,81 +2318,23 @@
                   this.actionName = uiConfiguration.virtualButtonName;
                   this.isHidden = uiConfiguration.isHidden;
                   this.virtualStatus = uiConfiguration.virtualStatus;
-                  //check is RCU Toggle Scene
-                  // if(uiConfiguration.key == 'first'){
-                  //   let this_name = name;
-                  //   this.sceneName = scenes[i].title;
-                  //   let actionMaps = JSON.parse(scenes[i].action);
-                  //   this.actionList = actionMaps.actionList;
-                  //   //find
-                  //   for (let j in scenes){
-                  //     if(isset(scenes[j].ui_configuration)){
-                  //       let uiConfig = JSON.parse(scenes[j].ui_configuration);
-                  //       if(uiConfig.mapping == this_name){
-                  //         if(uiConfig.key == 'second'){
-                  //           this.secondSceneName = scenes[j].title;
-                  //           let actionMapss = JSON.parse(scenes[j].action);
-                  //           this.actionList_2 = actionMapss.actionList;
-                  //         }
-                  //         if(uiConfig.key == 'third'){
-                  //           let actionMapss = JSON.parse(scenes[j].trigger);
-                  //           this.trigger = actionMapss.trigger;
-                  //         }
-                  //       }
-                  //     }
-                  //   }
-                  // }
-                  // if(uiConfiguration.key == 'second'){
-                  //   let this_name = name;
-                  //   this.secondSceneName = scenes[i].title;
-                  //   let actionMaps = JSON.parse(scenes[i].action);
-                  //   this.actionList_2 = actionMaps.actionList;
-                  //   //find
-                  //   for (let j in scenes){
-                  //     if(isset(scenes[j].ui_configuration)){
-                  //       let uiConfig = JSON.parse(scenes[j].ui_configuration);
-                  //       if(uiConfig.mapping == this_name){
-                  //         if(uiConfig.key == 'first'){
-                  //           this.sceneName = scenes[j].title;
-                  //           let actionMapss = JSON.parse(scenes[j].action);
-                  //           this.actionList = actionMapss.actionList;
-                  //         }
-                  //         if(uiConfig.key == 'third'){
-                  //           let actionMapss = JSON.parse(scenes[j].trigger);
-                  //           this.trigger = actionMapss.trigger;
-                  //         }
-                  //       }
-                  //     }
-                  //   }
-                  // }
-                  // if(uiConfiguration.key == 'third'){
-                  //   let this_name = name;
-                  //   //find
-                  //   for (let j in scenes){
-                  //     if(isset(scenes[j].ui_configuration)){
-                  //       let uiConfig = JSON.parse(scenes[j].ui_configuration);
-                  //       if(uiConfig.mapping == this_name){
-                  //         if(uiConfig.key == 'first'){
-                  //           this.sceneName = scenes[j].title;
-                  //           let actionMapss = JSON.parse(scenes[j].action);
-                  //           this.actionList = actionMapss.actionList;
-                  //         }
-                  //         if(uiConfig.key == 'second'){
-                  //           this.secondSceneName = scenes[j].title;
-                  //           let actionMapss = JSON.parse(scenes[j].action);
-                  //           this.actionList_2 = actionMapss.actionList;
-                  //         }
-                  //       }
-                  //     }
-                  //   }
-                  // }
                 }
-                // console.log("actionMap.isVirtual",actionMap);
-                // if(isset(actionMap.isVirtual) && actionMap.isVirtual){
-                //   $(`input[name="virtual_button"]`).trigger('click');
-                // }
+                for (let j in this.templateConfig) {
+                  if (this.templateConfig[j].name == this.templateName) {
+                    this.stepList = this.templateConfig[j].step;
+                  }
+                }
+                if (this.templateName == 'Multiway Switch') {
+                  this.index = 1;
+                } else if (this.templateName == 'Scene Banner' || this.templateName == 'Room Scene Button') {
+                  this.index = 1;
+                } else {
+                  this.index = 0.5;
+                }
+                this.activeStepList();
               }
             }
+            this.initMutiwayDevices();
             //if subdevice name is scene-gang
           },
           getVirtualButtonId(guid) {
@@ -2423,7 +2385,7 @@
             // this.pickObj.open();
             app.dialog.preloader();
             console.log('overallSceneMap', this.overallSceneMap);
-            if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'Click And Stop') {
+            if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Curtain') {
               let url = encodeURI(`/api/resource/Scene`);
               let method = 'POST';
               if (this.scenePostId) {
@@ -2821,7 +2783,7 @@
               if (this.templateName == 'RCU Scene Toggle' && this.mutiwayStatus == 1) {
                 this.index = 7;
                 this.mutiwayStatus = 2;
-              } else if (this.templateName == 'Click And Stop') {
+              } else if (this.templateName == 'RCU Curtain') {
                 if (this.mutiwayStatus == 2) {
                   this.index = 3;
                 } else {
@@ -2848,7 +2810,7 @@
                 this.scrollItem(110);
                 app.dialog.close();
                 return;
-              } else if (this.templateName == 'Click And Stop') {
+              } else if (this.templateName == 'RCU Curtain') {
                 //run again
                 if (this.mutiwayStatus == 2) {
                   this.scrollItem(110);
@@ -3277,7 +3239,7 @@
                 thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}${actionItemCommand}`;
                 //have the two scene
                 if (this.mutiwayStatus == 2) {
-                  if (this.templateName == 'Click And Stop') {
+                  if (this.templateName == 'RCU Curtain') {
                     let this_mac = core_utils_get_mac_address_from_guid(this.actionGuid, true);
                     //if choose the main RCU,should trigger the main rcu
                     if (this.mainRcuGuid) {
@@ -3732,11 +3694,7 @@
                   }
                 } else if (item.device_button_group.startsWith('OPENCLOSE UART')) {
                   debugger;
-                  if (
-                    this.templateName == 'RCU Scene Button' ||
-                    this.templateName == 'RCU Radar' ||
-                    this.templateName == 'Click And Stop'
-                  ) {
+                  if (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar' || this.templateName == 'RCU Curtain') {
                     let $command = item.action_command.substring(2, item.action_command.length);
                     let devices = cloneDeep(erp.info.profile.profile_device);
                     let gatewayMac = '';
@@ -3764,7 +3722,7 @@
                   this.templateName != 'RCU Scene Button' &&
                   this.templateName != 'RCU Radar' &&
                   this.templateName != 'RCU Scene Toggle' &&
-                  this.templateName != 'Click And Stop'
+                  this.templateName != 'RCU Curtain'
                 ) {
                   start_length = data.length / 2;
                   actioncommand += `${start_length.toString(16).pad('00')}${data}`;
@@ -3772,7 +3730,7 @@
                   this.templateName == 'RCU Scene Button' ||
                   this.templateName == 'RCU Radar' ||
                   this.templateName == 'RCU Scene Toggle' ||
-                  this.templateName == 'Click And Stop'
+                  this.templateName == 'RCU Curtain'
                 ) {
                   actioncommand += data;
                 } else if (button_group.startsWith('RCU')) {
@@ -3853,7 +3811,7 @@
                 this.templateName == 'RCU Scene Button' ||
                 this.templateName == 'RCU Radar' ||
                 this.templateName == 'RCU Scene Toggle' ||
-                this.templateName == 'Click And Stop'
+                this.templateName == 'RCU Curtain'
               ) {
                 if (
                   postList[i].device_mode == 'Triac Dimming' ||
@@ -4020,7 +3978,7 @@
                   this.actionLocation[i] = sceneId;
                 }
                 //click and stop
-                if (this.templateName == 'Click And Stop') {
+                if (this.templateName == 'RCU Curtain') {
                   if (this.mutiwayStatus == 2) {
                     this.actionCurtainId_2 = sceneId;
                   } else {
@@ -4154,7 +4112,12 @@
                   this.index = 10;
                   this.initDevices();
                   return;
-                }else if(this.templateName == 'Room Scene Button'){
+                } else if (this.templateName == 'Room Scene Button') {
+                  //check the name length
+                  if(this.sceneName.length > 3){
+                    app.dialog.alert(`${_('Scene name can only be three letters or characters.')}`);
+                    return;
+                  }
                   this.index = 12;
                   this.initDevices();
                   return;
@@ -4821,7 +4784,7 @@
                 ui_configuration: JSON.stringify({}),
                 condition: JSON.stringify(this.roomList),
                 image: this.uploadImage,
-                is_enabled: this.templateName == 'Room Scene Button'?1:0,
+                is_enabled: this.templateName == 'Room Scene Button' ? 1 : 0,
               };
               await this.postScene(post_scene_data);
               await ha_profile_ready();

@@ -358,7 +358,6 @@ window.device_wifi_setting_component = {
       //check if the ssid and the password and the topic have no save,break this step and next step
       if(this.setting.ssid === this.originalSsid && this.setting.ssid_password === this.originalSsidPassword && this.setting.email === this.originalEmail && this.wifiStatus == 1){  
         clearTimeout(this.$this_timer);
-          emitter.emit('refresh', {});
           window.globalUpdate = true;
           if (this.type == 2) {
             app.preloader.show();

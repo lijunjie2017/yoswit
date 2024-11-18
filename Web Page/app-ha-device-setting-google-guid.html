@@ -36,10 +36,92 @@
             </p>
           </div>
           <div class="tabs">
-            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px;text-align: center;">{{_("Friendly Reminder")}}</div>
                 <div class="card-content card-content-padding">
-                  <div class="card-body">
+                  <p style="font-size: 16px;white-space:normal;word-wrap:break-word;">{{_('The current operation is to sync the functionality of controlling Bluetooth devices in the app with Google Home. Please be aware.')}}</p>
+                  <div class="step-info">
+                    <div class="step-item display-flex align-items-center justify-content-start">
+                      <p>{{_('1. Start Google Home.')}}</p>
+                      <img src="https://my.yoswit.com/files/google_home.png" alt="" style="width: 57px;height: 50px;" />
+                      <a class="button button-fill button-save" style="width: 80px;height: 50px;margin-left: 15px;font-size: 14px;" v-on:click="toLaunchGoogleHome()">{{_("Launch")}}</a>
+                    </div>
+                    <div class="step-item display-flex align-items-center justify-content-start">
+                      <p>{{_('2. Tap the bottom menu: Devices.')}}</p>
+                      <img src="https://my.yoswit.com/files/devices_icon.png" alt="" style="width: 65px;height: 50px;margin-left: 5px;" />
+                    </div>
+                    <div class="step-item display-flex align-items-center justify-content-start">
+                      <p>{{_('3. Tap the Add button.')}}</p>
+                      <img src="https://my.yoswit.com/files/Add_devices.png" alt="" style="width: 80px;height: 50px;margin-left: 10px;" />
+                    </div>
+                    <div class="step-item">
+                      <p>{{_('4. Tap the Work with Google Home option.')}}</p>
+                      <img src="https://my.yoswit.com/files/choose_device.jpg" alt="" />
+                    </div>
+                    <div class="step-item">
+                      <p>{{_('5. Tap the search button and search for: Yoswit.')}}</p>
+                      <img src="https://my.yoswit.com/files/search_yoswit.png" alt="" />
+                    </div>
+                    <div class="step-item">
+                      <p>{{_('6. Tap Continue to enter the Mob-Mob login page.')}}</p>
+                      <img src="https://my.yoswit.com/files/login_banner.png" alt="" />
+                    </div>
+                    <div class="step-item">
+                      <p>{{_('7. Enter the following account.')}}</p>
+                      <div class="list no-hairlines-md">
+                        <ul>
+                          <li class="item-content item-input">
+                            <div class="item-media align-self-flex-start">
+                              <i class="icon material-icons setting-list-icon p-1">mail</i>
+                            </div>
+                            <div class="item-inner">
+                              <div class="item-title item-label">Mob-Mob {{ _('Email Address')}}</div>
+                              <div class="item-input-wrap">
+                                <input type="text" name="email" :value="user_email" :placeholder="emailTip" readonly />
+                              </div>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div class="step-item">
+                      <p>{{_('8. Enter your password.') }}</p>
+                      <div class="list no-hairlines-md">
+                        <ul>
+                          <li class="item-content item-input">
+                            <div class="item-media align-self-flex-start">
+                              <i class="icon material-icons setting-list-icon p-1">key</i>
+                            </div>
+                            <div class="item-inner">
+                              <div class="item-title item-label">Mob-Mob {{ _('Password')}}</div>
+                              <div class="item-input-wrap">
+                                <input type="text" id="google_password" name="password" v-model="password" required :placeholder="passwordTip" />
+                                <i
+                                  class="material-icons"
+                                  style="
+                                    position: absolute;
+                                    right: 0px;
+                                    top: 0px;
+                                    padding: 10px 0px 10px 10px;
+                                    font-size: 20px;
+                                    z-index: 999999;
+                                  "
+                                  func="show_hide_password_field"
+                                  >visibility</i
+                                >
+                                <span class="input-clear-button"></span>
+                              </div>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div class="step-item">
+                      <p>{{_('9. Tap Next to sync with Google.')}}</p>
+                    </div>
+                  </div>
+                  <div class="card-body" style="display: none;">
                     <input type="hidden" name="name" value="" />
                     <div class="list no-hairlines-md">
                       <ul>
@@ -48,7 +130,7 @@
                             <i class="icon material-icons setting-list-icon p-1">mail</i>
                           </div>
                           <div class="item-inner">
-                            <div class="item-title item-label">{{ _('Email Address')}}</div>
+                            <div class="item-title item-label">Mob-Mob {{ _('Email Address')}}</div>
                             <div class="item-input-wrap">
                               <input type="text" name="email" :value="user_email" :placeholder="emailTip" readonly />
                             </div>
@@ -59,9 +141,9 @@
                             <i class="icon material-icons setting-list-icon p-1">key</i>
                           </div>
                           <div class="item-inner">
-                            <div class="item-title item-label">{{ _('Password')}}</div>
+                            <div class="item-title item-label">Mob-Mob {{ _('Password')}}</div>
                             <div class="item-input-wrap">
-                              <input type="password" name="password" :value="password" required :placeholder="passwordTip" />
+                              <input type="password" id="google_password" name="password" v-model="password" required :placeholder="passwordTip" />
                               <i
                                 class="material-icons"
                                 style="
@@ -86,7 +168,7 @@
                           <div class="item-inner">
                             <div class="item-title item-label" lang="en">Profile</div>
                             <div class="item-input-wrap input-dropdown-wrap">
-                              <select name="device_mode" placeholder="Please choose..." lang="en" id="profile_google">
+                              <select name="device_mode" :placeholder="_('Please choose')+'...'" lang="en" id="profile_google">
                                 <option v-for="item in profile_list" :key="item.name" :value="item.name">
                                   {{tran(item.profile_name)}}
                                 </option>
@@ -101,17 +183,17 @@
               </div>
               <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT STEP")}}</div>
+                  <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("COMPELETE")}}</div>
                 </div>
               </div>
             </div>
-            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+            <div id="step-2" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
               <div class="block-title" style="overflow: initial">{{_("Sync To Google")}}</div>
               <div class="list media-list no-margin list-group">
                 <ul>
                   <div v-for="item in deviceList" :key="item.name">
                     <li class="list-group-title" v-if="item.isTitle">{{tran(item.title)}}</li>
-                    <li class="device mobmob-device swipeout" v-if="!item.isTitle">
+                    <li class="device mobmob-device swipeout" v-if="!item.isTitle && !item.hidden">
                       <div class="item-content swipeout-content">
                         <label class="checkbox" style="padding-left: 20px; padding-right: 20px"
                           ><input v-on:click="changeVal(item)" type="checkbox" :checked="item.unsync_to_google === 1?false:true" /><i
@@ -131,18 +213,46 @@
                         </div>
                         <div class="control-panel-right"></div>
                       </div>
-                      <div class="swipeout-actions-right">
-                        <a href="#" class="link" func="controller_deviceNetwork_list_set_default_connect"
-                          ><i class="icon material-icons">check</i></a
-                        >
-                      </div>
                     </li>
                   </div>
                 </ul>
               </div>
               <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("COMPELETE")}}</div>
+                  <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT")}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="popup demo-popup-swipe-handler" ref="popupSwipeHandler">
+          <div class="page">
+            <div class="swipe-handler"></div>
+            <div class="page-content">
+              <div class="block-title" style="font-size: 18px;line-height: normal;color:var(--f7-navbar-text-color, var(--f7-bars-text-color));">{{_("Steps to Set Account to Link Google Home")}}</div>
+              <div class="block block-strong-ios block-outline-ios">
+                <p class="google-guid-step text-muted">
+                  1. {{_('Open the Google Home App, click the "+" in the device bar at the bottom, and select the device that supports Google Home.                          ')}}
+                </p>
+                <p class="google-guid-step text-muted">
+                  2. {{_('Search for Yoswit, click to link the account, and then click continue.')}}
+                </p>
+                <p class="google-guid-step text-muted">
+                  3. {{_('Enter your account and password in the login interface, click login, and wait for the connection to complete.')}}
+                </p>
+                <p class="google-guid-step text-muted">
+                  4. {{_('After completion of the connection, click finish to return to the main device interface and view devices in the device list.')}}
+                </p>
+                <p class="google-guid-step text-muted">
+                  5. {{_('If you need to control it through a Google speaker, add the Google speaker to the Google Home.')}}
+                </p>
+                <p class="google-guid-step text-muted">
+                  6. {{_('Then you can control the Yoswit device through voice commands.')}}
+                </p>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="save()">{{_("CONFIRM")}}</div>
                 </div>
               </div>
             </div>
@@ -178,16 +288,18 @@
           imgError: 'https://my.yoswit.com/files/products/YO2086-1G.svg',
           erpProfile: null,
           profileName: '',
+          sceneImage: 'https://my.yoswit.com/files/google_home_gatewayjpg.jpg',
         },
         computed: {},
         mounted() {
           this.init();
           const select = document.getElementById('profile_google');
-          select.addEventListener('change', function () {
-            console.log(select.value);
-            this.profileName = select.value;
-            this.getProfileData(select.value);
-          });
+          // select.addEventListener('change', function () {
+          //   console.log(select.value);
+          //   this.profileName = select.value;
+          //   this.getProfileData(select.value);
+          // });
+          this.getProfileData();
         },
         methods: {
           toTab() {},
@@ -200,9 +312,12 @@
           },
           async init() {
             let key = `google_password_${erp.userId}`;
+            console.log('key',key);
+            console.log('db.get(key)',await db.get(key));
             this.password = await db.get(key);
+            console.log('this.password',this.password);
             if (!this.password) {
-              this.password = '111111';
+              this.password = app.utils.id('xxxxxx', '0123456789');
             }
             this.user_email = users[users.current].usr;
             let active_profile = erp.info.profile.name;
@@ -225,14 +340,61 @@
           },
           nextStep(index) {
             if (index == 1) {
+              //this.initPopup();
               this.save();
+              return; 
             } else if (index == 2) {
-              this.syncProfileSubdevice();
+              this.syncUserSettings();
             }
           },
-          async getProfileData(name) {
-            app.dialog.preloader();
-            let url = `/api/resource/Profile/${name}`;
+          toLaunchGoogleHome(){
+            this.checkisUpload().then((res) => {
+              if(res){
+                console.log('res',res);
+                if(Capacitor.platform === 'ios'){
+                  window.plugins.launcher.launch({
+                    uri: `chromecast://`,
+                  }, console.log, console.error);
+                }else {
+                  window.plugins.launcher.launch({
+                    packageName: 'com.google.android.apps.chromecast.app',
+                  }, console.log, console.error);
+                }
+              }else{
+                const link = Capacitor.platform === 'ios' ? 'https://apps.apple.com/us/app/google-home/id680819774' : 'https://play.google.com/store/apps/details?id=com.google.android.apps.chromecast.app';
+                if (link) {
+                  location.href = link;
+                }
+              }
+            });
+          },
+          checkisUpload(item){
+            return new Promise((resolve, reject) => {
+              appAvailability.check(
+                Capacitor.platform === 'ios' ? `${'chromecast'}://` : 'com.google.android.apps.chromecast.app',
+                function(info) {
+                  resolve(true);
+                },
+                function() {
+                  resolve(false);
+                }
+              )
+            });
+          },
+          initPopup(){
+            if(this.$popupSwipeHandler){
+              this.$popupSwipeHandler.close();
+            }
+            this.$popupSwipeHandler = app.popup.create({
+              el: this.$refs.popupSwipeHandler,
+              swipeToClose: 'to-bottom',
+              swipeHandler: '.swipe-handler'
+            });
+            this.$popupSwipeHandler.open();
+          },
+          async getProfileData() {
+            //app.dialog.preloader();
+            let url = `/api/resource/Profile/${erp.info.profile.name}`;
             try {
               let data = await http.request(url, {
                 responseType: 'json',
@@ -243,9 +405,9 @@
               let dataObj = data.data.data;
               erpProfile = dataObj;
               this.getProfileSubdeviceList(true);
-              app.dialog.close();
+              //app.dialog.close();
             } catch (err) {
-              app.dialog.close();
+              //app.dialog.close();
               app.dialog.alert(err);
             }
           },
@@ -269,8 +431,11 @@
                   device.isTitle = false;
                   const hexid = device.device.substring(device.device.length - 6, device.device.length - 2).toUpperCase();
                   for (let i in modelList) {
-                    if (hexid === i) {
+                    if (hexid.toUpperCase() === i) {
                       device.image = modelList[i].image;
+                      if(modelList[i].sync_to_google != 1){
+                        device.hidden = true;
+                      }
                     }
                   }
                   list.push(device);
@@ -280,10 +445,11 @@
             this.deviceList = cloneDeep(list);
           },
           async save() {
-            let profile_val = $('#profile_google').val();
-            //save in local
-            let key = `google_password_${erp.userId}`;
-            db.set(key, this.password);
+            if(this.$popupSwipeHandler){
+              this.$popupSwipeHandler.close();
+            }
+            //let profile_val = $('#profile_google').val();
+            
             try {
               app.dialog.preloader();
               setTimeout(() => {
@@ -295,8 +461,8 @@
                   system: erp.setting.app_api_url,
                   key: '111111',
                   email: users[users.current].usr,
-                  password: this.password,
-                  profile: profile_val,
+                  password: this.password?this.password:'111111',
+                  profile: erp.info.profile.name,
                 },
                 serializer: 'urlencoded',
                 headers: {
@@ -304,8 +470,8 @@
                 },
               });
               app.dialog.close();
-              this.index = 2;
-              this.getProfileSubdeviceList();
+              this.syncProfileSubdevice();
+              //this.getProfileSubdeviceList();
               //$update();
             } catch (error) {
               app.dialog.close();
@@ -313,22 +479,17 @@
               app.dialog.alert(error);
             }
           },
-          async syncProfileSubdevice() {
+          async syncUserSettings(){
             app.dialog.preloader();
+            let password_val = $('#google_password').val();
+            console.log('password_val',password_val);
+            //save in local
+            let key = `google_password_${erp.userId}`;
+            db.set(key, password_val);
             let this_name = `${erp.appId}-${users[users.current].usr}`;
+            let user_url = `/api/resource/User Settings/${encodeURI(this_name)}`;
             let thisList = this.deviceList.filter((item) => item.isTitle != true);
-            let url = `/api/resource/Profile/${this.profileName}`;
-            try {
-              await http.request(url, {
-                responseType: 'json',
-                serializer: 'json',
-                data: {
-                  profile_subdevice: thisList,
-                },
-                method: 'PUT',
-              });
-              let user_url = `/api/resource/User Settings/${encodeURI(this_name)}`;
-              await http.request(user_url, {
+            await http.request(user_url, {
                 responseType: 'json',
                 serializer: 'json',
                 data: {
@@ -347,8 +508,35 @@
                   }
                 });
               });
+              while (true) {
+                try {
+                  const dialog = app.dialog.close();
+                  if (!dialog) {
+                    break;
+                  }
+                } catch (e) {
+                  break;
+                }
+              }
+              mainView.router.refreshPage();
+              app.dialog.alert('Sync Successfully.');
+          },
+          async syncProfileSubdevice() {
+            app.dialog.preloader();
+            let this_name = `${erp.appId}-${users[users.current].usr}`;
+            let thisList = this.deviceList.filter((item) => item.isTitle != true);
+            let url = `/api/resource/Profile/${this.profileName}`;
+            try {
+              await http.request(url, {
+                responseType: 'json',
+                serializer: 'json',
+                data: {
+                  profile_subdevice: thisList,
+                },
+                method: 'PUT',
+              });
               app.dialog.close();
-              app.dialog.alert('Sync successfully');
+              this.index = 2;
             } catch (error) {
               app.dialog.close();
               app.dialog.alert(error);
@@ -373,5 +561,14 @@
 <style>
 .checkbox i.icon-checkbox{
   opacity: 1;
+}
+.google-guid-step{
+  white-space:normal;
+  word-wrap:break-word;
+  padding:5px 15px;
+  font-size: 16px;
+}
+.step-item{
+  margin-bottom: 10px;
 }
 </style>

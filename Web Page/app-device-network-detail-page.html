@@ -65,7 +65,7 @@
                       <div class="item-media" style="position: relative">
                         <img :src="erp.get_url(item.image?item.image:imgError)" width="60" />
                         <i
-                          class="material-icons mesh-head"
+                          class="material-icons   mesh-head"
                           :style="{'position':'absolute','left':'-5px','bottom':'-5px','font-size':'20px','display':item.meshHeadSet?'inline-block':'none','color':item.meshHeadConnect?'green':'red'}"
                           >{{item.meshHeadConnect?'link':'link_off'}}</i
                         >
@@ -143,9 +143,12 @@
                 </div>
               </div>
               <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="totalDevices != 0 || uncatDevices!= 0">
+                <div class="col" v-if="index == 1">
+                  <div class="button button-fill button-save" v-on:click="nextStep(3)" >{{_("Preview")}}</div>
+                </div>
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="nextStep(1)" v-if="index == 0">{{_("NEXT STEP")}}</div>
-                  <div class="button button-fill button-save" v-on:click="nextStep(2)" v-if="index == 1">{{_("Configuring")}}</div>
+                  <div class="button button-fill button-save" v-on:click="nextStep(1)" v-if="index == 0">{{_("Next")}}</div>
+                  <div class="button button-fill button-save" v-on:click="nextStep(2)" v-if="index == 1">{{_("Complete")}}</div>
                 </div>
               </div>
             </div>
@@ -296,7 +299,7 @@
                 const hexid = guid.substring(guid.length - 6, guid.length - 2);
                 const model = erp.doctype.device_model[hexid.toUpperCase()];
                 item.deviceNetworkSize = model.device_network_size ? model.device_network_size : 1;
-                if (!model && !model.image) {
+                if (model && model.image) {
                   item.image = model.image;
                 } else {
                   item.image = '';
@@ -358,17 +361,53 @@
               });
               this.updateTotal();
             }
+            console.log(this.deviceList)
           },
-          nextStep() {
-            if (this.index == 0) {
+          checkIsScan(){
+            let list = this.deviceList.filter((item)=>item.checked && this.dealwithShow(item));
+            let checkStatus = true;
+            for(let i in list){
+              console.log('list[i].device',peripheral[list[i].device].prop);
+              let rssi = peripheral[list[i].device].prop.rssilv;
+              console.log('rssi',rssi);
+              if(rssi == 0 || !isset(rssi)){
+                checkStatus = false;
+                break;
+              }
+            }
+            return checkStatus;
+          },
+          nextStep(tabIndex) {
+            if (tabIndex == 1) {
+              let list = this.deviceList.filter((item)=>item.checked && this.dealwithShow(item));
+              console.log('list',list);
+              if((list.length == 0) && edit == 0){
+                app.dialog.alert(_('No devices need to be networked.'));
+                return;
+              }else if(list.length == 1 && edit == 0){
+                app.dialog.alert(_('Only one device can not be networked.'));
+                return;
+              }else if(list.length == 1 && edit == 1){
+                app.dialog.alert(_('Only one device can not be networked.'));
+                return;
+              }
               if (this.totalDevices == 0 && edit == 0) {
-                app.dialog.alert(_('No devices need to be networked'));
+                app.dialog.alert(_('No devices need to be networked.'));
               } else {
+                // let status = this.checkIsScan();
+                // if(!status){
+                //   app.dialog.alert(_('Please ensure the device is near you.'));
+                //   return;
+                // }
                 app.sortable.enable($('.sortable-network-wrapper'));
                 this.saveDeviceInNetwork();
               }
-            } else if (this.index == 1) {
+            } else if (tabIndex == 2) {
               this.editDeviceInNetwork();
+            }else if(tabIndex == 3){
+              this.sortStatus = false;
+              edit = 1;
+              this.index = 0;
             }
           },
           dealwithShow(item) {
@@ -410,6 +449,7 @@
             if (this.sortStatus) {
               return;
             }
+            console.log('edit',edit);
             if (edit == 1) {
               if (!item.checked) {
                 if (item.deviceNetworkSize > 1) {
@@ -707,6 +747,7 @@
                 //   () => {}
                 // );
                 emitter.emit('network/status', { code: 1 });
+                emitter.emit('device_network_update', { code: 1 });
               }
               setTimeout(
                 () => {

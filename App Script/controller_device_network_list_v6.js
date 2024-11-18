@@ -1,9 +1,9 @@
 window.device_network_list_component = {
   template: /*html*/ `
     <div class="container">
-      <div class="list ha-guide-list">
+      <div class="list ha-guide-list no-margin">
           <ul>
-            <li class="swipeout scene swipeout-delete-manual" v-for="(item,index) in networkList" :key="index">
+            <li class="swipeout scene swipeout-delete-manual" :class="item.isdisabled?'disabled':''" v-for="(item,index) in networkList" :key="index">
               <div class="card swipeout-content no-shadow no-border bg-color-gray margin-bottom overflow-hidden text-color-white h-110">
                 <div class="overlay"></div>
                 <div
@@ -23,9 +23,25 @@ window.device_network_list_component = {
                     
                   </div>
                   <div class="item-content">
-                    <div class="item-inner">
+                    <div class="item-inner justify-content-start">
+                    <div v-if="type != 1" class="check-box display-flex justify-content-center align-items-center">
+                    <i
+                      class="material-icons text-color-white"
+                      style="font-size: 30px"
+                      v-if="!item.ischeck"
+                      v-on:click="changeNetworkStatus(item)"
+                      >check_box_outline_blank</i
+                    >
+                    <i
+                      class="material-icons text-color-white"
+                      style="font-size: 30px"
+                      v-else="item.ischeck"
+                      v-on:click="changeNetworkStatus(item)"
+                      >check_box</i
+                      >
+                    </div>
                       <div
-                        class="h5 d-block text-color-white margin-bottom-half"
+                        class="h5 d-block text-color-white margin-left"
                         style="
                           text-shadow:
                             1px 1px 2px grey,
@@ -48,8 +64,9 @@ window.device_network_list_component = {
                         class="button button-small button-round button-fill icon-button"
                         style="background-color: red; margin-left: 10px; width: 40px; height: 40px; border-radius: 50%"
                         v-on:click="onDeleted(index)"
+                        v-if="type == 1"
                       >
-                        <i class="icon material-icons" style="font-size: 20px">delete</i>
+                        <i class="icon material-icons"  style="font-size: 20px">delete</i>
                       </a>
                     </div>
                   </div>
@@ -61,7 +78,7 @@ window.device_network_list_component = {
         <div class="device-null" v-if="networkList.length == 0">
           <div class="block" style="text-align: center">
             <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-            <p>${_("You don't have any network batch, create one.")}</p>
+            <p style="display:none;">${_('You don not have any network batch, create one')}</p>
           </div>
           <div class="block block-strong">
             <p class="row">
@@ -69,18 +86,19 @@ window.device_network_list_component = {
             </p>
           </div>
         </div>
-        <div class="fab fab-right-bottom" v-if="type != 1">
+        <div class="fab fab-right-bottom" v-if="type != 1" style="position: fixed;bottom: 10px;right: 10px;">
           <a style="text-align: center" v-on:click="createNetwork()">
             <i class="icon material-icons">add</i>
           </a>
         </div>
     </div>
       `,
-  props: ['guid', 'subdevice_name', 'type'],
+  props: ['guid', 'subdevice_name', 'type', 'config','gateway'],
   data: () => {
     return {
       sceneList: [],
       networkList: [],
+      otherGatewayMapDeviceList: [],
       localTrigerSceneList: [],
       localActionSceneList: [],
       sheetMap: {},
@@ -90,43 +108,44 @@ window.device_network_list_component = {
     console.log('comming');
     Vue.prototype.$init = this.initNetwork;
     Vue.prototype.$download = this.download;
+    this.initGatewayConfig();
     this.initNetwork();
     this.scan();
     emitter.on('refresh', (data) => {
       this.initNetwork();
     });
-    debugger
-    if(this.$addNetwork){
-      emitter.off('devic/network/add',this.$addNetwork);
+    //debugger
+    if (this.$addNetwork) {
+      emitter.off('devic/network/add', this.$addNetwork);
     }
-    if(this.$networkFun){
-      emitter.off('devic/network/next',this.$networkFun);
+    if (this.$networkFun) {
+      emitter.off('devic/network/next', this.$networkFun);
     }
-    this.$networkFun = (data)=>{
+    this.$networkFun = (data) => {
       let guid = data.guid;
       console.log(data);
       if (this.networkList.length == 0) {
         //to add networl
         let index = 0;
         mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${index + 1}&edit=0`);
-        emitter.emit('devic/network/index',{
-          code : 0
-        })
-      }else{
-        emitter.emit('devic/network/index',{
-          code : 1
-        })
+        emitter.emit('devic/network/index', {
+          code: 0,
+        });
+      } else {
+        emitter.emit('devic/network/index', {
+          code: 1,
+        });
       }
-    }
-    this.$addNetwork = (data)=>{
-      console.log("createNetwork");
+    };
+    this.$addNetwork = (data) => {
+      console.log('createNetwork');
       this.createNetwork();
-    }
-    emitter.on('devic/network/add',this.$addNetwork);
-    emitter.on('devic/network/next',this.$networkFun);
+    };
+    emitter.on('devic/network/add', this.$addNetwork);
+    emitter.on('devic/network/next', this.$networkFun);
     setTimeout(() => {
       emitter.on('device_network_update', (data) => {
-        this.initNetwork();
+        this.initNetwork(true);
       });
     }, 500);
   },
@@ -134,8 +153,8 @@ window.device_network_list_component = {
     console.log('beforeDestroy');
     emitter.off('refresh');
     emitter.off('device_network_update');
-    emitter.off('devic/network/next',this.$networkFun);
-    emitter.off('devic/network/add',this.$addNetwork);
+    emitter.off('devic/network/next', this.$networkFun);
+    emitter.off('devic/network/add', this.$addNetwork);
     //emitter.off('set_timmer');
   },
   computed: {},
@@ -188,8 +207,11 @@ window.device_network_list_component = {
             app.dialog.close();
             erp.info.profile.profile_device = devices;
             //save the ble command
-            mainView.router.refreshPage();
-
+            if (this.type == 1) {
+              mainView.router.refreshPage();
+            } else {
+              this.initNetwork();
+            }
             //this.initNetwork();
           } catch (error) {
             app.dialog.close();
@@ -200,7 +222,22 @@ window.device_network_list_component = {
         () => {}
       );
     },
-    async initNetwork() {
+    initGatewayConfig() {
+      //find other gateway config
+      if (this.type == 1) {
+        return;
+      }
+      let subdevices = erp.info.profile.profile_subdevice;
+      subdevices.forEach((item) => {
+        if (item.device_button_group == 'Yoswit Gateway' && this.guid != item.device) {
+          if (item.config) {
+            this.otherGatewayMapDeviceList = this.otherGatewayMapDeviceList.concat(item.config.split(','));
+          }
+        }
+      });
+      console.log('otherGatewayMapDeviceList', this.otherGatewayMapDeviceList);
+    },
+    async initNetwork(checkStatus) {
       this.networkList = [];
       let profileDevices = cloneDeep(erp.info.profile.profile_device);
       let networkMap = {};
@@ -218,6 +255,8 @@ window.device_network_list_component = {
             index: i,
             count: networkMap[i],
             image: `https://dev.mob-mob.com/files/network.jpeg`,
+            ischeck: this.config.split(',').indexOf(i.toString()) != -1 || checkStatus ? true : false,
+            isdisabled: this.otherGatewayMapDeviceList.indexOf(i.toString()) != -1 ? true : false,
           });
         }
       }
@@ -237,6 +276,47 @@ window.device_network_list_component = {
       //   count : 0,
       //   image : `https://dev.mob-mob.com/files/scene.jpg`
       // })
+    },
+    checkNetwork() {
+      let networkList = this.networkList.filter((item) => {
+        return item.ischeck;
+      });
+      console.log('networkList', networkList);
+      let url = encodeURI(`/api/resource/Profile/${erp.info.profile.name}`);
+      http2.request(url, {
+        method: 'PUT',
+        serializer: 'json',
+        responseType: 'json',
+        debug:true,
+        data : {
+          profile_device : erp.info.profile.profile_device
+        }
+      }).then((resData)=>{
+        emitter.emit('network/post', {
+          code: 1,
+          networkList: networkList,
+        });
+      })
+    },
+    changeNetworkStatus(item) {
+      item.ischeck = !item.ischeck;
+      console.log('item',item);
+      //should del the network device gateway
+      let profileDevices = cloneDeep(erp.info.profile.profile_device);
+      if (!item.ischeck) {
+        profileDevices.forEach((kitem) => {
+          if (parseInt(kitem.network_id)  === parseInt(item.index) ) {
+            kitem.gateway = '';
+          }
+        });
+      }else{
+        profileDevices.forEach((kitem) => {
+          if (parseInt(kitem.network_id)  === parseInt(item.index) ) {
+            kitem.gateway = this.gateway;
+          }
+        });
+      }
+      erp.info.profile.profile_device = profileDevices;
     },
     toDetail(item) {
       mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${item.index}&edit=1`);

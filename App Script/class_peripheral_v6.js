@@ -1,3 +1,4 @@
+erp.peripheral_timer_settimeout = [];
 if(!isset(window.peripheral)){
     window.peripheral = {};
 }
@@ -345,7 +346,7 @@ window.Peripheral = (function() {
         if(!self.lastStorechecksum || self.lastStorechecksum!=storechecksum){
             self.lastStorechecksum = storechecksum;
             
-            setTimeout(function(){
+            const timeoutId = setTimeout(function(){
                 //console.log("running Class");
                 db.get('peripheral').then((data)=>{
                     let storedPeripheral = {};
@@ -372,15 +373,17 @@ window.Peripheral = (function() {
                     
                     
                     storedPeripheral[self.prop.guid] = storeProp;
-					if(storeProp.guid == '3038623631666565383663361203491d'){
+					if(storeProp.guid == '6430326561623565353434651201791b'){
 						//console.log("storedPeripheralRan",storedPeripheral);
 					}
                     db.set('peripheral', JSON.stringify(storedPeripheral));
                 });
+                erp.peripheral_timer_settimeout.push(timeoutId)
             }, 10);
         }
-        
-        delete emitProp.status.control;
+        if(emitProp.hexModel != '0179'){
+					delete emitProp.status.control;
+				}
         
         let emitchecksum = md5(JSON.stringify(emitProp));
 				if(emitProp.guid == '3038623631666565383663361203491d'){
@@ -388,7 +391,7 @@ window.Peripheral = (function() {
 					// console.log('emitchecksum',emitchecksum);
 					// console.log('this.prop',this.prop)
 				}
-				if(emitProp.guid == '3334383531383763323636321203461d'){
+				if(emitProp.guid == '6430326561623565353434651201791b'){
 					console.log("comming2")
 				}
         if(!this.lastEmitchecksum || this.lastEmitchecksum!=emitchecksum){
@@ -997,7 +1000,7 @@ window.Peripheral = (function() {
 					characteristic: characteristic,
 					data: data,
 				}]).then((rs)=>{
-                    resolve();
+                    resolve(1);
                 }).catch((error)=>{
                     reject(error);
                 });
@@ -1049,8 +1052,8 @@ window.Peripheral = (function() {
 					service: "ff80",
 					characteristic: peripheral[findGuid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
 					data: data,
-				}]).then((rs)=>{
-					resolve(rs);
+				}]).then(()=>{
+					resolve(2);
 				}).catch((error)=>{
 					reject(error);
 				});
@@ -1141,7 +1144,7 @@ window.Peripheral = (function() {
 					callback:"",
 					raw:""
 				}, 0, false, false, false).then(() => {
-					resolve();
+					resolve(3);
 				}).catch(reject);
 			});
 		};
@@ -1172,7 +1175,8 @@ window.Peripheral = (function() {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+    				    //throw new Error('Device is not here');
+								bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -1188,7 +1192,7 @@ window.Peripheral = (function() {
 						return doMESHOnoff(gangs);
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -1282,7 +1286,7 @@ window.Peripheral = (function() {
 				self.onPropChanged();
 				
                 self.doMultipleWrite(commands).then((rs)=>{
-                    resolve();
+                    resolve(1);
                 }).catch((error)=>{
                     reject(error);
                 });
@@ -1334,7 +1338,7 @@ window.Peripheral = (function() {
 				self.onPropChanged();
 				
 				peripheral[findGuid].write(commands).then((rs)=>{
-					resolve();
+					resolve(2);
 				}).catch((error)=>{
 					reject(error);
 				});
@@ -1404,7 +1408,7 @@ window.Peripheral = (function() {
 					callback:"",
 					raw:""
 				}, 0, false, false, false).then(() => {
-					resolve();
+					resolve(3);
 				}).catch(reject);
 			});
 		};
@@ -1435,7 +1439,7 @@ window.Peripheral = (function() {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -1451,7 +1455,7 @@ window.Peripheral = (function() {
 						return doMESH(gangs);
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -1504,7 +1508,7 @@ window.Peripheral = (function() {
 			});
 			
 				self.doMultipleWrite(commands).then((rs)=>{
-						resolve();
+						resolve(1);
 				}).catch((error)=>{
 						reject(error);
 				});
@@ -1543,7 +1547,7 @@ window.Peripheral = (function() {
 				callback:"",
 				raw:""
 			}, 0, false, false, false).then(() => {
-				resolve();
+				resolve(3);
 			}).catch(reject);
 		});
 	};
@@ -1574,7 +1578,8 @@ window.Peripheral = (function() {
 										return Promise.resolve();
 										break;
 								case self.route.NA:
-							throw new Error('Device is not here');
+							//throw new Error('Device is not here');
+							bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -1587,7 +1592,7 @@ window.Peripheral = (function() {
 					return doMOBMOB();
 										break;
 								case self.route.NA:
-							throw new Error('Device is not here');
+									bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -1660,7 +1665,7 @@ window.Peripheral = (function() {
 		self.onPropChanged();
 		
 						self.doMultipleWrite(commands).then((rs)=>{
-								resolve();
+								resolve(1);
 						}).catch((error)=>{
 								reject(error);
 						});
@@ -1694,7 +1699,7 @@ const doMESH = (gangs) => {
 		self.onPropChanged();
 		
 		peripheral[findGuid].write(commands).then((rs)=>{
-			resolve();
+			resolve(2);
 		}).catch((error)=>{
 			reject(error);
 		});
@@ -1746,7 +1751,7 @@ const doMOBMOB = (gangs) => {
 			callback:"",
 			raw:""
 		}, 0, false, false, false).then(() => {
-			resolve();
+			resolve(3);
 		}).catch(reject);
 	});
 };
@@ -1777,7 +1782,7 @@ const doMOBMOB = (gangs) => {
 									return Promise.resolve();
 									break;
 							case self.route.NA:
-						throw new Error('Device is not here');
+								bleHelper.openBluetooth();
 									break;
 						}
 		})
@@ -1793,7 +1798,7 @@ const doMOBMOB = (gangs) => {
 				return doMESH(gangs);
 									break;
 							case self.route.NA:
-						throw new Error('Device is not here');
+								bleHelper.openBluetooth();
 									break;
 						}
 		})
@@ -1871,7 +1876,7 @@ const doMOBMOB = (gangs) => {
     				characteristic: characteristic,
     				data: data,
     			}]).then((rs)=>{
-    				resolve();
+    				resolve(1);
     			}).catch((error)=>{
     				reject(error);
     			});
@@ -1935,7 +1940,7 @@ const doMOBMOB = (gangs) => {
 					callback:"",
 					raw:""
 				}, 0, false, false, false).then(() => {
-					resolve();
+					resolve(2);
 				}).catch(reject);
 			});
 		};
@@ -1969,7 +1974,7 @@ const doMOBMOB = (gangs) => {
 					characteristic: peripheral[findGuid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
 					data: data,
 				}]).then((rs)=>{
-					resolve();
+					resolve(3);
 				}).catch((error)=>{
 					reject(error);
 				});
@@ -2003,7 +2008,7 @@ const doMOBMOB = (gangs) => {
 										return Promise.resolve();
 										break;
 								case self.route.NA:
-							throw new Error('Device is not here');
+									bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -2019,7 +2024,7 @@ const doMOBMOB = (gangs) => {
 					return doMESHDimming(gangs);
 										break;
 								case self.route.NA:
-							throw new Error('Device is not here');
+									bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -2096,7 +2101,7 @@ const doMOBMOB = (gangs) => {
 				self.onPropChanged();
 				
                 self.doMultipleWrite(commands).then((rs)=>{
-                    resolve();
+                    resolve(1);
                 }).catch((error)=>{
                     reject(error);
                 });
@@ -2130,7 +2135,7 @@ const doMOBMOB = (gangs) => {
 				self.onPropChanged();
 				
 				peripheral[findGuid].write(commands).then((rs)=>{
-					resolve();
+					resolve(2);
 				}).catch((error)=>{
 					reject(error);
 				});
@@ -2182,7 +2187,7 @@ const doMOBMOB = (gangs) => {
 					callback:"",
 					raw:""
 				}, 0, false, false, false).then(() => {
-					resolve();
+					resolve(3);
 				}).catch(reject);
 			});
 		};
@@ -2213,7 +2218,7 @@ const doMOBMOB = (gangs) => {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -2229,7 +2234,7 @@ const doMOBMOB = (gangs) => {
 						return doMESH(gangs);
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -2297,7 +2302,7 @@ const doMOBMOB = (gangs) => {
     			self.onPropChanged();
     			
     			self.doMultipleWrite(commands).then((rs)=>{
-    				resolve();
+    				resolve(1);
     			}).catch((error)=>{
     				reject(error);
 			    });
@@ -2327,7 +2332,7 @@ const doMOBMOB = (gangs) => {
     			self.onPropChanged();
     			
     			peripheral[findGuid].write(commands).then((rs)=>{
-    				resolve();
+    				resolve(2);
     			}).catch((error)=>{
     				reject(error);
     			});
@@ -2375,7 +2380,7 @@ const doMOBMOB = (gangs) => {
     				callback:"",
     				raw:""
     			}, 0, false, false, false).then(() => {
-    				resolve();
+    				resolve(3);
     			}).catch(reject);
     		});
     	};
@@ -2406,7 +2411,7 @@ const doMOBMOB = (gangs) => {
 						return Promise.resolve();
 						break;
 					case self.route.NA:
-						throw new Error('Device is not here');
+						bleHelper.openBluetooth();
 						break;
 				}
 			})
@@ -2422,7 +2427,7 @@ const doMOBMOB = (gangs) => {
 					    return doMESH(gangs);
 						break;
 					case self.route.NA:
-					    throw new Error('Device is not here');
+						bleHelper.openBluetooth();
 						break;
 				}
 			})
@@ -2493,7 +2498,7 @@ const doMOBMOB = (gangs) => {
 			self.onPropChanged();
 			
 							self.doMultipleWrite(commands).then((rs)=>{
-									resolve();
+									resolve(1);
 							}).catch((error)=>{
 									reject(error);
 							});
@@ -2523,7 +2528,7 @@ const doMOBMOB = (gangs) => {
 			self.onPropChanged();
 			
 			peripheral[findGuid].write(commands).then((rs)=>{
-				resolve();
+				resolve(2);
 			}).catch((error)=>{
 				reject(error);
 			});
@@ -2571,7 +2576,7 @@ const doMOBMOB = (gangs) => {
 				callback:"",
 				raw:""
 			}, 0, false, false, false).then(() => {
-				resolve();
+				resolve(3);
 			}).catch(reject);
 		});
 	};
@@ -2602,7 +2607,7 @@ const doMOBMOB = (gangs) => {
 										return Promise.resolve();
 										break;
 								case self.route.NA:
-							throw new Error('Device is not here');
+									bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -2618,7 +2623,7 @@ const doMOBMOB = (gangs) => {
 					return doMESH(gangs);
 										break;
 								case self.route.NA:
-							throw new Error('Device is not here');
+									bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -2691,7 +2696,7 @@ const doMOBMOB = (gangs) => {
 										console.log("command",commands)
     			}
                 self.doMultipleWrite(commands).then((rs)=>{
-                    resolve();
+                    resolve(1);
                 }).catch((error)=>{
                     reject(error);
                 });
@@ -2719,7 +2724,7 @@ const doMOBMOB = (gangs) => {
 				}
 
 				peripheral[findGuid].write(commands).then((rs)=>{
-					resolve();
+					resolve(2);
 				}).catch((error)=>{
 					reject(error);
 				});
@@ -2798,7 +2803,7 @@ const doMOBMOB = (gangs) => {
 					callback:"",
 					raw:""
 				}, 0, false, false, false).then(() => {
-					resolve();
+					resolve(3);
 				}).catch(reject);
 			});
 		};
@@ -2829,7 +2834,7 @@ const doMOBMOB = (gangs) => {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -2845,7 +2850,7 @@ const doMOBMOB = (gangs) => {
 						return doMESHSendIR(data);
                 	    break;
                 	case self.route.NA:
-    				    throw new Error('Device is not here');
+										bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -3413,27 +3418,38 @@ const doMOBMOB = (gangs) => {
 
     Peripheral.prototype.doConnect = function() {
         const self = this;
-      
     	const connect = () => {
+				console.log("class_peripheral: doConnect");
     		return new Promise((resolve, reject) => {
-    		    if(self.prop.connected){ //use bluetooth
-    		        self.onConnectionChanged('connected');
-    		        resolve(self.prop);
-    		    }else{
-    		        self.onConnectionChanged('connecting');
-        			ble.connect(self.prop.id, (rs)=>{
-    	                self.update(rs);
-        			    resolve(rs);
-        			}, (err)=>{
-        			    console.log('class_err',err)
-						ble.refreshDeviceCache(self.prop.id, 0, null, null);
-    		            self.onConnectionChanged('disconnected');
-										emitter.emit("disconnected",{
-											id : self.prop.id
-										})
-        			    reject(6001); //Failed to connect
-        			});
-    		    }
+					checkBLEEnabled().then(()=>{
+						if(deviceInfo.operatingSystem === 'ios'){
+							return new Promise((resolve,reject)=>{
+								resolve()
+							})
+						}else{
+							console.log("class.periperal: checkLocationEnabled");
+							return checkLocationEnabled();
+						}
+					}).then(()=>{
+						if(self.prop.connected){ //use bluetooth
+								self.onConnectionChanged('connected');
+								resolve(self.prop);
+						}else{
+								self.onConnectionChanged('connecting');
+							ble.connect(self.prop.id, (rs)=>{
+											self.update(rs);
+									resolve(rs);
+							}, (err)=>{
+									console.log('class_err',err)
+							ble.refreshDeviceCache(self.prop.id, 0, null, null);
+											self.onConnectionChanged('disconnected');
+											emitter.emit("disconnected",{
+												id : self.prop.id
+											})
+										reject(6001); //Failed to connect
+								});
+						}
+					})
     		});
     	};
     	const readFirmware = () => {
@@ -3697,7 +3713,14 @@ const doMOBMOB = (gangs) => {
 
 		return new Promise((resolve, reject) => {
     	    if(!isset(self.prop.rssi)){
-    	        reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
+						console.log("class.periperal: checkBLEEnabled");
+						checkBLEEnabled().then(()=>{
+							console.log("class.periperal: checkBLEEnabled: success");
+							reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
+						}).catch((error)=>{
+							bleHelper.openBluetooth();
+							//reject(error);
+						})
     	    }else{
     	       // connect().then((rs)=>{
 				let enableTry = false;
@@ -3807,8 +3830,18 @@ const doMOBMOB = (gangs) => {
         };
         
     	return new Promise((resolve, reject) => {
+					
     	    if(!isset(self.prop.rssi)){
-    	        reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
+						//check if have no open the bluetooth
+						console.log("class.periperal: checkBLEEnabled");
+						checkBLEEnabled().then(()=>{
+							console.log("class.periperal: checkBLEEnabled: success");
+							reject(bleError.BLE_PERIPHERAL_NOT_FOUND); //6300
+						}).catch((error)=>{
+							debugger
+							bleHelper.openBluetooth();
+							//reject(error);
+						})
     	    }else{
     	       // connect().then((rs)=>{
 				let enableTry = false;

@@ -153,6 +153,11 @@
                         <div class="button button-fill button-save" v-on:click="toManual()">{{_("Manual Mode")}}</div>
                       </div>
                       <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("Rematch")}}</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                      <div class="col">
                         <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("NEXT")}}</div>
                       </div>
                     </div>
@@ -1977,6 +1982,7 @@
           async toStudy() {
             //auto to matching
             console.log('toStudy');
+            let errorStatus = false;
             this.irData = [];
             app.dialog.preloader(`${_('Preparing, please wait...')}`);
             let uuid = window.peripheral[guid].prop.id;
@@ -1994,13 +2000,29 @@
                     let index = rs.substring(2, 4);
                     let ir_learned_data = rs.substring(4, rs.length);
                     this.irData.push(ir_learned_data);
-                    if (index == '00' && rs != '8900') {
+                    if (index == '00' && rs != '8900' && !errorStatus) {
                       app.dialog.close();
                       console.log('this.irData', this.irData);
                       //should be check the device_type
-                      this.interCode++;
+                      if(this.deviceType == 'Air Conditioner'){
+                        this.interCode = 0;
+                      }else{
+                        this.interCode++;
+                      }
                       this.continueStudy(device_type);
                       //$(`.init-input[name="ir_code"]`).val(this.irData.join(''));
+                    }else if(index == '0a'){
+                      let obj = this.countSubstrings(ir_learned_data);
+                      console.log('obj', obj);
+                      if (obj['00'] > 10 || obj['ff'] > 10) {
+                        errorStatus = true;
+                        app.dialog.close();
+                        app.dialog.alert(
+                          _(
+                            `Sorry, the received infrared code is incomplete. Please get closer to the device and press the button again, and avoid pressing multiple times.`
+                          )
+                        );
+                      }
                     } else if (rs == '8900') {
                       //can not get the code
                       app.dialog.close();
@@ -2021,6 +2043,8 @@
                 },
               ]);
               app.dialog.close();
+              console.log('this.interCode',this.deviceType);
+              console.log('this.mappingStepConfig',this.mappingStepConfig[this.deviceType]);
               //check the times of the study
               let title = `${_('Please press the ' + this.mappingStepConfig[this.deviceType][this.interCode] + ' button on the remote control.')}`;
               // if (device_type == 'Television' && this.interCode == 1) {
@@ -2036,7 +2060,21 @@
               app.dialog.alert(_(erp.get_log_description(err)));
             }
           },
+          countSubstrings(inputString) {
+            const substrings = ['00', 'ff'];
+            const counts = {};
+            substrings.forEach((sub) => {
+              const matches = inputString.match(new RegExp(sub, 'g'));
+              counts[sub] = matches ? matches.length : 0;
+            });
+            return counts;
+          },
           async continueStudy(device_type) {
+            console.log('continueStudy',device_type);
+            if(this.deviceType == 'Air Conditioner'){
+              this.mapCode();
+              return;
+            }
             let title = `${_('Please press the ' + this.mappingStepConfig[this.deviceType][this.interCode] + ' button on the remote control.')}`;
             if (this.interCode == this.mappingStepConfig[this.deviceType].length) {
               this.mapCode();

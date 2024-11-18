@@ -14,146 +14,105 @@ window.BleManager = (function() {
     BleManager.prototype.scan = function(success, failure, services=['fff0', 'ff70', 'ffb0', 'ff80', '1827', '1828']){
         const self = this;
         
-		self.manager.isEnabled(()=>{
-		    if (deviceInfo.operatingSystem === 'ios') {
-            	self.manager.startScanWithOptions(
-        			services,
-        			{
-        				reportDuplicates: true,
-        				scanMode: 'lowLatency',
-        			},
-        			success,
-        			failure
-        		)
-        		
-        		self.timer.push(setTimeout(async ()=>{
-        		    for(let guid in peripheral){
-        		        const p = peripheral[guid].getProp();
-        		        if(isset(p.lastDiscoverDate) && !p.disappear){
-        		            let currentDate = new Date();
-                            let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
-                            
-                            //console.log('disappear: '+timeDifference);
-                            if (timeDifference >= 18) {
-                            	peripheral[guid].update({rssi:1000});
-                            }
-        		        }
-        		    }
-        		    
-        		    await self.stopScan();
-        		    await self.wait(200);
-        		    self.scan(success, failure, services);
-        		}, 20000));
-		    }else{
-                self.manager.isLocationEnabled(()=>{
-                	self.manager.startScanWithOptions(
-            			services,
-            			{
-            				reportDuplicates: true,
-            				scanMode: 'lowLatency',
-            			},
-            			success,
-            			failure
-            		)
-            		
-            		self.timer.push(setTimeout(async ()=>{
-            		    for(let guid in peripheral){
-            		        const p = peripheral[guid].getProp();
-            		        if(isset(p.lastDiscoverDate) && !p.disappear){
-            		            let currentDate = new Date();
-                                let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
-                                
-                                //console.log('disappear: '+timeDifference);
-                                if (timeDifference >= 18) {
-                                	peripheral[guid].update({rssi:1000});
-                                }
-            		        }
-            		    }
-            		    
-            		    await self.stopScan();
-            		    await self.wait(200);
-            		    self.scan(success, failure, services);
-            		}, 20000));
-                }, ()=>{
-                    //alert("FFFFF2");
-                    failure(bleError.BLE_MOBILE_LOCATION_SERVICE_NOT_ENABLED);
-    		    
-            // 		self.timer.push(setTimeout(async ()=>{
-            // 		    for(let guid in peripheral){
-            // 		        const p = peripheral[guid].getProp();
-            // 		        if(isset(p.lastDiscoverDate) && !p.disappear){
-            // 		            let currentDate = new Date();
-            //                     let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
-                                
-            //                     //console.log('disappear: '+timeDifference);
-            //                     if (timeDifference >= 18) {
-            //                     	peripheral[guid].update({rssi:1000});
-            //                     }
-            // 		        }
-            // 		    }
-            		    
-            // 		    await self.stopScan();
-            // 		    await self.wait(200);
-            // 		    self.scan(success, failure, services);
-            // 		}, 20000));
-                });
-		    }
-		}, ()=>{
-            if (deviceInfo.operatingSystem === 'ios'){
-                failure(bleError.BLE_MOBILE_BLUETOOTH_NOT_ENABLED);
-            }else{
-                ble.enable(()=>{},()=>{});
+        self.manager.startScanWithOptions(
+            services,
+            {
+                reportDuplicates: true,
+                scanMode: 'lowLatency',
+            },
+            success,
+            failure
+        )
+        self.timer.push(setTimeout(async ()=>{
+            for(let guid in peripheral){
+                const p = peripheral[guid].getProp();
+                if(isset(p.lastDiscoverDate) && !p.disappear){
+                    let currentDate = new Date();
+                    let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
+                    
+                    //console.log('disappear: '+timeDifference);
+                    if (timeDifference >= 18) {
+                        peripheral[guid].update({rssi:1000});
+                    }
+                }
             }
-    // 		self.timer.push(setTimeout(async ()=>{
-    // 		    for(let guid in peripheral){
-    // 		        const p = peripheral[guid].getProp();
-    // 		        if(isset(p.lastDiscoverDate) && !p.disappear){
-    // 		            let currentDate = new Date();
-    //                     let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
-                        
-    //                     //console.log('disappear: '+timeDifference);
-    //                     if (timeDifference >= 18) {
-    //                     	peripheral[guid].update({rssi:1000});
-    //                     }
-    // 		        }
-    // 		    }
-    		    
-    // 		    await self.stopScan();
-    // 		    await self.wait(200);
-    // 		    self.scan(success, failure, services);
-    // 		}, 20000));
-		});
-		
-//     	self.manager.startScanWithOptions(
-// 			services,
-// 			{
-// 				reportDuplicates: true,
-// 				scanMode: 'lowLatency',
-// 			},
-// 			success,
-// 			failure
-// 		)
-		
-// 		self.manager.isEnabled(()=>{
-//     		self.timer.push(setTimeout(async ()=>{
-//     		    for(let guid in peripheral){
-//     		        const p = peripheral[guid].getProp();
-//     		        if(isset(p.lastDiscoverDate) && !p.disappear){
-//     		            let currentDate = new Date();
-//                         let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
-                        
-//                         //console.log('disappear: '+timeDifference);
-//                         if (timeDifference >= 18) {
-//                         	peripheral[guid].update({rssi:1000});
-//                         }
-//     		        }
-//     		    }
-    		    
-//     		    await self.stopScan();
-//     		    await self.wait(200);
-//     		    self.scan(success, failure, services);
-//     		}, 20000));
-// 		});
+            
+            await self.stopScan();
+            await self.wait(200);
+            self.scan(success, failure, services);
+        }, 20000));
+		// self.manager.isEnabled(()=>{
+		//     if (deviceInfo.operatingSystem === 'ios') {
+        //     	self.manager.startScanWithOptions(
+        // 			services,
+        // 			{
+        // 				reportDuplicates: true,
+        // 				scanMode: 'lowLatency',
+        // 			},
+        // 			success,
+        // 			failure
+        // 		)
+        		
+        // 		self.timer.push(setTimeout(async ()=>{
+        // 		    for(let guid in peripheral){
+        // 		        const p = peripheral[guid].getProp();
+        // 		        if(isset(p.lastDiscoverDate) && !p.disappear){
+        // 		            let currentDate = new Date();
+        //                     let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
+                            
+        //                     //console.log('disappear: '+timeDifference);
+        //                     if (timeDifference >= 18) {
+        //                     	peripheral[guid].update({rssi:1000});
+        //                     }
+        // 		        }
+        // 		    }
+        		    
+        // 		    await self.stopScan();
+        // 		    await self.wait(200);
+        // 		    self.scan(success, failure, services);
+        // 		}, 20000));
+		//     }else{
+        //         self.manager.isLocationEnabled(()=>{
+        //         	self.manager.startScanWithOptions(
+        //     			services,
+        //     			{
+        //     				reportDuplicates: true,
+        //     				scanMode: 'lowLatency',
+        //     			},
+        //     			success,
+        //     			failure
+        //     		)
+            		
+        //     		self.timer.push(setTimeout(async ()=>{
+        //     		    for(let guid in peripheral){
+        //     		        const p = peripheral[guid].getProp();
+        //     		        if(isset(p.lastDiscoverDate) && !p.disappear){
+        //     		            let currentDate = new Date();
+        //                         let timeDifference = (currentDate - new Date(p.lastDiscoverDate)) / 1000;
+                                
+        //                         //console.log('disappear: '+timeDifference);
+        //                         if (timeDifference >= 18) {
+        //                         	peripheral[guid].update({rssi:1000});
+        //                         }
+        //     		        }
+        //     		    }
+            		    
+        //     		    await self.stopScan();
+        //     		    await self.wait(200);
+        //     		    self.scan(success, failure, services);
+        //     		}, 20000));
+        //         }, ()=>{
+        //             //alert("FFFFF2");
+        //             failure(bleError.BLE_MOBILE_LOCATION_SERVICE_NOT_ENABLED);
+        //         });
+		//     }
+		// }, ()=>{
+        //     if (deviceInfo.operatingSystem === 'ios'){
+        //         failure(bleError.BLE_MOBILE_BLUETOOTH_NOT_ENABLED);
+        //     }else{
+        //         ble.enable(()=>{},()=>{});
+        //     }
+		// });
     };
     
     BleManager.prototype.wait = function(ms){
@@ -232,6 +191,44 @@ window.bleHelper = {
         }else{
             return 1;
         }
+    },
+    openBluetooth: function(){
+        while (true) {
+            try {
+                const dialog = app.dialog.close();
+                if (!dialog) {
+                    break;
+                }
+            } catch (e) {
+                break;
+            }
+        }
+        if(deviceInfo.operatingSystem === 'ios'){
+            app.dialog.confirm(_('Please open bluetooth in settings or toolbar, and then refresh.'),()=>{
+                PermissionRequestSheet.openSettings();
+            },()=>{});
+        }else{
+            ble.enable(()=>{},()=>{});
+            setTimeout(()=>{
+                mainView.router.refreshPage();
+            }, 2000);
+        }
+    },
+    getControlSource: function(device){
+        return new Promise((resolve)=>{
+
+            peripheral[device].findRoute().then((route)=>{
+                let control_source = route;
+                if(control_source == 'bluetooth'){
+                    control_source = 'Bluetooth';
+                }else if(control_source == 'mobmob'){
+                    control_source = 'MobMob';
+                }else{
+                    control_source = 'Bluetooth';
+                }
+                resolve(control_source);
+            });
+        });
     }
 };
 

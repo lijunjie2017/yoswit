@@ -20,12 +20,12 @@
         <div>
           <div class="block mx-3 margin-top">
             <p class="segmented segmented-strong">
-              <button class="button step-one" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">{{_("STEP 1")}}</button>
-              <button class="button step-two" :class="index == 2?'button-active button':'button'" v-on:click="toTab(2)">{{_("STEP 2")}}</button>
-              <button class="button step-three" :class="index == 3?'button-active button':'button'" v-on:click="toTab(3)">
+              <button class="button step-one" :class="index == 1?'button-active button':'button'">{{_("STEP 1")}}</button>
+              <button class="button step-two" :class="index == 2?'button-active button':'button'">{{_("STEP 2")}}</button>
+              <button class="button step-three" :class="index == 3?'button-active button':'button'">
                 {{_("STEP 3")}}
               </button>
-              <button class="button step-three" :class="index == 4?'button-active button':'button'" v-on:click="toTab(4)">
+              <button class="button step-three" :class="index == 4?'button-active button':'button'">
                 {{_("STEP 4")}}
               </button>
               <span class="segmented-highlight"></span>
@@ -142,23 +142,23 @@
               </div>
               <div class="row" style="margin-bottom: 15px">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("NEXT STEP")}}</div>
+                  <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("NEXT")}}</div>
                 </div>
               </div>
             </div>
             <div id="step-2" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-else-if="index == 3">
-              <device-gateway-setting-component :gateway="gateway" :guid="guid" :type="2" ref="childRef" @child-event="handleChildEvent"></device-gateway-setting-component>
+              <device-gateway-setting-component :gateway="gateway" :guid="guid" :type="2" ref="childRef" @child-event="handleChildEvent" :ismobile="false" :config="gateway_config"></device-gateway-setting-component>
               <div class="row" style="margin-bottom: 15px;margin-top: 15px;">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="toTab(4)">{{_("NEXT STEP")}}</div>
+                  <div class="button button-fill button-save" v-on:click="toTab(4)">{{_("NEXT")}}</div>
                 </div>
               </div>
             </div>
             <div id="step-3" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-else-if="index == 2">
-              <device-network-component :type="2" ref="deviceNetworkChildRef"></device-network-component>
+              <device-network-component :type="2" :gateway="gateway" ref="deviceNetworkChildRef" :guid="guid" @child-event="handleChildEvent" :config="gateway_config"></device-network-component>
               <div class="row" style="margin-bottom: 15px;margin-top: 15px;">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("NEXT STEP")}}</div>
+                  <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("NEXT")}}</div>
                 </div>
               </div>
             </div>
@@ -178,9 +178,9 @@
                       <div class="signal-wave wave3"></div>
                     </div>
                   </div>
-                  <div class="gateway-info-show display-flex flex-direction-row justify-content-center align-content-center align-items-center" style="padding-left: 15px;padding-right: 15px;width: 320px;">
-                    <p class="display-flex"><div class="mobmob" style="background-position:left top"></div><span>{{_("means online.")}}</span></p>
-                    <p class="display-flex"><div class="mobmob"></div><span>{{_("means offline.")}}</span></p>
+                  <div class="gateway-info-show display-flex flex-direction-row justify-content-center align-content-center align-items-center" style="width: 100%;">
+                    <p class="display-flex"><div class="mobmob" style="background-position:left top;;"></div><span>{{_("Means Online")}} </span></p>
+                    <p class="display-flex"><div class="mobmob" style="margin-left: 10px;"></div><span>{{_("Means Offline")}}</span></p>
                   </div>
                   <div class="timeline">
                     <div class="timeline-item" v-for="item in statusList" :key="item.id">
@@ -194,7 +194,7 @@
                         <i class="icon material-icons text-color-green" style="background:#4cd964;border-radius: 50%;color: #fff!important;" v-if="item.status == 1">check_circle</i>
                         <i class="icon material-icons text-color-red" style="background:#ff3b30;border-radius: 50%;color: #fff!important;" v-if="item.status == 2">cancel</i>
                       </div>
-                      <div class="timeline-item-content" style="word-break:break-all;word-wrap:break-word;">
+                      <div class="timeline-item-content" style="white-space:normal;word-wrap:break-word;">
                         {{_(item.title)}}
                       </div>
                     </div>
@@ -203,7 +203,7 @@
               </div>
               <div class="row" style="margin-bottom: 15px;margin-top: 15px;">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("Compelete")}}</div>
+                  <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("Complete")}}</div>
                 </div>
               </div>
             </div>
@@ -245,12 +245,13 @@
         components: {
           // components
           DeviceGatewaySettingComponent: window.device_gateway_setting_component,
-          DeviceNetworkComponent: window.device_network_component,
+          DeviceNetworkComponent: window.device_network_list_component,
           DeviceWifiSettingComponent : window.device_wifi_setting_component
         },
         data: {
           // data
           loadindex: false,
+          gateway_config : '',
           wifiStatus : 2,
           deviceNetworkStatus : false, //control device network is next step
           bluetooth_status: 1,
@@ -278,7 +279,7 @@
           gateway: '',
           device_name : device_name,
           gatewayInfoShow : '',
-          statusTitle : 'Gateway Conecting...',
+          statusTitle : 'Gateway Connecting...',
           statusList : [
             {
               title : 'Check Gateway Network Status.',
@@ -291,7 +292,7 @@
               id : 2,
             },
             {
-              title : 'Device Gateway ID:',
+              title : 'Device Gateway ID: ',
               status : 0,
               id : 3,
             },
@@ -301,7 +302,7 @@
               status : 0,
             },
             {
-              title : 'To skip,please click the below button to check at home page.',
+              title : 'To skip, please click the below button to check at home page.',
               id : 5,
               status : 4,
               num : 0
@@ -315,6 +316,17 @@
           },
         },
         methods: {
+          handleChildEvent(data) {
+            console.log('data', data);
+          },
+          initGatewayConfig(){
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            subdevices.forEach((item)=>{
+              if(item.device == guid){
+                this.gateway_config = item.config;
+              }
+            })
+          },
           // methods
           async init(){
             //gateways value
@@ -504,7 +516,7 @@
                     if(res.data){
                       let data = res.data.device_gateway;
                       this.statusList[2].status = 1;
-                      this.statusList[2].title = _('Device Gateway ID:')+data.name;
+                      this.statusList[2].title = _('Device Gateway ID: ')+data.name+'.';
                     }
                   });
                 }catch(error){
@@ -537,7 +549,7 @@
                           //this.statusList[4].status = 4;
                           //this.statusList[4].title = `gateway已連接設備數為:${this_count}`;
                           if(targetDeviceNum == this_count){
-                            this.statusList[3].title = _('Compelete');
+                            this.statusList[3].title = _('Complete');
                             this.statusList[3].status = 1;
                             //delete the list 
                             this.statusList.splice(4,1);
@@ -685,15 +697,19 @@
               return
             }
             if(index == 3){
-              if(this.deviceNetworkStatus){
-                this.$refs.deviceNetworkChildRef.toggleSort();
-                return
-              }
+              // if(this.deviceNetworkStatus){
+              //   this.$refs.deviceNetworkChildRef.toggleSort();
+              //   return
+              // }
+              this.$refs.deviceNetworkChildRef.checkNetwork();
+              return
             }
             //if index == 4 ,show the connect status
             if (index == 4) {
               //update the state of gateways
               //first send the check command to the gateways
+              //post the check network to erp
+              //this.$refs.deviceNetworkChildRef.checkNetwork();
               this.$refs.childRef.syncGateways();
               return
             }
@@ -757,6 +773,7 @@
             },2*1000)
             return
           }
+          this.initGatewayConfig();
           //this.checkIfOnline();
           //this.checkIsGatewaysValue();
           emitter.off('loadindex');
@@ -793,8 +810,38 @@
           emitter.off('network/status');
           emitter.on('network/status',(data)=>{
             if(data.code == 1){
-              this.index = 3;
+              //this.index = 3;
               emitter.off('network/status');
+            }
+          })
+          emitter.off('network/post');
+          emitter.on('network/post',(data)=>{
+            console.log("data",data);
+            if(data.code == 1){
+              let list = data.networkList.map((item)=>{
+                return item.index;
+              })
+              let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+              subdevices.forEach((item)=>{
+                if(item.device == this.guid){
+                  item.config = list.join(',');
+                  this.gateway_config = list.join(',');
+                }
+              })
+              http2.request(`/api/resource/Profile/${erp.info.profile.name}`,{
+                method : 'PUT',
+                serializer : 'json',
+                data : {
+                  profile_subdevice : subdevices
+                }
+              }).then((res)=>{
+                
+                erp.info.profile.profile_subdevice = subdevices;
+                this.index = 3;
+                emitter.off('network/status');
+              }).catch((err)=>{
+                app.dialog.alert(err);
+              })
             }
           })
           //this.checkIotStatus();

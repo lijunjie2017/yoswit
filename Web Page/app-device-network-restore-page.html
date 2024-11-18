@@ -307,7 +307,7 @@
                 const hexid = guid.substring(guid.length - 6, guid.length - 2);
                 const model = erp.doctype.device_model[hexid.toUpperCase()];
                 item.deviceNetworkSize = model.device_network_size ? model.device_network_size : 1;
-                if (!model && !model.image) {
+                if (model && model.image) {
                   item.image = model.image;
                 } else {
                   item.image = '';

@@ -50,7 +50,7 @@ window.device_gateway_setting_component = {
                           <div class="item-title-row">
                               <div class="item-title display-flex justify-content-flex-start align-content-center" :signal="item.signal" >
                               <div class="signal" v-if="!ismobile"></div>
-                              <span>{{ item.device_model }} (v{{item.firmware}})</span>
+                              <span>{{ item.device_model }} ({{item.firmware}})</span>
                               <i class="material-icons text-color-orange" v-if="item.default_connect === 1">check_box</i>
                               <i class="material-icons" style="color:red;" v-if="item.checked && !item.link">link_off</i>
                               <i class="material-icons" style="color:green;" v-if="item.checked && item.link">link</i>
@@ -71,7 +71,7 @@ window.device_gateway_setting_component = {
     </div>
   </div>
   `,
-  props: ['gateway', 'guid','type','ismobile'],
+  props: ['gateway', 'guid','type','ismobile','config'],
   data: () => {
     return {
       profileDevice: [],
@@ -105,11 +105,13 @@ window.device_gateway_setting_component = {
             let profile_subdevice = rs.data.data.profile_subdevice;
             //in order to get the firmware on gateways list
             profile_device.forEach(item=>{
-                for(let i in window.profile_subdevice){
-                    if(item.name === window.profile_subdevice[i].profile_device){
-                        item.firmware = window.profile_subdevice[i].firmware;
-                    }
-                }
+              item.firmware = window.peripheral[item.device].prop.firmware?window.peripheral[item.device].prop.firmware:'';
+                // for(let i in profile_subdevice){
+                //     if(item.name === profile_subdevice[i].profile_device){
+                //         //item.firmware = window.profile_subdevice[i].firmware;
+                //         item.firmware = window.peripheral[item.device].prop.firmware?window.peripheral[item.device].prop.firmware:'';
+                //     }
+                // }
             })
             console.log(profile_device);
             this.profileDevice = this.groupNetworkDevice(profile_device, profile_subdevice);
@@ -147,18 +149,28 @@ window.device_gateway_setting_component = {
     },
     groupNetworkDevice: function (profileDevice, profileSubdevice) {
       const map = {};
+      console.log("this.config",this.config);
       profileDevice.forEach((device) => {
         device.link = false;
         device.signal = 0;
         device.network_id = device.network_id || '0';
         const groupName = device.network_id || '0';
+        console.log("groupName",groupName);
+        let status = this.config.split(',').indexOf(groupName.toString()) != -1;
+        console.log("groupName",status);
         if (!map[groupName]) {
           map[groupName] = [];
         }
 
         map[groupName].push(device);
       });
-
+      for(let o in map){
+        let status = this.config.split(',').indexOf(o.toString()) != -1;
+        if(!status && o != 0){
+          delete map[o];
+        }
+      }
+      console.log("map",map)
       const keys = Object.keys(map).sort((a, b) => {
         a = parseInt(a);
         b = parseInt(b);
@@ -241,12 +253,7 @@ window.device_gateway_setting_component = {
       const action = item.checked;
       //const action = item.checked;
       if(action){
-        app.dialog.confirm('Do you confirm to remove the device from the gateway '+this.gateway+'?', ()=>{
-            //this.postDataToErp(item,action);
-            item.gateway = '';
-        }, function(){
-            item.checked = true;
-        });
+        item.gateway = '';
       }else{
         item.checked = false;
         item.gateway = this.gateway;
@@ -313,7 +320,15 @@ window.device_gateway_setting_component = {
             //item.default_connect = 1;
           }
         });
-        this.profileData.profile_device = this.profileDevice.filter(item=>!item.isGroup);
+        this.profileData.profile_device.forEach(item=>{
+          this.profileDevice.forEach(kitem=>{
+            if(item.name == kitem.name && kitem.checked){
+              item.default_connect = kitem.default_connect;
+              item.gateway = kitem.gateway
+            }
+          })
+        })
+        //this.profileData.profile_device = this.profileDevice.filter(item=>!item.isGroup);
       }
       //check num of default network
       default_connect_count = this.profileDevice.filter(item=>item.default_connect == 1 && !item.isGroup && item.device_model == "YO105");
@@ -431,7 +446,7 @@ window.device_gateway_setting_component = {
         let checklist = [];
         let group_list = this.profileDevice.filter((ele)=>{return (ele.isGroup && parseInt(ele.network_id )> 0 )});
         this.profileDevice.forEach((kitem,kindex)=>{
-            if(kitem.default_connect == 1 && parseInt(kitem.network_id )> 0){
+            if(kitem.default_connect == 1 && parseInt(kitem.network_id )> 0 && kitem.checked){
                 default_connect_count++;
             }
             if(kitem.checked && !kitem.isGroup){
