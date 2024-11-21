@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="page-content">
+    <div class="page-content notify">
       {% raw %}
       <div id="vue-app" v-cloak>
         <div class="main-box">
@@ -37,10 +37,9 @@
           </div>
           <div class="tabs">
             <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="block-title" style="overflow: initial">{{_("Link Account to Google")}}</div>
               <div class="card">
-                <div class="card-header" style="font-weight: 500; font-size: 18px;text-align: center;">{{_("Friendly Reminder")}}</div>
                 <div class="card-content card-content-padding">
-                  <p style="font-size: 16px;white-space:normal;word-wrap:break-word;">{{_('The current operation is to sync the functionality of controlling Bluetooth devices in the app with Google Home. Please be aware.')}}</p>
                   <div class="step-info">
                     <div class="step-item display-flex align-items-center justify-content-start">
                       <p>{{_('1. Start Google Home.')}}</p>
@@ -85,37 +84,9 @@
                         </ul>
                       </div>
                     </div>
-                    <div class="step-item">
-                      <p>{{_('8. Enter your password.') }}</p>
-                      <div class="list no-hairlines-md">
-                        <ul>
-                          <li class="item-content item-input">
-                            <div class="item-media align-self-flex-start">
-                              <i class="icon material-icons setting-list-icon p-1">key</i>
-                            </div>
-                            <div class="item-inner">
-                              <div class="item-title item-label">Mob-Mob {{ _('Password')}}</div>
-                              <div class="item-input-wrap">
-                                <input type="text" id="google_password" name="password" v-model="password" required :placeholder="passwordTip" />
-                                <i
-                                  class="material-icons"
-                                  style="
-                                    position: absolute;
-                                    right: 0px;
-                                    top: 0px;
-                                    padding: 10px 0px 10px 10px;
-                                    font-size: 20px;
-                                    z-index: 999999;
-                                  "
-                                  func="show_hide_password_field"
-                                  >visibility</i
-                                >
-                                <span class="input-clear-button"></span>
-                              </div>
-                            </div>
-                          </li>
-                        </ul>
-                      </div>
+                    <div class="step-item display-flex align-items-center justify-content-start">
+                      <p>{{_('8. Enter your app login password and click the sync button.') }}</p>
+                      <a class="button button-fill button-save" style="width: 110px;height: 50px;margin-left: 15px;font-size: 14px;" v-on:click="save(1)">{{_("Sync")}}</a>
                     </div>
                     <div class="step-item">
                       <p>{{_('9. Tap Next to sync with Google.')}}</p>
@@ -188,7 +159,7 @@
               </div>
             </div>
             <div id="step-2" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
-              <div class="block-title" style="overflow: initial">{{_("Sync To Google")}}</div>
+              <div class="block-title" style="overflow: initial">{{_("Choose Device to Sync to Google")}}</div>
               <div class="list media-list no-margin list-group">
                 <ul>
                   <div v-for="item in deviceList" :key="item.name">
@@ -223,6 +194,9 @@
                 </div>
               </div>
             </div>
+          </div>
+          <div class="tabs">
+
           </div>
         </div>
         <div class="popup demo-popup-swipe-handler" ref="popupSwipeHandler">
@@ -312,9 +286,7 @@
           },
           async init() {
             let key = `google_password_${erp.userId}`;
-            console.log('key',key);
-            console.log('db.get(key)',await db.get(key));
-            this.password = await db.get(key);
+            // this.password = await db.get(key);
             console.log('this.password',this.password);
             if (!this.password) {
               this.password = app.utils.id('xxxxxx', '0123456789');
@@ -337,6 +309,34 @@
             temporaryArry.push(profile_list_temp[currentIdx]);
             profile_list_temp.splice(currentIdx, 1);
             this.profile_list = temporaryArry.concat(profile_list_temp);
+            this.checkIfHaveGateway();
+          },
+          async checkIfHaveGateway(){
+            //app.dialog.preloader();
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            let checkStatus = true;
+            let gatewayCount = 0;
+            let gatewayList = devices.filter((item) => item.device_mode === 'Gateway');
+            let gatewayNameList = [];
+            gatewayList.forEach((item, index) => {
+              if(item.gateway){
+                gatewayNameList.push(item.gateway);
+              }
+            })
+            //first check if have gateway, may be more than one
+            //second check device gateway is same as profile gateway
+            console.log('gatewayNameList',gatewayNameList);
+            devices.forEach((item, index) => {
+              if(item.device_mode != 'Gateway'){
+                if(gatewayNameList.indexOf(item.gateway) != -1 && gatewayNameList.length > 0){
+                  gatewayCount++;
+                }
+              }
+            })
+            console.log('gatewayCount',gatewayCount);
+            // if(!gatewayCount){
+            //   app.dialog.confirm(``,)
+            // }
           },
           nextStep(index) {
             if (index == 1) {
@@ -435,6 +435,7 @@
                       device.image = modelList[i].image;
                       if(modelList[i].sync_to_google != 1){
                         device.hidden = true;
+                        device.unsync_to_google = 1;
                       }
                     }
                   }
@@ -444,7 +445,7 @@
             });
             this.deviceList = cloneDeep(list);
           },
-          async save() {
+          async save(type) {
             if(this.$popupSwipeHandler){
               this.$popupSwipeHandler.close();
             }
@@ -461,7 +462,7 @@
                   system: erp.setting.app_api_url,
                   key: '111111',
                   email: users[users.current].usr,
-                  password: this.password?this.password:'111111',
+                  password: users[users.current].pwd,
                   profile: erp.info.profile.name,
                 },
                 serializer: 'urlencoded',
@@ -470,7 +471,11 @@
                 },
               });
               app.dialog.close();
-              this.syncProfileSubdevice();
+              if(!type){
+                this.syncProfileSubdevice();
+              }else{
+                app.dialog.alert('Sync Successfully.');
+              }
               //this.getProfileSubdeviceList();
               //$update();
             } catch (error) {
@@ -485,7 +490,7 @@
             console.log('password_val',password_val);
             //save in local
             let key = `google_password_${erp.userId}`;
-            db.set(key, password_val);
+            // db.set(key, password_val);
             let this_name = `${erp.appId}-${users[users.current].usr}`;
             let user_url = `/api/resource/User Settings/${encodeURI(this_name)}`;
             let thisList = this.deviceList.filter((item) => item.isTitle != true);
@@ -518,8 +523,16 @@
                   break;
                 }
               }
-              mainView.router.refreshPage();
-              app.dialog.alert('Sync Successfully.');
+              //mainView.router.refreshPage();
+              mainView.router.back();
+              const toast = app.toast.create({
+                text: 'Sync Successfully.',
+              });
+              toast.open();
+              setTimeout(()=>{
+                toast.close();
+              },1000)
+              
           },
           async syncProfileSubdevice() {
             app.dialog.preloader();
@@ -537,6 +550,16 @@
               });
               app.dialog.close();
               this.index = 2;
+              setTimeout(()=>{
+                const notifyDiv = document.querySelector('.notify');
+                console.log('notifyDiv',notifyDiv);
+                if(notifyDiv){
+                  console.log('notifyDiv.scrollTop',notifyDiv.scrollTop);
+                  notifyDiv.scrollTo(0,0);
+                }
+              },200)
+              
+              
             } catch (error) {
               app.dialog.close();
               app.dialog.alert(error);

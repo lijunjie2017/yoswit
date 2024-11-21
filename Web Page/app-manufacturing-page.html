@@ -1,0 +1,187 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Manufacturing') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only manufacturing-btn-refresh" func="manufacturing_clean_discovery_list">
+            <i class="icon material-icons">replay</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div style="background-color: #ccc">
+            <div class="row no-gap">
+              <div class="col-50" style="padding: 0px">
+                <select
+                  name="manufacturing-batch"
+                  style="
+                    font-size: 16px;
+                    background-color: #ccc;
+                    width: 100%;
+                    font-weight: bold;
+                    max-height: 50px;
+                    line-height: 50px;
+                    padding: 0px 10px;
+                    -webkit-border-top-right-radius: 0px;
+                    -webkit-border-bottom-right-radius: 0px;
+                    -moz-border-radius-topright: 0px;
+                    -moz-border-radius-bottomright: 0px;
+                    border-top-right-radius: 0px;
+                    border-bottom-right-radius: 0px;
+                  "
+                >
+                  <option value="">- 选择批次 -</option>
+                  <option v-for="batch in batchs" :value="batch.batch_id">{{ batch.batch_id }}</option>
+                </select>
+              </div>
+              <div class="col-50" style="padding: 0px">
+                <select
+                  name="manufacturing-model"
+                  style="
+                    font-size: 16px;
+                    background-color: #ccc;
+                    width: 100%;
+                    font-weight: bold;
+                    max-height: 50px;
+                    line-height: 50px;
+                    padding: 0px 10px;
+                    -webkit-border-top-left-radius: 0px;
+                    -webkit-border-bottom-left-radius: 0px;
+                    -moz-border-radius-topleft: 0px;
+                    -moz-border-radius-bottomleft: 0px;
+                    border-top-left-radius: 0px;
+                    border-bottom-left-radius: 0px;
+                  "
+                >
+                  <option value="">- 选择型号 -</option>
+                  <option v-for="model in models" :value="model.model_code">{{ model.model_code }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="row no-gap">
+              <div class="col-40" style="padding: 0px">
+                <label
+                  class="item-checkbox item-checkbox-icon-start item-content"
+                  style="max-height: 50px; line-height: 50px"
+                  func="manufacturing_toggle_show_done"
+                >
+                  <input type="checkbox" name="checkbox-manufacturing-show-done" value="show-done" />
+                  <i class="icon icon-checkbox" style="float: left; margin: 15px 5px 15px 10px"></i>
+                  <div class="item-inner" style="float: left">
+                    <div class="item-title">显示已生产设备</div>
+                  </div>
+                </label>
+              </div>
+              <div class="col-40" style="padding: 0px">
+                <label class="item-checkbox item-checkbox-icon-start item-content" style="max-height: 50px; line-height: 50px">
+                  <input
+                    type="checkbox"
+                    name="checkbox-manufacturing-show-all"
+                    value="show-all"
+                    changefunc="manufacturing_toggle_show_all"
+                  />
+                  <i class="icon icon-checkbox" style="float: left; margin: 15px 5px 15px 10px"></i>
+                  <div class="item-inner" style="float: left">
+                    <div class="item-title">显示遥远设备</div>
+                  </div>
+                </label>
+              </div>
+              <div class="col-20" style="padding: 0px">
+                <a
+                  style="max-height: 50px; line-height: 50px; -webkit-border-radius: 0px; -moz-border-radius: 0px; border-radius: 0px"
+                  func="controller_toggle_manufacturing"
+                  class="col button button-fill button-large manufacturing-btn-start"
+                  >开始</a
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="list media-list no-margin manufacturing-found-list" style="margin-top: 0px; padding-top: 0px">
+            <ul></ul>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { name, sub_name } = $f7route.query;
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          batchs: [],
+          models: [],
+        },
+        watch: {},
+        mounted() {
+          this.init();
+        },
+        methods: {
+          init() {
+            let this_batchs = cloneDeep(erp.doctype.device_batch);
+            let this_models = cloneDeep(erp.doctype.device_model);
+            let this_batchs_list = [];
+            let this_models_list = [];
+            for (let i in this_batchs) {
+              this_batchs_list.push(this_batchs[i]);
+            }
+            for (let i in this_models) {
+              this_models_list.push(this_models[i]);
+            }
+            console.log('this_batchs_list', this_batchs_list);
+            console.log('this_models_list', this_models_list);
+            this.batchs = this.sortByKey(this_batchs_list, 'batch_id');
+            this.models = this.sortByKey(this_models_list, 'model_code');
+          },
+          sortByKey(arr, key) {
+            return arr.sort((a, b) => {
+              const aValue = typeof a[key] === 'string' && !isNaN(a[key]) ? Number(a[key]) : a[key];
+              const bValue = typeof b[key] === 'string' && !isNaN(b[key]) ? Number(b[key]) : b[key];
+              if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return aValue - bValue;
+              }
+              return aValue.toString().localeCompare(bValue.toString());
+            });
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

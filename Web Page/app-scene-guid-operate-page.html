@@ -599,6 +599,7 @@
                     v-for="(item,index) in roomList"
                     :key="item.name"
                     :style="{'background-color':'#253b4f'}"
+                    v-if="!item.isHidden"
                   >
                     <div class="scnen-template-title">
                       <p>{{tran(item.title)}}</p>
@@ -730,7 +731,6 @@
                                 <div
                                   class="button button-raised button-big circle"
                                   v-if="subItem.mainType == 4"
-                                  v-on:click="chooseTemplate(subItem)"
                                 >
                                   <div>
                                     <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important">touch_app</i>
@@ -739,7 +739,6 @@
                                 <div
                                   class="button button-raised button-big circle"
                                   v-if="subItem.mainType == 5"
-                                  v-on:click="chooseTemplate(subItem)"
                                 >
                                   <div>
                                     <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important"
@@ -750,7 +749,6 @@
                                 <div
                                   class="button button-raised button-big circle"
                                   v-if="subItem.mainType == 6"
-                                  v-on:click="chooseTemplate(subItem)"
                                 >
                                   <div>
                                     <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important"
@@ -1671,28 +1669,7 @@
             // });
             //this.pickObj.setValue(["RCU Scene Button"])
           },
-          initDevices() {
-            let roomList = cloneDeep(erp.info.profile.profile_room);
-            //check if have the room check
-            let roomName;
-
-            if (this.scenePostId) {
-              this.conditionsMap.forEach((item) => {
-                if (item.ischeck) {
-                  roomName = item.name;
-                }
-              });
-            }
-            roomList.forEach((roomItem) => {
-              if (roomName == roomItem.name) {
-                roomItem.ischeck = true;
-                roomItem.isHidden = false;
-              } else {
-                roomItem.ischeck = false;
-                roomItem.isHidden = true;
-              }
-            });
-            this.roomList = roomList;
+          initRoomDevices(){
             let devices = cloneDeep(erp.info.profile.profile_subdevice);
             let scenes = cloneDeep(erp.info.scene);
             let sceneMap;
@@ -1702,7 +1679,6 @@
                 sceneMap = scenes[i];
               }
             }
-
             //init the profile_device
             let profile_devices = cloneDeep(erp.info.profile.profile_device);
             devices.forEach((item) => {
@@ -1732,9 +1708,7 @@
                   item.isload = true;
                   console.log('item.mainType', item.mainType);
                   if (item.mainType == 7 || item.mainType == 2) {
-                    setTimeout(() => {
-                      this.initRangeBar(item.device, item.device_button_group, item.ref);
-                    }, 500);
+                    this.initRangeBar(item.device, item.device_button_group, item.ref);
                   }
                 }
               });
@@ -1812,6 +1786,31 @@
               }
             });
             this.subdevices = devices;
+            return devices
+          },
+          initDevices() {
+            let roomList = cloneDeep(erp.info.profile.profile_room);
+            //check if have the room check
+            let roomName;
+
+            if (this.scenePostId) {
+              this.conditionsMap.forEach((item) => {
+                if (item.ischeck) {
+                  roomName = item.name;
+                }
+              });
+            }
+            roomList.forEach((roomItem) => {
+              if (roomName == roomItem.name) {
+                roomItem.ischeck = true;
+                roomItem.isHidden = false;
+              } else {
+                roomItem.ischeck = false;
+                //roomItem.isHidden = true;
+              }
+            });
+            this.roomList = roomList;
+            let devices = this.initRoomDevices();
             //filter the room devices
             let roomMap = {};
             this.roomList.forEach((item) => {
@@ -2033,6 +2032,7 @@
               }
             });
             this.index = 10;
+            this.initRoomDevices();
             this.activeStepList();
           },
           switchOneOnly() {
@@ -2293,6 +2293,7 @@
                 if (scenes[i].image) {
                   this.sceneImage = 'url(' + scenes[i].image + ')';
                   this.uploadImage = scenes[i].image;
+                  $('input[name="banner"]').val(scenes[i].image);
                 }
                 if (isset(scenes[i].condition)) {
                   try {
@@ -4104,6 +4105,10 @@
                 app.dialog.alert(`${_('Scene name must be filled in')}`);
                 return;
               } else {
+                console.log($('input[name="banner"]').val());
+                if ($('input[name="banner"]').val()) {
+                  this.uploadImage = this.uploadImage ? this.uploadImage : `${erp.setting.app_api_url}${$('input[name="banner"]').val()}`;
+                }
                 //app.dialog.preloader(`${_("Rcu Connecting")}`);
                 if (this.templateName == 'Multiway Switch') {
                   this.index = 8;
@@ -4687,7 +4692,7 @@
                   changed: this.rangeChangeFunDimming,
                 },
               });
-            }, 200);
+            }, 300);
           },
           rangeChangeFunDimming(element) {
             console.log(element);
@@ -4764,6 +4769,7 @@
           async tindyCommandAndPostErp() {
             //tindy the command and save in erp
             app.dialog.preloader();
+            
             let devices = this.subdevices.filter((item) => item.chooseStatus);
             // devices.forEach(item=>{
             //   let { device_button_group, name, device, ref,device_mode ,device_model} = item;
@@ -4773,6 +4779,7 @@
 
             // })
             //save in the action
+            debugger
             try {
               let post_scene_data = {
                 title: this.sceneName,

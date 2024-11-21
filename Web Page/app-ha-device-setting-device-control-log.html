@@ -51,6 +51,7 @@
                     <span class="text-muted size-12" style="margin-left: 5px;" v-if="log_item.device_mode == 'Curtain Switch'">
                       {{log_item.command_type.toUpperCase()}}
                     </span>
+                    <span class="text-muted size-12" v-if="log_item.command_type == 'PAUSE'">{{_("PAUSED")}}</span>
                   </div>
                 </div>
               </div>
@@ -139,6 +140,9 @@
                       item.room_temperature = objMap.room_temperature;
                     }
                     if(item.device_mode == 'Curtain Switch'){
+                      item.is_show_status = false;
+                    }
+                    if(item.command_type == 'PAUSE'){
                       item.is_show_status = false;
                     }
                     item.device_model = device_type_map.device_type;

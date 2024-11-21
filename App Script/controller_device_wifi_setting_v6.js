@@ -131,7 +131,7 @@ window.device_wifi_setting_component = {
   </div>
   </div>
   `,
-  props: ['gateway', 'guid', 'type', 'device_name'],
+  props: ['gateway', 'guid', 'type', 'device_name','slot_index'],
   data: () => {
     return {
       // data
@@ -252,7 +252,9 @@ window.device_wifi_setting_component = {
           clearTimeout(this.$preloaderHide);
         }
         app.preloader.hide();
-        app.dialog.alert(_('Connection timeout.Please check the SSID and password.'));
+        if(this.slot_index && this.slot_index == 1){
+          app.dialog.alert(_('Connection timeout. Please check the SSID and password.'));
+        }
       }, 1000 * 60);
       //emitter.off(will_topic);
       if(this.$wifiTopicFun){

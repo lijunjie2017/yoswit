@@ -765,6 +765,8 @@ window.Peripheral = (function() {
 		if(self.prop.hexModel == '0179'){
 			//change the time
 			self.prop.status.bluetooth[1] = '1970-01-01 00:00:00';
+			self.prop.status.mobmob[1] = '1970-01-01 00:00:00';
+			return;
 		}
 		//console.log("p.date",p.date)
 		self.prop.status.mobmob[1] = isset(p.date)?p.date:'1970-01-01 00:00:00';
@@ -1813,6 +1815,207 @@ const doMOBMOB = (gangs) => {
 			clearTimeout(self.timeout_timer);
 		});
 	});
+};
+Peripheral.prototype.gvDimming = function(gangs) {
+	const self = this;
+	//first can get the last sattus
+	let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
+	self.prop.status.control[0] = data[0];
+	for(let g of gangs){
+			if(g.gang<8 || g.gang>12) continue;
+			self.prop.status.control[0][g.gang] = g.value;
+	if(g.value > 0){
+			self.prop.status.last[0][g.gang] = g.value;
+	}
+	}
+	self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+
+	return new Promise((resolve, reject) => {
+		const action = {
+				func:'gvDimming',
+				args:[
+						gangs
+				],
+				callback: {
+						resolve:resolve,
+						reject:reject
+				}
+		}
+		self.queue.push(action);
+		if (!self.isExecuting) {
+			self.isExecuting = true;
+			self.execute();
+		}
+	});
+};
+Peripheral.prototype._gvDimming = function(gangs) {
+	const self = this;
+	let currentRoute = '';
+
+const doBLE = (gangs) => {
+	return new Promise((resolve, reject) => {
+	let service = "ff80", characteristic = "ff81";
+	let commands = [];
+	
+		for(let g of gangs){
+				if(g.gang<8 || g.gang>12) continue;
+				
+				self.prop.status.control[0][g.gang] = g.value;
+				data = g.value.toString(16).toUpperCase().pad("00");
+				data = `892${(g.gang-8)}${data}`;
+				commands.push({
+					service: service,
+					characteristic: characteristic,
+					data: data,
+				});
+		}
+		
+	self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+	self.onPropChanged();
+	
+					self.doMultipleWrite(commands).then((rs)=>{
+							resolve(1);
+					}).catch((error)=>{
+							reject(error);
+					});
+	});
+};
+
+const doMESH = (gangs) => {
+	return new Promise((resolve, reject) => {
+	const findGuid = self.findLead();
+
+	let service = "ff80", characteristic = "ff81";
+	let commands = [];
+	
+		for(let g of gangs){
+				if(g.gang<8 || g.gang>12) continue;
+				
+				self.prop.status.control[0][g.gang] = g.value;
+				data = g.value.toString(16).toUpperCase().pad("00");
+				data = `02${self.prop.mac_reverse_key}892${(g.gang-8)}${data}`;
+				commands.push({
+					service: service,
+					characteristic: characteristic,
+					data: data,
+				});
+		}
+		
+	self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+	self.onPropChanged();
+	
+	peripheral[findGuid].write(commands).then((rs)=>{
+		resolve(2);
+	}).catch((error)=>{
+		reject(error);
+	});
+});
+};
+
+
+const doMOBMOB = (gangs) => {
+	return new Promise((resolve, reject) => {
+	let findGuid = self.findDefaultConnect();
+	if(!isset(findGuid)){
+		findGuid = self.prop.guid;
+	}
+	let service = "ff80", characteristic = "ff81";
+	let commands = [];
+	
+		for(let g of gangs){
+				if(g.gang<8 || g.gang>12) continue;
+				
+				self.prop.status.control[0][g.gang] = g.value;
+				data = g.value.toString(16).toUpperCase().pad("00");
+				data = `02${self.prop.mac_reverse_key}892${(g.gang-8)}${data}`;
+				commands.push({
+					action: "write",
+					guid: findGuid,
+					mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+					service_id: service,
+					char_id: characteristic,
+					value: data.toLowerCase()
+				});
+		}
+		
+	self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+	self.onPropChanged();
+					let strList = self.prop.gateway.split('-');
+					let gatewayStr = '';
+					if(strList.length <= 2 ){
+							gatewayStr = self.prop.gateway.toLowerCase();
+					}else{
+							gatewayStr = self.prop.gateway;
+					}
+	core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
+		command:"Control",
+		function:"bleHelper.perform",
+		params:commands,
+		callback:"",
+		raw:""
+	}, 0, false, false, false).then(() => {
+		resolve(3);
+	}).catch(reject);
+});
+};
+
+
+return new Promise((resolve, reject) => {
+	Promise.race([
+		self.findRoute(),
+		self.timeout(10000).then(() => {
+				self.disconnect();
+			throw 7001;
+		})
+	])
+	.then((result) => {
+			currentRoute = result;
+					switch (currentRoute) {
+						case self.route.BLUETOOTH:
+								if(self.prop.connected){
+										return Promise.resolve();
+								}else{
+										return self.doConnect();
+								}
+								break;
+						case self.route.MOBMOB:
+								return Promise.resolve();
+								break;
+						case self.route.MESH:
+								return Promise.resolve();
+								break;
+						case self.route.NA:
+							bleHelper.openBluetooth();
+								break;
+					}
+	})
+	.then(() => {
+					switch (currentRoute) {
+						case self.route.BLUETOOTH:
+			return doBLE(gangs);
+								break;
+						case self.route.MOBMOB:
+			return doMOBMOB(gangs);
+								break;
+						case self.route.MESH:
+			return doMESH(gangs);
+								break;
+						case self.route.NA:
+							bleHelper.openBluetooth();
+								break;
+					}
+	})
+	.then((result) => {
+		resolve(result);
+	})
+	.catch((error) => {
+		reject(error);
+	})
+	.then(() => {
+		// Clean up resources
+		clearTimeout(self.timeout_timer);
+	});
+});
 };
 	Peripheral.prototype.dimming = function(gangs) {
 		const self = this;
@@ -3018,7 +3221,19 @@ const doMOBMOB = (gangs) => {
     	    }).then(()=>{
     	        
     	    })
-    	}else if(action.func=="doMusicPlayer"){
+    	}else if(action.func=="gvDimming"){
+				this._gvDimming(action.args[0]).then((rs) => {
+					action.callback.resolve(rs);
+					this.execute();
+			}).catch((error) => {
+					//app.dialog.alert(_(erp.get_log_description(error)));
+					action.callback.reject(error);
+					this.queue = [];
+					this.isExecuting = false;
+			}).then(()=>{
+					
+			})
+			}else if(action.func=="doMusicPlayer"){
 				this._doMusicPlayer().then((rs) => {
 						action.callback.resolve(rs);
 						this.execute();

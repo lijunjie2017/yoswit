@@ -33,7 +33,7 @@
           </div>
           <div class="tabs">
             <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
-              <device-wifi-setting-component :gateway="gateway" :guid="guid" :device_name="device_name" :type="2" ref="wifiChildRef"></device-wifi-setting-component>
+              <device-wifi-setting-component :gateway="gateway" :guid="guid" :device_name="device_name" :type="2" :slot_index="index" ref="wifiChildRef"></device-wifi-setting-component>
               <div class="card" style="display: none;">
                 <div class="card-header" style="text-align: center;">
                   <div class="wifi-img">
