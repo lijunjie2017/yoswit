@@ -407,13 +407,15 @@
               //post to erp data
               let profile_device = erp.info.profile.profile_device;
               let mac = core_utils_get_mac_address_from_guid(guid, false);
-              let url = `/api/resource/Profile%20Device/${device_name}`;
+              profile_device.forEach((item)=>{
+                if(item.name == device_name){
+                  item.gateway = `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`;
+                }
+              })
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
               let method = 'PUT';
               let data = {
-                parenttype: 'Profile',
-                parent: erp.info.profile.name,
-                parentfield: 'profile_device',
-                gateway: `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`,
+                profile_device : profile_device
               };
               await http.request(url, {
                 method: method,
@@ -421,12 +423,6 @@
                 serializer: 'json',
                 data: data,
                 contentType: 'application/json',
-              });
-              //refresh the local data for erp
-              profile_device.forEach((item) => {
-                if (item.name == device_name) {
-                  item.gateway = `${mac.toLowerCase()}-${this.setting.email}`;
-                }
               });
               //post to erp
               await iot_device_setting_sync_server(guid, null, null, true, {

@@ -24,7 +24,7 @@ window.device_network_list_component = {
                   </div>
                   <div class="item-content">
                     <div class="item-inner justify-content-start">
-                    <div v-if="type != 1" class="check-box display-flex justify-content-center align-items-center">
+                    <div v-if="type != 1 && !item.isdisabled" class="check-box display-flex justify-content-center align-items-center">
                     <i
                       class="material-icons text-color-white"
                       style="font-size: 30px"
@@ -41,15 +41,21 @@ window.device_network_list_component = {
                       >
                     </div>
                       <div
-                        class="h5 d-block text-color-white margin-left"
+                        class="h5 d-block text-color-white"
+                        :class="!item.isdisabled?'margin-left':''"
                         style="
                           text-shadow:
                             1px 1px 2px grey,
                             0 0 2px black,
                             0 0 2px grey;
+                          width:100%;
                         "
                       >
                         {{_(item.title)}}
+                        <div class="item-subtitle" v-if="item.isdisabled" mobmob="1">
+                          <div class="mobmob"></div>
+                          <div>{{tran(getGatewayInfo(item.relaxGateway).room_name)}} - {{getGatewayInfo(item.relaxGateway).name}}</div>
+                        </div>
                       </div>
                     </div>
                     <div class="item-after">
@@ -222,6 +228,29 @@ window.device_network_list_component = {
         () => {}
       );
     },
+    getGatewayInfo(gateway){
+      if(!gateway){
+        return {};
+      }
+      let name = '';
+      let room_name = '';
+      let profileDevices = cloneDeep(erp.info.profile.profile_device);
+      let device_name = '';
+      profileDevices.forEach((item)=>{
+        if(item.gateway == gateway && item.device_mode == 'Gateway'){
+          device_name = item.name;
+        }
+      })
+      let subdevices = erp.info.profile.profile_subdevice;
+      subdevices.forEach((item)=>{
+        if(item.profile_device == device_name){
+          name = tran(item.title);
+          room_name = tran(item.room_name);
+        }
+      })
+      console.log("name",name,"room_name",room_name);
+      return {name,room_name};
+    },
     initGatewayConfig() {
       //find other gateway config
       if (this.type == 1) {
@@ -257,9 +286,20 @@ window.device_network_list_component = {
             image: `https://dev.mob-mob.com/files/network.jpeg`,
             ischeck: this.config.split(',').indexOf(i.toString()) != -1 || checkStatus ? true : false,
             isdisabled: this.otherGatewayMapDeviceList.indexOf(i.toString()) != -1 ? true : false,
+            relaxGateway:this.findRelaxGateway(i)
           });
         }
       }
+    },
+    findRelaxGateway(network_id){
+      let devices = cloneDeep(erp.info.profile.profile_device);
+      let relaxGateway = '';
+      devices.forEach((item)=>{
+        if(parseInt(item.network_id) == parseInt(network_id)){
+          relaxGateway = item.gateway;
+        }
+      })
+      return relaxGateway;
     },
     async createNetwork() {
       //get the profile network

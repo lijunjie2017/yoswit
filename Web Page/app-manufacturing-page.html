@@ -102,7 +102,7 @@
               <div class="col-20" style="padding: 0px">
                 <a
                   style="max-height: 50px; line-height: 50px; -webkit-border-radius: 0px; -moz-border-radius: 0px; border-radius: 0px"
-                  func="controller_toggle_manufacturing"
+                  v-on:click="startProduce()"
                   class="col button button-fill button-large manufacturing-btn-start"
                   >开始</a
                 >
@@ -145,6 +145,42 @@
           init() {
             let this_batchs = cloneDeep(erp.doctype.device_batch);
             let this_models = cloneDeep(erp.doctype.device_model);
+            window.ble_batch = {};
+            for(let d in this_batchs){
+              window.ble_batch[this_batchs[d].device_hex_batch.toLowerCase()] = {
+                'name': this_batchs[d].batch_id,
+                'password': this_batchs[d].password?this_batchs[d].password:'000000',
+                'quantity': this_batchs[d].quantity?this_batchs[d].quantity:0,
+                'default': []
+              };
+              let default_config = this_batchs[d].device_default_config;
+              for(let cfg in default_config){
+                if(default_config[cfg]['device_command'] == 'SET_BLE_DEVICE_PASSWORD'){
+                  window.ble_batch[this_batchs[d].device_hex_batch.toLowerCase()]['default'].push('82'+'000000'.convertToHex()+default_config[cfg].description.convertToHex());
+                }else if(default_config[cfg]['device_command'] == 'SET_BLE_DEVICE_DEFAULT_PASSWORD'){
+                  window.ble_batch[this_batchs[d].device_hex_batch.toLowerCase()]['default'].push('88038354'+default_config[cfg].description.convertToHex());
+                }else{
+                  window.ble_batch[this_batchs[d].device_hex_batch.toLowerCase()]['default'].push(default_config[cfg].description);
+                }
+              }
+            }
+            window.ble_model = {};
+            for(let m in this_models){
+              window.ble_model[this_models[m].hexid.toLowerCase()] = {
+                'name': this_models[m].model_code,
+                'default': [],
+              };
+              let default_config = this_models[m].device_default_config;
+              for(let cfg in default_config){
+                if(default_config[cfg]['device_command'] == 'SET_BLE_DEVICE_PASSWORD'){
+                  window.ble_model[this_models[m].hexid.toLowerCase()]['default'].push('82'+'000000'.convertToHex()+default_config[cfg].description.convertToHex());
+                }else if(default_config[cfg]['device_command'] == 'SET_BLE_DEVICE_DEFAULT_PASSWORD'){
+                  window.ble_model[this_models[m].hexid.toLowerCase()]['default'].push('88038354'+default_config[cfg].description.convertToHex());
+                }else{
+                  window.ble_model[this_models[m].hexid.toLowerCase()]['default'].push(default_config[cfg].description);
+                }
+              }
+            }
             let this_batchs_list = [];
             let this_models_list = [];
             for (let i in this_batchs) {
@@ -168,6 +204,133 @@
               return aValue.toString().localeCompare(bValue.toString());
             });
           },
+          startProduce() {
+            console.log('startProduce');
+            let testButton = ha_control_template_render('3730623866363434633162321202191d','YO815d','On Off IR');
+            app.sheet
+              .create({
+                content: `
+            <div class="sheet-modal" style="height:auto">
+            	<div class="sheet-modal-inner">
+            		<div class="swipe-handler"></div>
+            		<div class="page-content">
+            			<div class="list list-strong list-outline list-dividers-ios">
+            				<ul>
+            					<li class="manufacturing-steps manufacturing-step1">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟1：連接設備</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step2">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟2：讀取Mac</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step3">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟3：讀取版本號</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step4">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟4：輸入密匙</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step5">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟5：更新設置名稱及設定</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step6">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟6：重啟中</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step7">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟7：確認更新設置名稱</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step8">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟8：上傳my.mob-mob.com伺服器</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+            					<li class="manufacturing-steps manufacturing-step9">
+            						<div class="item-content">
+            							<div class="item-inner">
+            								<div class="item-title">步驟9：上傳erp伺服器</div>
+            								<div class="item-after">
+            									<i class="icon material-icons">watch_later</i>
+            								</div>
+            							</div>
+            						</div>
+            					</li>
+                    ${testButton}
+            				</ul>
+            			</div>
+            			<div class="block manufacturing-remaining-time" style="text-align:center;">
+            				生產剩餘時間: <font>30</font>秒
+            			</div>
+            		</div>
+            	</div>
+            </div>
+        `,
+                on: {
+                  closed: function () {
+                    clearTimeout(manufacturing_produce_timer);
+                    if (manufacturing_processing) {
+                      app.dialog.alert('生產中斷，請重新生產！', runtime.appInfo.name);
+                    }
+                    manufacturing_processing = false;
+                  },
+                },
+                swipeToClose: true,
+                push: true,
+                backdrop: true,
+              })
+              .open();
+          },
         },
         computed: {},
         beforeDestroy() {},
@@ -185,3 +348,35 @@
     return $render;
   };
 </script>
+
+<style>
+  .box-btn {
+			margin-bottom: 7.5px;
+			margin-top: 7.5px;
+		}
+		.box-left {
+			border-left: 1px solid var(--f7-list-item-border-color);
+		}
+		.unit {
+			font-size: 11px;
+		}
+		.title-btn {
+			width: 100%;
+			margin-left: 5px;
+		}
+		.iaq-title-big {
+			font-size: 12px;
+		}
+		.main-btn .box-btn-img {
+			background-color: #3bb33b;
+		}
+    .device .swipeout-actions-right {
+			transform: translateX(200%);
+		}
+    .device .swipeout-actions-left {
+			transform: translateX(-200%);
+		}
+    .device-none {
+			display: none !important;
+		}
+</style>

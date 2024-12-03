@@ -423,8 +423,28 @@ window.iot_mode_setup_change_mode_init = function(params) {
                         }
                         if(selected == 'Curtain Motor Ac' || selected == 'Curtain Motor'){
                             post_data['device_button_group'] = 'OPENCLOSE UART';
+                            //should check original device_button_group
+                            if(button_group.includes('REVERSE')){
+                                //update the status
+                                let status =  peripheral[guid].prop.status.control[0][48];
+                                let last_status = peripheral[guid].prop.status.last[0][48];
+                                peripheral[guid].prop.status.control[0][48] = 100 - status*1;
+                                if(last_status > 1){
+                                    peripheral[guid].prop.status.last[0][48] = 100 - last_status*1;
+                                }
+                            }
                         }else if(selected == 'Curtain Motor Reverse Ac' || selected == 'Curtain Motor Reverse'){
                             post_data['device_button_group'] = 'OPENCLOSE UART REVERSE';
+                            //should check original device_button_group
+                            if(!button_group.includes('REVERSE')){
+                                //update the status
+                                let status =  peripheral[guid].prop.status.control[0][48];
+                                let last_status = peripheral[guid].prop.status.last[0][48];
+                                peripheral[guid].prop.status.control[0][48] = 100 - status*1;
+                                if(last_status > 1){
+                                    peripheral[guid].prop.status.last[0][48] = 100 - last_status*1;
+                                }
+                            }
                         }
                         subdevices.forEach(item=>{
                             if(subdevice_name == item.name){

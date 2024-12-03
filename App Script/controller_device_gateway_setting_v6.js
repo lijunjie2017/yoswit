@@ -71,7 +71,7 @@ window.device_gateway_setting_component = {
     </div>
   </div>
   `,
-  props: ['gateway', 'guid','type','ismobile','config'],
+  props: ['gateway', 'guid','type','ismobile','config','isShowUnassigned'],
   data: () => {
     return {
       profileDevice: [],

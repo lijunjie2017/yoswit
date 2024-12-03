@@ -480,7 +480,7 @@
               item.isHidden = false;
               //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
               let fliterList = ['YO780','YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
-              let fliterButtonGroup = ['RCU INPUT','ONOFF GANG',];
+              let fliterButtonGroup = ['RCU INPUT'];
               if(type == 2){
                 if(fliterList.indexOf(item.device_model) > -1){
                   item.isHidden = true;
@@ -490,6 +490,9 @@
                       item.isHidden = false;
                     }
                   }
+                }
+                if(item.device_button_group.startsWith('RCU INPUT')){
+                  item.isHidden = true;
                 }
               }
               let triggerFliterList = ['YO105','YO121-BLE-LE','YO121-AC'];

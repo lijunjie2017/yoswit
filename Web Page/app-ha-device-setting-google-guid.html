@@ -24,7 +24,7 @@
       {% raw %}
       <div id="vue-app" v-cloak>
         <div class="main-box">
-          <div class="block mx-3 margin-top">
+          <div class="block mx-3 margin-top" v-if="showStepStatus">
             <p class="segmented segmented-strong">
               <button class="button step-one" :class="index == 1?'button-active button':'button'" v-on:click="toTab(1)">
                 {{_("Step 1")}}
@@ -36,7 +36,19 @@
             </p>
           </div>
           <div class="tabs">
-            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+            <div id="step-0" class="view tab view-main" :class="[index == 0 ? 'tab-active' : '']" v-if="index == 0" style="width: 100%;height: 100%;margin-top: 50%;margin-bottom: -60px;">
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="toLink(1)">{{_("Use Mobile as Hub")}}</div>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="toLink(2)">{{_("Get a Bridge Device")}}</div>
+                </div>
+              </div>
+            </div>
+            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2 && showStepStatus">
               <div class="block-title" style="overflow: initial">{{_("Link Account to Google")}}</div>
               <div class="card">
                 <div class="card-content card-content-padding">
@@ -158,7 +170,7 @@
                 </div>
               </div>
             </div>
-            <div id="step-2" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+            <div id="step-2" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1 && showStepStatus">
               <div class="block-title" style="overflow: initial">{{_("Choose Device to Sync to Google")}}</div>
               <div class="list media-list no-margin list-group">
                 <ul>
@@ -253,6 +265,7 @@
         el: page.el.querySelector('#vue-app'),
         data: {
           index: 1,
+          showStepStatus : false,
           profile_list: [],
           user_email: '',
           password: '',
@@ -294,6 +307,7 @@
             this.user_email = users[users.current].usr;
             let active_profile = erp.info.profile.name;
             this.profileName = active_profile;
+            this.checkIfHaveGateway();
             let list = await http.request(
               encodeURI(`${erp.settings[erp.appId].app_api_url}/api/resource/Profile?fields=["*"]&limit=10000000`),
               {
@@ -309,14 +323,26 @@
             temporaryArry.push(profile_list_temp[currentIdx]);
             profile_list_temp.splice(currentIdx, 1);
             this.profile_list = temporaryArry.concat(profile_list_temp);
-            this.checkIfHaveGateway();
           },
           async checkIfHaveGateway(){
             //app.dialog.preloader();
             let devices = cloneDeep(erp.info.profile.profile_device);
+            let device_models = cloneDeep(erp.doctype.device_model);
             let checkStatus = true;
             let gatewayCount = 0;
-            let gatewayList = devices.filter((item) => item.device_mode === 'Gateway');
+            let gatewayList = [];
+            devices.forEach((item, index) => {
+              let modelMap = {};
+              for(let i in device_models){
+                if(device_models[i].model_code === item.device_model){
+                  modelMap = device_models[i];
+                  break;
+                }
+              }
+              if(modelMap.gateway){
+                gatewayList.push(item);
+              }
+            })
             let gatewayNameList = [];
             gatewayList.forEach((item, index) => {
               if(item.gateway){
@@ -325,18 +351,48 @@
             })
             //first check if have gateway, may be more than one
             //second check device gateway is same as profile gateway
+            console.log("gatewayList",gatewayList)
             console.log('gatewayNameList',gatewayNameList);
             devices.forEach((item, index) => {
-              if(item.device_mode != 'Gateway'){
+              let modelMap = {};
+              for(let i in device_models){
+                if(device_models[i].model_code === item.device_model){
+                  modelMap = device_models[i];
+                  break;
+                }
+              }
+              if(!modelMap.gateway){
                 if(gatewayNameList.indexOf(item.gateway) != -1 && gatewayNameList.length > 0){
                   gatewayCount++;
                 }
               }
             })
             console.log('gatewayCount',gatewayCount);
-            // if(!gatewayCount){
-            //   app.dialog.confirm(``,)
-            // }
+            if(!gatewayCount && gatewayList.length == 0){
+              this.index = 0;
+              this.showStepStatus = false;
+            }else if(!gatewayCount && gatewayList.length > 0){
+              //tips have gateway but no device
+              while (true) {
+                try {
+                  const dialog = app.dialog.close();
+                  if (!dialog) {
+                    break;
+                  }
+                } catch (e) {
+                  break;
+                }
+              }
+              app.dialog.confirm('The device is not connected to the network. Would you like to configure it?',()=>{
+                //get the gateway device
+                let gatewayDevice = gatewayList[0];
+                mainView.router.navigate(`/mobile-app/gateway-wifi-config?guid=${gatewayDevice.device}&device_name=${gatewayDevice.name}`);
+              },()=>{
+                mainView.router.back();
+              });
+            }else{
+              this.showStepStatus = true;
+            }
           },
           nextStep(index) {
             if (index == 1) {
@@ -391,6 +447,13 @@
               swipeHandler: '.swipe-handler'
             });
             this.$popupSwipeHandler.open();
+          },
+          toLink(type){
+            if(type == 1){
+              mainView.router.navigate('/mobile-app/ha-device-setting-iframe-page?type=1&title='+encodeURI('Use Mobile as Hub'));
+            }else{
+              mainView.router.navigate('/mobile-app/ha-device-setting-iframe-page?type=2&title='+encodeURI('Get a Bridge Device'));
+            }
           },
           async getProfileData() {
             //app.dialog.preloader();
@@ -539,12 +602,17 @@
             let this_name = `${erp.appId}-${users[users.current].usr}`;
             let thisList = this.deviceList.filter((item) => item.isTitle != true);
             let url = `/api/resource/Profile/${this.profileName}`;
+            let post_list = cloneDeep(thisList);
+            post_list.forEach((item, index) => {
+              delete item.hidden;
+            })
+            
             try {
               await http.request(url, {
                 responseType: 'json',
                 serializer: 'json',
                 data: {
-                  profile_subdevice: thisList,
+                  profile_subdevice: post_list,
                 },
                 method: 'PUT',
               });
@@ -570,7 +638,10 @@
     });
 
     $on('pageBeforeRemove', (e, page) => {});
-
+    //events
+    $on("pageAfterIn",()=>{
+      vueApp.init();
+    }) 
     $onUnmounted(() => {
       if (vueApp) {
         vueApp.$destroy();

@@ -4,13 +4,14 @@ window.manufacturing_periperal_inner_template = `
 		<div class="item-title-row">
 		    <div class="item-title" lang="en">{{model}}-{{name}}</div>
 		</div>
-		<div class="item-subtitle">{{id}}, RSSI: {{rssi}}</div>
+		<div class="item-subtitle">ID: {{id}}</div>
+        <div class="item-subtitle">RSSI: {{rssi}}</div>
 	</div>
 	<a class="button button-raised" func="manufacturing_start_produce" ref="{{id}}" style="float:right;line-height:50px;width:80px;padding:0px;margin-right:10px;background-color:#fff;">生產</a>
 </div>
 `;
 window.manufacturing_periperal_outer_template = `
-<li class="manufacturing-peripheral device" uuid="{{id}}" style="max-height:70px;padding:10px 5px;">
+<li class="manufacturing-peripheral device" uuid="{{id}}" style="max-height:75px;padding:10px 5px;">
     ${manufacturing_periperal_inner_template}
 </li>
 `;
@@ -139,6 +140,7 @@ window.manufacturing_start_produce = (params) => {
     }
     
     manufacturing_current_step = 0;
+    //let testButton = ha_control_template_render('6430326561623565353434651201791b','YO825k','On Off IR');
     app.sheet.create({
         content: `
             <div class="sheet-modal" style="height:auto">
@@ -146,7 +148,7 @@ window.manufacturing_start_produce = (params) => {
             		<div class="swipe-handler"></div>
             		<div class="page-content">
             			<div class="list list-strong list-outline list-dividers-ios">
-            				<ul>
+            				<ul class="manufacturing-steps-list">
             					<li class="manufacturing-steps manufacturing-step1">
             						<div class="item-content">
             							<div class="item-inner">
@@ -387,6 +389,7 @@ window.manufacturing_process_periperal = (id, cmd) => {
                 window[cmd[i].pre](id, 'start', null);
             }
             if(cmd[i].action=="connect"){
+                debugger
                 console.log("Manufacturing: Connect");
                 manufacturing_periperals[id].reconnect = true;
                 ble.connect(id, function(rs){
@@ -465,6 +468,7 @@ window.manufacturing_process_periperal = (id, cmd) => {
                         rs = parseFloat(rs.substring(2).convertToAscii());
                         manufacturing_periperals[id].firmware = rs;
                     }else{
+                        debugger
                         rs = null;
                     }
                     if(isset(cmd[i].post) && isset(window[cmd[i].post])){
@@ -483,6 +487,7 @@ window.manufacturing_process_periperal = (id, cmd) => {
                 }, cmd[i].delay*1000);
             }else{
                 if(isset(cmd[i].post) && isset(window[cmd[i].post])){
+                    debugger
                     window[cmd[i].post](id, 'done', null).then(() => {
                         manufacturing_update_step(id, 'done', null);
                         loop(i+1);
@@ -498,10 +503,25 @@ window.manufacturing_process_periperal = (id, cmd) => {
 window.manufacturing_update_step = (id, flag, info) => {
     if(flag=='start'){
         manufacturing_current_step++;
-        $('.manufacturing-step'+manufacturing_current_step).find('.icon').addClass('spin_icon').html('autorenew')
+        $('.manufacturing-step'+manufacturing_current_step).find('.icon').addClass('spin_icon').html('autorenew');
+        if(manufacturing_current_step==7){
+            // alert(manufacturing_current_step);
+            // alert(manufacturing_new_guid);
+            // debugger
+            //get the device template
+            let p = manufacturing_periperals[id];
+            manufacturing_periperals[id].guid = manufacturing_new_guid;
+            manufacturing_periperals[id].connected = false;
+            manufacturing_periperals[id].connecting = false;
+            debugger
+            let template = ha_control_template_render(manufacturing_new_guid, erp.doctype.device_model[$("select[name='manufacturing-model']").val().toUpperCase()].model_code,'',id);
+            //alert(template);
+            $('.manufacturing-steps-list').append(template);
+        }
     }else if(flag=='done'){
         $('.manufacturing-step'+manufacturing_current_step).addClass('done');
-        $('.manufacturing-step'+manufacturing_current_step).find('.icon').removeClass('spin_icon').attr('style','font-weight:bold;color:green').html('done')
+        $('.manufacturing-step'+manufacturing_current_step).find('.icon').removeClass('spin_icon').attr('style','font-weight:bold;color:green').html('done');
+        
     }
     if(isset(info)){
         $('.manufacturing-step'+manufacturing_current_step).find('.item-title').append(": "+info);
@@ -519,10 +539,13 @@ window.manufacturing_update_step = (id, flag, info) => {
 
 window.manufacturing_upload_to_my_mobmob = (id, args) => {
     manufacturing_update_step(id, 'start', null);
-
+    debugger
+    
     if(!isset(manufacturing_periperals[id])) return;
     
     let p = manufacturing_periperals[id];
+    
+    debugger
     let parameters = [];
     parameters.push('mac_address='+p.mac_address);
     parameters.push('uuid='+id);

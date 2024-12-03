@@ -25,6 +25,7 @@
                   :key="item.id"
                   :class="item.isActive?'button-active button':'button'"
                   v-on:click="toTab(item.id)"
+                  v-if="item.isShow"
                 >
                   {{_('Step')}} {{item.name}}
                 </button>
@@ -202,7 +203,24 @@
                   <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("previous")}}</div>
                 </div>
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="updateDeviceNetwork()">{{_("COMPLETE")}}</div>
+                  <div class="button button-fill button-save" v-on:click="updateDeviceNetwork()">{{_(step_title)}}</div>
+                </div>
+              </div>
+            </div>
+            <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+              <device-gateway-setting-component
+                :gateway="gateway"
+                :guid="targetGuid"
+                :type="2"
+                ref="childRef"
+                @child-event="handleChildEvent"
+                :ismobile="false"
+                :config="gateway_config"
+                :isShowUnassigned="true"
+              ></device-gateway-setting-component>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="syncGateway()">{{_("COMPLETE")}}</div>
                 </div>
               </div>
             </div>
@@ -230,11 +248,15 @@
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
+        components: {
+          DeviceGatewaySettingComponent: window.device_gateway_setting_component,
+        },
         data: {
           stepList: [
-            { id: 1, name: 1, isActive: true },
-            { id: 2, name: 2, isActive: false },
-            { id: 3, name: 3, isActive: false },
+            { id: 1, name: 1, isActive: true, isShow: true },
+            { id: 2, name: 2, isActive: false, isShow: true },
+            { id: 3, name: 3, isActive: false, isShow: true },
+            { id: 4, name: 4, isActive: false, isShow: false },
           ],
           index: 1,
           deviceList: [],
@@ -248,10 +270,23 @@
           targetPairingCommandList: [],
           blePostCommand: [],
           gateway: '',
+          isGateway: false,
+          step_title: 'COMPLETE',
+          gateway_config: '',
         },
         watch: {},
         mounted() {
           this.showDevices();
+          this.initStepList();
+          emitter.off('gateway/sync');
+          emitter.on('gateway/sync', (data) => {
+            if (data.code == 1) {
+              app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
+                window.globalUpdate = true;
+                mainView.router.back();
+              });
+            }
+          });
         },
         methods: {
           toTab(id) {
@@ -266,6 +301,35 @@
             // if (id == 3) {
             //   this.initDeviceNetwork();
             // }
+          },
+          initStepList() {
+            //check if the device is gateway
+            let device_models = cloneDeep(erp.doctype.device_model);
+            let this_model = erp.info.device[guid].device_model;
+            let device_map = {};
+            for (let model in device_models) {
+              if (device_models[model].model_code == this_model) {
+                device_map = device_models[model];
+              }
+            }
+            console.log('device_map', device_map);
+            if (device_map.gateway && device_map.gateway == 1) {
+              this.stepList[3].isShow = true;
+              this.isGateway = true;
+              this.step_title = 'Next';
+              this.initGatewayConfig();
+            }
+          },
+          syncGateway() {
+            this.$refs.childRef.syncGateways();
+          },
+          initGatewayConfig() {
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            subdevices.forEach((item) => {
+              if (item.device == guid) {
+                this.gateway_config = item.config;
+              }
+            });
           },
           toggle() {
             this.moreStatus = !this.moreStatus;
@@ -371,7 +435,12 @@
             profile_subdevices.forEach((item) => {
               if (item.device == guid) {
                 if (item.config) {
-                  let config = JSON.parse(item.config);
+                  //check if the Object is valid
+                  try {
+                    let config = JSON.parse(item.config);
+                  } catch (e) {
+                    return;
+                  }
                   let this_button_group = item.device_button_group;
                   let mapping = config.mapping;
                   let subdeviceItem = profile_subdevices.find((e) => e.name == mapping);
@@ -439,7 +508,7 @@
             console.log('commandList', commandList);
             this.blePostCommand = commandList;
             this.updateBleCommand();
-            console.log("this.targetPairingCommandList",this.targetPairingCommandList)
+            console.log('this.targetPairingCommandList', this.targetPairingCommandList);
           },
           async updateBleCommand() {
             app.dialog.preloader(_('Connecting...'));
@@ -472,6 +541,7 @@
                 });
                 console.log('nextStepStatus', nextStepStatus);
                 if (nextStepStatus) {
+                  await this.updateSceneDevice();
                   app.dialog.close();
                   this.toTab(3);
                   this.initDeviceNetwork();
@@ -480,7 +550,7 @@
                 app.dialog.close();
                 //if have error,should alert this error and tip
                 app.dialog.confirm(
-                  `${_(error)} ,${_('retry?')}`,
+                  `${_erp.get_log_description(error)} ,${_('retry?')}`,
                   () => {
                     this.updateBleCommand();
                   },
@@ -492,6 +562,58 @@
                 //app.dialog.alert(_(erp.get_log_description(error)));
               }
             }
+          },
+          updateSceneDevice() {
+            //scene banner, room scene button,mutiway scene button,rcu scene button,rcu scene toggle,rcu radar,rcu curtain
+            //first can not update the rcu scene
+            /*
+            1.scene banner
+            mutiway gang 815 825 835...
+            */
+            return new Promise(async (resolve, reject) => {
+              let scenes = cloneDeep(erp.info.scene);
+              for (let i in scenes) {
+                if (scenes[i].scene_template == 'Scene Banner' || scenes[i].scene_template == 'Room Scene Button') {
+                  try {
+                    let actionMap = JSON.parse(scenes[i].action);
+                    let post_status = false;
+                    actionMap.forEach((item) => {
+                      if (item.device == guid) {
+                        //update the scene
+                        item.device = this.targetGuid;
+                        post_status = true;
+                      }
+                    });
+                    //update to erp
+                    if (post_status) {
+                      let url = `/api/resource/Scene/${scenes[i].name}`;
+                      await http2.request(url, {
+                        method: 'PUT',
+                        serializer: 'json',
+                        data: {
+                          action: JSON.stringify(actionMap),
+                        },
+                      });
+                    }
+                  } catch (e) {
+                    reject(e);
+                  }
+                }
+              }
+              resolve();
+            });
+          },
+          //update the sync gateway list
+          async updateSyncGatewayList(){
+            //this case is: device is been replaced,should update the sync gateway list
+            //check if have the gateway,and find the gateway topic
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            
+
+          },
+          //update the google device list 
+          async updateGoogleDeviceList(){
+            //this case can not update the google device list 
           },
           async initDeviceNetwork() {
             let profile_device = cloneDeep(erp.info.profile.profile_device);
@@ -707,6 +829,10 @@
                   'gateway': this.gateway,
                 },
               });
+              if (this.isGateway) {
+                this.toTab(4);
+                return;
+              }
               await ha_profile_ready();
               app.dialog.close();
               app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {

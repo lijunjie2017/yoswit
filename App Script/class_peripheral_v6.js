@@ -219,13 +219,13 @@ window.Peripheral = (function() {
 					    && thermostat.fan == 0
 					    && thermostat.temp == 0
 					){
-					    const latestStatus = self.getLatestStatus();
-                        self.prop.status.bluetooth[0][42] = latestStatus[0][42];
-    					self.prop.status.bluetooth[0][43] = latestStatus[0][43];
-    					self.prop.status.bluetooth[0][44] = latestStatus[0][44];
-    					self.prop.status.bluetooth[0][45] = latestStatus[0][45];
-    					self.prop.status.bluetooth[0][46] = latestStatus[0][46];
-							self.prop.status.bluetooth[0][47] = latestStatus[0][47];
+					    // const latestStatus = self.getLatestStatus();
+              //           self.prop.status.bluetooth[0][42] = latestStatus[0][42];
+    					// self.prop.status.bluetooth[0][43] = latestStatus[0][43];
+    					// self.prop.status.bluetooth[0][44] = latestStatus[0][44];
+    					// self.prop.status.bluetooth[0][45] = latestStatus[0][45];
+    					// self.prop.status.bluetooth[0][46] = latestStatus[0][46];
+							// self.prop.status.bluetooth[0][47] = latestStatus[0][47];
 					}else{
                         self.prop.status.bluetooth[0][42] = thermostat.power;
     					self.prop.status.bluetooth[0][43] = thermostat.model;
@@ -295,12 +295,31 @@ window.Peripheral = (function() {
         	delete prop.lastDiscoverDate;
         	delete prop.services;
         	delete prop.characteristics;
+					delete prop.status.bluetooth[1];
+					delete prop.status.mqtt[1];
+					delete prop.manufactureData;
+					delete prop.connectedSize;
+					delete prop.lastProfileMqttChechsum;
         	const refreshKey = md5(JSON.stringify(prop));
         	if(self.refreshKey != refreshKey || focusRefresh){
+							if(prop.guid == '3963396536653033393764361203611d'){
+								console.log("refreshKey",prop)
+							}
         	    self.refreshKey = refreshKey;
-        	    setTimeout(function(){
+							let date1 = bleHelper.parseTimeString(self.prop.status.bluetooth[1])
+							let date2 = bleHelper.parseTimeString(self.prop.status.control[1])
+							const totalTime1 = date1.timestamp + date1.microsec / 1000;
+							const totalTime2 = date2.timestamp + date2.microsec / 1000;
+							//compare the date with function
+							if(totalTime1 > totalTime2){
+								//if curtain motor is reverse,update the control status
+								if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
+									self.prop.status.control[0][48] = 100 - self.prop.status.bluetooth[0][48];
+								}
+								setTimeout(function(){
         	        self.onPropChanged();
-        	    }, 10);
+        	    	}, 10);
+							}
         	}
         }, 10);
     };
@@ -312,6 +331,8 @@ window.Peripheral = (function() {
             $(`.home-scanned-peripheral[uuid="${this.prop.id}"]`).attr('bluetooth',2);
             $(`.bluetooth-icons[guid="${this.prop.guid}"]`).attr('ref', 2);
             $(`.home-scanned-peripheral[guid="${this.prop.guid}"]`).attr('bluetooth',2);
+            $(`.signal-panel-manual[guid="${this.prop.guid}"]`).attr('bluetooth',2);
+            
         }else if(state=='connected'){
             this.prop.connecting = false;
             this.prop.connected = true;
@@ -320,6 +341,7 @@ window.Peripheral = (function() {
             $(`.home-scanned-peripheral[uuid="${this.prop.uuid}"]`).find('.control-panel-right[type-box="Dimming"]').attr('bluetooth',1);
             $(`.bluetooth-icons[guid="${this.prop.guid}"]`).attr('ref', 1);
             $(`.home-scanned-peripheral[guid="${this.prop.guid}"]`).attr('bluetooth',1);
+            $(`.signal-panel-manual[guid="${this.prop.guid}"]`).attr('bluetooth',1);
         }else{
             this.prop.connecting = false;
             this.prop.connected = false;
@@ -329,6 +351,7 @@ window.Peripheral = (function() {
             $(`.home-scanned-peripheral[uuid="${this.prop.uuid}"]`).find('.control-panel-right[type-box="Dimming"]').attr('bluetooth',0);
             $(`.bluetooth-icons[guid="${this.prop.guid}"]`).attr('ref', 0);
             $(`.home-scanned-peripheral[guid="${this.prop.guid}"]`).attr('bluetooth',0);
+            $(`.signal-panel-manual[guid="${this.prop.guid}"]`).attr('bluetooth',0);
         }
         this.onPropChanged();
     };
@@ -556,38 +579,57 @@ window.Peripheral = (function() {
                 //self.prop.gangs[i] = parseInt(value);
                 self.prop.status.bluetooth[0][i+1] = parseInt(value);
             }
-			//if dimming
-			let dimmingIo = parseInt(io, 16);
-			self.prop.status.bluetooth[0][8] = dimmingIo;
-            self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+						//if dimming
+						let dimmingIo = parseInt(io, 16);
+						self.prop.status.bluetooth[0][8] = dimmingIo;
+            //self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
             self.onPropChanged();
-        }else if(data.startsWith("94110000")){
-			let thermostat = {
-				power: parseInt(data.substring(10,12), 16),
-				model: parseInt(data.substring(12,14), 16),
-				fan: parseInt(data.substring(14, 16), 16),
-				temp: parseInt(data.substring(16, 18), 16),
-                room_temp: parseInt(data.substring(18,20), 16),
-				humidity : parseInt(data.substring(26,28), 16),
-			}
-			if(thermostat.power){
-				console.log(thermostat);
-				console.log(data)
-			}
-            self.prop.status.bluetooth[0][42] = thermostat.power;
-			self.prop.status.bluetooth[0][43] = thermostat.model;
-			self.prop.status.bluetooth[0][44] = thermostat.fan;
-			self.prop.status.bluetooth[0][45] = thermostat.temp;
-			self.prop.status.bluetooth[0][46] = thermostat.room_temp;
-			self.prop.status.bluetooth[0][47] = thermostat.humidity;
+        }else if(data.startsWith("8b")){
+					//update the curtain status
+					let curtainStatus = parseInt(data.substring(2,4),16);
+					if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
+						self.prop.status.control[0][48] = 100 - curtainStatus*1;
+						if(100 - curtainStatus*1 > 1){
+							self.prop.status.last[0][48] = 100 - curtainStatus*1;
+						}
+					}else{
+						self.prop.status.control[0][48] = curtainStatus*1;
+						if(curtainStatus*1 > 1){
+							self.prop.status.last[0][48] = curtainStatus*1;
+						}
+					}
+					
+					self.onPropChanged();
+					//self.prop.status.control[0][48] = curtainStatus;
+					//self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 30000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+					//self.onPropChanged();
+				}else if(data.startsWith("94110000")){
+					let thermostat = {
+						power: parseInt(data.substring(10,12), 16),
+						model: parseInt(data.substring(12,14), 16),
+						fan: parseInt(data.substring(14, 16), 16),
+						temp: parseInt(data.substring(16, 18), 16),
+										room_temp: parseInt(data.substring(18,20), 16),
+						humidity : parseInt(data.substring(26,28), 16),
+					}
+					if(thermostat.power){
+						console.log(thermostat);
+						console.log(data)
+					}
+					self.prop.status.bluetooth[0][42] = thermostat.power;
+					self.prop.status.bluetooth[0][43] = thermostat.model;
+					self.prop.status.bluetooth[0][44] = thermostat.fan;
+					self.prop.status.bluetooth[0][45] = thermostat.temp;
+					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+					self.prop.status.bluetooth[0][47] = thermostat.humidity;
 			
 			
-			self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-			//compare the time
-			console.log("self.prop.status.bluetooth[1] > self.prop.status.control[1]",self.prop.status.bluetooth[1] > self.prop.status.control[1])
-			if(	self.prop.status.bluetooth[1] > self.prop.status.control[1]){
-			      self.onPropChanged();
-			}
+					self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+					//compare the time
+					console.log("self.prop.status.bluetooth[1] > self.prop.status.control[1]",self.prop.status.bluetooth[1] > self.prop.status.control[1])
+					if(	self.prop.status.bluetooth[1] > self.prop.status.control[1]){
+								//self.onPropChanged();
+					}
         }else if(data.startsWith("9502000009") || data.startsWith("95FF000001")){
 					const byteStrings = data.match(/.{1,2}/g);
           const targetStatus = parseInt(byteStrings[5], 16);
@@ -656,10 +698,70 @@ window.Peripheral = (function() {
 							kwh = parseInt(data.substr(32,2)+data.substr(30,2)+data.substr(28,2)+data.substr(26,2), 16) / 100000.0;
 					}
 
-					let text = '<div class="pvi" style="font-size:12px">P:'+p.toFixed(2)+' &nbsp; V:'+v.toFixed(2)+' &nbsp; I:'+i.toFixed(2)+' &nbsp; Kwh:'+kwh.toFixed(2)+'</div>';
-					$("li.device[guid='"+self.prop.guid+"'] .item-content .pvi").remove();
-					$("li.device[guid='"+self.prop.guid+"'] .item-content .item-inner").append(text);
-					$("li.device[guid='"+self.prop.guid+"']").css({'height':90+'px'});
+					//let text = '<div class="pvi" style="font-size:12px">P:'+p.toFixed(2)+' &nbsp; V:'+v.toFixed(2)+' &nbsp; I:'+i.toFixed(2)+' &nbsp; Kwh:'+kwh.toFixed(2)+'</div>';
+					let text = `
+					<div class="pvi list media-list no-margin display-flex justify-content-start align-content-center align-items-center" style="font-size:12px;flex-wrap:wrap;height:auto;width:100%;border-top: 1px dashed #d1d1d1;">
+						<div class="main-btn" style="width: 25%;">
+								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+														<img src="https://my.yoswit.com/files/power-icon-02.png" style="width: 45px;height: 45px;" />
+														<span class="unit" style="font-size:16px;margin-left:10px;">${Math.ceil(v)}</span> 
+												</div>
+												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+														<span class="iaq-title-big">V:&nbsp;</span>
+														<span class="unit" style="font-size:14px;">${Math.ceil(v)}</span> 
+												</div>
+										</div>
+								</div>
+						</div>
+						<div class="main-btn" style="width: 25%;">
+								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+														<img src="https://my.yoswit.com/files/power-icon-03.png" style="width: 45px;height: 45px;" />
+														<span class="unit" style="font-size:16px;margin-left:10px;">${i.toFixed(1)}</span> 
+												</div>
+												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+														<span class="iaq-title-big">I:&nbsp;</span>
+														<span class="unit" style="font-size:14px;">${i.toFixed(1)}</span> 
+												</div>
+										</div>
+								</div>
+						</div>
+						<div class="main-btn" style="width: 25%;">
+								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+														<img src="https://my.yoswit.com/files/power-icon-04.png" style="width: 45px;height: 45px;" />
+														<span class="unit" style="font-size:16px;margin-left:5px;">${Math.ceil(p)}</span> 
+												</div>
+												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+														<span class="iaq-title-big">P:&nbsp;</span>
+														<span class="unit" style="font-size:14px;">${Math.ceil(p)}</span> 
+												</div>
+										</div>
+								</div>
+						</div>
+						<div class="main-btn" style="width: 25%;">
+								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+														<img src="https://my.yoswit.com/files/power-icon-01.png" style="width: 45px;height: 45px;" />
+														<span class="unit" style="font-size:16px;margin-left:5px;">${kwh.toFixed(2)}</span> 
+												</div>
+												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+														<span class="iaq-title-big">kWh:&nbsp;</span>
+														<span class="unit" style="font-size:14px;">${kwh.toFixed(2)}</span> 
+												</div>
+										</div>
+								</div>
+						</div>
+					</div>
+					`
+					$("li.home-scanned-peripheral-smart[guid='"+self.prop.guid+"'] .pvi").remove();
+					$("li.home-scanned-peripheral-smart[guid='"+self.prop.guid+"'] ").append(text);
+					$("li.home-scanned-peripheral-smart[guid='"+self.prop.guid+"']").css({'height':140+'px'});
 				}
     };
 	Peripheral.prototype.onChangeGateway = function(p){
@@ -779,9 +881,13 @@ window.Peripheral = (function() {
 				self.onPropChanged();
 			}
 			// self.prop.status.mobmob[1] = self.prop.status.bluetooth[1];
-			// self.onPropChanged();
 		}
 		if(p.date >= self.prop.status.control[1] && p.date >= self.prop.status.bluetooth[1]){
+			//upddate the status
+			if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
+				self.prop.status.last[0][48] = 100 - self.prop.status.last[0][48]*1;
+				self.prop.status.control[0][48] = 100 - self.prop.status.control[0][48]*1;
+			}
 			self.onPropChanged();
 		}
 	}
@@ -2656,7 +2762,9 @@ return new Promise((resolve, reject) => {
 				self.prop.status.last[0][g.gang] = g.value;
 			}
 		}
-		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+		if(!isset(gangs[0].type)){
+			self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+		}
 		
 		return new Promise((resolve, reject) => {
 			const action = {
@@ -3343,7 +3451,9 @@ return new Promise((resolve, reject) => {
 				latestElement = this.prop.status[key];
 			}
     	}
-    
+    	if(this.prop.guid == '3963396536653033393764361203611d'){
+			console.log('latestElement',latestElement)
+		}
     	return latestElement;
     };
     Peripheral.prototype.getLatestStatusFromRealSource = function(){
@@ -3523,7 +3633,12 @@ return new Promise((resolve, reject) => {
 		};
     Peripheral.prototype.getFirmwareNo = function(firmware){
         try{
-            if(firmware.trim() == "3.0.0" || firmware.trim() == "1.0.0"){
+            // if(firmware.trim() == "3.0.0" || firmware.trim() == "1.0.0"){
+            //     firmware = `7.0`;
+            // }
+            //in case the gateway have differ firmware like : 1.1.0, 1.2.x, 1.3.x, 2.x.x
+            const versionPattern = /^\d+\.\d+\.\d+$/;
+            if(versionPattern.test(firmware)){
                 firmware = `7.0`;
             }
         }catch(e){}
@@ -3646,11 +3761,13 @@ return new Promise((resolve, reject) => {
 							return checkLocationEnabled();
 						}
 					}).then(()=>{
+						//alert(self.prop.connected)
 						if(self.prop.connected){ //use bluetooth
 								self.onConnectionChanged('connected');
 								resolve(self.prop);
 						}else{
 								self.onConnectionChanged('connecting');
+								//alert(self.prop.id)
 							ble.connect(self.prop.id, (rs)=>{
 											self.update(rs);
 									resolve(rs);

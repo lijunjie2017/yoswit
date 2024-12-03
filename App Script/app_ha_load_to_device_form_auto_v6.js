@@ -317,7 +317,7 @@ window._ble_load_to_device_form_auto = (loading_config) => {
                     }
                 }
             }
-        }else if(select.value == "Curtain Motor Reverse" || select.value == "Curtain Motor"){
+        }else if(select.value == "Curtain Motor Ac" || select.value == "Curtain Motor"){
           for(let i in default_template){
               if(default_template[i].mode == select.value){
                   new_button_group = default_template[i].device_button_group
@@ -326,7 +326,34 @@ window._ble_load_to_device_form_auto = (loading_config) => {
           console.log('new_button_group',new_button_group)
           args.button_group = new_button_group;
           $(".device-button-group").html(new_button_group)
-          $('input[name="device_button_group"').val(new_button_group)
+          $('input[name="device_button_group"').val(new_button_group);
+          if(loading_config.button_group.includes("REVERSE")){
+                let status =  peripheral[guid].prop.status.control[0][48];
+                let last_status = peripheral[guid].prop.status.last[0][48];
+                peripheral[guid].prop.status.control[0][48] = 100 - status*1;
+                if(last_status > 1){
+                  peripheral[guid].prop.status.last[0][48] = 100 - last_status*1;
+                }
+            }
+        }else if(select.value == "Curtain Motor Reverse" || select.value == "Curtain Motor Reverse Ac"){
+            for(let i in default_template){
+              if(default_template[i].mode == select.value){
+                  new_button_group = default_template[i].device_button_group
+              }
+            }
+            console.log('new_button_group',new_button_group)
+            args.button_group = new_button_group;
+            $(".device-button-group").html(new_button_group)
+            $('input[name="device_button_group"').val(new_button_group);
+            if(!loading_config.button_group.includes("REVERSE")){
+                let status =  peripheral[guid].prop.status.control[0][48];
+                let last_status = peripheral[guid].prop.status.last[0][48];
+                peripheral[guid].prop.status.control[0][48] = 100 - status*1;
+                if(last_status > 1){
+                  peripheral[guid].prop.status.last[0][48] = 100 - last_status*1;
+                }
+            }
+            
         }else{
             let gang = button_group.substring(button_group.length-1)
             for(let i in default_template){

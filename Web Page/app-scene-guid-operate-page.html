@@ -2287,7 +2287,12 @@
                 if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Curtain') {
                   this.actionList = actionMap.actionList;
                   this.actionList_2 = actionMap.actionList_2;
-
+                  let scene_virtual_button = scenes[i].scene_virtual_button;
+                  scene_virtual_button.forEach((item)=>{
+                    if(!this.virtualIdList[item.device]){
+                      this.virtualIdList[item.device] = parseInt(item.virtual_button_id);
+                    }
+                  })
                   debugger;
                 }
                 if (scenes[i].image) {
@@ -2371,6 +2376,35 @@
             // }
             // return this.findMissingNumber(virtualIdList);
           },
+          getSameVirtualId(){
+            //list_1 is first rcu,list_2 is second rcu
+            let guid_1 = this.rcuList[0].guid;
+            let guid_2 = this.rcuList[1].guid;
+            let list_1 = [];
+            let list_2 = [];
+            let sceneObj = cloneDeep(erp.info.scene);
+            for(let i in sceneObj){
+              if(isset(sceneObj[i].scene_virtual_button)){
+                sceneObj[i].scene_virtual_button.forEach((item)=>{
+                  if(item.device == guid_1){
+                    list_1.push(parseInt(item.virtual_button_id));
+                  }
+                  if(item.device == guid_2){
+                    list_2.push(parseInt(item.virtual_button_id));
+                  }
+                })
+              }
+            }
+            let allNumbers = Array.from({ length: 32 }, (_, i) => i + 1);
+            const usedNumbers = new Set([...list_1, ...list_2]);
+            let missingNumbers = allNumbers.filter((number) => !usedNumbers.has(number));
+            debugger
+            console.log("list_1",list_1);
+            console.log("list_2",list_2);
+            console.log("missingNumbers",missingNumbers);
+            return missingNumbers[0];
+          },
+
           changeVirtualStatus() {
             if (this.oneOnly) {
               app.dialog.alert(_('Since you have selected to run only once, this option cannot be modified'));
@@ -2639,6 +2673,18 @@
                 let errorLog = '';
                 let mainRcuId = '';
                 let rcuIndex = 0;
+                let isCheckAnyRcu = true;
+                let chooseRcuList = [];
+                for(let i in actionCommandList){
+                  let device_model = erp.info.device[i].device_model;
+                  if(device_model == 'YO780'){
+                    chooseRcuList.push(i);
+                  }
+                };
+                if(chooseRcuList.length < 2){
+                  isCheckAnyRcu = false;
+                  this.subscribeMacadrress = '';
+                }
                 for (let i in actionCommandList) {
                   //composition the rcu trigger command
                   debugger;
@@ -2657,7 +2703,12 @@
                   let gang = this.actionLocation[i];
                   // alert(i)
                   // alert(gang);
-                  let virtualGang = this.virtualIdList[i] ? this.virtualIdList[i] : this.getVirtualButtonId(i);
+                  let virtualGang = '';
+                  if(isCheckAnyRcu){
+                    virtualGang = this.virtualIdList[i] ? this.virtualIdList[i] : this.getSameVirtualId();
+                  }else{
+                    virtualGang = this.virtualIdList[i] ? this.virtualIdList[i] : this.getVirtualButtonId(i);
+                  }
                   //alert(virtualGang);
                   if (!this.virtualIdList[i]) {
                     this.virtualIdList[i] = virtualGang;
@@ -2665,6 +2716,7 @@
                   // if(rcuIndex == 0){
                   //   mainRcuId = gang
                   // }
+                  //alert(virtualGang);
                   let pre_command = `8F2000${parseInt(gang).toString(16).pad('00')}${parseInt(gang).toString(16).pad('00')}`;
                   let $thisCommand = `${opcode}${typeIndex}${mac}00${ref}13${parseInt(virtualGang).toString(16).pad('00')}`;
                   $thisCommand = `${($thisCommand.length / 2).toString(16).pad('00')}${$thisCommand}`;
@@ -3802,7 +3854,7 @@
             this.rcuList.forEach((rcuItem) => {
               let guid = rcuItem.guid;
               let ismobmob = window.peripheral[guid].prop.is_mobmob;
-              if (ismobmob == 1) {
+              if (ismobmob == 1 && rcuItem.ischeck) {
                 gatewayActionGuid = guid;
                 return;
               }
@@ -3950,6 +4002,12 @@
                     if (this.mutiwayStatus == 2) {
                       existId = thisRcuIdList[1].storage_id;
                     } else {
+                      existId = thisRcuIdList[0].storage_id;
+                    }
+                  }else if(this.templateName == 'RCU Curtain'){
+                    if(this.mutiwayStatus == 2){
+                      existId = thisRcuIdList[1].storage_id;
+                    }else{
                       existId = thisRcuIdList[0].storage_id;
                     }
                   } else {

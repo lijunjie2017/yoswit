@@ -1,0 +1,70 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${_(titles)}</div>
+      </div>
+    </div>
+
+    <div class="page-content notify">
+      {% raw %}
+      <div id="vue-app" v-cloak style="height: 100%;">
+        <div class="main-box" style="height: 100%;">
+          <iframe id="myIframe" :src="targetUrl" frameborder="0" style="height: 100%; width: 100%"></iframe>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let titles = '';
+    let { type,title } = $f7route.query;
+    console.log(type,title);
+    titles = title;
+    $update();
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          targetUrl : '',
+        },
+        computed: {},
+        mounted() {
+          this.init();
+        },
+        methods: {
+          init(){
+            this.targetUrl = 'https://dev.yoswit.com/technology/bluetooth-to-cloud?type=' + type;
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

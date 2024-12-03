@@ -155,6 +155,8 @@ window.bleHelper = {
             else
                 return button_group.replaceAll('DIMMING', '')*1 + 7;
                 
+        }else if(button_group.startsWith('GV DIMMING')){
+            return button_group.replaceAll('GV DIMMING', '')*1 + 7;
         }else if(button_group.startsWith('RCU ONOFF GANG')){ // rcu onoff 1-20, id are from 12 - 31
             return button_group.replaceAll('RCU ONOFF GANG', '')*1 + 11;
             
@@ -229,6 +231,17 @@ window.bleHelper = {
                 resolve(control_source);
             });
         });
+    },
+    parseTimeString:function(timeStr){
+        if(!timeStr) return {timestamp: 0, microsec: 0};
+        const [datePart, timePart] = timeStr.split(' ');
+        const [hours, minutes, seconds] = timePart.split(':');
+        const [sec, microsec] = seconds.split('.');
+        const dateTime = dayjs(`${datePart} ${hours}:${minutes}:${sec}`);
+        return {
+        timestamp: dateTime.valueOf(), 
+            microsec: microsec ? parseInt(microsec, 10) : 0 
+        };
     }
 };
 
