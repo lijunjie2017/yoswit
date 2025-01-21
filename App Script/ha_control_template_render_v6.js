@@ -47,7 +47,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       );
     }
     if (peripheral[guid]) {
-      if (device_button_group.startsWith('OPENCLOSE UART')) {
+      if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
         let command = '8602' + data.toLowerCase();
         try {
           debugger
@@ -123,7 +123,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       scaleSubSteps: 4,
       on: {
         changed:
-          device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE GANG')
+          device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE GANG') || device_button_group.startsWith('OPENCLOSE WIFI UART')
             ? range_change_fun
             : range_change_fun_for_dimming,
       },
@@ -395,7 +395,52 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
   </div>
   `;
   };
-
+  //door senser
+  const door_senser_template = (device_button_group, title) => {
+    return `
+  <div>
+    <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
+    <div class="item-content swipeout-content">
+      <a class="item-link item-content no-chevron no-ripple no-active-state">
+        <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
+        </div>
+        <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
+          <div class="item-title-row">
+            <div class="item-title ellipsis"style="width: 190px">${model_map.model_code} ${title}</div>
+          </div>
+          <div class="item-subtitle" style="margin-top: 3px;margin-bottom: 3px;">${_(core_utils_get_mac_address_from_guid(guid))}</div>
+          <div class="signal-panel-manual item-text height-21" style="width: 120%" signal="5" bluetooth="0" guid="${guid}">
+            <div class="signal-view-main">
+              <div class="signal"></div>
+              <div class="bluetooth"></div>
+            </div>
+          </div>
+        </div>
+        </a>
+        <div class="swipeout-actions-right">
+          <a
+            guid="${guid}" 
+            device_button_group="${device_button_group}"
+            func="click_connect_manual"
+            class="link color-cust-purple"
+            id="${id}"
+            ><i class="icon material-icons" style="line-height: 15px!important;">settings_bluetooth</i></a
+          >
+        </div>
+        <div class="control-panel-right" style="">
+          <a class="right" guid="${guid}" device_button_group="${device_button_group}" id="${id}" func="click_connect_manual">
+            <div class="button button-raised button-big circle manual-door-senser" style="background-color: grey;">
+                <img src="${
+                'https://my.yoswit.com/files/app/door_close.svg'
+              }" style="width:25px;height:25px" alt=""/>
+            </div>
+          </a>
+        </div>
+      </div>
+    </li>
+  </div>
+  `;
+  };
   //gateway template
   const gateway_template = (device_button_group, title) => {
     return `
@@ -712,7 +757,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       continue;
     }
     let gang = '';
-    if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE GANG')) {
+    if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE GANG') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
       if (device_default_template[i].device_button_group && device_default_template[i].device_button_group.startsWith('OPENCLOSE GANG')) {
         gang = device_default_template[i].device_button_group.replace('OPENCLOSE GANG', '');
       }
@@ -737,6 +782,8 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       html += gateway_template(device_button_group, '');
     } else if (device_button_group.includes('IAQ')) {
       html += iaq_template(device_button_group, '');
+    }else if(device_button_group.includes('Door Open')){
+      html += door_senser_template(device_button_group, '');
     } else {
       gang = device_default_template[i].device_button_group.replace('ONOFF GANG', '');
       html += onoff_template(device_button_group, gang);
@@ -803,6 +850,12 @@ window.manual_onoff = (params) => {
             },
           ])
           .then((rs) => {
+            let gang = device_button_group.replace('ONOFF GANG', '');
+            peripheral[guid].write([{
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: `972101${parseInt(gang).toString(16).pad('00')}${parseInt(ref == 0 ? 1 : 0).toString(16).pad('00')}`
+            }])
             console.log(rs);
           })
           .catch((error) => {
@@ -846,7 +899,7 @@ window.manual_curtain_motor = (params) => {
       manual_dim_bar_list[range_key].setValue(100);
     }
   } else if (ref == 2) {
-    if (device_button_group.startsWith('OPENCLOSE UART')) {
+    if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
       let data = '55AA050101036DDC' + erp.script.core_util_calculate_crc16_for_motor('55AA050101036DDC');
       let otherModelStatus = false;
       if (model_map.model_code == 'YO121-AC-R2W') otherModelStatus = true;

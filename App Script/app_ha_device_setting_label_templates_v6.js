@@ -196,6 +196,44 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Change Virtual BUtton";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            device-mode="{{device_mode }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            subdevice-name="{{profile_subdevice_name}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="rcu_retry_time" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">bolt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting != ""  %}
+                        <p class="setting-value text-muted size-12">{{_(self_setting_data.setting)}}</p>
+                        {% else %}
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a func="iot_ble_change_virtual_button" ref="{{ device }}" button-group="{{device_button_group }}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Device Test";
     setting_label_template[setting_label] = `
         <div 
@@ -565,11 +603,11 @@ window.initSettingTemplate = ()=>{
             class="auto-init card margin-bottom-half mx-0 my-3"
             ref="{{ device }}"
             init-func="iot_mode_setup_led_mode_auto_init"
-            setting-type="{{ self_setting_data.setting_type }}"
-            setting-name="{{ self_setting_data.name }}"
-            setting-value="{{ self_setting_data.setting }}"
+            setting-type="{{ led_data.setting_type }}"
+            setting-name="{{ led_data.name }}"
+            setting-value="{{ led_data.setting }}"
             button-group="{{device_button_group }}"
-            dependencies="{{self_setting_data.dependencies}}"
+            dependencies="{{led_data.dependencies}}"
             slot-index="{{slot_index}}"
         >
             <input name="led_mode" type="hidden" value="" />
@@ -581,9 +619,85 @@ window.initSettingTemplate = ()=>{
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(led_data.setting_type) }}</h5>
+                        {% if led_data.setting == '' %}
+                        <p class="setting-value text-muted size-12">{{ _('Reverse') }}</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(led_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Backlight Brightness";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_backlight_brightness_mode_auto_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="backlight_brightness" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light_mode</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
                         <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
                         {% if self_setting_data.setting == '' %}
-                        <p class="setting-value text-muted size-12">{{ _('Reverse') }}</p>
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Manned Backlight Brightness";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_manned_backlight_brightness_mode_auto_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="manned_backlight_brightness" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light_mode</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == '' %}
+                        <p class="setting-value text-muted size-12"></p>
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
                         {% endif %}
@@ -1685,7 +1799,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">settings</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1715,7 +1829,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">settings</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1750,7 +1864,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">visibility</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1785,7 +1899,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">settings</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1820,7 +1934,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">settings</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1850,7 +1964,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">visibility</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1885,7 +1999,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">visibility</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1920,7 +2034,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">light</i>
+                            <i class="material-icons">settings</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -2052,10 +2166,10 @@ window.initSettingTemplate = ()=>{
         <div class="auto-init card margin-bottom-half mx-0 my-3" 
         ref="{{ device }}" 
         init-func="iot_mode_setup_per_press_brightness_init" 
-        dependencies="{{self_setting_data.dependencies}}"
-        setting-type="{{ self_setting_data.setting_type }}"
-        setting-name="{{ self_setting_data.name }}"
-        setting-value="{{ self_setting_data.setting }}"
+        dependencies="{{per_data.dependencies}}"
+        setting-type="{{ per_data.setting_type }}"
+        setting-name="{{ per_data.name }}"
+        setting-value="{{ per_data.setting }}"
         button-group="{{ device_button_group }}"
         slot-index="{{slot_index}}"
         >
@@ -2068,11 +2182,11 @@ window.initSettingTemplate = ()=>{
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
-                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
-                        {% if self_setting_data.setting == "" %}
+                        <h5 class="no-margin-bottom">{{ _('Per Press Brightness') }}</h5>
+                        {% if per_data.setting == "" %}
                         <p class="setting-value text-muted size-12">5</p>
                         {% else %}
-                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        <p class="setting-value text-muted size-12">{{ _(per_data.setting) }}</p>
                         {% endif %}
                     </div>
                     <div class="col-auto">
@@ -2116,6 +2230,340 @@ window.initSettingTemplate = ()=>{
                         <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Battery Alert";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="setup_battery_threshold" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">earbuds_battery</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/mobile-app/sensor-data-settings-list?guid={{device}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Battery Alert Threshold";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_mode_setup_battery_threshold_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="setup_battery_threshold" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">earbuds_battery</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{_('Less Than: ')}}{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Notification";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_setup_notification_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="setup_notification" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Mesh Test";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_setup_mesh_test_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="mesh_test" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">hub</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Alert Notification";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="setup_notification" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="/mobile-app/sensor-data-settings-list?guid={{device}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Refresh Rate";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_mode_refresh_rate_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="refresh_rate" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">refresh</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}min</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Push Interval";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_mode_setup_push_interval_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="push_interval" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">manage_history</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Notification Interval";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_mode_setup_notification_interval_init" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="notification_interval" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">manage_history</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12">60min</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Battery Notification";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            device-mode="{{device_mode }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+           
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">notifications</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        <p class="setting-value text-muted size-12 battery-notification">{{_(self_setting_data.setting)}}</p>
+                    </div>
+                    <div class="col-auto">
+                        <label class="toggle toggle-init">
+                            <input 
+                                type="checkbox"
+                                button-group="{{device_button_group }}"
+                                setting-type="{{ self_setting_data.setting_type }}"
+                                setting-name="{{ self_setting_data.name }}"
+                                device-mode="{{device_mode }}"
+                                ref="{{ device }}"
+                                slot-index="{{slot_index}}"
+                                changefunc="iot_mode_setup_battery_notification_change"
+                                {% if self_setting_data.setting != 'Off' and self_setting_data.setting !="" %}checked{% endif %}
+                            />
+                            <span class="toggle-icon"></span>
+                        </label>
                     </div>
                 </div>
             </div>

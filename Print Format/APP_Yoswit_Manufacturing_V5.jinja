@@ -28,12 +28,43 @@
   animation-iteration-count: infinite;
   animation-timing-function: linear;
 }
+
+  .box-btn {
+			margin-bottom: 7.5px;
+			margin-top: 7.5px;
+		}
+		.box-left {
+			border-left: 1px solid var(--f7-list-item-border-color);
+		}
+		.unit {
+			font-size: 11px;
+		}
+		.title-btn {
+			width: 100%;
+			margin-left: 5px;
+		}
+		.iaq-title-big {
+			font-size: 12px;
+		}
+		.main-btn .box-btn-img {
+			background-color: #3bb33b;
+		}
+    .device .swipeout-actions-right {
+			transform: translateX(200%);
+		}
+    .device .swipeout-actions-left {
+			transform: translateX(-200%);
+		}
+    .device-none {
+			display: none !important;
+		}
+
 </style>
 <div style="background-color:#ccc;">
     <div class="row no-gap">
         <div class="col-50" style="padding:0px;">
             <select name="manufacturing-batch" style="font-size:16px;background-color:#ccc;width:100%;font-weight:bold;max-height:50px;line-height:50px;padding:0px 10px;-webkit-border-top-right-radius:0px;-webkit-border-bottom-right-radius: 0px;-moz-border-radius-topright: 0px;-moz-border-radius-bottomright: 0px;border-top-right-radius: 0px;border-bottom-right-radius: 0px;">
-                <option value="">- 选择批次 -</option>
+                <option value="">- {{_("Select Batch")}} -</option>
                 {% for b in batchs %}
                     <option value="{{b.device_hex_batch}}">{{b.name}}</option>
                 {% endfor %}
@@ -41,7 +72,7 @@
         </div>
         <div class="col-50" style="padding:0px;">
             <select name="manufacturing-model" style="font-size:16px;background-color:#ccc;width:100%;font-weight:bold;max-height:50px;line-height:50px;padding:0px 10px;-webkit-border-top-left-radius: 0px;-webkit-border-bottom-left-radius: 0px;-moz-border-radius-topleft: 0px;-moz-border-radius-bottomleft: 0px;border-top-left-radius: 0px;border-bottom-left-radius: 0px;">
-                <option value="">- 选择型号 -</option>
+                <option value="">- {{_("Select Model")}} -</option>
                 {% for b in models %}
                     <option value="{{b.hexid}}">{{b.name}}</option>
                 {% endfor %}
@@ -54,7 +85,7 @@
                 <input type="checkbox" name="checkbox-manufacturing-show-done" value="show-done" />
                 <i class="icon icon-checkbox" style="float:left;margin:15px 5px 15px 10px"></i>
                 <div class="item-inner" style="float:left;">
-                    <div class="item-title">显示已生产设备</div>
+                    <div class="item-title">{{_("Manufactured")}}</div>
                 </div>
             </label>
         </div>
@@ -63,12 +94,12 @@
                 <input type="checkbox" name="checkbox-manufacturing-show-all" value="show-all" changefunc="manufacturing_toggle_show_all" />
                 <i class="icon icon-checkbox" style="float:left;margin:15px 5px 15px 10px"></i>
                 <div class="item-inner" style="float:left;">
-                    <div class="item-title">显示遥远设备</div>
+                    <div class="item-title">{{_("Remote Devices")}}</div>
                 </div>
             </label>
         </div>
         <div class="col-20" style="padding:0px;">
-            <a style="max-height:50px;line-height:50px;-webkit-border-radius: 0px;-moz-border-radius: 0px;border-radius: 0px;" func="controller_toggle_manufacturing" class="col button button-fill button-large manufacturing-btn-start">开始</a>
+            <a style="max-height:50px;line-height:50px;-webkit-border-radius: 0px;-moz-border-radius: 0px;border-radius: 0px;background-image:none!important;" func="controller_toggle_manufacturing" class="col button button-fill button-large manufacturing-btn-start">{{_("Start")}}</a>
         </div>
     </div>
 </div>

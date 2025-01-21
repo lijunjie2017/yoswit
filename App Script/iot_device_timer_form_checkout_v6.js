@@ -26,7 +26,8 @@ window.iot_device_timer_form_checkout = function() {
 
     //app.preloader.show();
     iot_ble_check_enable(() => {
-        return iot_ble_do_pre_action(formdata.guid);
+        //return iot_ble_do_pre_action(formdata.guid);
+        return window.peripheral[formdata.guid].connect();
     }).then(() => {
         //alert(123)
         return iot_ble_set_timer(guid, timer_id ? parseInt(timer_id) : null, formdata.button_group, formdata.date, formdata.time + ":00", repeat, 1, action, timer_max_num);

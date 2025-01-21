@@ -441,7 +441,7 @@
               <div class="card">
                 <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Button And Setting")}}</div>
                 <div class="card-content card-content-padding">
-                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px" v-if="this.templateName != 'RCU Scene Toggle'">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px" v-if="this.templateName != 'Gateway Scene'">
                     <div class="add-box add-action display-flex justify-content-space-between align-items-center">
                       <div class="trigger-text">{{_('Virtual Button')}}</div>
                       <div
@@ -453,7 +453,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px" v-if="this.templateName != 'RCU Scene Toggle'">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px" v-if="this.templateName != 'Gateway Scene'">
                     <div class="add-box add-action display-flex justify-content-space-between align-items-center">
                       <div class="trigger-text">{{_('Hide Button')}}</div>
                       <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="changeHideDevice">
@@ -2385,23 +2385,23 @@
               if (this.rcuList[i].ischeck) {
                 let guid = this.rcuList[i].guid;
                 try {
-                  if (window.peripheral[guid].prop.connected) {
-                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
-                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
-                  } else {
-                    await window.peripheral[guid].connect();
-                    //subscribe the address
-                    //16 + 00(unsubscribe)/01(subscribe) + address
-                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
-                    $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
-                  }
-                  await window.peripheral[guid].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: `1601${this.subscribeMacadrress}`,
-                    },
-                  ]);
+                  // if (window.peripheral[guid].prop.connected) {
+                  //   $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
+                  //   $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
+                  // } else {
+                  //   await window.peripheral[guid].connect();
+                  //   //subscribe the address
+                  //   //16 + 00(unsubscribe)/01(subscribe) + address
+                  //   $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').addClass('text-color-green');
+                  //   $(`.manufacturing-steps[guid="${guid}"]`).find('.item-after i').html('check_circle');
+                  // }
+                  // await window.peripheral[guid].write([
+                  //   {
+                  //     service: 'ff80',
+                  //     characteristic: 'ff81',
+                  //     data: `1601${this.subscribeMacadrress}`,
+                  //   },
+                  // ]);
                 } catch (error) {
                   console.log(error);
                   rcuConnectStatus = false;
@@ -2482,11 +2482,6 @@
             
           },
           deleteTriggerItem(index) {
-            //if is save in the ble,should warn the user, can not delete
-            if(this.scenePostId && this.templateName != 'RCU Radar'){
-              app.dialog.alert(_('This scene has been saved in the ble, can not delete.If you want to delete, please delete the scene.'));
-              return;
-            }
             this.trigger.splice(index, 1);
           },
           async loadFavoriteErpData(){
@@ -3086,13 +3081,13 @@
                   }
                   //post to the ble
                   try {
-                    await window.peripheral[i].write([
-                      {
-                        service: 'ff80',
-                        characteristic: 'ff81',
-                        data: totalCommand,
-                      },
-                    ]);
+                    // await window.peripheral[i].write([
+                    //   {
+                    //     service: 'ff80',
+                    //     characteristic: 'ff81',
+                    //     data: totalCommand,
+                    //   },
+                    // ]);
                   } catch (error) {
                     postBleStatus = false;
                     errorLog = error;
@@ -3618,13 +3613,13 @@
                 //alert(sceneId)
                 let last_command = ``;
                 if (this.timercommand.length) {
-                  last_command = `${this.tidyCommand(parseInt(sceneId).toString(16).pad('00'), parseInt(sceneId).toString(16).pad('00'), this.trigger[i], 0)}${(
+                  last_command = `${this.tidyCommand(sceneId.toString(16).pad('00'), sceneId.toString(16).pad('00'), this.trigger[i], 0)}${(
                     this.timercommand.length / 2
                   )
                     .toString(16)
                     .pad('00')}${this.timercommand}`;
                 } else {
-                  last_command = `${this.tidyCommand(parseInt(sceneId).toString(16).pad('00'), parseInt(sceneId).toString(16).pad('00'), this.trigger[i], 0)}`;
+                  last_command = `${this.tidyCommand(sceneId.toString(16).pad('00'), sceneId.toString(16).pad('00'), this.trigger[i], 0)}`;
                 }
                 console.log('last_command', last_command);
                 //set the antion and trigger the virtual
@@ -3653,7 +3648,7 @@
                     actionItemCommand += `0b02${this_mac}8f0200${parseInt(this_sceneId).toString(16).pad('00')}`;
                   }
                 }
-                thisActionCommand = `8f1000${parseInt(sceneId).toString(16).pad('00')}${actionItemCommand}`;
+                thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}${actionItemCommand}`;
                 //have the two scene
                 if (this.mutiwayStatus == 2) {
                   if (this.templateName == 'RCU Curtain') {
@@ -3677,7 +3672,7 @@
                       let this_mac = core_utils_get_mac_address_from_guid(this.mainRcuGuid, true);
                       let this_virtualId = this.virtualIdList[this.mainRcuGuid]; //virtual id;
                       this_command_data += `0c02${this_mac}972103${parseInt(this_virtualId).toString(16).pad('00')}02`;
-                      thisActionCommand = `8f1000${parseInt(sceneId).toString(16).pad('00')}${this_command_data}`;
+                      thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}${this_command_data}`;
                     } else {
                       //change the virtual
                       let this_command_data = '';
@@ -3692,7 +3687,7 @@
                           this_command_data += `0c02${this_mac}972103${parseInt(this_sceneId).toString(16).pad('00')}02`;
                         }
                       }
-                      thisActionCommand = `8f1000${parseInt(sceneId).toString(16).pad('00')}${this_command_data}`;
+                      thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}${this_command_data}`;
                     }
                   }
                   //alert(thisActionCommand)
@@ -3709,7 +3704,7 @@
                   }
                 });
                 if (triggerStatus) {
-                  thisActionCommand = `8f1000${parseInt(sceneId).toString(16).pad('00')}1302${rcuMac}13048f0200${parseInt(this.actionId)
+                  thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}1302${rcuMac}13048f0200${parseInt(this.actionId)
                     .toString(16)
                     .pad('00')}05972103${parseInt(virtualSceneId).toString(16).pad('00')}${parseInt(this_ref).toString(16).pad('00')}`;
                 }
@@ -3733,26 +3728,24 @@
                 //let thisActionCommand = `8f0200${parseInt(this.actionId).toString(16).pad("00")}02${rcuMac}${parseInt(this.actionId).toString(16).pad("00")}`;
                 let settingCommand = ``;
                 if (isset(virtualSceneId) && virtualSceneId) {
-                  settingCommand = `8f32${parseInt(gang).toString(16).pad('00')}00${rcuMac}13${parseInt(virtualSceneId).toString(16).pad('00')}00`;
+                  settingCommand = `8f32${gang.toString(16).pad('00')}00${rcuMac}13${parseInt(virtualSceneId).toString(16).pad('00')}00`;
                 }
                 for (let i in this.actionBleCommandList) {
                   let this_mac = core_utils_get_mac_address_from_guid(i, true);
                   let this_sceneId = this.virtualIdList[i];
                   //check if one rcu
-                  settingCommand = `8f32${parseInt(gang).toString(16).pad('00')}00${this_mac}13${parseInt(this_sceneId).toString(16).pad('00')}00`;
+                  settingCommand = `8f32${gang.toString(16).pad('00')}00${this_mac}13${parseInt(this_sceneId).toString(16).pad('00')}00`;
                 }
                 if(this.mainRcuGuid){
                   debugger
                   let this_mac = core_utils_get_mac_address_from_guid(this.mainRcuGuid, true);
                   let this_sceneId = this.virtualIdList[this.mainRcuGuid];
-                  settingCommand = `8f32${parseInt(gang).toString(16).pad('00')}00${this_mac}13${parseInt(this_sceneId).toString(16).pad('00')}00`;
+                  settingCommand = `8f32${gang.toString(16).pad('00')}00${this_mac}13${parseInt(this_sceneId).toString(16).pad('00')}00`;
                 }
                 if(this.trigger[i].button_group.startsWith("Door Open")){
                   thisActionCommand = ``;
                 }
-                if(this.templateName == 'RCU Curtain' || this.templateName == 'RCU Scene Button'){
-                  settingCommand = ``;
-                }
+                debugger
                 //let toggleVirtualCommand = `8f1000${sceneId.toString(16).pad("00")}0c02${rcuMac}972103${parseInt(this.actionId).toString(16).pad("00")}02`;
                 console.log('thisActionCommand', thisActionCommand);
                 console.log('settingCommand', settingCommand);
@@ -4310,7 +4303,8 @@
             let gatewayActionGuid;
             this.rcuList.forEach((rcuItem) => {
               let guid = rcuItem.guid;
-              let ismobmob = window.peripheral[guid].prop.is_mobmob;
+              //let ismobmob = window.peripheral[guid].prop.is_mobmob;
+              let ismobmob = 1;
               if (ismobmob == 1 && rcuItem.ischeck) {
                 gatewayActionGuid = guid;
                 return;
@@ -4525,13 +4519,13 @@
                   this.randarActionCommand['command'] = totalActionCommand;
                 }
                 try {
-                  await window.peripheral[i].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: totalActionCommand,
-                    },
-                  ]);
+                  // await window.peripheral[i].write([
+                  //   {
+                  //     service: 'ff80',
+                  //     characteristic: 'ff81',
+                  //     data: totalActionCommand,
+                  //   },
+                  // ]);
                   if (extraStaus) {
                     this.actionMap[`extra_${i}`] = totalActionCommand;
                   } else {

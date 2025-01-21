@@ -1,0 +1,236 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Add User') }}</div>
+        <div class="right scene-list-right" style="display: none" @click="${()=>saveCondition()}">
+          <i class="material-icons">add</i>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content" style="height: 100%">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="card">
+          <div class="list card-content-padding">
+            <ul>
+              <li class="item-content item-input no-padding-left">
+                <a class="item-link smart-select smart-select-init" data-open-in="sheet" style="width: 100%">
+                  <select name="mac-user" multiple>
+                    <option v-for="item in userList" :key="item.usr" :value="item.name" selected>{{item.full_name}}</option>
+                  </select>
+                  <div class="item-content" style="padding-left: 0px;border-bottom: 0.8px solid rgba(0,0,0,.1);">
+                    <div class="item-inner flex-direction-row align-items-center justify-content-center">
+                      <div class="item-title" style="font-size: 16px;color: var(--f7-label-text-color);">{{_("Assign To")}}</div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+            <div class="col">
+              <div class="button button-fill button-save" v-on:click="saveCondition()">{{_("Add")}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, owner,name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          guid: guid,
+          userList: [],
+          userId: owner?owner:users[users.current].usr,
+          sceneName: '',
+          sceneNameTip: 'Please enter the scene name.',
+          assignUser: '',
+          assignUserTip: _('Assign To'),
+          postMap:null,
+          permission:false,
+        },
+        computed: {},
+        mounted() {
+          this.initUser();
+        },
+        methods: {
+          async initUser() {
+            let url = `/api/method/appv6.getProfileUser?name=${erp.info.profile.name}`;
+            let res = await http2.request(url, {
+              method: 'GET',
+              serializer: 'json',
+              responseType: 'json',
+              debug: true,
+            });
+           //check if user is owner, can show all the user, if not can not show
+            let owner = erp.info.profile.owner;
+            if(owner == users[users.current].usr){
+              this.permission = true;
+              let list = res.data.data;
+              list.forEach(item => {
+                if(item.name == this.userId){
+                  item.selected = true;
+                }
+              })
+              this.userList = list.filter(item => !item.selected);
+            }else{
+              this.permission = false;
+              this.userList = res.data.data.filter(item => item.name == users[users.current].usr);
+            }
+            console.log(this.userList);
+            this.getErpData();
+          },
+          async getErpData() {
+            let url = `/api/resource/Device/${guid}`;
+            let res = await http2.request(url, {
+              method: 'GET',
+              serializer: 'json',
+              responseType: 'json',
+              debug: true,
+            });
+            if(res.data.data){
+              this.postMap = res.data.data;
+            }
+            let list = res.data.data.device_scene || [];
+            //process the list 
+            let newList = [];
+            list.forEach((item) => {
+              if(item.name == name){
+                let config_map = JSON.parse(item.scene_config);
+                let config = config_map.config_list;
+                let map_user = config_map.map_user;
+                this.mapUser = map_user;
+                //set value
+                let set_value = [];
+                map_user.forEach(citem => {
+                  set_value.push(citem.name);
+                })
+                //if is not owner, set the value to the user list
+                let owner = erp.info.profile.owner;
+                if(owner != users[users.current].usr && this.userId != users[users.current].usr){
+                  set_value = set_value.filter(item => item == users[users.current].usr);
+                }
+                let smartSelect = app.smartSelect.get('.smart-select');
+                smartSelect.setValue(set_value);
+              }
+            });
+            this.settingsList = newList;
+            console.log(list);
+            console.log(res);
+          },
+          async saveCondition(){
+            app.dialog.preloader();
+            let smartSelect = app.smartSelect.get('.smart-select');
+            let value = smartSelect.getValue();
+            console.log(value);
+            //if not owner,and the value is exist, alert
+            let owner = erp.info.profile.owner;
+            if(owner != users[users.current].usr){
+              if(this.mapUser.find(item => item.name == value[0])){
+                app.dialog.alert(_('You have already assigned to this user.'));
+                app.dialog.close();
+                return;
+              }
+            }
+            //save to erp
+            let url = `/api/resource/Device/${guid}`;
+            let device_scene = [];
+            console.log(this.postMap);
+            this.postMap.device_scene.forEach((user) => {
+              if (user.name == name) {
+                let config_map = JSON.parse(user.scene_config);
+                let map_user = config_map.map_user;
+                //check if the value is exist
+                let isExist = false;
+                //should check the permission
+                if(this.permission){
+                  map_user = [];
+                  value.forEach(vitem => {
+                    map_user.push({
+                        name : this.userList.find(item => item.name == vitem).name,
+                        full_name : this.userList.find(item => item.name == vitem).full_name,
+                        user_image : this.userList.find(item => item.name == vitem).user_image,
+                        last_login : this.userList.find(item => item.name == vitem).last_login,
+                      });
+                  })
+                }else{
+                  value.forEach(vitem => {
+                    if(map_user.find(item => item.name == vitem)){
+                      isExist = true;
+                    }else{
+                      map_user.push({
+                        name : this.userList.find(item => item.name == vitem).name,
+                        full_name : this.userList.find(item => item.name == vitem).full_name,
+                        user_image : this.userList.find(item => item.name == vitem).user_image,
+                        last_login : this.userList.find(item => item.name == vitem).last_login,
+                      });
+                    }
+                  })
+                }
+                
+                config_map.map_user = map_user;
+                user.scene_config = JSON.stringify(config_map);
+              }
+              device_scene.push(user);
+            });
+            try {
+              let res = await http2.request(url, {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  device_scene: device_scene,
+                },
+              });
+              app.dialog.close();
+              mainView.router.back();
+            } catch (error) {
+              console.log(error);
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+          }
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none !important;
+  }
+</style>

@@ -10,6 +10,7 @@ window.iot_ble_delete_timer = function (params) {
       })
         .then(() => {
           let mode_code = window.peripheral[guid] ? window.peripheral[guid].prop.hexModel : '';
+          
           if (mode_code == '021B') {
             let delActionCommand = `8F1100${parseInt(timer_id).toString(16).pad('00')}`;
             let delTriggerCommand = `8F210000${parseInt(timer_id).toString(16).pad('00')}`;
@@ -26,38 +27,63 @@ window.iot_ble_delete_timer = function (params) {
                 },
               ]);
           } else {
-            return iot_ble_write(guid, 'ff80', 'ff81', '84' + '01' + '00' + parseInt(timer_id).toString(16).pad('00'), false);
+            let firmware = window.peripheral[guid].prop.firmwareNo;
+            if(firmware < 6){
+                let bleList = [];
+                let service = 'fe00';
+                let characteristic = 'fe02';
+                bleList.push({
+                    service: service,
+                    characteristic: characteristic,
+                    data: `${parseInt(timer_id).toString(16).pad("00")}`,
+                });
+                bleList.push({
+                    service: service,
+                    characteristic: 'fe03',
+                    data: `${parseInt(timer_id).toString(16).pad("00")}0000000000000000000000`,
+                })
+                if(firmware < 3.8){
+                    bleList.push({
+                        service: service,
+                        characteristic: 'fe04',
+                        data: `00`,
+                    })
+                    bleList.push({
+                        service: service,
+                        characteristic: 'fe05',
+                        data: `0000000000`,
+                    })
+                    bleList.push({
+                        service: service,
+                        characteristic: 'fe06',
+                        data: `ff07`,
+                    })
+                }
+                return window.peripheral[guid].write(bleList);
+            }else{
+                let bleList = [];
+                bleList.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '84' + '01' + '00' + parseInt(timer_id).toString(16).pad('00'),
+                })
+                return window.peripheral[guid].write(bleList);
+            }
+            //return iot_ble_write(guid, 'ff80', 'ff81', '84' + '01' + '00' + parseInt(timer_id).toString(16).pad('00'), false);
           }
         })
         .then(() => {
           return new Promise((resove, reject) => {
             return http
               .request(
-                '/api/resource/Device%20Local%20Timer?parent=Device&' +
-                  encodeURI('fields=["name", "timer_id"]&filters=[["parent", "=", "' + guid + '"], ["timer_id", "=", "' + timer_id + '"]]'),
+                `/api/method/appv6.putDeviceTimer?guid=${guid}&timer_id=${timer_id}`,
                 {
                   method: 'GET',
                   responseType: 'json',
                 }
               )
               .then((rs) => {
-                const server_timers = rs.data.data;
-                if (server_timers.length > 0) {
-                  http
-                    .request('/api/resource/Device%20Local%20Timer/' + server_timers[0].name, {
-                      serializer: 'json',
-                      method: 'DELETE',
-                      data: {
-                        parenttype: 'Device',
-                        parentfield: 'device_timer',
-                        parent: guid,
-                      },
-                    })
-                    .then(resove)
-                    .catch(reject);
-                } else {
-                  resove();
-                }
+                resove();
               })
               .catch(reject);
           });

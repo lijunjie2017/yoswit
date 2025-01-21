@@ -1,0 +1,1172 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Push Settings') }}</div>
+        <div class="right scene-list-right" style="display: none" @click="${()=>saveCondition()}">
+          <i class="material-icons">check</i>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content" style="height: 100%">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="block mx-3 margin-top">
+            <p class="segmented segmented-strong">
+              <button class="button step-one" :class="index == 1?'button-active button':'button'">{{_("Step")}} 1</button>
+              <button class="button step-two" :class="index == 2?'button-active button':'button'">{{_("Step")}} 2</button>
+              <span class="segmented-highlight"></span>
+            </p>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="list card-content-padding">
+                    <ul>
+                      <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Scene Name")}}</div>
+                          <div class="item-input-wrap">
+                            <input type="text" v-model="sceneName" :placeholder="SceneNameTip" required validate />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <div
+                  class="medium-50 large-50 device-setting-list"
+                  :style="{'padding': '15px', 'height': settingsList.length > 3 ? '360px':'auto', 'overflow-y': settingsList.length > 3 ? 'auto':'hidden'}"
+                >
+                  <div class="card margin-bottom-half mx-0 my-3" v-for="setting, index in settingsList" :key="setting.index">
+                    <input type="hidden" :id="setting.id" />
+                    <div class="card-content card-content-padding">
+                      <div class="row">
+                        <div class="col-auto">
+                          <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">settings</i>
+                          </div>
+                        </div>
+                        <div class="col align-self-center no-padding-left" v-on:click="showHelp(setting.id)">
+                          <h5 class="no-margin-bottom">
+                            {{_(setting.title)}}<i
+                              class="material-icons text-muted popover-open"
+                              v-if="setting.id != 'temperature' && setting.id != 'battery_alert_threshold' && setting.id != 'door_open_close_threshold'"
+                              data-popover=".popover-menu"
+                              :name="setting.id"
+                              style="font-size: 20px; margin-left: 5px; position: relative; top: 2px; top: 4px"
+                              >help</i
+                            >
+                          </h5>
+                          <p class="setting-value text-muted size-12" :name="setting.id" style="margin-bottom: 0px"></p>
+                        </div>
+                        <div class="col-auto">
+                          <a class="button button-fill button-44 color-theme button-raised device" v-on:click="showPicker(setting.id)">
+                            <i class="material-icons">navigate_next</i>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div :class="'popover popover-menu'">
+                    <div class="popover-angle"></div>
+                    <div class="popover-inner">
+                      <div class="page-content">
+                        <div style="font-size: 14px; padding: 5px 15px" v-for="tip in helpTipContent" :key="tip.title">
+                          <div>{{tip.title}}</div>
+                          <div class="text-muted" style="font-size: 12px; color: #999">{{tip.level}}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(0)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("Complete")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="medium-50 large-50 padding-15" style="display: none">
+          <!-- choose the user -->
+          <div class="card margin-bottom-half mx-0 my-3" v-for="user,index in userList" :key="index">
+            <div class="card-content card-content-padding">
+              <div class="row">
+                <div class="col-auto">
+                  <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                    <i class="material-icons">person</i>
+                  </div>
+                </div>
+                <div class="col align-self-center no-padding-left" style="max-width: 180px">
+                  <h5 class="no-margin-bottom" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
+                    {{_(user.scene_title)}}
+                  </h5>
+                  <p class="setting-value text-muted size-12"></p>
+                </div>
+                <div class="col-auto" style="display: flex; align-items: center; width: 120px">
+                  <a
+                    :href="'/mobile-app/choose-user?user_id='+user.scene_title+'&guid='+guid"
+                    class="button button-fill button-44 color-theme button-raised device"
+                  >
+                    <i class="material-icons">person_add</i>
+                  </a>
+                  <a
+                    :href="'/mobile-app/sensor-data-settings-detail?user_id='+user.scene_title+'&guid='+guid"
+                    class="button button-fill button-44 color-theme button-raised device"
+                    style="margin-left: 5px"
+                    v-if="user.scene_title != userId"
+                  >
+                    <i class="material-icons">navigate_next</i>
+                  </a>
+                  <a
+                    class="button button-fill button-44 color-red button-raised device"
+                    style="margin-left: 5px"
+                    v-if="user.scene_title == userId"
+                    v-on:click="deleteUser(user.scene_title)"
+                  >
+                    <i class="material-icons">delete</i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, subdevice_name, owner, add,name } = $f7route.query;
+    const saveCondition = () => {
+      vueApp.saveCondition();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          sceneTemplate: 'Geomagnetic Scene',
+          index: 1,
+          addStatus: add ? true : false,
+          sceneName: '',
+          SceneNameTip: _('Scene Name'),
+          guid: guid,
+          name: name,
+          userId: owner ? owner : users[users.current].usr,
+          mapUserList: [],
+          settingsList: [],
+          IAQSettingList: [
+            {
+              title: 'Temperature',
+              id: 'temperature',
+              icon: 'settings',
+              unit: '°C',
+              choose_type: 'range', //range,less then,greater then
+              setting_value: [
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                33, 34, 35,
+              ],
+              save_value: [],
+            },
+            {
+              title: 'Humidity',
+              id: 'humidity',
+              icon: 'settings',
+              unit: '%',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '40-45%',
+                },
+                {
+                  title: 'Good',
+                  level: '50-60%, 35-40%',
+                },
+                {
+                  title: 'Medium',
+                  level: '60-65%, 20-35%',
+                },
+                {
+                  title: 'Low',
+                  level: '65-80%, 14-20%',
+                },
+                {
+                  title: 'Suck',
+                  level: '0-13%, 81-100%',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+              save_value: [],
+            },
+            {
+              title: 'PM1.0',
+              id: 'pm1_0',
+              icon: 'settings',
+              unit: 'μg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-50μg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '51-100μg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '101-150μg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '151-200μg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>200μg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 50, 100, 150, 200, 250],
+              save_value: [],
+            },
+            {
+              title: 'PM2.5',
+              id: 'pm2_5',
+              icon: 'settings',
+              unit: 'μg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-15μg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '15-35μg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '35-55μg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '55-75μg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>76μg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 15, 25, 35, 45, 55, 65, 75, 85],
+              save_value: [],
+            },
+            {
+              title: 'PM10',
+              id: 'pm10',
+              icon: 'settings',
+              unit: 'μg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-50μg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '50-150μg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '150-250μg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '250-350μg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>350μg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 50, 150, 250, 350, 450],
+              save_value: [],
+            },
+            {
+              title: 'Voc',
+              id: 'voc',
+              icon: 'settings',
+              unit: 'ppd',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-300ppd',
+                },
+                {
+                  title: 'Good',
+                  level: '301-500ppd',
+                },
+                {
+                  title: 'Medium',
+                  level: '501-1000ppd',
+                },
+                {
+                  title: 'Suck',
+                  level: '>1000ppd',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 300, 500, 1000, 1500],
+              save_value: [],
+            },
+            {
+              title: 'Nox',
+              id: 'nox',
+              icon: 'settings',
+              unit: 'µg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-40µg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '41-80µg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '81-180µg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '181-280µg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>280µg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 40, 80, 180, 280, 400, 600],
+              save_value: [],
+            },
+            {
+              title: 'Lux',
+              id: 'lux',
+              icon: 'settings',
+              unit: 'Lux',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-100Lux',
+                },
+                {
+                  title: 'Good',
+                  level: '101-300Lux',
+                },
+                {
+                  title: 'Medium',
+                  level: '301-1000Lux',
+                },
+                {
+                  title: 'Low',
+                  level: '>1000Lux',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 100, 300, 1000, 3000],
+              save_value: [],
+            },
+            {
+              title: 'CO2',
+              id: 'co2',
+              icon: 'settings',
+              unit: 'ppm',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-600ppm',
+                },
+                {
+                  title: 'Good',
+                  level: '601-1000ppm',
+                },
+                {
+                  title: 'Medium',
+                  level: '1001-15000ppm',
+                },
+                {
+                  title: 'Low',
+                  level: '1501-20000ppm',
+                },
+                {
+                  title: 'Suck',
+                  level: '>20000ppm',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 600, 1000, 1500, 2500, 4000],
+              save_value: [],
+            },
+            {
+              title: 'Pressure',
+              id: 'pressure',
+              icon: 'settings',
+              unit: 'hPa',
+              tip: [
+                {
+                  title: 'Low',
+                  level: '0-1000hPa',
+                },
+                {
+                  title: 'Perfect',
+                  level: '1001-1020hPa',
+                },
+                {
+                  title: 'High',
+                  level: '>1020hPa',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 1000, 1020, 1050],
+              save_value: [],
+            },
+            {
+              title: 'Noise',
+              id: 'noise',
+              icon: 'settings',
+              unit: 'dB',
+              tip: [
+                {
+                  title: 'Silent',
+                  level: '0-20dB',
+                },
+                {
+                  title: 'Very Quiet',
+                  level: '21-40dB',
+                },
+                {
+                  title: 'Quiet',
+                  level: '41-60dB',
+                },
+                {
+                  title: 'Normal',
+                  level: '61-80dB',
+                },
+                {
+                  title: 'Loud',
+                  level: '81-100dB',
+                },
+                {
+                  title: 'Very Loud',
+                  level: '101-120dB',
+                },
+                {
+                  title: 'Dangerous',
+                  level: '>120dB',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 20, 40, 60, 80, 100, 120, 140],
+              save_value: [],
+            },
+            {
+              title: 'HCHO',
+              id: 'hcho',
+              icon: 'settings',
+              unit: 'mg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-0.08mg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '0.08-0.1mg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '0.1-0.2mg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '0.2-0.5mg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>0.5mg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 0.08, 0.1, 0.2, 0.5, 1],
+              save_value: [],
+            },
+            {
+              title: 'O3',
+              id: 'o3',
+              icon: 'settings',
+              unit: 'µg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-50µg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '51-100µg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '101-180µg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '181-240µg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>240µg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 50, 100, 180, 240, 300],
+              save_value: [],
+            },
+            {
+              title: 'CO',
+              id: 'co',
+              icon: 'settings',
+              unit: 'mg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-2µg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '2-5µg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '5-100µg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '10-15µg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>15µg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 2, 5, 10, 15, 30, 35],
+              save_value: [],
+            },
+          ],
+          BatterySettingList: [
+            {
+              title: 'Battery Alert Threshold',
+              icon: 'settings',
+              unit: 'bar',
+              id: 'battery_alert_threshold',
+              setting_value: [1, 2, 3, 4, 5, 6],
+              save_value: [],
+            },
+          ],
+          OpenDoorSettingList: [
+            {
+              title: 'Alert Threshold',
+              icon: 'settings',
+              unit: '',
+              id: 'door_open_close_threshold',
+              setting_value: ['Door Open', 'Door Close'],
+              save_value: [],
+            },
+          ],
+          pickerMapList: [],
+          pickerValueMap: '',
+          helpTipContent: [],
+          userList: [],
+          userSceneId: '', //this means the scene Trigger id
+          userSceneGatewayId: '', //this means the scene gateway id
+          userSceneName: '', //this means the scene id
+        },
+        computed: {},
+        mounted() {
+          Vue.prototype.$saveCondition = this.saveCondition;
+          //this.scan();
+          this.init();
+          if (this.$saveUser) {
+            emitter.off('saveUser', this.$saveUser);
+          }
+          this.$saveUser = (data) => {
+            console.log('saveUser', data);
+            this.userList = data.userList;
+          };
+          emitter.on('saveUser', this.$saveUser);
+        },
+        methods: {
+          nextStep(index) {
+            if (index == 1) {
+              if (this.sceneName == '') {
+                app.dialog.alert(_('Please enter the scene name.'));
+                return;
+              }
+              this.init();
+              this.index = 2;
+            } else if (index == 2) {
+              this.saveCondition();
+            } else if (index == 0) {
+              this.index = 1;
+            }
+          },
+          init() {
+            //check the device model with the guid
+            let deviceMapList = cloneDeep(erp.info.device);
+            if (isset(deviceMapList[guid])) {
+              let deviceMap = deviceMapList[guid];
+              if (deviceMap.device_model == 'YO380DC') {
+                this.settingsList = this.BatterySettingList;
+              } else if (deviceMap.device_model.includes('YO161')) {
+                this.settingsList = this.IAQSettingList;
+              } else if (deviceMap.device_model == 'YO202DS') {
+                this.settingsList = this.OpenDoorSettingList;
+              }
+            }
+            this.pickerMapList = [];
+            this.settingsList.forEach((setting) => {
+              //init the picker
+              if (setting.id != 'battery_alert_threshold' && setting.id != 'door_open_close_threshold') {
+                this.pickerMapList[setting.id] = app.picker.create({
+                  inputEl: document.getElementById(setting.id),
+                  rotateEffect: true,
+                  cols: [
+                    {
+                      textAlign: 'center',
+                      values: setting.setting_value,
+                      displayValues: setting.setting_value.map((value) => value.toString() + setting.unit),
+                    },
+                    {
+                      textAlign: 'center',
+                      values: setting.setting_value,
+                      displayValues: setting.setting_value.map((value) => value.toString() + setting.unit),
+                    },
+                  ],
+                  on: {
+                    change: (picker, value, index) => {
+                      console.log(value, index);
+                    },
+                    open: async (picker) => {
+                      console.log('open');
+                      console.log(picker.$el.find('.toolbar .link'));
+                      $(picker.$el.find('.toolbar .link')).on('click', async () => {
+                        console.log('save');
+                        let value = picker.getValue();
+                        console.log(value);
+                        //check if the value is error
+                        if (value[0] > value[1] || value[0] == value[1]) {
+                          app.dialog.alert(_('Setting value is not in accordance with the rules.'));
+                          return;
+                        }
+                        $(`p[name=${this.pickerValueMap}]`).text(value[0] + setting.unit + ' - ' + value[1] + setting.unit);
+                        this.settingsList.forEach((kitem) => {
+                          if (kitem.id === this.pickerValueMap) {
+                            kitem.save_value = value;
+                          }
+                        });
+                        //save the value to the database
+                        //await iot_device_setting_sync_server(guid, setting.id, value[0] + ' - ' + value[1]);
+                        picker.close();
+                      });
+                    },
+                  },
+                });
+              } else if (setting.id == 'door_open_close_threshold') {
+                this.pickerMapList[setting.id] = app.picker.create({
+                  inputEl: document.getElementById(setting.id),
+                  rotateEffect: true,
+                  cols: [
+                    {
+                      textAlign: 'center',
+                      values: setting.setting_value,
+                      displayValues: setting.setting_value.map((value) => value.toString() + setting.unit),
+                    },
+                  ],
+                  on: {
+                    change: (picker, value, index) => {
+                      console.log(value, index);
+                    },
+                    open: async (picker) => {
+                      $(picker.$el.find('.toolbar .link')).on('click', async () => {
+                        console.log('save');
+                        let value = picker.getValue();
+                        console.log(value);
+                        $(`p[name=${this.pickerValueMap}]`).text(_(value));
+                        this.settingsList.forEach((kitem) => {
+                          if (kitem.id === this.pickerValueMap) {
+                            this.sceneTemplate = value[0];
+                            kitem.save_value = value;
+                          }
+                        });
+                        //save the value to the database
+                        //await iot_device_setting_sync_server(guid, setting.id, value[0] + ' - ' + value[1]);
+                        picker.close();
+                      });
+                    },
+                  },
+                });
+              } else {
+                this.pickerMapList[setting.id] = app.picker.create({
+                  inputEl: document.getElementById(setting.id),
+                  rotateEffect: true,
+                  cols: [
+                    {
+                      textAlign: 'center',
+                      values: setting.setting_value,
+                      displayValues: setting.setting_value.map((value) => value.toString() + setting.unit),
+                    },
+                  ],
+                  on: {
+                    change: (picker, value, index) => {
+                      console.log(value, index);
+                    },
+                    open: async (picker) => {
+                      console.log('open');
+                      console.log(picker.$el.find('.toolbar .link'));
+                      $(picker.$el.find('.toolbar .link')).on('click', async () => {
+                        console.log('save');
+                        let value = picker.getValue();
+                        console.log(value);
+                        $(`p[name=${this.pickerValueMap}]`).text(_('Less Than: ') + value + setting.unit);
+                        this.settingsList.forEach((kitem) => {
+                          if (kitem.id === this.pickerValueMap) {
+                            kitem.save_value = [value];
+                          }
+                        });
+                        //save the value to the database
+                        //await iot_device_setting_sync_server(guid, setting.id, value[0] + ' - ' + value[1]);
+                        picker.close();
+                      });
+                    },
+                  },
+                });
+              }
+            });
+            this.getErpData();
+          },
+          async getErpData() {
+            let url = `/api/resource/Device/${guid}`;
+            try {
+              let res = await http2.request(url, {
+                method: 'GET',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+              });
+              let list = res.data.data.device_scene || [];
+              this.userList = list;
+              console.log(list);
+              list.forEach((item) => {
+                debugger
+                if (item.name == this.name && !this.addStatus) {
+                  let config_map = JSON.parse(item.scene_config);
+                  let config = config_map.config_list;
+                  let map_user = config_map.map_user;
+                  this.mapUserList = map_user;
+                  if (!this.sceneName) {
+                    this.sceneName = config_map.title;
+                  }
+                  this.userSceneId = config_map.user_scene_id ? config_map.user_scene_id : '';
+                  this.userSceneGatewayId = config_map.user_scene_gateway_id ? config_map.user_scene_gateway_id : '';
+                  this.userSceneName = config_map.user_scene_name ? config_map.user_scene_name : '';
+                  config.forEach((citem) => {
+                    this.settingsList.forEach((kitem) => {
+                      if (kitem.id === citem.id) {
+                        if (kitem.id == 'battery_alert_threshold') {
+                          kitem.save_value = [citem.value[0]];
+                          $(`p[name=${kitem.id}]`).text(_('Less Than: ') + citem.value[0] + kitem.unit);
+                        } else if (kitem.id == 'door_open_close_threshold') {
+                          kitem.save_value = [citem.value[0]];
+                          $(`p[name=${kitem.id}]`).text(_(citem.value[0]));
+                        } else {
+                          kitem.save_value = citem.value;
+                          $(`p[name=${kitem.id}]`).text(citem.value[0] + kitem.unit + ' - ' + citem.value[1] + kitem.unit);
+                        }
+                      }
+                    });
+                    this.pickerMapList[citem.id].setValue(citem.value);
+                  });
+                }
+              });
+              console.log(res);
+            } catch (error) {
+              console.log(error);
+            }
+          },
+          showPicker(id) {
+            console.log(id);
+            this.pickerValueMap = id;
+            this.pickerMapList[id].open();
+          },
+          showHelp(id) {
+            console.log(id);
+            this.settingsList.forEach((setting) => {
+              if (setting.id === id) {
+                this.helpTipContent = setting.tip;
+              }
+            });
+            //let appPopover = app.popover.open('.popover-menu');
+          },
+          async deleteUser(user_id) {
+            app.dialog.confirm(
+              _('Are you sure you want to delete this user?'),
+              async () => {
+                let device_scene = [];
+                this.userList.forEach((item) => {
+                  if (item.scene_title == user_id) {
+                    let config_map = JSON.parse(item.scene_config);
+                    let config = config_map.config_list;
+                    //get the scene id,and delete the scene
+                  } else {
+                    device_scene.push(item);
+                  }
+                });
+                let url = `/api/resource/Device/${guid}`;
+                let res = await http2.request(url, {
+                  method: 'PUT',
+                  serializer: 'json',
+                  responseType: 'json',
+                  debug: true,
+                  data: {
+                    device_scene: device_scene,
+                  },
+                });
+                console.log(res);
+                this.getErpData();
+              },
+              () => {}
+            );
+          },
+          async saveCondition() {
+            app.dialog.preloader();
+            try {
+              await this.postBleData();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+            console.log(this.settingsList);
+            //update the database
+            let saveData = [];
+            this.settingsList.forEach((setting) => {
+              if (setting.save_value.length > 0) {
+                saveData.push({
+                  id: setting.id,
+                  value: setting.save_value,
+                });
+              }
+            });
+            console.log(saveData);
+            let url = `/api/resource/Device/${guid}`;
+            let device_scene = [];
+            //should check the data if no youself, then add it
+            this.userList.forEach((user) => {
+              if (user.name != this.name) {
+                device_scene.push(user);
+              }
+            });
+            let config_map = {
+              title: this.sceneName,
+              config_list: saveData,
+              map_user: this.mapUserList,
+              user_scene_id: this.userSceneId,
+              user_scene_gateway_id: this.userSceneGatewayId,
+              user_scene_name: this.userSceneName,
+            };
+            device_scene.push({
+              scene_title: this.userId,
+              scene_config: JSON.stringify(config_map),
+            });
+            debugger;
+            try {
+              let res = await http2.request(url, {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  device_scene: device_scene,
+                },
+              });
+              console.log(res);
+              app.dialog.close();
+              this.getErpData();
+              app.dialog.confirm(_('Save Successfully'), () => {
+                mainView.router.back();
+              });
+            } catch (error) {
+              app.dialog.close();
+              console.log(error);
+              app.dialog.alert(error);
+            }
+          },
+          postBleData() {
+            /**
+             * 1. check the gateway is online
+             * 2. if online, then post the data
+             * 3. if offline, then alert the user
+             * 4.get the device scene id
+             */
+            return new Promise(async (resolve, reject) => {
+              let profile_device = cloneDeep(erp.info.profile.profile_device);
+              let devices = cloneDeep(erp.info.device);
+              let gateway_str = profile_device.find((item) => item.device == guid).gateway;
+              if (gateway_str) {
+                //get the setting of the user scene id
+
+                let sceneIdMap = await get_battery_threshold_scene_id(this.sceneTemplate == 'Door Close' ? 'Door Open' : this.sceneTemplate, guid);
+                let sceneId = sceneIdMap.id;
+                let sceneName = sceneIdMap.scene_name;
+
+                if (sceneId == -Infinity) {
+                  sceneId = '1';
+                  this.userSceneId = sceneId;
+                } else {
+                  if (!this.userSceneId) {
+                    this.userSceneId = parseInt(sceneId) + 1;
+                  }
+                }
+                let gateway_mac = gateway_str.split('-')[0];
+                let gateway_guid = '';
+                for (let i in devices) {
+                  if (devices[i].mac_address.toLowerCase() == gateway_mac.trim().toLowerCase()) {
+                    gateway_guid = i;
+                    break;
+                  }
+                }
+                let gatewayId = await get_device_id_by_guid(gateway_guid);
+
+                if (!gatewayId || gatewayId == 'null') {
+                  gatewayId = 1;
+                  this.userSceneGatewayId = gatewayId;
+                } else {
+                  if (!this.userSceneGatewayId) {
+                    this.userSceneGatewayId = parseInt(gatewayId) + 1;
+                  }
+                }
+                //post ble
+                let trigger_ble_list = [];
+                let gateway_action_ble_list = [];
+                if (this.sceneTemplate == 'Geomagnetic Scene') {
+                  let selected = this.settingsList.find((item) => item.id == 'battery_alert_threshold').save_value[0];
+                  let typeIndex = '23';
+                  let opcode = '00';
+                  let $trigger_command = `${opcode}${typeIndex}${core_utils_get_mac_address_from_guid(guid, true)}01${parseInt(selected).toString(16).pad('00')}000000`;
+                  let trigger = `8F2000${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt(
+                    $trigger_command.length / 2
+                  )
+                    .toString(16)
+                    .pad('00')}${$trigger_command}`;
+                  let $action_command = `02${core_utils_get_mac_address_from_guid(gateway_guid, true)}8f0200${parseInt(this.userSceneGatewayId).toString(16).pad('00')}`;
+                  let button_action = `8F1000${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt($action_command.length / 2)
+                    .toString(16)
+                    .pad('00')}${$action_command}`;
+                  let gateway_action = '';
+                  let $command = `02${core_utils_get_mac_address_from_guid(gateway_guid, true)}18${core_utils_get_mac_address_from_guid(guid, true)}${guid}${parseInt(selected).toString(16).pad('00')}8599${parseInt(this.userSceneGatewayId).toString(16).pad('00')}`;
+                  gateway_action = `8F1000${parseInt(this.userSceneGatewayId).toString(16).pad('00')}${parseInt($command.length / 2)
+                    .toString(16)
+                    .pad('00')}${$command}`;
+                  debugger;
+
+                  trigger_ble_list.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: trigger,
+                  });
+                  trigger_ble_list.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: button_action,
+                  });
+
+                  gateway_action_ble_list.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: gateway_action,
+                  });
+                } else if (this.sceneTemplate == 'Door Open' || this.sceneTemplate == 'Door Close') {
+                  let typeIndex = '05';
+                  let opcode = '00';
+                  let this_ref = '';
+                  let post_type = '';
+                  let post_id = '8c';
+                  //check the scene id
+                  debugger;
+                  if (this.userSceneId == '1') {
+                    post_id = '8c';
+                  } else if (this.userSceneId == '2') {
+                    post_id = '8d'; 
+                  } else if (this.userSceneId == '3') {
+                    post_id = '8e';
+                  } else if (this.userSceneId == '4') {
+                    post_id = '8f';
+                  } else {
+                    reject('Scene count is out of range.');
+                  }
+                  if (this.sceneTemplate == 'Door Open') {
+                    this_ref = '7c';
+                    post_type = '0b';
+                  } else if (this.sceneTemplate == 'Door Close') {
+                    this_ref = '7b';
+                    post_type = '0c';
+                  }
+                  let trigger = `8f0100${post_id}010200${typeIndex}${core_utils_get_mac_address_from_guid(gateway_guid, true)}${parseInt(this.userSceneGatewayId).toString(16).pad('00')}`;
+                  let button_action = `8f0300${this_ref}${post_id}`;
+                  trigger_ble_list.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: trigger,
+                  });
+                  trigger_ble_list.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: button_action,
+                  });
+                  let $command = `02${core_utils_get_mac_address_from_guid(gateway_guid,true)}18${core_utils_get_mac_address_from_guid(guid,true)}${guid}${post_type}8599${parseInt(this.userSceneGatewayId).toString(16).pad('00')}`;
+                  gateway_action = `8F1000${parseInt(this.userSceneGatewayId).toString(16).pad('00')}${parseInt($command.length / 2)
+                    .toString(16)
+                    .pad('00')}${$command}`;
+                  gateway_action_ble_list.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: gateway_action,
+                  });
+                }
+                try {
+                  let gateway_connected = window.peripheral[gateway_guid] ? window.peripheral[gateway_guid].prop.rssilv : 0;
+                  if (!gateway_connected) {
+                    app.dialog.close();
+                    reject(_('This setting requires a connection through the Gateway, and please ensure that the Gateway is online.'));
+                  }
+                } catch (err) {
+                  app.dialog.close();
+                  reject(_(erp.get_log_description(err)));
+                }
+                try {
+                  await window.peripheral[guid].write(trigger_ble_list);
+                  await window.peripheral[gateway_guid].write(gateway_action_ble_list);
+                  //update the scene data
+                  let scene_device_location = [
+                    {
+                      device: guid,
+                      storage_id: this.userSceneId,
+                    },
+                    {
+                      device: gateway_guid,
+                      storage_id: this.userSceneGatewayId,
+                    },
+                  ];
+                  let res = await post_scene_data(this.userSceneName, scene_device_location, this.sceneTemplate == 'Door Close' ? 'Door Open' : this.sceneTemplate);
+                  console.log('res', res);
+                  if (res.data) {
+                    this.userSceneName = res.data.data.name;
+                  }
+                  resolve();
+                } catch (err) {
+                  reject(_(erp.get_log_description(err)));
+                }
+              } else {
+                reject(_('This setting requires a connection through the Gateway, and please ensure that the Gateway is online.'));
+              }
+            });
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none !important;
+  }
+  .padding-15 {
+    padding: 15px;
+  }
+  .scroll-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px; /* 根据需要设定高度 */
+  }
+
+  .arrow {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent; /* 箭头的宽度和颜色 */
+    border-right: 10px solid transparent; /* 箭头的宽度和颜色 */
+    border-top: 15px solid black; /* 箭头的颜色 */
+    animation: bounce 1s infinite; /* 使箭头上下跳动的动画 */
+  }
+
+  /* 动画效果 */
+  @keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px); /* 向上跳 */
+    }
+    60% {
+      transform: translateY(-5px); /* 向下回落 */
+    }
+  }
+</style>

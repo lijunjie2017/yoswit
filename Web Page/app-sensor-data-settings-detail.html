@@ -1,0 +1,747 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Sensor Detail') }}</div>
+        <div class="right scene-list-right" @click="${()=>saveCondition()}">
+          <i class="material-icons">check</i>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content" style="height: 100%">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="medium-50 large-50 device-setting-list-detail">
+          <!-- choose the user -->
+          <div class="card margin-bottom-half mx-0 my-3">
+            <div class="card-content card-content-padding">
+              <div class="row">
+                <div class="col-auto">
+                  <span style="font-weight: bold;">{{_('Current User:')}}</span>
+                </div>
+                <div class="col align-self-center no-padding-left">
+                  <h5 class="no-margin-bottom">{{user_id}}</h5>
+                  <p class="setting-value text-muted size-12"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card margin-bottom-half mx-0 my-3" v-for="setting, index in settingsList" :key="setting.index">
+            <input type="hidden" :id="'detail_'+setting.id" />
+            <div class="card-content card-content-padding">
+              <div class="row">
+                <div class="col-auto">
+                  <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                    <i class="material-icons">settings</i>
+                  </div>
+                </div>
+                <div class="col align-self-center no-padding-left" v-on:click="showHelp(setting.id)">
+                  <h5 class="no-margin-bottom">
+                    {{_(setting.title)}}<i
+                      class="material-icons text-muted popover-open"
+                      v-if="setting.id != 'temperature'"
+                      data-popover=".popover-menu"
+                      :name="setting.id"
+                      style="font-size: 20px; margin-left: 5px; position: relative; top: 2px; top: 4px"
+                      >help</i
+                    >
+                  </h5>
+                  <p class="setting-value text-muted size-12" :name="setting.id" style="margin-bottom: 0px;"></p>
+                </div>
+                <div class="col-auto">
+                  <a class="button button-fill button-44 color-theme button-raised device" v-on:click="showPicker(setting.id)">
+                    <i class="material-icons">navigate_next</i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div :class="'popover popover-menu'">
+            <div class="popover-angle"></div>
+            <div class="popover-inner">
+              <div class="page-content">
+                <div style="font-size: 14px; padding: 5px 15px" v-for="tip in helpTipContent" :key="tip.title">
+                  <div>{{tip.title}}</div>
+                  <div class="text-muted" style="font-size: 12px; color: #999">{{tip.level}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, user_id } = $f7route.query;
+    console.log(user_id);
+    const saveCondition = () => {
+      vueApp.saveCondition();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          user_id : user_id,
+          settingsList: [],
+          IAQSettingList: [
+            {
+              title: 'Temperature',
+              id: 'temperature',
+              icon: 'settings',
+              unit: '°C',
+              choose_type: 'range', //range,less then,greater then
+              setting_value: [
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                33, 34, 35,
+              ],
+              save_value: [],
+            },
+            {
+              title: 'Humidity',
+              id: 'humidity',
+              icon: 'settings',
+              unit: '%',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '40-45%',
+                },
+                {
+                  title: 'Good',
+                  level: '50-60%, 35-40%',
+                },
+                {
+                  title: 'Medium',
+                  level: '60-65%, 20-35%',
+                },
+                {
+                  title: 'Low',
+                  level: '65-80%, 14-20%',
+                },
+                {
+                  title: 'Suck',
+                  level: '0-13%, 81-100%',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+              save_value: [],
+            },
+            {
+              title: 'PM1.0',
+              id: 'pm1_0',
+              icon: 'settings',
+              unit: 'μg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-50μg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '51-100μg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '101-150μg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '151-200μg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>200μg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 50, 100, 150, 200, 250],
+              save_value: [],
+            },
+            {
+              title: 'PM2.5',
+              id: 'pm2_5',
+              icon: 'settings',
+              unit: 'μg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-15μg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '15-35μg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '35-55μg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '55-75μg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>76μg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 15, 25, 35, 45, 55, 65, 75, 85],
+              save_value: [],
+            },
+            {
+              title: 'PM10',
+              id: 'pm10',
+              icon: 'settings',
+              unit: 'μg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-50μg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '50-150μg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '150-250μg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '250-350μg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>350μg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 50, 150, 250, 350, 450],
+              save_value: [],
+            },
+            {
+              title: 'Voc',
+              id: 'voc',
+              icon: 'settings',
+              unit: 'ppd',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '1-300ppd',
+                },
+                {
+                  title: 'Good',
+                  level: '301-500ppd',
+                },
+                {
+                  title: 'Medium',
+                  level: '501-1000ppd',
+                },
+                {
+                  title: 'Suck',
+                  level: '>1000ppd',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 300, 500, 1000, 1500],
+              save_value: [],
+            },
+            {
+              title: 'Nox',
+              id: 'nox',
+              icon: 'settings',
+              unit: 'µg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-40µg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '41-80µg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '81-180µg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '181-280µg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>280µg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 40, 80, 180, 280, 400, 600],
+              save_value: [],
+            },
+            {
+              title: 'Lux',
+              id: 'lux',
+              icon: 'settings',
+              unit: 'Lux',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-100Lux',
+                },
+                {
+                  title: 'Good',
+                  level: '101-300Lux',
+                },
+                {
+                  title: 'Medium',
+                  level: '301-1000Lux',
+                },
+                {
+                  title: 'Low',
+                  level: '>1000Lux',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 100, 300, 1000, 3000],
+              save_value: [],
+            },
+            {
+              title: 'CO2',
+              id: 'co2',
+              icon: 'settings',
+              unit: 'ppm',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-600ppm',
+                },
+                {
+                  title: 'Good',
+                  level: '601-1000ppm',
+                },
+                {
+                  title: 'Medium',
+                  level: '1001-15000ppm',
+                },
+                {
+                  title: 'Low',
+                  level: '1501-20000ppm',
+                },
+                {
+                  title: 'Suck',
+                  level: '>20000ppm',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 600, 1000, 1500, 2500, 4000],
+              save_value: [],
+            },
+            {
+              title: 'Pressure',
+              id: 'pressure',
+              icon: 'settings',
+              unit: 'hPa',
+              tip: [
+                {
+                  title: 'Low',
+                  level: '0-1000hPa',
+                },
+                {
+                  title: 'Perfect',
+                  level: '1001-1020hPa',
+                },
+                {
+                  title: 'High',
+                  level: '>1020hPa',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [1, 1000, 1020, 1050],
+              save_value: [],
+            },
+            {
+              title: 'Noise',
+              id: 'noise',
+              icon: 'settings',
+              unit: 'dB',
+              tip: [
+                {
+                  title: 'Silent',
+                  level: '0-20dB',
+                },
+                {
+                  title: 'Very Quiet',
+                  level: '21-40dB',
+                },
+                {
+                  title: 'Quiet',
+                  level: '41-60dB',
+                },
+                {
+                  title: 'Normal',
+                  level: '61-80dB',
+                },
+                {
+                  title: 'Loud',
+                  level: '81-100dB',
+                },
+                {
+                  title: 'Very Loud',
+                  level: '101-120dB',
+                },
+                {
+                  title: 'Dangerous',
+                  level: '>120dB',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 20, 40, 60, 80, 100, 120, 140],
+              save_value: [],
+            },
+            {
+              title: 'HCHO',
+              id: 'hcho',
+              icon: 'settings',
+              unit: 'mg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-0.08mg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '0.08-0.1mg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '0.1-0.2mg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '0.2-0.5mg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>0.5mg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 0.08, 0.1, 0.2, 0.5, 1],
+              save_value: [],
+            },
+            {
+              title: 'O3',
+              id: 'o3',
+              icon: 'settings',
+              unit: 'µg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-50µg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '51-100µg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '101-180µg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '181-240µg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>240µg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 50, 100, 180, 240, 300],
+              save_value: [],
+            },
+            {
+              title: 'CO',
+              id: 'co',
+              icon: 'settings',
+              unit: 'mg/m³',
+              tip: [
+                {
+                  title: 'Perfect',
+                  level: '0-2µg/m³',
+                },
+                {
+                  title: 'Good',
+                  level: '2-5µg/m³',
+                },
+                {
+                  title: 'Medium',
+                  level: '5-100µg/m³',
+                },
+                {
+                  title: 'Low',
+                  level: '10-15µg/m³',
+                },
+                {
+                  title: 'Suck',
+                  level: '>15µg/m³',
+                },
+              ],
+              choose_type: 'range',
+              setting_value: [0, 2, 5, 10, 15, 30, 35],
+              save_value: [],
+            },
+          ],
+          BatterySettingList: [
+            {
+              title: 'Battery Alert Threshold',
+              icon: 'settings',
+              id: 'battery_alert_threshold',
+              setting_value: [1, 2, 3, 4, 5, 6],
+              save_value: [],
+            },
+          ],
+          pickerMapList: [],
+          pickerValueMap: '',
+          helpTipContent: [],
+          userList: [],
+          userMapList : []
+        },
+        computed: {},
+        mounted() {
+          Vue.prototype.$saveCondition = this.saveCondition;
+          //this.scan();
+          this.init();
+          if (this.$saveUser) {
+            emitter.off('saveUser', this.$saveUser);
+          }
+          this.$saveUser = (data) => {
+            console.log('saveUser', data);
+            this.userList = data.userList;
+          };
+          emitter.on('saveUser', this.$saveUser);
+        },
+        methods: {
+          init() {
+            this.settingsList = this.IAQSettingList;
+            this.pickerMapList = [];
+            this.settingsList.forEach((setting) => {
+              //init the picker
+              this.pickerMapList[setting.id] = app.picker.create({
+                inputEl: document.getElementById('detail_'+setting.id),
+                rotateEffect: true,
+                cols: [
+                  {
+                    textAlign: 'center',
+                    values: setting.setting_value,
+                    displayValues: setting.setting_value.map((value) => value.toString() + setting.unit),
+                  },
+                  {
+                    textAlign: 'center',
+                    values: setting.setting_value,
+                    displayValues: setting.setting_value.map((value) => value.toString() + setting.unit),
+                  },
+                ],
+                on: {
+                  change: (picker, value, index) => {
+                    console.log(value, index);
+                  },
+                  open: async (picker) => {
+                    console.log('open');
+                    console.log(picker.$el.find('.toolbar .link'));
+                    $(picker.$el.find('.toolbar .link')).on('click', async () => {
+                      console.log('save');
+                      let value = picker.getValue();
+                      console.log(value);
+                      //check if the value is error
+                      if (value[0] > value[1] || value[0] == value[1]) {
+                        app.dialog.alert(_('Setting value is not in accordance with the rules.'));
+                        return;
+                      }
+                      $(`.device-setting-list-detail p[name=${this.pickerValueMap}]`).text(value[0] + setting.unit + ' - ' + value[1] + setting.unit);
+                      this.settingsList.forEach((kitem) => {
+                        if (kitem.id === this.pickerValueMap) {
+                          kitem.save_value = value;
+                        }
+                      });
+                      //save the value to the database
+                      //await iot_device_setting_sync_server(guid, setting.id, value[0] + ' - ' + value[1]);
+                      picker.close();
+                    });
+                  },
+                },
+              });
+            });
+            this.getErpData();
+          },
+          async getErpData(){
+            let url = `/api/resource/Device/${guid}`;
+            let res = await http2.request(url, {
+              method: 'GET',
+              serializer: 'json',
+              responseType: 'json',
+              debug: true,
+            });
+            let list = res.data.data.device_scene || [];
+            this.userList = list;
+            console.log(list);
+            list.forEach((item) => {
+              if (item.scene_title == this.user_id) {
+                let config_map = JSON.parse(item.scene_config);
+                let config = config_map.config_list;
+                this.userMapList = config_map.map_user;
+                config.forEach((citem) => {
+                  this.settingsList.forEach((kitem) => {
+                    if (kitem.id === citem.id) {
+                      kitem.save_value = citem.value;
+                      $(`.device-setting-list-detail p[name=${kitem.id}]`).text(citem.value[0] + kitem.unit + ' - ' + citem.value[1] + kitem.unit);
+                    }
+                  });
+                  this.pickerMapList[citem.id].setValue(citem.value);
+                });
+              }
+            });
+            console.log(res);
+          },
+          showPicker(id) {
+            console.log(id);
+            this.pickerValueMap = id;
+            this.pickerMapList[id].open();
+          },
+          showHelp(id) {
+            console.log(id);
+            this.settingsList.forEach((setting) => {
+              if (setting.id === id) {
+                this.helpTipContent = setting.tip;
+              }
+            });
+            //let appPopover = app.popover.open('.popover-menu');
+          },
+          async saveCondition() {
+            app.dialog.preloader();
+            console.log(this.settingsList);
+            //update the database
+            let saveData = [];
+            this.settingsList.forEach((setting) => {
+              if (setting.save_value.length > 0) {
+                saveData.push({
+                  id: setting.id,
+                  value: setting.save_value,
+                });
+              }
+            });
+            console.log(saveData);
+            let url = `/api/resource/Device/${guid}`;
+            let device_scene = [];
+            //should check the data if no youself, then add it
+            this.userList.forEach((user) => {
+              if (user.scene_title != this.user_id) {
+                device_scene.push(user);
+              }
+            });
+            let config_map = {
+              config_list : saveData,
+              map_user : this.userMapList
+            }
+            device_scene.push({
+              scene_title: this.user_id,
+              scene_config: JSON.stringify(config_map),
+            });
+            try {
+              let res = await http2.request(url, {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  device_scene: device_scene,
+                },
+              });
+              console.log(res);
+              app.dialog.close();
+              this.getErpData();
+              app.dialog.alert(_('Save Successfully'));
+            } catch (error) {
+              app.dialog.close();
+              console.log(error);
+              app.dialog.alert(error);
+            }
+            
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-hidden {
+    display: none !important;
+  }
+  .device-setting-list-detail {
+    padding: 15px;
+  }
+  .padding-15 {
+    padding: 15px;
+  }
+  .scroll-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px; /* 根据需要设定高度 */
+  }
+
+  .arrow {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent; /* 箭头的宽度和颜色 */
+    border-right: 10px solid transparent; /* 箭头的宽度和颜色 */
+    border-top: 15px solid black; /* 箭头的颜色 */
+    animation: bounce 1s infinite; /* 使箭头上下跳动的动画 */
+  }
+
+  /* 动画效果 */
+  @keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px); /* 向上跳 */
+    }
+    60% {
+      transform: translateY(-5px); /* 向下回落 */
+    }
+  }
+</style>

@@ -59,6 +59,7 @@
                 :gateway="guid"
                 :guid="guid"
                 :type="2"
+                config=""
                 :ismobile="ismobile"
                 ref="childRef"
                 @child-event="handleChildEvent"
@@ -198,7 +199,7 @@
           guid: guid,
           device_name: device_name,
           gatewayInfoShow: '',
-          statusTitle: 'Mobile Conecting...',
+          statusTitle: 'Mobile Connecting...',
           statusList: [
             {
               title: 'Check Gateway Network Status.',
@@ -238,7 +239,8 @@
           nextStep(index) {
             if (index == 1) {
               //emit the data to the child
-              emitter.emit('devic/network/next', { guid: this.guid });
+              //emitter.emit('devic/network/next', { guid: this.guid });
+              this.index = 2;
             } else if (index == 2) {
               this.$refs.childRef.syncGateways();
               return;
@@ -260,7 +262,7 @@
             }
             this.$topicFun = async (res) => {
               let message = res.message;
-              if (message.startsWith('Online')) {
+              if (message.includes('Online')) {
                 this.statusList[0].status = 1;
                 this.statusList[1].status = 1;
                 try {

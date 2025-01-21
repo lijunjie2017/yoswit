@@ -333,14 +333,15 @@
             // })
           },
           toDetail(item) {
+            this.scan();
             mainView.router.navigate(`/mobile-app/device-network-detail?network_index=${item.index}&edit=1`);
           },
           async scan() {
             await bleManager.stopScan();
             await bleManager.wait(200);
             bleManager.scan(this.onDiscovery, async () => {
-              await bleManager.wait(5000);
-              this.scan();
+              //await bleManager.wait(5000);
+              //this.scan();
             });
           },
           async onDiscovery(p) {
@@ -350,6 +351,13 @@
             setTimeout(() => {
               if (!isset(peripheral[p.guid])) {
                 peripheral[p.guid] = new Peripheral(p);
+                if(isset(erp.info.device[p.guid])){
+                  peripheral[p.guid].prop.firmware = erp.info.device[p.guid].firmware || 0;
+                let firmwareNo = peripheral[p.guid].prop.firmware.replace(/[^0-9.]/g, '');
+                firmwareNo = firmwareNo.split('.');
+                  firmwareNo = firmwareNo[0] + '.' + (firmwareNo.length > 1 ? firmwareNo.slice(1).join('') : '0');
+                  peripheral[p.guid].prop.firmwareNo = firmwareNo;
+                }
               }
               emitter.emit('ha_network_update_status', { p: p });
             }, 10);

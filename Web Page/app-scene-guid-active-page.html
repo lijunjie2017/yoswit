@@ -283,6 +283,18 @@
                         <i class="material-icons text-color-theme" style="font-size: 50px" v-if="mainRcuConfig">toggle_on</i>
                       </div>
                     </div>
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">
+                        <span>{{_('485 Enable')}}</span>
+                      </div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="viaConfig = !viaConfig"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!viaConfig">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="viaConfig">toggle_on</i>
+                      </div>
+                    </div>
                   </div>
                   <p class="tips text-color-gray">{{_('This configuration is suitable for multiple RCUs connected via 485 wiring.')}}</p>
                 </div>
@@ -491,6 +503,7 @@
           doorBellStatus: true,
           cleanAndDndStatus: true,
           mainRcuConfig : false,
+          viaConfig : false
         },
         watch:{
           slotlist:{
@@ -515,7 +528,6 @@
         methods: {
           dealWithMode(item){
             let modeStr = '/';
-            debugger
             if(item.activeMode == 1){
               if(item.mode == 1){
                 modeStr = 'On Off Switch'
@@ -877,6 +889,13 @@
                   }
                   
                 }
+                if(item.setting_type == 'via_485'){
+                  if(item.setting == 0){
+                    this.viaConfig = false;
+                  }else{
+                    this.viaConfig = true
+                  }
+                }
               });
             }
           },
@@ -914,24 +933,48 @@
                 (rs) => {
                   console.log(rs);
                   if (rs.startsWith('9711')) {
-                    let index_one = rs.substr(6, 2);
-                    let index_two = rs.substr(10, 2);
-                    let index_three = rs.substr(14, 2);
-                    let index_four = rs.substr(18, 2);
-                    let index_five = rs.substr(22, 2);
-                    this.slotlist.forEach((kitem) => {
-                      if (kitem.name == 1) {
-                        kitem.activeMode = parseInt(index_one);
-                      } else if (kitem.name == 2) {
-                        kitem.activeMode = parseInt(index_two);
-                      } else if (kitem.name == 3) {
-                        kitem.activeMode = parseInt(index_three);
-                      } else if (kitem.name == 4) {
-                        kitem.activeMode = parseInt(index_four);
-                      } else if (kitem.name == 5) {
-                        kitem.activeMode = parseInt(index_five);
+                    // let index_one = rs.substr(6, 2);
+                    // let index_two = rs.substr(10, 2);
+                    // let index_three = rs.substr(14, 2);
+                    // let index_four = rs.substr(18, 2);
+                    // let index_five = rs.substr(22, 2);
+                    // this.slotlist.forEach((kitem) => {
+                    //   if (kitem.name == 1) {
+                    //     kitem.activeMode = parseInt(index_one);
+                    //   } else if (kitem.name == 2) {
+                    //     kitem.activeMode = parseInt(index_two);
+                    //   } else if (kitem.name == 3) {
+                    //     kitem.activeMode = parseInt(index_three);
+                    //   } else if (kitem.name == 4) {
+                    //     kitem.activeMode = parseInt(index_four);
+                    //   } else if (kitem.name == 5) {
+                    //     kitem.activeMode = parseInt(index_five);
+                    //   }
+                    // });
+                    let obj = class_test_rcu(rs);
+                    console.log("obj",obj);
+                    this.slotlist.forEach(item=>{
+                      if(isset(obj[parseInt(item.name).toString(16).pad('00')])){
+                        let value = obj[parseInt(item.name).toString(16).pad('00')];
+                        if(value.length == 2){
+                          item.activeMode = '00';
+                        }else{
+                          item.activeMode = parseInt(value.substr(0,2));
+                          let mode = parseInt(value.substr(2,2));
+                          if(mode == 5){
+                            item.mode = 3;
+                          }else if(mode == 3){
+                            item.mode = 4;
+                          }else if(mode == 4){
+                            item.mode = 5;
+                          }else{
+                            item.mode = mode;
+                          }
+                          //item.mode = parseInt(value.substr(2,2));
+                        }
                       }
-                    });
+                    })
+                    console.log("this.slotlist",this.slotlist);
                   } else if (rs.startsWith('9714')) {
                   }
                 },
@@ -1325,7 +1368,8 @@
             let erpObj = {
               'door_bell': this.doorBellStatus ? '1' : '0',
               'clean_dnd': this.cleanAndDndStatus ? '1' : '0',
-              'main_rcu' : this.mainRcuConfig?'1':'0'
+              'main_rcu' : this.mainRcuConfig?'1':'0',
+              'via_485' : this.viaConfig?'1':'0'
             };
             //change the ioList status
             this.ioList.forEach((item) => {
@@ -1334,6 +1378,27 @@
                 item.inputStatus = !this.cleanAndDndStatus;
               }
             });
+            //init via_485
+            try{
+              let list = [];
+              if(this.viaConfig){
+                list.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `972002010400000100c20100`,
+                })
+              }else{
+                list.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `972002010000000100c20100`,
+                })
+              }
+              await window.peripheral[guid].write(list);
+            }catch(error){ 
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
             try {
               console.log(erpObj);
               await iot_device_setting_sync_server(guid, null, null, true, erpObj);

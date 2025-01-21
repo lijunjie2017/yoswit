@@ -422,7 +422,11 @@ window.iot_mode_setup_change_mode_init = function(params) {
                             "device_mode": selected,
                         }
                         if(selected == 'Curtain Motor Ac' || selected == 'Curtain Motor'){
-                            post_data['device_button_group'] = 'OPENCLOSE UART';
+                            if(button_group.includes('WIFI')){
+                                post_data['device_button_group'] = 'OPENCLOSE WIFI UART';
+                            }else{
+                                post_data['device_button_group'] = 'OPENCLOSE UART';
+                            }
                             //should check original device_button_group
                             if(button_group.includes('REVERSE')){
                                 //update the status
@@ -434,7 +438,11 @@ window.iot_mode_setup_change_mode_init = function(params) {
                                 }
                             }
                         }else if(selected == 'Curtain Motor Reverse Ac' || selected == 'Curtain Motor Reverse'){
-                            post_data['device_button_group'] = 'OPENCLOSE UART REVERSE';
+                            if(button_group.includes('WIFI')){
+                                post_data['device_button_group'] = 'OPENCLOSE WIFI UART REVERSE';
+                            }else{
+                                post_data['device_button_group'] = 'OPENCLOSE UART REVERSE';
+                            }
                             //should check original device_button_group
                             if(!button_group.includes('REVERSE')){
                                 //update the status

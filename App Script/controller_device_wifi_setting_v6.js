@@ -264,7 +264,7 @@ window.device_wifi_setting_component = {
         console.log('component res', res);
         let message = res.message;
         //debugger
-        if (message == 'Online') {
+        if (message.includes('Online')) {
           clearTimeout(this.$subscribeTimer);
           clearTimeout(this.$preloaderHide);
           this.connectTemp = 3;//control the mqtt connect count;

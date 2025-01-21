@@ -384,7 +384,7 @@
       // col.setValue(26)
     };
     $onMounted(() => {
-      if (mode == 'On Off Switch') {
+      if (mode == 'On Off Switch' || mode == 'RCU Scene Button') {
         $('.on-off-list').removeClass('device-hidden');
       }else if(mode == 'RCU Controller' && button_group == 'SCENE MUTIWAY ONOFF GANG1'){
         $('.dimming-list').removeClass('device-hidden');

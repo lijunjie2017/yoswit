@@ -47,29 +47,33 @@ window.iot_ble_load_all_timer = function (params) {
                 ///mobile-app/timer-form-page?subdevice={{subdevice.name}}
                 resolve([]);
             }
-            ble.startNotification(p.prop.id, "ff80", "ff82",
-                (rs) => {
-                    if (rs && rs.startsWith(BLE_TIMER_LOAD)) {
-                        console.log(TAG, rs);
-
-                        if (rs === (BLE_TIMER_LOAD + BLE_TIMER_ALL).toLowerCase()) {
-                            resolve(timers);
-                        } else {
-                            timers.push(rs);
+            let firmware = window.peripheral[guid].prop.firmwareNo;
+            if(firmware && firmware > 6){
+                ble.startNotification(p.prop.id, "ff80", "ff82",
+                    (rs) => {
+                        if (rs && rs.startsWith(BLE_TIMER_LOAD)) {
+                            console.log(TAG, rs);
+    
+                            if (rs === (BLE_TIMER_LOAD + BLE_TIMER_ALL).toLowerCase()) {
+                                resolve(timers);
+                            } else {
+                                timers.push(rs);
+                            }
                         }
+                    },
+                    (e) => {
+                        app.preloader.hide();
+                        console.log(TAG, "listen error: " + e);
+                        reject(e);
                     }
-                },
-                (e) => {
-                    app.preloader.hide();
-                    console.log(TAG, "listen error: " + e);
+                );
+    
+                iot_ble_write(guid, "ff80", "ff81", BLE_TIMER_LOAD + BLE_TIMER_ALL, false).catch((e) => {
+                    console.log(TAG, "write error: " + e);
                     reject(e);
-                }
-            );
-
-            iot_ble_write(guid, "ff80", "ff81", BLE_TIMER_LOAD + BLE_TIMER_ALL, false).catch((e) => {
-                console.log(TAG, "write error: " + e);
-                reject(e);
-            });
+                });
+            }
+            
         });
     }).then((timers) => {
         // reset
@@ -289,7 +293,7 @@ window.iot_ble_load_all_timer = function (params) {
                 mainView.router.back();
             });
         } else {
-            app.dialog.alert(e);
+            app.dialog.alert(_(erp.get_log_description(e)));
         }
     });
 }

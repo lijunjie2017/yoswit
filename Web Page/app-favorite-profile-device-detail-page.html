@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Favorite List') }}</div>
+        <div class="title">{{ _('Favorite Detail') }}</div>
         <div class="right scene-list-right device-hidden"></div>
       </div>
     </div>
@@ -110,10 +110,6 @@
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
-          favoriteList: [],
-          title: '',
-          applyForList: [],
-          subdevices: [],
         },
         computed: {},
         mounted() {
@@ -121,109 +117,11 @@
           this.init();
         },
         methods: {
-          async onDeleted() {
-            //alert the confirm
-            app.dialog.confirm(
-              _('Confirm Deletion?'),
-              async () => {
-                try {
-                  await http2.request(encodeURI('/api/resource/User/' + users[users.current].user_id), {
-                    serializer: 'json',
-                    responseType: 'json',
-                    method: 'PUT',
-                    data: {
-                      interest: '',
-                    },
-                  });
-                  app.dialog.alert(_('Delete Successfully'));
-                  this.subdevices = [];
-                  this.init();
-                } catch (error) {
-                  app.dialog.alert(error);
-                }
-              },
-              () => {}
-            );
-          },
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
           async init() {
-            this.favoriteList = [];
-            try {
-              let resData = await http2.request(encodeURI('/api/resource/User/' + users[users.current].user_id), {
-                responseType: 'json',
-                method: 'GET',
-              });
-              let interest = resData.data.data.interest;
-              if (interest) {
-                let interestMap = JSON.parse(interest);
-                let favoriteSubdevices = interestMap.subdevices;
-                this.subdevices = favoriteSubdevices?favoriteSubdevices:[];
-                let obj = cloneDeep(interestMap);
-                obj['image'] = 'https://dev.mob-mob.com/files/scene.jpg';
-                obj['applyFor'] = obj.applyFor;
-                obj['applyForStr'] = obj.applyFor
-                  .map((item) => {
-                    return tran(item.title);
-                  })
-                  .join(',');
-                this.applyForList = obj.applyFor;
-
-                obj['total'] = favoriteSubdevices.length;
-                this.title = obj['title'];
-                //count the device on differ room]
-                this.favoriteList.push(obj);
-                console.log('obj', obj);
-              } else {
-                this.favoriteList = [];
-              }
-            } catch (error) {
-              this.favoriteList = [];
-            }
-          },
-          async favoriteRoom() {
-            mainView.router.navigate(`/mobile-app/scene-guid-operate-page?type=favorite`);
-            return 
-            let inputTitle = `${_('This will overwrite the previous configuration. Do you wish to continue?')}`;
-            debugger
-            if (this.subdevices.length == 0) {
-              inputTitle = `Save the current profile configuration and enter a title.`;
-              //
-              
-            };
-            this.subdevices = window.favoriteSubdevices;
-            app.dialog.prompt(`${inputTitle}`, async (name) => {
-              if (name) {
-                let postObj = {
-                  subdevices: this.subdevices,
-                  title: name,
-                  source: erp.info.profile.name,
-                  applyFor: this.applyForList,
-                  date: dayjs().format(),
-                };
-                try {
-                  await http2.request(encodeURI('/api/resource/User/' + users[users.current].user_id), {
-                    serializer: 'json',
-                    responseType: 'json',
-                    method: 'PUT',
-                    data: {
-                      interest: JSON.stringify(postObj),
-                    },
-                  });
-                  app.dialog.alert(_('Save Successfully'));
-                  this.init();
-                } catch (error) {
-                  console.log(error);
-                }
-              } else {
-                app.dialog.alert(`${_('Title can not be empty. ')}`);
-              }
-            });
-            setTimeout(() => {
-              $(`.dialog-input-field .dialog-input`).attr('placeholder', _('Title'));
-              $(`.dialog-input-field .dialog-input`).val(this.title);
-            }, 0);
+            
           },
         },
       });

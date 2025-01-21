@@ -1,0 +1,670 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Device Timer') }}</div>
+        <div class="right">
+          <a link icon-only @click="${()=>batch_save()}">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box" id="frappe-form">
+          <div class="card no-border">
+            <div class="card-content" style="padding-bottom: 10px">
+              <div class="list">
+                <!--<input type="hidden" name="guid" value="{{ guid }}" />
+                <input type="hidden" name="subdevice" value="{{ subdevice.name }}" />
+                <input type="hidden" name="timer_id" value="{{ doc.data.timerid if hasTimerId else '' }}" />
+                <input type="hidden" name="button_group" value="{{ subdevice.device_button_group }}" />
+                <input type="hidden" name="timer_max_num" value="{{ timer_max_num }}" />
+                <input type="hidden" name="mode" value="{{ device_model.mode }}" /> -->
+                <ul>
+                  <li class="device py-2" style="box-sizing: content-box" v-if="!normal_radar">
+                    <div class="item-content">
+                      <div
+                        class="item-media"
+                        :style="{
+                        'background-position': 'center',
+                        'background-size': 'contain',
+                        'position': 'relative',
+                        'background-image': 'url('+device_image+')'}"
+                      >
+                        <i class="material-icons icons-authfail">no_encryption</i>
+                      </div>
+                      <div class="item-inner">
+                        <div class="item-title">
+                          {{ title }}
+                          <div class="item-footer">{{ model }}-{{ device_name }}</div>
+                          <div class="item-footer">{{ firmware }}-{{ mac_address }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="control-panel-right"></div>
+                  </li>
+                  <li v-if="!normal_radar">
+                    <div class="item-content item-input">
+                      <div class="item-inner">
+                        <div class="item-title item-label form-label">
+                          {{ _('Unmanned Duration') }} <span class="input-required">*</span>
+                        </div>
+                        <div class="item-input-wrap">
+                          <input
+                            type="number"
+                            name="duration"
+                            v-model="duration"
+                            :placeholder='_("Unmanned Duration(s)")'
+                            id="device_timer_time_duration"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li v-if="normal_radar">
+                    <div class="item-content item-input">
+                      <div class="item-inner">
+                        <div class="item-title item-label form-label">
+                          {{ _('Radar Mode') }} <span class="input-required">*</span>
+                        </div>
+                        <div class="item-input-wrap">
+                          <span>Sleep</span><i class="icon material-icons text-color-theme" v-on:click="sleepStatus=!sleepStatus" v-if="sleepStatus" style="margin-left: 10px;">check_box</i><i class="icon material-icons text-color-theme" v-on:click="sleepStatus=!sleepStatus" v-if="!sleepStatus" style="margin-left: 10px;">check_box_outline_blank</i>
+                          <span style="margin-left: 10px;">Detection</span><i class="icon material-icons text-color-theme" v-on:click="sleepStatus=!sleepStatus" v-if="!sleepStatus" style="margin-left: 10px;">check_box</i><i class="icon material-icons text-color-theme" v-on:click="sleepStatus=!sleepStatus" v-if="sleepStatus" style="margin-left: 10px;">check_box_outline_blank</i>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="item-content item-input">
+                      <div class="item-inner">
+                        <div class="item-title item-label form-label">{{ _('Time') }} <span class="input-required">*</span></div>
+                        <div class="item-input-wrap">
+                          <input type="text" name="time" value="" placeholder="Time" readonly="readonly" id="device_timer-time-picker" />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="item-content item-input">
+                      <div class="item-inner">
+                        <div class="item-title item-label form-label">{{ _('Start From') }} <span class="input-required">*</span></div>
+                        <div class="item-input-wrap">
+                          <input type="text" name="date" value="" placeholder="Date" readonly="readonly" id="device_timer-date-picker" />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <a class="item-link smart-select" id="device_timer-repeat-select">
+                      <select name="repeat" multiple>
+                        <option value="repeat_monday">{{ _('Mon') }}</option>
+                        <option value="repeat_tuesday">{{ _('Tue') }}</option>
+                        <option value="repeat_wednesday">{{ _('Wed') }}</option>
+                        <option value="repeat_thursday">{{ _('Thu') }}</option>
+                        <option value="repeat_friday">{{ _('Fri') }}</option>
+                        <option value="repeat_saturday">{{ _('Sat') }}</option>
+                        <option value="repeat_sunday">{{ _('Sun') }}</option>
+                      </select>
+                      <div class="item-content">
+                        <div class="item-inner">
+                          <div class="item-title">
+                            <div class="item-label">{{ _('Repeat') }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { subdevice, timer_id, action } = $f7route.query;
+
+    const batch_save = () => {
+      vueApp.$batchSave();
+    };
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          duration: 0,
+          title: '',
+          timerId: timer_id ? timer_id : null,
+          ref: isset(action) ? action : 1,
+          subdevice_name: '',
+          guid: '',
+          device_button_group: '',
+          mode: '',
+          model: '',
+          device_image: '',
+          device_name: '',
+          firmware: 0,
+          mac_address: '',
+          buttonBoxType: 3,
+          modeStr: 0,
+          speedVaule: 1,
+          temperature: 26,
+          timercommand: '',
+          detectionRange: 0,
+          unmannedDuration: 0,
+          movingRange: [],
+          staticRange: [],
+          radar_mode : '',
+          sleepStatus: true,
+          detectionStatus: false,
+          normal_radar : true,
+          p: null,
+        },
+        watch: {},
+        mounted() {
+          this.init();
+          this.initDate();
+          Vue.prototype.$batchSave = this.save;
+          emitter.on('set_timmer', (data) => {
+            console.log(data);
+            this.timercommand = data.command;
+          });
+        },
+        methods: {
+          initDate() {
+            let form_date = new Date();
+            form_date.setMinutes(form_date.getMinutes() + 2);
+            this.iot_device_timer_form_time_picker = app.picker.create({
+              inputEl: '#device_timer-time-picker',
+              value: [form_date.getHours().toString().pad('00'), form_date.getMinutes().toString().pad('00')],
+              formatValue: function (values, displayValues) {
+                return values[0] + ':' + values[1];
+              },
+              cols: [
+                // Hours
+                {
+                  values: (function () {
+                    var arr = [];
+                    for (var i = 0; i <= 23; i++) {
+                      arr.push(i.toString().pad('00'));
+                    }
+                    return arr;
+                  })(),
+                },
+                // Divider
+                {
+                  divider: true,
+                  content: ':',
+                },
+                // Minutes
+                {
+                  values: (function () {
+                    var arr = [];
+                    for (var i = 0; i <= 59; i++) {
+                      arr.push(i.toString().pad('00'));
+                    }
+                    return arr;
+                  })(),
+                },
+              ],
+            });
+            this.iot_device_timer_form_date_picker = app.calendar.create({
+              inputEl: '#device_timer-date-picker',
+              locale: 'en-US',
+              dateFormat: 'yyyy-mm-dd',
+              value: [form_date],
+              openIn: 'customModal',
+              header: true,
+              footer: true,
+            });
+            this.iot_device_timer_form_repeat_select = app.smartSelect.create({
+              el: '#device_timer-repeat-select',
+              openIn: 'sheet',
+            });
+            //iot_device_timer_form_repeat_select.setValue(repeat);
+          },
+          init() {
+            let devices = cloneDeep(erp.info.profile.profile_device);
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let models = cloneDeep(erp.doctype.device_model);
+
+            subdevices.forEach((item) => {
+              if (item.name == subdevice) {
+                devices.forEach((kitem) => {
+                  if (kitem.name == item.profile_device) {
+                    this.model = kitem.device_model;
+                    this.device_name = kitem.device_name;
+                  }
+                });
+                this.subdevice_name = item.name;
+                this.guid = item.device;
+                this.p = window.peripheral[this.guid];
+                this.mac_address = core_utils_get_mac_address_from_guid(this.guid);
+                this.device_button_group = item.device_button_group;
+                this.mode = item.device_mode;
+                this.title = _(item.title);
+              }
+            });
+            this.firmware = window.peripheral[this.guid].prop.firmware;
+            //get the device model image
+            for (let i in models) {
+              if (models[i].model_code === this.model) {
+                if (isset(models[i].image)) {
+                  this.device_image = models[i].image;
+                } else {
+                  this.device_image = 'https://my.yoswit.com/files/products/YO815.svg';
+                }
+              }
+            }
+            if(this.mode.includes("24G")){
+              this.normal_radar = true;
+              this.startNotification();
+            }
+          },
+          startNotification() {
+            iot_ble_check_enable()
+              .then(() => {
+                return window.peripheral[this.guid].connect();
+              })
+              .then(() => {
+                return new Promise((resolve, reject) => {
+                  if (Capacitor.getPlatform() === 'android') {
+                    ble.requestMtu(
+                      p.id,
+                      512,
+                      () => {
+                        console.log('>>>> radar request mtu success');
+                        resolve();
+                      },
+                      (err) => {
+                        console.log('>>>> radar request mtu fail: ' + err);
+                        reject(err);
+                      }
+                    );
+                  } else {
+                    resolve();
+                  }
+                });
+              })
+              .then(() => {
+                ble.startNotification(
+                  p.id,
+                  'ff80',
+                  'ff82',
+                  (rs) => {
+                    // console.log('>>>> radar notify data: ' + rs);
+
+                    this.processNotifyData(rs);
+                  },
+                  (err) => {
+                    console.log('>>>> radar notify error: ' + err);
+                  }
+                );
+              })
+              .then(() => {
+                this.writeCmd('9500');
+              })
+              .catch((err) => {
+                app.dialog.alert(err, runtime.appInfo.name, () => {
+                  // mainView.router.back();
+                });
+              });
+          },
+          processNotifyData(rs) {
+            if (rs.startsWith('9500000030')) {
+              const byteStrings = rs.match(/.{1,2}/g);
+              console.log(byteStrings);
+
+              // 触发间距 (* 100)
+              // 1 -> 0.75m | 0 -> 0.2m
+              const range_gate_resolution = iot_utils_from_little_endian_hex(byteStrings.slice(6, 6 + 2).join(''));
+              this.detectionRange = range_gate_resolution;
+
+              if (this.sleepStatus) {
+                // 无人持续时间
+                const no_target_lastfor = iot_utils_from_little_endian_hex(byteStrings.slice(31, 31 + 4).join(''));
+                this.unmannedDuration = no_target_lastfor;
+
+                // 运动能量值 [0-8]
+                const move_range_gate = byteStrings.slice(35, 35 + 9).map((e) => parseInt(e, 16));
+                this.movingRange = move_range_gate;
+
+                // 静止能量值 [0-8]
+                const static_range_gate = byteStrings.slice(44, 44 + 9).map((e) => parseInt(e, 16));
+                this.staticRange = static_range_gate;
+              } else {
+                // 无人持续时间
+                const no_target_lastfor = iot_utils_from_little_endian_hex(byteStrings.slice(8, 8 + 4).join(''));
+                this.unmannedDuration = no_target_lastfor;
+
+                // 运动能量值 [0-8]
+                const move_range_gate = byteStrings.slice(12, 12 + 9).map((e) => parseInt(e, 16));
+                this.movingRange = move_range_gate;
+
+                // 静止能量值 [0-8]
+                const static_range_gate = byteStrings.slice(21, 21 + 9).map((e) => parseInt(e, 16));
+                this.staticRange = static_range_gate;
+              }
+            } else if (rs.startsWith('950100001F'.toLowerCase())) {
+              if (!this.enableDetection) {
+                return;
+              }
+
+              const byteStrings = rs.match(/.{1,2}/g);
+
+              // 运动能量值 [0-8]
+              const move_range_gate = byteStrings.slice(16, 16 + 9).map((e) => parseInt(e, 16));
+              move_range_gate.forEach((v, i) => {
+                this.movingReferenceRange[i] += v;
+              });
+
+              // 静止能量值 [0-8]
+              const static_range_gate = byteStrings.slice(25, 25 + 9).map((e) => parseInt(e, 16));
+              static_range_gate.forEach((v, i) => {
+                this.staticReferenceRange[i] += v;
+              });
+
+              this.recordCount += 1;
+            }
+          },
+          toHref() {
+            mainView.router.navigate(`/mobile-app/timer-picker-page?type=3`);
+          },
+          initRangeBar(guid, button_group, value) {
+            setTimeout(() => {
+              console.log($(`.range-slider-scene[guid="${guid}"][button_group="${button_group}"]`));
+              let range_silder = app.range.create({
+                el: `.range-slider-scene[guid="${guid}"][button_group="${button_group}"]`,
+                value: isset(value) ? value : 100,
+                min: 0,
+                max: 100,
+                draggableBar: false,
+                label: true,
+                step: 1,
+                scale: true,
+                scaleSteps: 5,
+                scaleSubSteps: 4,
+                on: {
+                  changed: this.rangeChangeFunDimming,
+                },
+              });
+            }, 200);
+          },
+          findMissingNumber(arr) {
+            if (arr.length === 0) {
+              return 1;
+            }
+            arr.sort((a, b) => a - b);
+            for (let i = 0; i < arr.length - 1; i++) {
+              if (arr[i + 1] - arr[i] > 1) {
+                return arr[i] + 1;
+              }
+            }
+            return arr[arr.length - 1] + 1;
+          },
+          async saveInErp(dateStr, timeStr, binaryRepeat, status, duration) {
+            //save data in erp
+            return new Promise(async (reslove, reject) => {
+              let devices = cloneDeep(erp.info.device);
+              let deviceMap = devices[this.guid];
+              let device_timers = deviceMap.device_timer;
+              let idList = device_timers.map((e) => {
+                return e.timer_id;
+              });
+              const repeat_keys = [
+                'repeat_monday',
+                'repeat_tuesday',
+                'repeat_wednesday',
+                'repeat_thursday',
+                'repeat_friday',
+                'repeat_saturday',
+                'repeat_sunday',
+              ].reverse();
+              const repeat = {};
+              for (let i = 0; i < repeat_keys.length; i++) {
+                repeat[repeat_keys[i]] = parseInt(binaryRepeat[i]);
+              }
+              if (!this.timerId && this.timerId != 0) {
+                device_timers.push({
+                  device_button_group: this.device_button_group,
+                  timer_id: this.findMissingNumber(idList),
+                  date: dateStr,
+                  time: timeStr,
+                  action: duration,
+                  repeat_daily: binaryRepeat === '1111111' ? 1 : 0,
+                  ...repeat,
+                  disabled: status === 0 ? 1 : 0,
+                });
+              } else {
+                let objMap = {
+                  device_button_group: this.device_button_group,
+                  date: dateStr,
+                  time: timeStr,
+                  action: '',
+                  repeat_daily: binaryRepeat === '1111111' ? 1 : 0,
+                  ...repeat,
+                  disabled: status === 0 ? 1 : 0,
+                };
+                device_timers.forEach((item) => {
+                  if (item.timer_id == this.timerId) {
+                    item = Object.assign(item, objMap);
+                  }
+                });
+              }
+              let url = encodeURI('/api/resource/Device/' + this.guid);
+              try {
+                await http2.request(url, {
+                  method: 'PUT',
+                  serializer: 'json',
+                  debug: true,
+                  data: {
+                    device_timer: device_timers,
+                  },
+                });
+                await ha_profile_ready();
+                reslove(1);
+              } catch (error) {
+                reject(error);
+              }
+            });
+          },
+          async save() {
+            //save the timer
+            let devices = cloneDeep(erp.info.device);
+            let deviceMap = devices[this.guid];
+            let device_timers = deviceMap.device_timer;
+            let idList = device_timers.map((e) => {
+              return e.timer_id;
+            });
+            let timer_id = this.timerId || this.timerId == 0 ? this.timerId : this.findMissingNumber(idList);
+            const repeat_keys = [
+              'repeat_monday',
+              'repeat_tuesday',
+              'repeat_wednesday',
+              'repeat_thursday',
+              'repeat_friday',
+              'repeat_saturday',
+              'repeat_sunday',
+            ].reverse();
+            const formdata = app.form.convertToData('#frappe-form');
+            console.log('timer', formdata);
+            let repeat = '';
+            if (formdata.repeat && formdata.repeat.length > 0) {
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[0]) !== -1 ? 1 : 0;
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[1]) !== -1 ? 1 : 0;
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[2]) !== -1 ? 1 : 0;
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[3]) !== -1 ? 1 : 0;
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[4]) !== -1 ? 1 : 0;
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[5]) !== -1 ? 1 : 0;
+              repeat += formdata.repeat.findIndex((e) => e === repeat_keys[6]) !== -1 ? 1 : 0;
+            } else {
+              repeat = '000000';
+            }
+            let dateStr = formdata.date;
+            let timeStr = formdata.time + ':00';
+            const dateParts = dateStr.split('-');
+            const timeParts = timeStr.split(':');
+            const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], timeParts[0], timeParts[1], timeParts[2]);
+            const start_time_hours = date.getHours().toString(16).pad('00');
+            const start_time_mins = date.getMinutes().toString(16).pad('00');
+            const this_day = date.getDate().toString(16).pad('00');
+            const this_month = (date.getMonth() + 1).toString(16).pad('00');
+            const hexYear = date.getFullYear().toString(16).pad('0000');
+            const yearHigh = hexYear.substring(0, 2);
+            const yearLow = hexYear.substring(2);
+            let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
+            if (repeat_int == '00') {
+              repeat_int = '80';
+            }
+            this.timercommand = `000300${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}`;
+            console.log(this.timercommand);
+            // let type = '03';
+            // let opcode = '00';
+
+            console.log(timer_id);
+
+            let $command = `${this.timercommand}`;
+            let $length = ($command.length / 2).toString(16).pad('00');
+            let command = `8F2000${parseInt(timer_id).toString(16).pad('00')}${parseInt(timer_id).toString(16).pad('00')}${$length}${$command}`;
+            let actioncommand_pre = `8F1000${parseInt(timer_id).toString().pad('00')}`;
+            let action_command = '';
+            //9527000004 + iot_utils_to_little_endian_hex((parseInt(value)),4);
+            //24G 9512000016+4byte(target_lastfor)+9byte(move_range_gate)+9byte(static_range_gate)
+            let $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}13099527000004${iot_utils_to_little_endian_hex(parseInt(this.duration), 4)}`;
+            action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
+            if(this.normal_radar){
+              $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}131b9512000016${iot_utils_to_little_endian_hex(parseInt(this.unmannedDuration), 4)}`;
+              $action_command += this.movingRange.map((e) => {
+                return parseInt(e).toString(16).pad('00');
+              }).join('');
+              $action_command += this.staticRange.map((e) => {
+                return parseInt(e).toString(16).pad('00');
+              }).join('');
+              action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
+            }
+            // if (this.ref == 0) {
+            //   let $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000100`;
+            //   action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
+            // } else {
+            //   //mode fan and temp
+            //   let on_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000101`;
+            //   let mode_command = `069404000001${parseInt(this.modeStr).toString(16).pad('00')}`;
+            //   let speed_command = `069405000001${parseInt(this.speedVaule).toString(16).pad('00')}`;
+            //   let temp_command = `069406000001${parseInt(this.temperature).toString(16).pad('00')}`;
+            //   action_command = `${on_command}${mode_command}${speed_command}${temp_command}`;
+            //   action_command = `${actioncommand_pre}${(action_command.length / 2).toString(16).pad('00')}${action_command}`;
+            // }
+            console.log('action_command', action_command);
+            console.log('command', command);
+            // debugger
+            // return
+            //tindy the colok
+            app.dialog.preloader();
+
+            try {
+              await iot_ble_sync_clock(this.guid, repeat);
+              await window.peripheral[this.guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: action_command,
+                },
+              ]);
+              await this.saveInErp(dateStr, timeStr, repeat, 1, this.duration);
+              while (true) {
+                try {
+                  const dialog = app.dialog.close();
+                  if (!dialog) {
+                    break;
+                  }
+                } catch (e) {
+                  break;
+                }
+              }
+              mainView.router.back();
+              setTimeout(() => {
+                app.ptr.refresh('.frappe-list-ptr-content');
+              }, 1000);
+            } catch (error) {
+              while (true) {
+                try {
+                  const dialog = app.dialog.close();
+                  if (!dialog) {
+                    break;
+                  }
+                } catch (e) {
+                  break;
+                }
+              }
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+        },
+        computed: {
+          dealWithThermostat() {
+            return function (modeStr) {
+              let showStr = '';
+              if (modeStr == 0) {
+                showStr = 4;
+              } else if (modeStr == 2) {
+                showStr = 2;
+              } else if (modeStr == 1) {
+                showStr = 5;
+              }
+              return showStr;
+            };
+          },
+        },
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .off_flag > .button.onoff {
+    background-color: var(--f7-block-strong-bg-color);
+    color: #8e8d93;
+    border-color: #8e8d93;
+  }
+  .off_flag > .button.onoff:after {
+    content: 'OFF';
+  }
+</style>

@@ -1,0 +1,150 @@
+{############## has profile checking ###############}
+{% set hasProfile = false %}
+{% set profile = frappe.db.get_list('Profile') %}
+{% set user_settings = None %}
+
+{% if profile|length > 0 %}
+    {% set hasProfile = true %}
+    {% set profile = frappe.get_doc('Profile', profile[0]) %}
+    {% if frappe.db.exists('User Settings', doc.appId~'-'~frappe.session.user) %}
+        {% set user_settings = frappe.get_doc('User Settings', doc.appId~'-'~frappe.session.user) %}
+        
+        {% if frappe.db.exists('Profile', user_settings.active_profile) %}
+            {% set profile = frappe.get_doc('Profile', user_settings.active_profile) %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+{% if hasProfile %}
+    {% set subdevice = frappe.get_doc('Profile Subdevice', doc.filters.profile_subdevice) %}
+    {% set device = frappe.get_doc('Device', subdevice.device) %}
+
+    {##### get model ####}
+    {% set model = device.device_model %}
+    {% if model == None or model == "" %}
+        {% if device != None and (device.device_model != None and device.device_model != "") %}
+            {% set model = device.device_model %}
+        {% else %}
+            {% set model = frappe.db.get_value("Device Model", {"hexid": device.guid[-6:-2]}, "name") %}
+        {% endif %}
+    {% endif %}
+
+    {% set device_model = frappe.get_doc("Device Model", model) %}
+    {% set mode = device_model.mode %}
+
+    {% set timers = frappe.get_all('Device Local Timer', filters={ "parent": subdevice.device, "device_button_group": subdevice.device_button_group }, fields=['*'], order_by="timer_id") %}
+    
+    {% set repeat_keys = ["repeat_monday", "repeat_tuesday", "repeat_wednesday", "repeat_thursday", "repeat_friday", "repeat_saturday", "repeat_sunday"] %}
+    {% set repeat_values = [_('Mon'), _('Tue'), _('Wed'), _('Thu'), _('Fri'), _('Sat'), _('Sun')] %}
+    
+    <!-- split -->
+    script
+    <!-- equalto -->
+    setTimeout(() => iot_ble_load_all_timer({ ref: "{{ subdevice.name }}|{{ subdevice.device }}|{{ subdevice.device_button_group }}" }), 0);
+
+    <!-- split -->
+
+    frappe-list-right
+    <!-- equalto -->
+    <a href="#" class="link icon-only" func="iot_ble_load_all_timer" ref="{{ subdevice.name }}|{{ subdevice.device }}|{{ subdevice.device_button_group }}">
+        <i class="icon material-icons">replay</i>
+    </a>
+    <!-- split -->
+
+    frappe-list-bottom-right
+    <!-- equalto -->
+    <div class="fab fab-right-bottom fab-add-timer">
+        <a func="iot_ble_set_timer_route" guid="{{ subdevice.device }}" subdevice="{{subdevice.name}}">
+            <i class="icon f7-icons">plus</i>
+        </a>
+    </div>
+    <!-- split -->
+    <style>
+        .iot_refresh_timer_unsync .list ul::before, .iot_refresh_timer_update .list ul::before {
+            height: 0px;
+        }
+    </style>
+
+    {% if timers|length > 0 %}
+        <div class="list device-timer no-margin">
+            <ul>
+                {% for timer in timers if timer.device_button_group == subdevice.device_button_group %}
+                    {% set repeat_days = [] %}
+                    {% if timer.repeat_daily %}
+                        {% set repeat_days = repeat_values|list %}
+                    {% else %}
+                        {% for k in repeat_keys %}
+                            {% if timer[k] == 1 %}
+                                {% set _ = repeat_days.append(repeat_values[loop.index - 1]) %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <li 
+                        class="swipeout"
+                        timer-id="{{ timer.timer_id }}"
+                        guid="{{ subdevice.device }}"
+                        button-group="{{ subdevice.device_button_group }}"
+                    >
+                        <div class="swipeout-content">
+                            <div class="item-content">
+                                <div class="item-inner">
+                                    <div class="item-title">
+                                        <span>{{ frappe.utils.get_datetime(timer.date~' '~timer.time).strftime('%H:%M') }}, Action: {{ _("On") if timer.action|int > 0 else _("Off") }}</span>
+                                        <div class="item-footer">
+                                            {{ _('Repeat') if repeat_days|length else _('Next') }}: {{ repeat_days|join(" ") if repeat_days|length else frappe.utils.get_datetime(timer.date~' '~timer.time).strftime('%Y-%m-%d') }}
+                                        </div>
+                                    </div>
+                                    <div class="item-after">
+                                        <label class="toggle toggle-init">
+                                            <input 
+                                                type="checkbox"
+                                                changefunc="iot_ble_toggle_timer"
+                                                guid="{{ subdevice.device }}"
+                                                subdevice="{{subdevice.name}}"
+                                                button-group="{{ subdevice.device_button_group }}"
+                                                timer-id="{{ timer.timer_id }}" 
+                                                date="{{ timer.date }}"
+                                                time="{{ timer.time }}"
+                                                action="{{ timer.action }}"
+                                                repeat-daily="{{ timer.repeat_daily }}"
+                                                repeat-monday="{{ timer.repeat_monday }}"
+                                                repeat-tuesday="{{ timer.repeat_tuesday }}"
+                                                repeat-wednesday="{{ timer.repeat_wednesday }}"
+                                                repeat-thursday="{{ timer.repeat_thursday }}"
+                                                repeat-friday="{{ timer.repeat_friday }}"
+                                                repeat-saturday="{{ timer.repeat_saturday }}"
+                                                repeat-sunday="{{ timer.repeat_sunday }}"
+                                                {% if (timer.disabled == 0 and repeat_days|length) or (timer.disabled == 0 and repeat_days|length <= 0 and frappe.utils.get_datetime(timer.date~' '~timer.time) > frappe.utils.get_datetime(frappe.utils.now())) %} checked {% endif %}
+                                            />
+                                            <span class="toggle-icon"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="swipeout-actions-right">
+                            <a func="iot_ble_set_timer_for_thermostat" action="{{ timer.action }}" guid="{{ subdevice.device }}" subdevice="{{subdevice.name}}" timerid="{{ timer.timer_id }}" class="bg-color-orange"><i class="icon material-icons">settings</i></a>
+                            <a func="iot_ble_delete_timer" guid="{{ subdevice.device }}" timer-id="{{ timer.timer_id }}" class="link swipeout-close" style="background-color: rgb(255, 0, 0)">
+                                <i class="icon material-icons">delete</i>
+                            </a>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- region unsync -->
+    <div class="iot_refresh_timer_unsync"></div>
+    <!-- endregion -->
+
+    <!-- region unsync -->
+    <div class="iot_refresh_timer_update"></div>
+    <!-- endregion -->
+
+    {% set empty = frappe.get_doc('Print Format', 'App_Core_No_Record_Found')%}
+    <div class="core_no_record_found_content device-timer-empty h-100" style="display: none">{{ frappe.render_template(empty.html|safe, {}) }}</div>
+    
+{% endif %}
+
+<!-- no-more-class -->

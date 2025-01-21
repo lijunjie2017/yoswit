@@ -351,13 +351,13 @@
                           <input type="radio" name="demo-radio-light" checked value="100" />
                           <i class="icon icon-radio"></i>
                           <div class="item-inner">
-                            <div class="item-title">On</div>
+                            <div class="item-title">{{_('On')}}</div>
                           </div>
                         </label>
                       </li>
                       <li class="radio-box card" v-for="(labelItem,labelIndex) in labelList" :key="labelItem.value" v-on:click="home_ui_click_touch_app_save(labelItem)">
                         <div style="width: 100%;padding: 15px;">
-                          {{labelItem.text}}
+                          {{_(labelItem.text)}}
                         </div>
                       </li>
                     </ul>
@@ -386,7 +386,8 @@
       $onUpdated = ctx.$onUpdated,
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
-    const {title,type,target_guid,template_name} = $f7route.query;
+    const {title,type,target_guid,template_name,gateway_topic} = $f7route.query;
+    console.log('gateway_topic', gateway_topic);
     const batch_save = () => {
       roomDeviceVueApp.$batchSave();
     };
@@ -461,6 +462,7 @@
                 if (device_name === kitem.name) {
                   item.device_model = kitem.device_model;
                   item.mac_address = kitem.device_name.substring(0,12);
+                  item.gateway = kitem.gateway;
                 }
               });
             });
@@ -478,8 +480,8 @@
               item.ref = 1;
               //filter the device not show in the page
               item.isHidden = false;
-              //YO780,YO780-Scene-12G,YO780-Scene-6G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161
-              let fliterList = ['YO780','YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161'];
+              //YO780,YO780-Scene-12G,YO780-Scene-6G,YO780-Scene-4G,YO780-Scene-1G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161,M146-BRL
+              let fliterList = ['YO780','YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161','M146-BRL','M146-BRR','M86-3DP','M86-3BR','M86-3MIR','M86-DP','M86-1G','YO103','YO203DC-24G','YO203DC-60G','YO205DC-60G','YO205DC-24G'];
               let fliterButtonGroup = ['RCU INPUT'];
               if(type == 2){
                 if(fliterList.indexOf(item.device_model) > -1){
@@ -494,6 +496,12 @@
                 if(item.device_button_group.startsWith('RCU INPUT')){
                   item.isHidden = true;
                 }
+                //if gateway scene,only show the gateway device
+                if(gateway_topic){
+                  if(item.gateway != gateway_topic){
+                    item.isHidden = true;
+                  }
+                }
               }
               let triggerFliterList = ['YO105','YO121-BLE-LE','YO121-AC'];
               if(type == 1){
@@ -502,6 +510,11 @@
                 }
                 if(item.device_model == 'YO780' && item.device_button_group != 'SCENE MUTIWAY ONOFF GANG1' && !item.device_button_group.startsWith('RCU INPUT')){
                   item.isHidden = true;
+                }
+                if(gateway_topic){
+                  if(item.gateway != gateway_topic){
+                    item.isHidden = true;
+                  }
                 }
               }
               //rcu
@@ -519,7 +532,7 @@
               for (let i in models) {
                 if (models[i].model_code === model) {
                   if (isset(models[i].image)) {
-                    item.imgUrl = models[i].image;
+                    item.imgUrl =  models[i].image;
                   } else {
                     item.imgUrl = 'https://my.yoswit.com/files/products/YO815.svg';
                   }
@@ -656,7 +669,7 @@
                 text: 'DIM',
                 type: 6,
               });
-            } else if (button_group.startsWith('OPENCLOSE UART')) {
+            } else if (button_group.startsWith('OPENCLOSE UART') || button_group.startsWith('OPENCLOSE WIFI UART')) {
               chooseList = [
                 {
                   value: '01',
@@ -823,7 +836,7 @@
                   item.turnlight = item.chooseType;
                 }
                 item.ref = parseInt((item.ref/100)*255);
-              } else if (device_button_group.startsWith('OPENCLOSE UART')) {
+              } else if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
                 //have differ model to be handle
                 //check if have gateway
                 // let devices = cloneDeep(erp.info.profile.profile_device);

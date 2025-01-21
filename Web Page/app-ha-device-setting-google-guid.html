@@ -71,12 +71,12 @@
                       <img src="https://my.yoswit.com/files/choose_device.jpg" alt="" />
                     </div>
                     <div class="step-item">
-                      <p>{{_('5. Tap the search button and search for: Yoswit.')}}</p>
-                      <img src="https://my.yoswit.com/files/search_yoswit.png" alt="" />
+                      <p>{{_('5. Tap the search button and search for: ')}}{{searchText}}.</p>
+                      <img :src="searchImage" alt="" />
                     </div>
                     <div class="step-item">
-                      <p>{{_('6. Tap Continue to enter the Mob-Mob login page.')}}</p>
-                      <img src="https://my.yoswit.com/files/login_banner.png" alt="" />
+                      <p>{{_('6. Tap Continue to enter the ')}}{{loginText}}{{_(' login page.')}}</p>
+                      <img :src="loginImage" alt="" />
                     </div>
                     <div class="step-item">
                       <p>{{_('7. Enter the following account.')}}</p>
@@ -87,7 +87,7 @@
                               <i class="icon material-icons setting-list-icon p-1">mail</i>
                             </div>
                             <div class="item-inner">
-                              <div class="item-title item-label">Mob-Mob {{ _('Email Address')}}</div>
+                              <div class="item-title item-label">{{loginText}} {{ _('Email Address')}}</div>
                               <div class="item-input-wrap">
                                 <input type="text" name="email" :value="user_email" :placeholder="emailTip" readonly />
                               </div>
@@ -276,6 +276,10 @@
           erpProfile: null,
           profileName: '',
           sceneImage: 'https://my.yoswit.com/files/google_home_gatewayjpg.jpg',
+          searchImage: 'https://my.yoswit.com/files/search_yoswit.png',
+          searchText: 'Yoswit',
+          loginImage: 'https://my.yoswit.com/files/login_banner.png',
+          loginText: 'Mob-Mob',
         },
         computed: {},
         mounted() {
@@ -298,6 +302,14 @@
             }
           },
           async init() {
+            //init the search image pass the appid
+            let appId = erp.appId;
+            if(appId == 'com.yoswit.apshon' || appId == 'com.lincogn.apshon'){
+              this.searchImage = 'https://my.yoswit.com/files/search_apshon.png';
+              this.searchText = 'Apshon';
+              this.loginImage = 'https://my.yoswit.com/files/apshon_login.png';
+              this.loginText = 'Apshon';
+            }
             let key = `google_password_${erp.userId}`;
             // this.password = await db.get(key);
             console.log('this.password',this.password);
@@ -365,6 +377,9 @@
                 if(gatewayNameList.indexOf(item.gateway) != -1 && gatewayNameList.length > 0){
                   gatewayCount++;
                 }
+              }
+              if(item.gateway){
+                gatewayCount++;
               }
             })
             console.log('gatewayCount',gatewayCount);

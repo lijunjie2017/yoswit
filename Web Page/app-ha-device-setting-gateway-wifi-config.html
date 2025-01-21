@@ -20,13 +20,13 @@
         <div>
           <div class="block mx-3 margin-top">
             <p class="segmented segmented-strong">
-              <button class="button step-one" :class="index == 1?'button-active button':'button'">{{_("STEP 1")}}</button>
-              <button class="button step-two" :class="index == 2?'button-active button':'button'">{{_("STEP 2")}}</button>
+              <button class="button step-one" :class="index == 1?'button-active button':'button'">{{_("Step")}}1</button>
+              <button class="button step-two" :class="index == 2?'button-active button':'button'">{{_("Step")}}2</button>
               <button class="button step-three" :class="index == 3?'button-active button':'button'">
-                {{_("STEP 3")}}
+                {{_("Step")}}3
               </button>
               <button class="button step-three" :class="index == 4?'button-active button':'button'">
-                {{_("STEP 4")}}
+                {{_("Step")}}4
               </button>
               <span class="segmented-highlight"></span>
             </p>
@@ -171,11 +171,8 @@
                   <div class="card-box display-flex flex-direction-row justify-content-center align-content-center align-items-center" style="width: 100%;">
                     <div class="signal-container">
                       <div class="signal-circle">
-                        <i class="icon material-icons text-color-primary">wifi_tethering</i>
+                        <i class="icon material-icons text-color-primary" style="font-size: 60px;">wifi_tethering</i>
                       </div>
-                      <div class="signal-wave wave1"></div>
-                      <div class="signal-wave wave2"></div>
-                      <div class="signal-wave wave3"></div>
                     </div>
                   </div>
                   <div class="gateway-info-show display-flex flex-direction-row justify-content-center align-content-center align-items-center" style="width: 100%;">
@@ -228,14 +225,14 @@
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
     let {guid,device_name} = $f7route.query;
-    let ssid = tran('SSID');
-    let password_name = tran('Password');
-    let email = tran('Email');
-    let server_url = tran('Server URI');
-    let port = tran('Server Port');
-    let username = tran('Server Username');
-    let server_password = tran('Server Password');
-    let wifi_tip = tran('Device supports 2.4 GHz Wi-Fi only');
+    let ssid = _('SSID');
+    let password_name = _('Password');
+    let email = _('Email');
+    let server_url = _('Server URI');
+    let port = _('Server Port');
+    let username = _('Server Username');
+    let server_password = _('Server Password');
+    let wifi_tip = _('Device supports 2.4 GHz Wi-Fi only');
     let vueApp = null;
     let targetDeviceNum = 0;
     let allDeviceNum = 0;
@@ -502,7 +499,7 @@
               //console.log("res",res);
               let message = res.message;
               debugger
-              if (message == 'Online') {
+              if (message.includes('Online')) {
                 //check the state of the connect status
                 this.statusList[0].status = 1;
                 this.statusList[1].status = 1;
@@ -583,7 +580,7 @@
                 return iot_ble_do_pre_action(guid);
               })
               .then(() => {
-                this.totastTool(tran('Upload Wi-Fi Data...'));
+                this.totastTool(_('Upload Wi-Fi Data...'));
                 // ssid
                 const data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
                 return iot_ble_write(guid, 'ff80', 'ff81', data, false);
@@ -600,7 +597,7 @@
                 });
               })
               .then(() => {
-                this.totastTool(tran('Upload Wi-Fi Data Successful.'));
+                this.totastTool(_('Upload Wi-Fi Data Successful.'));
                 this.postToIotServer();
               })
               .catch((err) => {
@@ -611,7 +608,7 @@
               });
           },
           postToIotServer() {
-            this.totastTool(tran('Upload Email Data...'));
+            this.totastTool(_('Upload Email Data...'));
             const data = '932200' + this.setting.email.length.toString(16).pad('0000') + this.setting.email.convertToHex();
             iot_ble_write(guid, 'ff80', 'ff81', data, false)
               .then(() => {
@@ -637,7 +634,7 @@
                 });
               })
               .then(() => {
-                this.totastTool(tran('Upload Server Port...'));
+                this.totastTool(_('Upload Server Port...'));
                 const data = '9301000002' + (this.setting.port * 1).toString(16).pad('0000');
                 return iot_ble_write(guid, 'ff80', 'ff81', data, false);
               })
@@ -645,7 +642,7 @@
                 return iot_device_setting_sync_server(guid, 'Server Port', this.setting.port || null);
               })
               .then(() => {
-                this.totastTool(tran('Upload Server URI...'));
+                this.totastTool(_('Upload Server URI...'));
                 const data = '930000' + this.setting.server_url.length.toString(16).pad('0000') + this.setting.server_url.convertToHex();
                 return iot_ble_write(guid, 'ff80', 'ff81', data, false);
               })
@@ -668,11 +665,11 @@
                 return iot_device_setting_sync_server(guid, 'Server Password', this.setting.server_password || 'null');
               })
               .then(() => {
-                this.totastTool(tran('Upload Successful!'));
+                this.totastTool(_('Upload Successful!'));
                 return iot_ble_write(guid, 'ff80', 'ff81', '810E');
               })
               .catch((err) => {
-                this.totastTool(tran('Upload Failed!'));
+                this.totastTool(_('Upload Failed!'));
                 app.preloader.hide();
 
                 if (!iot_ble_exception_message(err, false) && !core_server_exception_message(err)) {
@@ -817,17 +814,42 @@
           emitter.off('network/post');
           emitter.on('network/post',(data)=>{
             console.log("data",data);
-            if(data.code == 1){
+            if(data.code == 1 || data.code == 2){
               let list = data.networkList.map((item)=>{
                 return item.index;
               })
               let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-              subdevices.forEach((item)=>{
-                if(item.device == this.guid){
-                  item.config = list.join(',');
-                  this.gateway_config = list.join(',');
-                }
-              })
+              if(data.code == 2){
+                let replaceList = data.replaceList;
+                let networkIdList = replaceList.map((item)=>{
+                  return item.index;
+                })
+                subdevices.forEach((item)=>{
+                  if(item.device_button_group == 'Yoswit Gateway'){
+                    if(isset(item.config) && item.config && item.device != this.guid){
+                      let list = item.config.split(',');
+                      let newList = [];
+                      list.forEach((item)=>{
+                        if(!networkIdList.includes(item)){
+                          newList.push(item);
+                        }
+                      })
+                      item.config = newList.join(',');
+                    }else if(item.device == this.guid){
+                      item.config = list.join(',');
+                      this.gateway_config = list.join(',');
+                    }
+                  }
+                })
+              }else{
+                subdevices.forEach((item)=>{
+                  if(item.device == this.guid){
+                    item.config = list.join(',');
+                    this.gateway_config = list.join(',');
+                  }
+                })
+              }
+              
               http2.request(`/api/resource/Profile/${erp.info.profile.name}`,{
                 method : 'PUT',
                 serializer : 'json',
@@ -950,5 +972,23 @@
     height: 100%;
     opacity: 0;
   }
+}
+.list ul::before,
+.list ul::after {
+  content: none;
+}
+.diy-title{
+  padding: 15px 15px 0px 15px;
+  font-size: 18px;
+  color: #000;
+  font-weight: 500;
+}
+.help-icon{
+  font-size: 20px;
+  top: -2px;
+  color: #9e9e9e;
+}
+.device-hidden {
+  display: none!important;
 }
 </style>

@@ -7,7 +7,7 @@ window.manufacturing_periperal_inner_template = `
 		<div class="item-subtitle">ID: {{id}}</div>
         <div class="item-subtitle">RSSI: {{rssi}}</div>
 	</div>
-	<a class="button button-raised" func="manufacturing_start_produce" ref="{{id}}" style="float:right;line-height:50px;width:80px;padding:0px;margin-right:10px;background-color:#fff;">生產</a>
+	<a class="button button-raised" func="manufacturing_start_produce" ref="{{id}}" style="float:right;line-height:50px;width:85px;padding:0px;margin-right:10px;background-color:#fff;font-size:12px;">{{_("Produce")}}</a>
 </div>
 `;
 window.manufacturing_periperal_outer_template = `
@@ -25,18 +25,18 @@ window.controller_toggle_manufacturing = function(params){
     
     let error = "";
     if(batch==""){
-        error = "请选择批次";
+        error = _("Please Select Batch");
     }
     if(model==""){
-        error = error=="" ? "请选择型号" : "请选择批次和型号";
+        error = error=="" ? _("Please Select Model") : _("Please Select Batch and Model");
     }
     if(error!=""){
         app.dialog.alert(error);
         return;
     }
 
-    if(params.obj.text()=="开始"){
-        params.obj.html("停止");
+    if(params.obj.text()==_("Start")){
+        params.obj.html(_("Stop"));
         $(".button.back").hide();
         $("select[name='manufacturing-batch']").prop('disabled',true);
         $("select[name='manufacturing-model']").prop('disabled',true);
@@ -71,7 +71,7 @@ window.controller_toggle_manufacturing = function(params){
         }, function(){
         });
     }else{
-        params.obj.html("开始");
+        params.obj.html(_("Start"));
         $(".button.back").show();
         $("select[name='manufacturing-batch']").prop('disabled',false);
         $("select[name='manufacturing-model']").prop('disabled',false);
@@ -134,8 +134,8 @@ window.manufacturing_start_produce = (params) => {
     // 	<i class="icon material-icons">watch_later</i>
     // 	<i class="icon material-icons spin_icon">autorenew</i>
     
-    if($('.manufacturing-btn-start').html()=='开始'){
-        app.dialog.alert('请先设定好批次及型号，并按开始后再进行生产！');
+    if($('.manufacturing-btn-start').html()==_("Start")){
+        app.dialog.alert(_("Please set the batch and model first, and then begin production after starting!"));
         return;
     }
     
@@ -152,7 +152,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step1">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟1：連接設備</div>
+            								<div class="item-title">${_("Step 1: Connect the device.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -162,7 +162,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step2">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟2：讀取Mac</div>
+            								<div class="item-title">${_("Step 2: Mac address")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -172,7 +172,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step3">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟3：讀取版本號</div>
+            								<div class="item-title">${_("Step 3: Version Number")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -182,7 +182,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step4">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟4：輸入密匙</div>
+            								<div class="item-title">${_("Step 4: Enter the key.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -192,7 +192,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step5">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟5：更新設置名稱及設定</div>
+            								<div class="item-title">${_("Step 5: Update the settings name and configuration.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -202,7 +202,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step6">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟6：重啟中</div>
+            								<div class="item-title">${_("Step 6: Restarting.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -212,7 +212,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step7">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟7：確認更新設置名稱</div>
+            								<div class="item-title">${_("Step 7: Confirm the updated settings name.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -222,7 +222,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step8">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟8：上傳my.mob-mob.com伺服器</div>
+            								<div class="item-title">${_("Step 8: Upload to the my.mob-mob.com server.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -232,7 +232,7 @@ window.manufacturing_start_produce = (params) => {
             					<li class="manufacturing-steps manufacturing-step9">
             						<div class="item-content">
             							<div class="item-inner">
-            								<div class="item-title">步驟9：上傳erp伺服器</div>
+            								    <div class="item-title">${_("Step 9: Upload to the ERP server.")}</div>
             								<div class="item-after">
             									<i class="icon material-icons">watch_later</i>
             								</div>
@@ -242,7 +242,7 @@ window.manufacturing_start_produce = (params) => {
             				</ul>
             			</div>
             			<div class="block manufacturing-remaining-time" style="text-align:center;">
-            				生產剩餘時間: <font>30</font>秒
+                				${_("Remaining production time: ")}<font>30</font>${_("s")}
             			</div>
             		</div>
             	</div>
@@ -252,7 +252,7 @@ window.manufacturing_start_produce = (params) => {
             closed: function () {
                 clearTimeout(manufacturing_produce_timer);
                 if(manufacturing_processing){
-                    app.dialog.alert("生產中斷，請重新生產！", runtime.appInfo.name);
+                    app.dialog.alert(_("Production interrupted, please restart the process!"));
                 }
                 manufacturing_processing = false;
             }
@@ -293,6 +293,7 @@ window.manufacturing_start_produce = (params) => {
     
     
     /* default config of model and batch */
+    debugger
     if(isset(ble_model[model.toUpperCase()]) && isset(ble_model[model.toUpperCase()]['default']) && ble_model[model.toUpperCase()]['default'].length){
         for(let k in ble_model[model.toUpperCase()]['default']){
             cmd.push({action:"write",data:ble_model[model.toUpperCase()]['default'][k].toLowerCase()});
@@ -366,7 +367,7 @@ window.manufacturing_start_produce_timer = (second) => {
         if(manufacturing_processing){
             manufacturing_processing = false;
             $('.manufacturing-remaining-time').attr('style','text-align:center;color:red;');
-            $('.manufacturing-remaining-time').html('生產失敗，請重新嘗試');
+            $('.manufacturing-remaining-time').html(_("Production failed, please try again."));
             $('.manufacturing-steps').each(function(){
                 if($(this).hasClass('done')) return;
                 
@@ -532,7 +533,7 @@ window.manufacturing_update_step = (id, flag, info) => {
         manufacturing_processing = false;
         clearTimeout(manufacturing_produce_timer);
         $('.manufacturing-remaining-time').attr('style','text-align:center;color:green;');
-        $('.manufacturing-remaining-time').html('生產完成！');
+        $('.manufacturing-remaining-time').html(_("Production completed!"));
     }
     console.log("Manufacturing: "+flag+" manufacturing-step"+manufacturing_current_step);
 };

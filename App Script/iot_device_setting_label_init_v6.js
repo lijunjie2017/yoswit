@@ -77,6 +77,24 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
                 name : '',
                 dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
             }
+            data.per_data = {
+                setting_type : 'Per Press Brightness',
+                setting : '',
+                name : '',
+                dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+            }
+            data.led_data = {
+                setting_type : 'Led Mode',
+                setting : '',
+                name : '',
+                dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+            }
+            data.brightness_data = {
+                setting_type : 'Backlight Brightness',
+                setting : '',
+                name : '',
+                dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+            }
             device_setting_list.forEach(device_item=>{
                 console.log(device_item);
                 if(device_item.setting_type == setting_item.label){
@@ -102,6 +120,33 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
                         setting_type : device_item.setting_type,
                         setting : device_item.setting,
                         name : device_item.name
+                    }
+                }
+                let per_key = `Per Press Brightness ${data.device_button_group}`;
+                if(device_item.setting_type == per_key){
+                    data.per_data = {
+                        setting_type : 'Per Press Brightness',
+                        setting : device_item.setting,
+                        name : device_item.name,
+                        dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+                    }
+                }
+                let led_key = `Led Mode_${data.device_button_group}`;
+                if(device_item.setting_type == led_key){
+                    data.led_data = {
+                        setting_type : 'Led Mode',
+                        setting : device_item.setting,
+                        name : device_item.name,
+                        dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+                    }
+                }
+                let brightness_key = `Backlight Brightness`;
+                if(device_item.setting_type == brightness_key){
+                    data.brightness_data = {
+                        setting_type : 'Backlight Brightness',
+                        setting : device_item.setting,
+                        name : device_item.name,
+                        dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
                     }
                 }
             })

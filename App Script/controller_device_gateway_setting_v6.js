@@ -7,7 +7,7 @@ window.device_gateway_setting_component = {
         erp.setting.app_api_url + '/files/gateway.png'
       }');background-size:40px auto;background-position:left center;background-repeat:no-repeat;"></div>
       <div style="margin-left:55px;margin-top: 10px;">
-        <div style="font-size:25px;font-weight:bold;height:37px;overflow:hidden;">
+        <div style="font-size:20px;font-weight:bold;height:37px;overflow:hidden;">
         <span v-if="ismobile == false">{{ device.device_model }}-{{ device.mac_address }}</span>
         <span v-else>{{_('Mobile Phone')}}</span>
         </div>
@@ -59,7 +59,7 @@ window.device_gateway_setting_component = {
                           <div class="item-subtitle text-muted">{{ item.subdeviceNameList }}-{{ item.device_name.substring(0, 12) }}</div>
 
                           <div class="item-subtitle text-muted" v-if="item.gateway">{{ item.gateway }}</div>
-                          <div class="item-subtitle" style="color:red;font-weight:bold;" v-else>No Gateway</div>
+                          <div class="item-subtitle" style="color:red;font-weight:bold;" v-else>{{_('No Gateway')}}</div>
                       </div>
                   </div>
                   <div class="swipeout-actions-right">
@@ -105,7 +105,7 @@ window.device_gateway_setting_component = {
             let profile_subdevice = rs.data.data.profile_subdevice;
             //in order to get the firmware on gateways list
             profile_device.forEach(item=>{
-              item.firmware = window.peripheral[item.device].prop.firmware?window.peripheral[item.device].prop.firmware:'';
+              item.firmware = window.peripheral[item.device] && window.peripheral[item.device].prop.firmware?window.peripheral[item.device].prop.firmware:'';
                 // for(let i in profile_subdevice){
                 //     if(item.name === profile_subdevice[i].profile_device){
                 //         //item.firmware = window.profile_subdevice[i].firmware;
@@ -121,6 +121,7 @@ window.device_gateway_setting_component = {
           }
         })
         .then(() => {
+          
           if(this.ismobile){
             //no return
             return new Promise((resolve,reject)=>{
@@ -265,14 +266,14 @@ window.device_gateway_setting_component = {
       //if profile device have other gateway,cancel this operate
       let this_profile_devices = cloneDeep(erp.info.profile.profile_device);
       let isallChecked = true;
-      this_profile_devices.forEach(kitem=>{
-        if(isset(kitem.gateway) && kitem.gateway && kitem.gateway == this.gateway && kitem.device_mode != "Gateway"){
-          isallChecked = false;
-        }
-      })
-      if(!isallChecked){
-        return
-      }
+      // this_profile_devices.forEach(kitem=>{
+      //   if(isset(kitem.gateway) && kitem.gateway && kitem.gateway == this.gateway && kitem.device_mode != "Gateway"){
+      //     isallChecked = false;
+      //   }
+      // })
+      // if(!isallChecked){
+      //   return
+      // }
       this.allchecked = true;
       let default_connect_count = 0;
       this.profileDevice.forEach(item=>{
@@ -285,7 +286,7 @@ window.device_gateway_setting_component = {
           item.gateway = this.gateway
         }
         //can not choose the unasigned devices
-        if(item.network_id == "0"){
+        if(item.network_id == "0" && item.gateway != this.gateway){
           item.checked = false;
         }
         /*
@@ -346,6 +347,7 @@ window.device_gateway_setting_component = {
     //send more data to the profile
     async postMoredataToErp(){
       //change the value of the profile device
+      debugger
       let list = this.profileData.profile_device;
       list.forEach(item=>{
         this.profileDevice.forEach(kitem=>{
@@ -378,6 +380,7 @@ window.device_gateway_setting_component = {
         //alert(this.type==2?gateway:gateway.toLowerCase())
         try {
             app.preloader.show();
+            debugger
             let url = `/api/resource/Profile/${erp.info.profile.name}`;
             let postDevice = cloneDeep(erp.info.profile.profile_device);
             postDevice.forEach(kitem=>{
@@ -468,8 +471,8 @@ window.device_gateway_setting_component = {
                         }
                     })
                     list.push({
-                        "mac_address" : kitem.device_name.substring(0, 12).match(/.{1,2}/g).join(":"),
-                        "parent_mac" : parent_mac,
+                        "mac_address" : kitem.device_name.substring(0, 12).match(/.{1,2}/g).join(":").toLowerCase(),
+                        "parent_mac" : parent_mac.toLowerCase(),
                         "guid" : kitem.device,
                         "default_connect" : kitem.default_connect,
                         "model" : kitem.device_model,

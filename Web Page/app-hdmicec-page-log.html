@@ -1,0 +1,126 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Hdmicec Log') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="list ha-guide-list">
+                <ul>
+                  <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in logList" :key="index">
+                    <span style="font-size: 12px;color: #999;margin-right: 10px;display: inline-block;width: 140px;">{{item.time}} ---></span>
+                    <span>{{item.text}}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div
+              class="empty-box display-flex justify-content-center align-items-center flex-direction-column"
+              style="margin-top: 100px"
+              v-if="logList.length == 0"
+            >
+              <div class="display-flex justify-content-center">
+                <i class="material-icons text-color-gray" style="font-size: 220px">find_in_page</i>
+              </div>
+              <h3 class="text-align-center mt-3">{{_('No Records Found')}}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { guid } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1,
+          logList: [],
+        },
+        computed: {},
+        mounted() {
+          this.init();
+          if(this.$listenLogList){
+            emitter.off('listen_log_list', this.$listenLogList);
+          }
+          this.$listenLogList = (data)=>{
+            console.log(data);
+            this.logList = data.list;
+          }
+          emitter.on('listen_log_list', this.$listenLogList);
+        },
+        methods: {
+          async init() {
+            this.logList = window.htmi_log_list
+            // try {
+            //   let device_id = window.peripheral[guid].prop.id;
+            //   await ble.startNotification(
+            //     device_id,
+            //     'ff80',
+            //     'ff82',
+            //     (rs) => {
+            //       console.log(rs);
+            //       if (rs.startsWith('97220201')) {
+            //         let str = this.hexToString(rs.substring(8, rs.length));
+            //         console.log((str));
+            //         this.logList.push(str);
+            //       }
+            //     },
+            //     (err) => {
+            //       //app.dialog.close();
+            //       //app.dialog.alert(err);
+            //     }
+            //   );
+            // } catch (error) {
+            //   app.dialog.alert(_(erp.get_log_description(error)));
+            // }
+          },
+          hexToString(hex){
+            const hexArray = hex.match(/.{1,2}/g);
+            const str = hexArray.map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+            return str;
+          }
+        },
+        beforeDestroy(){
+          emitter.off('listen_log_list', this.$listenLogList);
+        }
+      });
+    });
+
+    // $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

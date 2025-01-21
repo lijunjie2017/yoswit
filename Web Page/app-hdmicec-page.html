@@ -16,63 +16,173 @@
     <div class="page-content">
       {% raw %}
       <div id="vue-app" v-cloak>
-        <div class="block">
-          <div class="row">
-            <div class="col">
-              <a href="#" v-on:click="postCommand(1)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">arrow_upward</i></a
-              >
+        <div class="main-box">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in stepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                  v-on:click="toTab(item.id)"
+                >
+                  {{_(item.name)}}
+                </button>
+              </div>
             </div>
           </div>
-          <div class="row" style="margin: 20px 0">
-            <div class="col">
-              <a href="#" v-on:click="postCommand(2)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">arrow_back</i></a
-              >
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="block">
+                <div class="row">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(1)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_upward</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(2)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_back</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(3)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>OK</span></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(4)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_forward</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(5)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_downward</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(6)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">add</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(7)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>—</span></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(8)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">undo</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(9)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">home</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(10)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">power_settings_new</i></a
+                    >
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="col">
-              <a href="#" v-on:click="postCommand(3)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><span>OK</span></a
-              >
-            </div>
-            <div class="col">
-              <a href="#" v-on:click="postCommand(4)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">arrow_forward</i></a
-              >
-            </div>
-          </div>
-          <div class="row">
-            <div class="col">
-              <a href="#" v-on:click="postCommand(5)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">arrow_downward</i></a
-              >
-            </div>
-          </div>
-          <div class="row" style="margin: 20px 0">
-            <div class="col">
-              <a href="#" v-on:click="postCommand(6)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">add</i></a
-              >
-            </div>
-            <div class="col">
-              <a href="#" v-on:click="postCommand(7)" class="button button-large button-raised" style="padding: 30px 0px"><span>—</span></a>
-            </div>
-          </div>
-          <div class="row" style="margin: 20px 0">
-            <div class="col">
-              <a href="#" v-on:click="postCommand(8)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">undo</i></a
-              >
-            </div>
-            <div class="col">
-              <a href="#" v-on:click="postCommand(9)" class="button button-large button-raised" style="padding: 30px 0px"><i class="icon material-icons">home</i></a>
-            </div>
-          </div>
-          <div class="row" style="margin: 20px 0">
-            <div class="col">
-              <a href="#" v-on:click="postCommand(10)" class="button button-large button-raised" style="padding: 30px 0px"
-                ><i class="icon material-icons">power_settings_new</i></a
-              >
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="block">
+                <div class="row">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(11)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_upward</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(12)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_back</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(13)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>OK</span></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(14)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_forward</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(15)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">arrow_downward</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(16)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">add</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(17)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>—</span></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(18)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">undo</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(19)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">home</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(20)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">power_settings_new</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="openDebug()" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">adb</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="toDebugPage()" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">description</i></a
+                    >
+                  </div>
+                </div>
+                <div class="list ha-guide-list">
+                  <ul>
+                    <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in logList" :key="index">
+                      <span>{{index+1}}: </span>
+                      <span>{{item}}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -91,18 +201,132 @@
       $on = ctx.$on;
 
     let vueApp = null;
+    window.htmi_log_list = [];
     const { guid } = $f7route.query;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
-          power : 0
+          index: 1,
+          power: 0,
+          logList : [],
+          stepList: [
+            {
+              id: 1,
+              name: 'CEC',
+              relatedIndex: 1,
+              isActive: true,
+            },
+            {
+              id: 2,
+              name: 'RS232',
+              relatedIndex: 2,
+              isActive: false,
+            },
+          ],
         },
         computed: {},
+        watch: {
+          logList: function (val) {
+            console.log(val)
+            emitter.emit('listen_log_list', {
+              list : window.htmi_log_list
+            });
+          },
+        },
         mounted() {},
         methods: {
+          toTab(id){
+            this.index = id;
+            this.stepList.forEach(item => {
+              item.isActive = item.id == id;
+            });
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          async openDebug(){
+            app.dialog.preloader();
+            try{
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `972002010100000180250000`,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `810e`,
+                },
+            ]);
+            await this.sleep(1000*5);
+            await window.peripheral[guid].connect();  
+            await this.sleep(1000*2);
+            app.dialog.close();
+            this.showDebug();
+            app.dialog.alert(_('Open Debug'));
+            }catch(e){
+              console.log(e);
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(e)));
+            }
+          },
+          async showDebug(){
+            //mainView.router.navigate(`/mobile-app/hdmicec-page-log?guid=${guid}`);
+            try {
+              let device_id = window.peripheral[guid].prop.id;
+              //await ble.withPromises.stopNotification(device_id);
+              //await this.stopNotification();
+              await ble.startNotification(
+                device_id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log(rs);
+                  if (rs.startsWith('97220201')) {
+                    let str = this.hexToString(rs.substring(8, rs.length));
+                    window.htmi_log_list.push({
+                      text : str,
+                      time : dayjs().format('YYYY-MM-DD HH:mm:ss')
+                    });
+                    this.logList.push(str);
+                  }
+                },
+                (err) => {
+                  //app.dialog.close();
+                  //app.dialog.alert(err);
+                }
+              );
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          hexToString(hex){
+            const hexArray = hex.match(/.{1,2}/g);
+            const str = hexArray.map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+            return str;
+          },
+          toDebugPage(){
+            mainView.router.navigate(`/mobile-app/hdmicec-page-log?guid=${guid}`);
+          },
+          stopNotification(){
+            let device_id = window.peripheral[guid].prop.id;
+            return new Promise((resolve,reject)=>{
+              ble.stopNotification(device_id, 'ff80', 'ff82', (rs) => {
+                console.log(rs);
+                resolve(rs);
+              }, (err) => {
+                reject(err);
+              });
+            });
+          },
+          writeCommand(){
+            this.logList.push('kh 0 01');
+          },
           async postCommand(type) {
             let command = '';
+            let pre_command = `972102016D63203020`;
             if (type == 1) {
               command = `9810000003b04401`;
             } else if (type == 2) {
@@ -117,18 +341,48 @@
               command = `9810000003b04441`;
             } else if (type == 7) {
               command = `9810000003b04442`;
-            }else if (type == 8) {
+            } else if (type == 8) {
               command = `9810000003b0440d`;
-            }else if (type == 9) {
+            } else if (type == 9) {
               command = `9810000003b04409`;
-            }else if (type == 10) {
-              if(this.power == 0){
+            } else if (type == 10) {
+              if (this.power == 0) {
                 this.power = 1;
                 command = `9810000003b0446d`;
-              }else{
+              } else {
                 this.power = 0;
               }
               command = `9810000003b0446c`;
+            }else if (type == 11){
+              //[m][c][ ][Set ID][ ][Data][Cr]
+              command = `${pre_command}34300D`;
+            }else if (type == 12){
+              //37
+              command = `${pre_command}30370D`;
+            }else if (type == 13){
+              //44
+              command = `${pre_command}34340D`;
+            } else if (type == 14) {
+              //06
+              command = `${pre_command}30360D`;
+            } else if (type == 15) {
+              //41
+              command = `${pre_command}34310D`;
+            } else if (type == 16) {
+              //02
+              command = `${pre_command}30320D`;
+            }else if (type == 17){  
+              //03
+              command = `${pre_command}30330D`;
+            }else if (type == 18){  
+              //28
+              command = `${pre_command}32380D`;
+            }else if (type == 19){ 
+              //7c
+              command = `${pre_command}37430D`;
+            }else if (type == 20){  
+              //08
+              command = `${pre_command}30380D`;
             }
             await window.peripheral[guid].write([
               {

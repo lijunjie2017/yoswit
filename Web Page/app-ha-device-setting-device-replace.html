@@ -241,7 +241,7 @@
       $on = ctx.$on;
 
     let vueApp = null;
-    let { guid, title } = $f7route.query;
+    let { guid, title,name } = $f7route.query;
 
     console.log('title', title);
     $update();
@@ -273,6 +273,9 @@
           isGateway: false,
           step_title: 'COMPLETE',
           gateway_config: '',
+          device_map_model: '',
+          device_map_mode : '',
+          profile_device_name : ''
         },
         watch: {},
         mounted() {
@@ -305,7 +308,36 @@
           initStepList() {
             //check if the device is gateway
             let device_models = cloneDeep(erp.doctype.device_model);
-            let this_model = erp.info.device[guid].device_model;
+            //get this model
+
+            let this_model = '';
+            let device_model = '';
+            let device_mode = '';
+            let profile_device_name = '';
+            let profile_devices = cloneDeep(erp.info.profile.profile_device);
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            
+            //check if device is no mode
+            profile_subdevices.forEach((item) => {
+              if(guid){
+                if (item.device == guid) {
+                  device_mode = item.device_mode;
+                  profile_device_name = item.profile_device;
+                  this.profile_device_name = item.profile_device;
+                }
+              }else{
+                if (item.name == name) {
+                  device_mode = item.device_mode;
+                  profile_device_name = item.profile_device;
+                }
+              }
+              
+            });
+            profile_devices.forEach((item) => {
+              if (item.name == profile_device_name) {
+                this_model = item.device_model;
+              }
+            });
             let device_map = {};
             for (let model in device_models) {
               if (device_models[model].model_code == this_model) {
@@ -338,11 +370,32 @@
             //get the device model
             let device_model = '';
             let device_mode = '';
+            let profile_device_name = '';
             let profile_devices = cloneDeep(erp.info.profile.profile_device);
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            
+            //check if device is no mode
+            profile_subdevices.forEach((item) => {
+              if(guid){
+                if (item.device == guid) {
+                  device_mode = item.device_mode;
+                  this.device_map_mode = item.device_mode;
+                  profile_device_name = item.profile_device;
+                  this.profile_device_name = item.profile_device;
+                }
+              }else{
+                if (item.name == name) {
+                  device_mode = item.device_mode;
+                  this.device_map_mode = item.device_mode;
+                  profile_device_name = item.profile_device;
+                  this.profile_device_name = item.profile_device;
+                }
+              }
+              
+            });
             profile_devices.forEach((item) => {
-              if (item.device == guid) {
-                device_model = item.device_model;
-                device_mode = item.device_mode;
+              if (item.name == profile_device_name) {
+                this.device_map_model = item.device_model;
               }
             });
             let devices = cloneDeep(peripheral);
@@ -350,6 +403,7 @@
             let erp_device = cloneDeep(erp.info.device);
             let map_device = Object.keys(erp_device);
             let ps = [];
+            debugger
             for (let guid in devices) {
               let p = devices[guid].prop;
               if (!p || !p.rssi || p.rssi >= 0) continue;
@@ -420,7 +474,7 @@
           },
           async initSettingList(kitem) {
             //settingList
-            let settings = erp.info.device[guid].settings;
+            let settings = erp.info.device[guid]?erp.info.device[guid].settings:[];
             let thisList = [];
             settings.forEach((item) => {
               if (item.setting_type == 'Email Address') {
@@ -436,27 +490,35 @@
               if (item.device == guid) {
                 if (item.config) {
                   //check if the Object is valid
+                  let config_map = {};
                   try {
                     let config = JSON.parse(item.config);
+                    if (typeof config !== 'object') {
+                      return;
+                    }
+                    config_map = config;
                   } catch (e) {
                     return;
                   }
                   let this_button_group = item.device_button_group;
-                  let mapping = config.mapping;
+                  let mapping = config_map.mapping;
                   let subdeviceItem = profile_subdevices.find((e) => e.name == mapping);
                   let targer_button_group = subdeviceItem.device_button_group;
                   let paramsMap = {
                     mapping: mapping,
-                    virtual: config.virtual,
-                    pairing_guid: config.pairing_guid,
-                    be_pairing: config.be_pairing,
+                    virtual: config_map.virtual,
+                    pairing_guid: config_map.pairing_guid,
+                    be_pairing: config_map.be_pairing,
                     this_button_group: this_button_group,
                     target_button_group: targer_button_group,
                     this_gang: this_button_group.replace('ONOFF GANG', ''),
                     targer_gang: targer_button_group.replace('ONOFF GANG', ''),
                   };
-                  let list = iot_ble_device_setting_type_init('Device Pairing', paramsMap, kitem.guid, guid);
-                  thisList = thisList.concat(list);
+                  debugger
+                  if(config_map.pairing_guid){
+                    let list = iot_ble_device_setting_type_init('Device Pairing', paramsMap, kitem.guid, guid);
+                    thisList = thisList.concat(list);
+                  }
                   //should change to command: title: value:
                   //tindy the command
                   //should params the obj like {"mapping":"vj33epcikm","virtual":"","pairing_guid":"66326262633362663264346412020f1d","be_pairing":"1",this_gang,targer_gang}
@@ -474,7 +536,8 @@
             let commandList = [];
             this.targetPairingCommandList = [];
             let mac_address = core_utils_get_mac_address_from_guid(this.targetGuid);
-            const hexid = guid.substring(guid.length - 6, guid.length - 2);
+            debugger
+            const hexid = this.targetGuid.substring(this.targetGuid.length - 6, this.targetGuid.length - 2);
             const model = erp.doctype.device_model[hexid.toUpperCase()];
             let hex_batch = '1D';
             let hex_model = hexid;
@@ -488,7 +551,7 @@
               commandList.unshift(data, data_1);
             }
             let password = peripheral[this.targetGuid].prop.password;
-            let new_password = peripheral[guid].prop.password;
+            let new_password = guid?peripheral[guid].prop.password:'000000';
             peripheral[this.targetGuid].prop.password = new_password;
             commandList.push(82 + password.convertToHex() + new_password.convertToHex());
             commandList.push('812A');
@@ -628,7 +691,7 @@
             });
             let thisList = [];
             //show the pre device and the next device
-            if (network_id) {
+            if (network_id && guid) {
               let networkIdList = profile_device
                 .filter((e) => e.network_id == network_id && e.network_id != 0)
                 .sort((a, b) => {
@@ -682,7 +745,8 @@
                 }
               }
             });
-            this.deviceNetworkList = thisList;
+            //this.deviceNetworkList = thisList;
+            this.deviceNetworkList = [];
             console.log('this.deviceNetworkList', this.deviceNetworkList);
           },
           async updateDeviceNetwork() {
@@ -734,8 +798,10 @@
                 }
               }
             } else {
+              debugger
               try {
-                await peripheral[guid].write([
+                app.dialog.preloader(_('Updating...'));
+                await peripheral[this.targetGuid].write([
                   {
                     service: 'ff80',
                     characteristic: 'ff81',
@@ -744,6 +810,7 @@
                 ]);
                 this.updateErpData();
               } catch (error) {
+                app.dialog.close();
                 app.dialog.alert(_(erp.get_log_description(error)));
               }
             }
@@ -795,20 +862,22 @@
             }
           },
           async updateErpData() {
+            
             let mac_address = core_utils_get_mac_address_from_guid(this.targetGuid);
             let this_firmware = peripheral[this.targetGuid].getProp().firmware;
-            let device_hex_model = peripheral[guid].getProp().hexModel.toUpperCase();
-            let model_name = erp.doctype.device_model[device_hex_model].name;
-            let mode_name = erp.doctype.device_model[device_hex_model].mode;
-            let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+            //let device_hex_model = peripheral[guid].getProp().hexModel.toUpperCase();
+            let model_name = this.device_map_model;
+            let mode_name = this.device_map_mode;
+            let device_batch = erp.doctype.device_batch[peripheral[this.targetGuid].getProp().hexBatch.toUpperCase()];
 
             //init device setting
-            let settings = erp.info.device[guid].settings;
+            let settings = erp.info.device[guid]?erp.info.device[guid].settings:[];
             settings.forEach((item) => {
               delete item.name;
             });
             let url = `/api/method/appv6.getOrUpdateDevice`;
             let method = 'POST';
+            debugger
             try {
               let deviceData = await http2.request(url, {
                 method: method,
@@ -824,6 +893,7 @@
                   'firmware': isset(this_firmware) ? this_firmware : '----',
                   'settings': settings,
                   'parent': erp.info.profile.name,
+                  'profile_device_name': this.profile_device_name,
                   'old_guid': guid,
                   'device_name': mac_address.replace(/:/g, ''),
                   'gateway': this.gateway,

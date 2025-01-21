@@ -91,6 +91,7 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
                 data = data.substring(6,data.length);
                 data += parseInt(action).toString(16).pad("00");
                 data += status.toString(16).pad("00");
+                //alert(data)
                 if(firmware < 3.8){
                     //check if repeat
                     bleList.push({
@@ -125,12 +126,23 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
                     bleList.push({
                         service: `fe00`,
                         characteristic: `fe05`,
-                        data: ``,
+                        data: `${port.toString(16).pad("00")}ffffffff`,
                     })
                     bleList.push({
                         service: `fe00`,
                         characteristic: `fe06`,
                         data: `ff07`,
+                    })
+                }else{
+                    bleList.push({
+                        service: service,
+                        characteristic: 'fe02',
+                        data: `${parseInt(rs.new_timer_id).toString(16).pad("00")}`,
+                    })
+                    bleList.push({
+                        service: service,
+                        characteristic: characteristic,
+                        data: data,
                     })
                 }
             }else{
@@ -148,14 +160,14 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
             console.log(TAG, data);
             console.log("service",service);
             console.log("characteristic",characteristic);
-            console.log(bleList);
+            console.log('bleList',bleList);
             window.peripheral[guid].write(bleList).then(() => {
                 resolve(rs);
             }).catch(reject);
         });
     }).then((rs) => {
         debugger
-        let url = encodeURI("/api/resource/Device/"+guid);
+        let url = encodeURI("/api/method/appv6.addDeviceTimer");
         let method = "PUT";
         let device_timer = cloneDeep(device_timer_list);
         const repeat_keys = ["repeat_monday", "repeat_tuesday", "repeat_wednesday", "repeat_thursday", "repeat_friday", "repeat_saturday", "repeat_sunday"].reverse();
@@ -196,12 +208,13 @@ window.iot_ble_set_timer = function (guid, timer_id, button_group, dateStr, time
         }
 
         
-        
+        debugger
         return http.request(url, {
-            method: method,
+            method: 'POST',
             serializer: "json",
             data: {
-                device_timer : device_timer
+                device_timer : device_timer,
+                guid: guid
             }
         });
     }).then(()=>{

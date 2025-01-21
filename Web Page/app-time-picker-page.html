@@ -26,7 +26,7 @@
               <input type="radio" name="demo-radio-time" value="1" checked />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">All day</div>
+                <div class="item-title">{{_('All Day')}}</div>
               </div>
             </label>
           </li>
@@ -35,13 +35,13 @@
               <input type="radio" name="demo-radio-time" value="0" />
               <i class="icon icon-radio"></i>
               <div class="item-inner">
-                <div class="item-title">Specific time period</div>
+                <div class="item-title">{{_('Specific time period')}}</div>
               </div>
             </label>
           </li>
           <li class="radio-box choose-time-box card device-hidden" @click="${()=>openTimes(1)}">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Start time</div>
+              <div class="item-title">{{_('Start Time')}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center">
                 <input
                   class="text-color-gray"
@@ -59,7 +59,7 @@
           </li>
           <li class="radio-box card choose-time-box card device-hidden" @click="${()=>openTimes(2)}">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">End time</div>
+              <div class="item-title">{{_('End Time')}}</div>
               <div class="timer-choose display-flex justify-content-flex-end align-items-center">
                 <input
                   class="text-color-gray"
@@ -78,7 +78,7 @@
           </li>
           <li class="radio-box card">
             <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
-              <div class="item-title">Repeat</div>
+              <div class="item-title">{{_('Repeat')}}</div>
               <div class="timer-choose item-link display-flex justify-content-space-between align-items-center smart-select smart-select-init" data-open-in="sheet">
                 <div class="item-content" style="min-width: 160px;max-width: 250px;">
                   <div class="item-inner">
@@ -86,14 +86,14 @@
                   </div>
                 </div>
                 <select name="week" multiple>
-                  <option value="" selected>Every day</option>
-                  <option value="0">Sun</option>
-                  <option value="1">Mon</option>
-                  <option value="2">Tue</option>
-                  <option value="3">Wed</option>
-                  <option value="4">Thu</option>
-                  <option value="5">Fri</option>
-                  <option value="6">Sat</option>
+                  <option value="" selected>{{_('Every Day')}}</option>
+                  <option value="0">{{_('Sun')}}</option>
+                  <option value="1">{{_('Mon')}}</option>
+                  <option value="2">{{_('Tue')}}</option>
+                  <option value="3">{{_('Wed')}}</option>
+                  <option value="4">{{_('Thu')}}</option>
+                  <option value="5">{{_('Fri')}}</option>
+                  <option value="6">{{_('Sat')}}</option>
                 </select>
               </div>
             </div>

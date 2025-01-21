@@ -123,6 +123,7 @@
 
     let vueApp = null;
     let { guid, subdevice_name } = $f7route.query;
+    subdevice_name = '9ssi70rm1d'
     const refresh = async (e, done) => {
       await ha_profile_ready();
       vueApp.$init();
@@ -664,7 +665,7 @@
             mainView.router.navigate(`/mobile-app/scene-guid-operate-page?sub_name=${subdevice_name}`);
           },
           toDetail(item) {
-            mainView.router.navigate(`/mobile-app/scene-guid-operate-page?name=${item.name}&sub_name=${subdevice_name}`);
+            mainView.router.navigate(`/mobile-app/scene-guid-operate-page-test-mira?name=${item.name}&sub_name=${subdevice_name}`);
           },
         },
       });

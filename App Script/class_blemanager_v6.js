@@ -186,10 +186,12 @@ window.bleHelper = {
             return button_group.replaceAll('RCU OUTPUT', '')*1 + 49;
         }else if(button_group.startsWith('RCU INPUT')){
             return button_group.replaceAll('RCU INPUT', '')*1 + 49;
-        }else if(button_group.startsWith('OPENCLOSE UART')){
+        }else if(button_group.startsWith('OPENCLOSE UART') || button_group.startsWith('OPENCLOSE WIFI UART') || button_group.startsWith('OPENCLOSE WIFI UART REVERSE') || button_group.startsWith('OPENCLOSE UART REVERSE')){
             return 48;
         }else if(button_group.startsWith('4in1 Sensor')){
             return 49;
+        }else if(button_group.startsWith('Door Open')){
+            return 86;
         }else{
             return 1;
         }
