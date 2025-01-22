@@ -179,8 +179,8 @@ window.Peripheral = (function() {
                         self.prop.status.bluetooth[0][i] = parseInt(value);
                     }
 										//randar sensor
-										// let sensor_ref = parseInt(self.prop.manufactureData.substring(16, 18), 16);
-										// self.prop.status.bluetooth[0][49] = sensor_ref
+										let sensor_ref = parseInt(self.prop.manufactureData.substring(16, 18), 16);
+										self.prop.status.bluetooth[0][49] = sensor_ref
                     //curtain motor
 					let curtain_io  = parseInt(self.prop.manufactureData.substring(4, 6),16);
 					//if status > 100,means curtain motor can not find the status
@@ -583,217 +583,239 @@ window.Peripheral = (function() {
         // alert("onCharRead data="+data);
         const self = this;
         //alert(data)
-				console.log("data",data);
-        if(data.startsWith("80")){
-            // io status    
-            let io = parseInt(data.substring(2, 4), 16);
-            for(let i=8; i>=0; i--){
-                let key = i.toString();
-                let value = "0";
-                if(io >= Math.pow(2, i)){
-                    value = "1";
-                    io -= Math.pow(2, i);
+		console.log("char",char);
+		console.log("data",data);
+		if(char=="2adc"){
+		    if(data=="0308"){
+		        self.disconnect().then(()=>{
+		            iot_set_mesh_on_provisioning_success(self.prop.guid);
+		        }, ()=>{
+		            iot_set_mesh_on_provisioning_success(self.prop.guid);
+		        });
+		    }else if(data=="03010100010000000000000000"){
+		        iot_set_mesh_on_identify_success(self.prop.id);
+		    }else if(data=="030903"){
+		        self.disconnect().then(()=>{
+		            iot_set_mesh_on_identify_fail(self.prop.id);
+		        }, ()=>{
+		            iot_set_mesh_on_identify_fail(self.prop.id);
+		        });
+		        
+		    }
+		}else if(char=='2ade'){
+		    
+		}else{
+		    if(data.startsWith("80")){
+                // io status    
+                let io = parseInt(data.substring(2, 4), 16);
+                for(let i=8; i>=0; i--){
+                    let key = i.toString();
+                    let value = "0";
+                    if(io >= Math.pow(2, i)){
+                        value = "1";
+                        io -= Math.pow(2, i);
+                    }
+                    //self.prop.gangs[i] = parseInt(value);
+                    self.prop.status.bluetooth[0][i+1] = parseInt(value);
                 }
-                //self.prop.gangs[i] = parseInt(value);
-                self.prop.status.bluetooth[0][i+1] = parseInt(value);
-            }
-						//if dimming
-						let dimmingIo = parseInt(io, 16);
-						self.prop.status.bluetooth[0][8] = dimmingIo;
-            //self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-            self.onPropChanged();
-        }else if(data.startsWith("8b")){
-					//update the door sensor
-					if(data.startsWith("8b00") && self.prop.hexModel && self.prop.hexModel == '0205'){
-						self.prop.status.bluetooth[0][86] = 0;
-						$('.manual-door-senser').find('img').attr('src', 'https://my.yoswit.com/files/app/door_close.svg');
-					}else if(self.prop.hexModel && self.prop.hexModel == '0205' && !data.startsWith("8b00")){
-						self.prop.status.bluetooth[0][86] = 1;
-						$('.manual-door-senser').find('img').attr('src', 'https://my.yoswit.com/files/app/door_open.svg');
-					}else{
-						let io_status = parseInt(data.substring(2,4),16);
-						self.prop.status.bluetooth[0][8] = io_status;
-					}
-					//update the curtain status
-					let curtainStatus = parseInt(data.substring(2,4),16);
-					if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
-						self.prop.status.control[0][48] = 100 - curtainStatus*1;
-						if(100 - curtainStatus*1 > 1){
-							self.prop.status.last[0][48] = 100 - curtainStatus*1;
-						}
-					}else if(self.prop.device_mode && self.prop.device_mode.includes('Curtain Motor')){
-						self.prop.status.control[0][48] = curtainStatus*1;
-						if(curtainStatus*1 > 1){
-							self.prop.status.last[0][48] = curtainStatus*1;
-						}
-					}
-					
-					self.onPropChanged();
-					//self.prop.status.control[0][48] = curtainStatus;
-					//self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 30000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-					//self.onPropChanged();
-				}else if(data.startsWith("94110000")){
-					let thermostat = {
-						power: parseInt(data.substring(10,12), 16),
-						model: parseInt(data.substring(12,14), 16),
-						fan: parseInt(data.substring(14, 16), 16),
-						temp: parseInt(data.substring(16, 18), 16),
-										room_temp: parseInt(data.substring(18,20), 16),
-						humidity : parseInt(data.substring(26,28), 16),
-					}
-					if(thermostat.power){
-						console.log(thermostat);
-						console.log(data)
-					}
-					self.prop.status.bluetooth[0][42] = thermostat.power;
-					self.prop.status.bluetooth[0][43] = thermostat.model;
-					self.prop.status.bluetooth[0][44] = thermostat.fan;
-					self.prop.status.bluetooth[0][45] = thermostat.temp;
-					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
-					self.prop.status.bluetooth[0][47] = thermostat.humidity;
-			
-			
-					self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
-					//compare the time
-					console.log("self.prop.status.bluetooth[1] > self.prop.status.control[1]",self.prop.status.bluetooth[1] > self.prop.status.control[1])
-					if(	self.prop.status.bluetooth[1] > self.prop.status.control[1]){
-								//self.onPropChanged();
-					}
-        }else if(data.startsWith("9502000009") || data.startsWith("95FF000001")){
-					const byteStrings = data.match(/.{1,2}/g);
-          const targetStatus = parseInt(byteStrings[5], 16);
-					self.prop.status.mobmob[0][49] = targetStatus>0?1:0;
-					self.onPropChanged();
-				}else if(data.startsWith("9380")){
-					let rsList = window.iot_ble_iaq_change_list(data);
-					for(let i in rsList){
-						const str = rsList[i].hex;
-						const type = rsList[i].type;
-						const index = rsList[i].index;
-						let value = core_utils_ieee_float_convert(str);
-						const iaqData = iaq_evaluate_rule(type);
-						console.log("value",value);
-						if(isset(iaqData)){
-								$("li.iaq-subdevice[guid='"+self.prop.guid+"']").find(`.${type} .box-btn-img`).css({'background-color':iaqData.bgcolor})
-						}
-						if(type == 'PRESSURE'){
-								value = parseInt(value/1000);
-						}
-						if(type == 'LUX'){
-								console.log("LUX value:"+value);
-								value = parseInt(value*2.5);
-								}
-						if(type == 'CO2'){
-								let str1 = str.substring(0,2);
-								let str2 = str.substring(2,4);
-								let newstr = parseInt(str2,16)*255 + parseInt(str1,16)*1
-								value = newstr
-						}
-						$("li.iaq-subdevice[guid='"+self.prop.guid+"']").find(`.${type} .iaq-title-big`).text(value)
-					}
-					$("li.iaq-subdevice[guid='"+self.prop.guid+"'] .main-btn").forEach((ele)=>{
-						let this_value = $(ele).find(".iaq-title-big").text();
-						if(this_value == '--'){
-								$(ele).hide()
-						}
-						if(this_value != '--'){
-								$(ele).show()
-						}
-					})
-					const score = data.substring(10,12);
-					let score_data = window.iaq_evaluate_rule('score',score);
-					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
-					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score").text(parseInt(score,16));
-				}else if(data.startsWith("87")){
-					console.log("87 data is",data);
-					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
-					let temp_v = parseInt(data.substr(16,2)+data.substr(14,2)+data.substr(12,2)+data.substr(10,2), 16);
-					let temp_i = parseInt(data.substr(24,2)+data.substr(22,2)+data.substr(20,2)+data.substr(18,2), 16);
-					let pvi_cf = 0.0;
-					if(temp_p>0){
-							pvi_cf = (1.0 / (temp_p /1000000.0));
-					}
-					let pvi_cf1_0 = (1.0 / (temp_v /1000000.0));
-					let pvi_cf1_1 = (1.0 / (temp_i /1000000.0));
-					let p = pvi_cf / 0.1209;
-					let v = (pvi_cf1_0 * 2.43 * 512.0 * 1880.0) / (3579000.0 * 2.0);
-					let i = (pvi_cf1_1 * 2.43 * 512.0) / (3579000.0 * 24.0 * 0.001);
-					if(p<5){
-							i = (p*1.0) / (v*1.0);
-					}
-					
-					let kwh = 0;
-					if(data.length>=34){
-							kwh = parseInt(data.substr(32,2)+data.substr(30,2)+data.substr(28,2)+data.substr(26,2), 16) / 100000.0;
-					}
-
-					//let text = '<div class="pvi" style="font-size:12px">P:'+p.toFixed(2)+' &nbsp; V:'+v.toFixed(2)+' &nbsp; I:'+i.toFixed(2)+' &nbsp; Kwh:'+kwh.toFixed(2)+'</div>';
-					let text = `
-					<div class="pvi list media-list no-margin display-flex justify-content-start align-content-center align-items-center" style="font-size:12px;flex-wrap:wrap;height:auto;width:100%;border-top: 1px dashed #d1d1d1;">
-						<div class="main-btn" style="width: 25%;">
-								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
-										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
-												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
-														<img src="https://my.yoswit.com/files/power-icon-02.png" style="width: 45px;height: 45px;" />
-														<span class="unit" style="font-size:16px;margin-left:10px;">${Math.ceil(v)}</span> 
-												</div>
-												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
-														<span class="iaq-title-big">V:&nbsp;</span>
-														<span class="unit" style="font-size:14px;">${Math.ceil(v)}</span> 
-												</div>
-										</div>
-								</div>
-						</div>
-						<div class="main-btn" style="width: 25%;">
-								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
-										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
-												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
-														<img src="https://my.yoswit.com/files/power-icon-03.png" style="width: 45px;height: 45px;" />
-														<span class="unit" style="font-size:16px;margin-left:10px;">${i.toFixed(1)}</span> 
-												</div>
-												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
-														<span class="iaq-title-big">I:&nbsp;</span>
-														<span class="unit" style="font-size:14px;">${i.toFixed(1)}</span> 
-												</div>
-										</div>
-								</div>
-						</div>
-						<div class="main-btn" style="width: 25%;">
-								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
-										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
-												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
-														<img src="https://my.yoswit.com/files/power-icon-04.png" style="width: 45px;height: 45px;" />
-														<span class="unit" style="font-size:16px;margin-left:5px;">${Math.ceil(p)}</span> 
-												</div>
-												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
-														<span class="iaq-title-big">P:&nbsp;</span>
-														<span class="unit" style="font-size:14px;">${Math.ceil(p)}</span> 
-												</div>
-										</div>
-								</div>
-						</div>
-						<div class="main-btn" style="width: 25%;">
-								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
-										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
-												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
-														<img src="https://my.yoswit.com/files/power-icon-01.png" style="width: 45px;height: 45px;" />
-														<span class="unit" style="font-size:16px;margin-left:5px;">${kwh.toFixed(2)}</span> 
-												</div>
-												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
-														<span class="iaq-title-big">kWh:&nbsp;</span>
-														<span class="unit" style="font-size:14px;">${kwh.toFixed(2)}</span> 
-												</div>
-										</div>
-								</div>
-						</div>
-					</div>
-					`
-					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"'] .pvi").remove();
-					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"'] ").append(text);
-					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"']").css({'height':140+'px'});
-				}else if(data.startsWith("9700")){
-					
-				}
+    						//if dimming
+    						let dimmingIo = parseInt(io, 16);
+    						self.prop.status.bluetooth[0][8] = dimmingIo;
+                //self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+                self.onPropChanged();
+            }else if(data.startsWith("8b")){
+    					//update the door sensor
+    					if(data.startsWith("8b00") && self.prop.hexModel && self.prop.hexModel == '0205'){
+    						self.prop.status.bluetooth[0][86] = 0;
+    						$('.manual-door-senser').find('img').attr('src', 'https://my.yoswit.com/files/app/door_close.svg');
+    					}else if(self.prop.hexModel && self.prop.hexModel == '0205' && !data.startsWith("8b00")){
+    						self.prop.status.bluetooth[0][86] = 1;
+    						$('.manual-door-senser').find('img').attr('src', 'https://my.yoswit.com/files/app/door_open.svg');
+    					}else{
+    						let io_status = parseInt(data.substring(2,4),16);
+    						self.prop.status.bluetooth[0][8] = io_status;
+    					}
+    					//update the curtain status
+    					let curtainStatus = parseInt(data.substring(2,4),16);
+    					if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
+    						self.prop.status.control[0][48] = 100 - curtainStatus*1;
+    						if(100 - curtainStatus*1 > 1){
+    							self.prop.status.last[0][48] = 100 - curtainStatus*1;
+    						}
+    					}else if(self.prop.device_mode && self.prop.device_mode.includes('Curtain Motor')){
+    						self.prop.status.control[0][48] = curtainStatus*1;
+    						if(curtainStatus*1 > 1){
+    							self.prop.status.last[0][48] = curtainStatus*1;
+    						}
+    					}
+    					
+    					self.onPropChanged();
+    					//self.prop.status.control[0][48] = curtainStatus;
+    					//self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 30000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+    					//self.onPropChanged();
+    				}else if(data.startsWith("94110000")){
+    					let thermostat = {
+    						power: parseInt(data.substring(10,12), 16),
+    						model: parseInt(data.substring(12,14), 16),
+    						fan: parseInt(data.substring(14, 16), 16),
+    						temp: parseInt(data.substring(16, 18), 16),
+    										room_temp: parseInt(data.substring(18,20), 16),
+    						humidity : parseInt(data.substring(26,28), 16),
+    					}
+    					if(thermostat.power){
+    						console.log(thermostat);
+    						console.log(data)
+    					}
+    					self.prop.status.bluetooth[0][42] = thermostat.power;
+    					self.prop.status.bluetooth[0][43] = thermostat.model;
+    					self.prop.status.bluetooth[0][44] = thermostat.fan;
+    					self.prop.status.bluetooth[0][45] = thermostat.temp;
+    					self.prop.status.bluetooth[0][46] = thermostat.room_temp;
+    					self.prop.status.bluetooth[0][47] = thermostat.humidity;
+    			
+    			
+    					self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+    					//compare the time
+    					console.log("self.prop.status.bluetooth[1] > self.prop.status.control[1]",self.prop.status.bluetooth[1] > self.prop.status.control[1])
+    					if(	self.prop.status.bluetooth[1] > self.prop.status.control[1]){
+    								//self.onPropChanged();
+    					}
+            }else if(data.startsWith("9502000009") || data.startsWith("95FF000001")){
+    					const byteStrings = data.match(/.{1,2}/g);
+              const targetStatus = parseInt(byteStrings[5], 16);
+    					self.prop.status.mobmob[0][49] = targetStatus>0?1:0;
+    					self.onPropChanged();
+    				}else if(data.startsWith("9380")){
+    					let rsList = window.iot_ble_iaq_change_list(data);
+    					for(let i in rsList){
+    						const str = rsList[i].hex;
+    						const type = rsList[i].type;
+    						const index = rsList[i].index;
+    						let value = core_utils_ieee_float_convert(str);
+    						const iaqData = iaq_evaluate_rule(type);
+    						console.log("value",value);
+    						if(isset(iaqData)){
+    								$("li.iaq-subdevice[guid='"+self.prop.guid+"']").find(`.${type} .box-btn-img`).css({'background-color':iaqData.bgcolor})
+    						}
+    						if(type == 'PRESSURE'){
+    								value = parseInt(value/1000);
+    						}
+    						if(type == 'LUX'){
+    								console.log("LUX value:"+value);
+    								value = parseInt(value*2.5);
+    								}
+    						if(type == 'CO2'){
+    								let str1 = str.substring(0,2);
+    								let str2 = str.substring(2,4);
+    								let newstr = parseInt(str2,16)*255 + parseInt(str1,16)*1
+    								value = newstr
+    						}
+    						$("li.iaq-subdevice[guid='"+self.prop.guid+"']").find(`.${type} .iaq-title-big`).text(value)
+    					}
+    					$("li.iaq-subdevice[guid='"+self.prop.guid+"'] .main-btn").forEach((ele)=>{
+    						let this_value = $(ele).find(".iaq-title-big").text();
+    						if(this_value == '--'){
+    								$(ele).hide()
+    						}
+    						if(this_value != '--'){
+    								$(ele).show()
+    						}
+    					})
+    					const score = data.substring(10,12);
+    					let score_data = window.iaq_evaluate_rule('score',score);
+    					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
+    					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score").text(parseInt(score,16));
+    				}else if(data.startsWith("87")){
+    					console.log("87 data is",data);
+    					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
+    					let temp_v = parseInt(data.substr(16,2)+data.substr(14,2)+data.substr(12,2)+data.substr(10,2), 16);
+    					let temp_i = parseInt(data.substr(24,2)+data.substr(22,2)+data.substr(20,2)+data.substr(18,2), 16);
+    					let pvi_cf = 0.0;
+    					if(temp_p>0){
+    							pvi_cf = (1.0 / (temp_p /1000000.0));
+    					}
+    					let pvi_cf1_0 = (1.0 / (temp_v /1000000.0));
+    					let pvi_cf1_1 = (1.0 / (temp_i /1000000.0));
+    					let p = pvi_cf / 0.1209;
+    					let v = (pvi_cf1_0 * 2.43 * 512.0 * 1880.0) / (3579000.0 * 2.0);
+    					let i = (pvi_cf1_1 * 2.43 * 512.0) / (3579000.0 * 24.0 * 0.001);
+    					if(p<5){
+    							i = (p*1.0) / (v*1.0);
+    					}
+    					
+    					let kwh = 0;
+    					if(data.length>=34){
+    							kwh = parseInt(data.substr(32,2)+data.substr(30,2)+data.substr(28,2)+data.substr(26,2), 16) / 100000.0;
+    					}
+    
+    					//let text = '<div class="pvi" style="font-size:12px">P:'+p.toFixed(2)+' &nbsp; V:'+v.toFixed(2)+' &nbsp; I:'+i.toFixed(2)+' &nbsp; Kwh:'+kwh.toFixed(2)+'</div>';
+    					let text = `
+    					<div class="pvi list media-list no-margin display-flex justify-content-start align-content-center align-items-center" style="font-size:12px;flex-wrap:wrap;height:auto;width:100%;border-top: 1px dashed #d1d1d1;">
+    						<div class="main-btn" style="width: 25%;">
+    								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+    										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+    												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+    														<img src="https://my.yoswit.com/files/power-icon-02.png" style="width: 45px;height: 45px;" />
+    														<span class="unit" style="font-size:16px;margin-left:10px;">${Math.ceil(v)}</span> 
+    												</div>
+    												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+    														<span class="iaq-title-big">V:&nbsp;</span>
+    														<span class="unit" style="font-size:14px;">${Math.ceil(v)}</span> 
+    												</div>
+    										</div>
+    								</div>
+    						</div>
+    						<div class="main-btn" style="width: 25%;">
+    								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+    										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+    												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+    														<img src="https://my.yoswit.com/files/power-icon-03.png" style="width: 45px;height: 45px;" />
+    														<span class="unit" style="font-size:16px;margin-left:10px;">${i.toFixed(1)}</span> 
+    												</div>
+    												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+    														<span class="iaq-title-big">I:&nbsp;</span>
+    														<span class="unit" style="font-size:14px;">${i.toFixed(1)}</span> 
+    												</div>
+    										</div>
+    								</div>
+    						</div>
+    						<div class="main-btn" style="width: 25%;">
+    								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+    										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+    												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+    														<img src="https://my.yoswit.com/files/power-icon-04.png" style="width: 45px;height: 45px;" />
+    														<span class="unit" style="font-size:16px;margin-left:5px;">${Math.ceil(p)}</span> 
+    												</div>
+    												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+    														<span class="iaq-title-big">P:&nbsp;</span>
+    														<span class="unit" style="font-size:14px;">${Math.ceil(p)}</span> 
+    												</div>
+    										</div>
+    								</div>
+    						</div>
+    						<div class="main-btn" style="width: 25%;">
+    								<div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+    										<div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+    												<div class="display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;">
+    														<img src="https://my.yoswit.com/files/power-icon-01.png" style="width: 45px;height: 45px;" />
+    														<span class="unit" style="font-size:16px;margin-left:5px;">${kwh.toFixed(2)}</span> 
+    												</div>
+    												<div class="title-btn display-flex justify-content-center align-items-center" style="display:none!important;">
+    														<span class="iaq-title-big">kWh:&nbsp;</span>
+    														<span class="unit" style="font-size:14px;">${kwh.toFixed(2)}</span> 
+    												</div>
+    										</div>
+    								</div>
+    						</div>
+    					</div>
+    					`
+    					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"'] .pvi").remove();
+    					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"'] ").append(text);
+    					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"']").css({'height':140+'px'});
+    				}else if(data.startsWith("9700")){
+    					
+    				}
+		}
     };
 	Peripheral.prototype.onChangeGateway = function(p){
 		const self = this;
@@ -983,16 +1005,27 @@ window.Peripheral = (function() {
     	self.isExecuting = false;
         
     	return new Promise((resolve, reject) => {
-			ble.refreshDeviceCache(self.prop.id, 0, null, null);
-			setTimeout(()=>{
-				ble.disconnect(self.prop.id, (rs)=>{
-					self.onConnectionChanged('disconnected');
-					resolve();
-				}, (error)=>{
-					self.onConnectionChanged('disconnected');
-					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
-				});
-			}, 500);
+			ble.refreshDeviceCache(self.prop.id, 0, ()=>{
+    			setTimeout(()=>{
+    				ble.disconnect(self.prop.id, (rs)=>{
+    					self.onConnectionChanged('disconnected');
+    					resolve();
+    				}, (error)=>{
+    					self.onConnectionChanged('disconnected');
+    					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
+    				});
+    			}, 500);
+			}, ()=>{
+    			setTimeout(()=>{
+    				ble.disconnect(self.prop.id, (rs)=>{
+    					self.onConnectionChanged('disconnected');
+    					resolve();
+    				}, (error)=>{
+    					self.onConnectionChanged('disconnected');
+    					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
+    				});
+    			}, 500);
+			});
     	});
     };
     Peripheral.prototype.write = function(commands) {
@@ -3466,7 +3499,122 @@ return new Promise((resolve, reject) => {
     	});
     }
 
+    Peripheral.prototype.identify = function(){
+        const self = this;
+        
+        let found2adc = false;
+	    if(isset(self.prop.characteristics)){
+		    for(let c of self.prop.characteristics){
+		        console.log("Find c.characteristic = "+c.characteristic);
+                if(c.characteristic.toLowerCase() == "2adc"){
+                    found2adc = true;
+                }
+		    }
+	    }
+        
+        if(found2adc){
+        	return new Promise((resolve, reject) => {
+        		const action = {
+        		    func:'identify',
+        		    args:[],
+        		    callback: {
+        		        resolve:resolve,
+        		        reject:reject
+        		    }
+        		}
+        		self.queue.push(action);
+        		if (!self.isExecuting) {
+        			self.isExecuting = true;
+        			self.execute();
+        		}
+        	});
+        }else{
+        	return new Promise((resolve, reject) => {
+        		reject("No 2adc");
+        	});
+        }
+    };
+    Peripheral.prototype._identify = function(){
+        const self = this;
+    	const doIdentify = () => {
+    		return new Promise((resolve, reject) => {
+                ble.identifyNode(
+                    self.prop.id,
+                    () => {
+                        resolve();
+                    },
+                    (e) => {
+                        reject(error);
+                    }
+                );
+    		});
+    	};
+    	
+    	return new Promise((resolve, reject) => {
+    		Promise.race([
+    			self.doConnect(),
+    			self.timeout(10000).then(() => {
+    			    self.disconnect();
+    				throw 7001;
+    			})
+    		])
+    		.then((result) => {
+                return doIdentify();
+    		})
+    		.then(() => {
+    			resolve();
+    		})
+    		.catch((error) => {
+    			reject(error);
+    		})
+    		.then(() => {
+    			// Clean up resources
+    			clearTimeout(self.timeout_timer);
+    		});
+    	});
+    };
 
+    Peripheral.prototype.bindAppKey = function(){
+        const self = this;
+    	return new Promise((resolve, reject) => {
+    		const action = {
+    		    func:'bindAppKey',
+    		    args:[],
+    		    callback: {
+    		        resolve:resolve,
+    		        reject:reject
+    		    }
+    		}
+    		self.queue.push(action);
+    		if (!self.isExecuting) {
+    			self.isExecuting = true;
+    			self.execute();
+    		}
+    	});
+    };
+    Peripheral.prototype._bindAppKey = function(){
+        const self = this;
+    	
+    	return new Promise((resolve, reject) => {
+    		Promise.race([
+    			self.doConnect(),
+    			self.timeout(10000).then(() => {
+    			    self.disconnect();
+    				throw 7001;
+    			})
+    		])
+    		.then(() => {
+    			resolve();
+    		})
+    		.catch((error) => {
+    			reject(error);
+    		})
+    		.then(() => {
+    			// Clean up resources
+    			clearTimeout(self.timeout_timer);
+    		});
+    	});
+    };
 
     Peripheral.prototype.execute = function(){
     	if (this.queue.length === 0) {
@@ -3620,6 +3768,28 @@ return new Promise((resolve, reject) => {
     	    })
     	}else if(action.func=="connect"){
     	    this._connect().then((rs) => {
+    	        action.callback.resolve(rs);
+    	        this.execute();
+    	    }).catch((error) => {
+    	        action.callback.reject(error);
+    	        this.queue = [];
+    	        this.isExecuting = false;
+    	    }).then(()=>{
+    	        
+    	    })
+    	}else if(action.func=="identify"){
+    	    this._identify().then((rs) => {
+    	        action.callback.resolve(rs);
+    	        this.execute();
+    	    }).catch((error) => {
+    	        action.callback.reject(error);
+    	        this.queue = [];
+    	        this.isExecuting = false;
+    	    }).then(()=>{
+    	        
+    	    })
+    	}else if(action.func=="bindAppKey"){
+    	    this._bindAppKey().then((rs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
@@ -4212,7 +4382,11 @@ return new Promise((resolve, reject) => {
         		        const notifyList = [];
             		    if(isset(self.prop.characteristics)){
                 		    for(let c of self.prop.characteristics){
-                                if(c.characteristic.toLowerCase() == "fff3" || c.characteristic.toLowerCase() == "ff82"){
+                		        console.log("Find c.characteristic = "+c.characteristic);
+                                if(c.characteristic.toLowerCase() == "fff3"
+                                || c.characteristic.toLowerCase() == "ff82"
+                                || c.characteristic.toLowerCase() == "2adc"
+                                || c.characteristic.toLowerCase() == "2ade"){
                                     notifyList.push({
                                         service: c.service,
                                         characteristic: c.characteristic
@@ -4228,11 +4402,13 @@ return new Promise((resolve, reject) => {
             		    
             		    if(notifyList.length>0){
                 		    for(let i in notifyList){
-                		        await new Promise(resolve => setTimeout(resolve, 200));
+                		        await new Promise(resolve => setTimeout(resolve, 1000));
+                		        console.log("startNotification = "+notifyList[i].characteristic);
             					ble.startNotification(self.prop.id, notifyList[i].service, notifyList[i].characteristic, function(rs){
                                     self.onCharNotified(notifyList[i].characteristic, rs)
                                 });
                 		    }
+                		    await new Promise(resolve => setTimeout(resolve, 1000));
             		    }
             		    resolve(true);
         		    }

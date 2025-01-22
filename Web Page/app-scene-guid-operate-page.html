@@ -251,6 +251,7 @@
                               <div class="item-subtitle">{{ item.device_model }}-{{ item.mac_address }}</div>
                               <div class="signal-panel item-text height-21" style="">
                                 {{tran(item.room_name)}}/
+                                <span v-if="item.virtualId && item.virtualId != 0" class="text-color-theme">{{_('V-ID ')}}{{item.virtualId}}/</span>
                                 <span class="text-color-theme">{{_(dealwithRef(item))}}</span>
                               </div>
                             </div>
@@ -305,6 +306,7 @@
                               <div class="item-subtitle">{{ item.device_model }}-{{ item.mac_address }}</div>
                               <div class="signal-panel item-text height-21" style="">
                                 {{tran(item.room_name)}}/
+                                <span v-if="item.virtualId && item.virtualId != 0" class="text-color-theme">{{_('V-ID ')}}{{item.virtualId}}/</span>
                                 <span class="text-color-theme">{{_(dealwithRef(item))}}</span>
                               </div>
                             </div>
@@ -4113,6 +4115,17 @@
                       let $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
                       data = `${($command.length / 2).toString(16).pad('00')}${$command}`;
                     }
+                  }else if(item.device_button_group == 'ONOFF GANG1'){
+                    let gang = parseInt(item.virtualId);
+                    let $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
+                    if(index == 0){
+                      let this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
+                      $command = `02${mac}13${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
+                      data = `${$command}`;
+                    }else{
+                      data = `${($command.length / 2).toString(16).pad('00')}${$command}`;
+                    }
+                    
                   } else if (item.device_button_group == 'DOOR SIGN') {
                     let ref = item.ref;
                     let onoff_satus = '00';

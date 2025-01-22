@@ -61,6 +61,7 @@
                         "
                       >
                         {{_(item.title)}}
+                        <div v-if="item.virtualId" class="text-color-white" style="font-size: 12px;">{{_('V-ID: ')}}{{item.virtualId}}</div>
                       </div>
                     </div>
                     <div class="item-after">
@@ -604,6 +605,9 @@
               }
               if (isset(subdevice_name) && subdevice_name) {
                 if (subdevice_name == scenes[i].profile_subdevice) {
+                  if(scenes[i].scene_virtual_button.length > 0){
+                    scenes[i].virtualId = scenes[i].scene_virtual_button[0].virtual_button_id;
+                  }
                   this.sceneList.push(scenes[i]);
                 }
                 //if normal scene

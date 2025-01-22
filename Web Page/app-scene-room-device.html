@@ -117,6 +117,18 @@
                         </a>
                         <div
                           class="button button-raised button-big circle"
+                          style="float: left;"
+                          v-if="subItem.virtualStatus"
+                          v-on:click="chooseVirtualId(subItem)"
+                        >
+                          <input type="hidden" name="bind_virtual_id" value="" />
+                          <div>
+                            <span v-if="subItem.virtualId && subItem.virtualId != 0" style="font-size: 22px;">{{subItem.virtualId}}</span>
+                            <i v-else class="material-icons" style="line-height: 70px !important; font-size: 25px !important">tag</i>
+                          </div>
+                        </div>
+                        <div
+                          class="button button-raised button-big circle"
                           v-if="subItem.mainType == 1"
                           v-on:click="chooseTemplate(subItem)"
                         >
@@ -469,6 +481,9 @@
             //init the modelList
             let models = cloneDeep(erp.doctype.device_model);
             devices.forEach((item) => {
+              //this param is used to check if the YO780 is in the virtual id
+              item.virtualStatus = false;
+              item.virtualId = '';
               //var the right button type
               if(type == 1){
                 item.mainType = 0;
@@ -517,9 +532,10 @@
                   }
                 }
               }
-              //rcu
+              //rcu,open virtual id to choose
               if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1'){
-                item.isHidden = true;
+                item.isHidden = false;
+                item.virtualStatus = true;
               }
               //choose status
               item.chooseStatus = false;
@@ -560,6 +576,36 @@
                 item.isHidden = true;
               }
             })
+          },
+          chooseVirtualId(item){
+            console.log(item);
+            const inputEl = $("input[name=bind_virtual_id]");
+            let virtual_id_list = [];
+            for(let i = 0;i <= 32;i++){
+              virtual_id_list.push(i);
+            }
+            this.virtualSelect = app.picker.create({  
+              inputEl: inputEl,
+              cols:[
+                {
+                  values: virtual_id_list,
+                  displayValues: virtual_id_list,
+                }
+              ],
+              on: {
+                change: (picker) => {
+                  console.log(picker.value);
+                  item.virtualId = picker.value[0];
+                },
+                open: (picker) => {
+                  console.log(picker);
+                  $(picker.$el).find(".toolbar-save-link").on("click", () => {
+                    console.log(picker.value);
+                  });
+                },
+              },
+            });
+            this.virtualSelect.open();
           },
           clickThermostatChange(item, click_type) {
             console.log(item, click_type);

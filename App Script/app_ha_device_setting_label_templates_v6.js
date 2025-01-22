@@ -597,6 +597,7 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    
     setting_label = "LED Mode";
     setting_label_template[setting_label] = `
         <div 
@@ -698,6 +699,44 @@ window.initSettingTemplate = ()=>{
                         <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
                         {% if self_setting_data.setting == '' %}
                         <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Linked Virtual Id";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_change_virtual_id_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="link_virtual_id" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">wb_iridescent</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == '' %}
+                        
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
                         {% endif %}
