@@ -1006,6 +1006,61 @@
                 </div>
               </div>
             </div>
+            <!-- index == 14 add led mode -->
+            <div id="step-14" class="view tab view-main" :class="[index == 14 ? 'tab-active' : '']" v-if="index == 14">
+              <!-- choose the scene button led status -->
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Associated Device LED")}}</div>
+                <div class="card-content card-content-padding">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px">
+                    <div class="action-list list media-list no-margin">
+                      <ul>
+                        <li class="device" v-for="(item,index) in ledActionList" :key="item.name">
+                          <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                            <div
+                              class="device-thumb item-media"
+                              :style="{
+                              'background-position': 'center',
+                              'background-size': 'contain',
+                              'position': 'relative',
+                              'background-image': 'url('+item.imgUrl+')'}
+                            "
+                            ></div>
+                            <div class="item-inner">
+                              <div class="item-title-row">
+                                <div class="item-title ellipsis" lang="en" style="width: 200px">{{item.title}}</div>
+                              </div>
+                              <div class="item-subtitle">{{ item.device_model }}-{{ item.mac_address }}</div>
+                              <div class="signal-panel item-text height-21" style="">
+                                {{tran(item.room_name)}}/
+                                <span v-if="item.virtualId && item.virtualId != 0" class="text-color-theme">{{_('V-ID ')}}{{item.virtualId}}/</span>
+                                <span class="text-color-theme">{{_(dealwithRef(item))}}</span>
+                              </div>
+                            </div>
+                            <div class="margin-right" style="" v-on:click="deleteLedItem(item.name,2)">
+                              <i class="material-icons text-color-gray">delete</i>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      class="add-box add-action display-flex justify-content-flex-start align-items-center"
+                      v-on:click="toRoomList('Choose Device Led','5','2')"
+                    >
+                      <i class="material-icons">add_circle</i>
+                      <div class="trigger-text margin-left">{{_("Add Actions")}}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(14)">{{_("NEXT")}}</div>
+                  </div>
+                </div>
+              </div>
+               <!-- choose the scene button led status end -->
+            </div>
           </div>
         </div>
       </div>
@@ -1065,6 +1120,8 @@
           actionCurtainId_2: '',
           actionList: [], //first action list
           actionList_2: [], //sconed action list
+          ledActionList : [],
+          chooseLedStatus : false,
           pickObj: null,
           virtualPick: null,
           rcuMacAddress: '',
@@ -1169,13 +1226,18 @@
                 },
                 {
                   id: 5,
-                  relatedIndex: 4,
+                  relatedIndex: 14,
                   name: '5',
                 },
                 {
-                  id: 5,
-                  relatedIndex: 5,
+                  id: 6,
+                  relatedIndex: 4,
                   name: '6',
+                },
+                {
+                  id: 7,
+                  relatedIndex: 5,
+                  name: '7',
                 },
               ],
             },
@@ -1209,13 +1271,18 @@
                 },
                 {
                   id: 7,
-                  relatedIndex: 4,
+                  relatedIndex: 14,
                   name: '6',
                 },
                 {
                   id: 8,
-                  relatedIndex: 5,
+                  relatedIndex: 4,
                   name: '7',
+                },
+                {
+                  id: 9,
+                  relatedIndex: 5,
+                  name: '8',
                 },
               ],
             },
@@ -1273,19 +1340,24 @@
                   name: '3',
                 },
                 {
-                  id: 6,
+                  id: 4,
                   relatedIndex: 3,
                   name: '4',
                 },
                 {
-                  id: 7,
-                  relatedIndex: 4,
+                  id: 5,
+                  relatedIndex: 14,
                   name: '5',
                 },
                 {
-                  id: 8,
-                  relatedIndex: 5,
+                  id: 6,
+                  relatedIndex: 4,
                   name: '6',
+                },
+                {
+                  id: 7,
+                  relatedIndex: 5,
+                  name: '7',
                 },
               ],
             },
@@ -1739,10 +1811,12 @@
             let list = JSON.parse(data.data);
             //console.log(list);
             list.forEach((element) => {
-              if (this.mutiwayStatus == 2) {
+              if (this.mutiwayStatus == 2 && !this.chooseLedStatus) {
                 this.actionList_2.push(element);
-              } else {
+              } else if(this.mutiwayStatus == 1 && !this.chooseLedStatus) {
                 this.actionList.push(element);
+              }else if(this.chooseLedStatus){
+                this.ledActionList.push(element);
               }
             });
             console.log(this.actionList);
@@ -2483,13 +2557,27 @@
             }
             
           },
+          deleteLedItem(name,type){
+            const index = this.ledActionList.findIndex((item) => item.name === name);
+            this.ledActionList.splice(index, 1);
+          },
           deleteTriggerItem(index) {
             //if is save in the ble,should warn the user, can not delete
-            if(this.scenePostId && this.templateName != 'RCU Radar'){
-              app.dialog.alert(_('This scene has been saved in the ble, can not delete.If you want to delete, please delete the scene.'));
-              return;
+            let deviceMap = this.trigger[index];
+            let guid = deviceMap.guid;
+            let deviceInfo = window.peripheral[guid].prop;
+            //check if the device can not scan
+            let rssi = deviceInfo.rssilv;
+            if(rssi){
+              //check if the device is save in the ble,delete the scene
+              if(this.scenePostId && this.templateName != 'RCU Radar'){
+                app.dialog.alert(_('This scene has been saved in the ble, can not delete.If you want to delete, please delete the scene.'));
+                return;
+              }
+              this.trigger.splice(index, 1);
+            }else{
+              this.trigger.splice(index, 1);
             }
-            this.trigger.splice(index, 1);
           },
           async loadFavoriteErpData(){
             this.templateName = "Favorite Scene";
@@ -2524,10 +2612,14 @@
                 this.templateName = scenes[i].scene_template;
                 //init the action name and the list
                 let actionMap = JSON.parse(scenes[i].action);
+                let uiConfigurationMap = JSON.parse(scenes[i].ui_configuration)
                 this.actionId = actionMap.actionId;
                 this.actionName = actionMap.title;
                 this.actionList = actionMap.actionList;
                 this.trigger = JSON.parse(scenes[i].trigger) || [];
+                if(isset(uiConfigurationMap) && isset(uiConfigurationMap.ledActionList)){
+                  this.ledActionList = uiConfigurationMap.ledActionList;
+                }
                 //del the connect status
                 if (Object.keys(this.trigger).length != 0) {
                   this.trigger.forEach((item) => {
@@ -2693,7 +2785,9 @@
                   virtual_button_id: this.virtualIdList[i],
                 });
               }
-
+              if(this.ledActionList.length){
+                this.overallSceneMap['ui_configuration']['ledActionList'] = this.ledActionList;
+              }
               let post_data = {
                 title: this.sceneName,
                 profile: erp.info.profile.name,
@@ -2797,6 +2891,7 @@
               if (postStatus) {
                 let url = `/api/resource/Scene/${this.scenePostId}`;
                 let method = 'PUT';
+                
                 try{
                   let postStatus = await http.request(url, {
                     method: method,
@@ -2976,6 +3071,7 @@
                         virtualButtonName: this.actionName,
                         isHidden: this.hideDevice,
                         virtualStatus: this.virtualStatus,
+                        ledActionList : this.ledActionList
                       }),
                       is_enabled: this.showInHome ? 0 : 1,
                     },
@@ -3000,6 +3096,9 @@
                     debug: true,
                     data: {
                       is_enabled: this.showInHome ? 0 : 1,
+                      ui_configuration:JSON.stringify({
+                        ledActionList : this.ledActionList
+                      })
                     },
                   });
                   await ha_profile_ready();
@@ -3200,8 +3299,14 @@
                   this.mutiwayStatus = 2;
                   //change the action list
                   let thisList = cloneDeep(this.actionList);
+                  //change the led status 
+
                   //change the ref to the pause
                   thisList.forEach((kitem) => {
+                    //check if have the virtual button id is on,change the status
+                    if(kitem.device_mode == 'RCU Controller' && isset(kitem.virtualId) && kitem.ref == 1){
+                      kitem.ref = 0;
+                    }
                     if (kitem.device_model == 'YO121-AC-R2W') {
                       let command = `02${core_utils_get_mac_address_from_guid(kitem.device, true)}860255fefe030338e5`;
                       kitem.action_command = command;
@@ -3700,6 +3805,21 @@
                   //alert(thisActionCommand)
                   //thisActionCommand = `8f1000${sceneId.toString(16).pad('00')}0b02${core_utils_get_mac_address_from_guid(this.actionGuid,true)}8f0200${parseInt(this.triggerActionId).toString(16).pad('00')}`;
                 }
+                if(this.ledActionList.length){
+                  let thisCommand = '';
+                  this.ledActionList.forEach(deviceItem=>{
+                    let guid = deviceItem.device;
+                    if(this.trigger[i].guid != guid){
+                      return
+                    } 
+                    let this_mac = core_utils_get_mac_address_from_guid(guid, true);
+                    let gang = deviceItem.device_button_group.replace("ONOFF GANG","")*1;
+                    let ref = deviceItem.ref;
+                    thisCommand += `0c02${this_mac}972101${parseInt(gang).toString(16).pad("00")}${parseInt(ref).toString(16).pad("00")}`;
+                    //alert(thisCommand)
+                  })
+                  thisActionCommand = `${thisActionCommand}${thisCommand}`
+                }
                 let triggerStatus = false;
                 let virtualSceneId = '';
                 let this_ref = 0;
@@ -4107,7 +4227,7 @@
                 } else if (mode == 'RCU Controller') {
                   if (item.device_button_group == 'SCENE MUTIWAY ONOFF GANG1') {
                     let gang = parseInt(item.config);
-                    if (index == 0) {
+                    if (index == 0  && controlIndex == 0) {
                       let this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
                       let $command = `02${mac}13${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
                       data = `${$command}`;
@@ -4118,7 +4238,7 @@
                   }else if(item.device_button_group == 'ONOFF GANG1'){
                     let gang = parseInt(item.virtualId);
                     let $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
-                    if(index == 0){
+                    if(index == 0  && controlIndex == 0){
                       let this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
                       $command = `02${mac}13${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
                       data = `${$command}`;
@@ -4238,6 +4358,32 @@
                       data = `${($ac_command.length / 2).toString(16).pad('00')}${$ac_command}`;
                     }
                   }
+                }else if(item.device_button_group.startsWith("Hdmicec")){
+                  debugger
+                  if (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar' || this.templateName == 'RCU Curtain' || this.templateName == 'RCU Scene Toggle') {
+                    let devices = cloneDeep(erp.info.profile.profile_device);
+                    let gatewayMac = '';
+                    devices.forEach((zitem) => {
+                      if (zitem.device_model == 'YO105') {
+                        gatewayMac = core_utils_get_mac_address_from_guid(zitem.device, true);
+                      }
+                    });
+                    let pre_command = `972102016B61203020`;
+                    let ref = item.ref;
+                    let $command = `${core_utils_get_mac_address_from_guid(item.device,true)}${pre_command}30${ref == 1?'31':'30'}0D`;
+                    let $ac_command = '';
+                    if(gatewayMac){
+                      $ac_command = `15${gatewayMac}${($command.length / 2).toString(16).pad('00')}${$command}`;
+                      
+                    }else{
+                      $ac_command = `15${core_utils_get_mac_address_from_guid(item.device, true)}${($command.length / 2).toString(16).pad('00')}${$command}`;
+                    }
+                    if(controlIndex == 0){
+                        data = `13${($ac_command.length / 2).toString(16).pad('00')}${$ac_command}`;
+                    }else{
+                      data = `${($ac_command.length / 2).toString(16).pad('00')}${$ac_command}`;
+                    }
+                  }
                 }
                 if (
                   data.length &&
@@ -4333,8 +4479,7 @@
               if (
                 this.templateName == 'RCU Scene Button' ||
                 this.templateName == 'RCU Radar' ||
-                this.templateName == 'RCU Scene Toggle' ||
-                this.templateName == 'RCU Curtain'
+                this.templateName == 'RCU Scene Toggle' 
               ) {
                 if (
                   postList[i].device_mode == 'Triac Dimming' ||
@@ -4345,18 +4490,38 @@
                 ) {
                   haveRcu = true;
                   let this_data = postList[i].actionCommand;
+                  //这段代码是要将所有的指令都组合一起然后写进rcu
                   if (i == gatewayActionGuid) {
                     for (let j in postList) {
-                      if (postList[j].device_mode == 'Thermostat' || postList[j].device_mode.startsWith('Curtain Moto')) {
+                      if (postList[j].device_mode == 'Thermostat' || postList[j].device_mode.startsWith('Curtain Moto') || postList[j].device_mode.startsWith('Hdmicec')) {
+                        //判断前两个是否有13
+                        // if(postList[j].actionCommand.substring(0,2) == '13'){
+                        //   this_data = `${postList[j].actionCommand}${this_data}`;
+                        // }else{
+                        //   this_data = `${this_data}${postList[j].actionCommand}`;
+                        // }
                         this_data += `${postList[j].actionCommand}`;
                       }
                     }
                   }
+                  debugger
                   //console.log('this_data.length',(this_data.length/2));
                   let this_post_data = `${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
                   //totalCommand += this_post_data;
                   thisCommandMap[i] = this_post_data;
                 }
+              }
+              //单独判断窗帘的场景
+              if(this.templateName == 'RCU Curtain'){
+                //窗帘场景只能发送到rcu上
+                let this_data = '';
+                haveRcu = true;
+                for (let i in postList) {
+                  this_data += postList[i].actionCommand;
+                }
+                let $command = `02${core_utils_get_mac_address_from_guid(gatewayActionGuid, true)}${this_data}`;
+                anotherCommand = `${($command.length / 2).toString(16).pad('00')}${$command}`;
+                thisCommandMap[gatewayActionGuid] = anotherCommand;
               }
             }
             //alert(haveRcu)
@@ -4724,13 +4889,17 @@
                 app.dialog.alert(_('Trigger must be filled in.'));
                 return;
               } else {
-                this.index = 4;
+                this.index = 14;
+                this.chooseLedStatus = true;
                 this.scrollItem(110 * 2);
               }
             } else if (index == 5) {
               this.saveTriggerOnble();
             } else if (index == 6) {
               this.buttonAndSetting();
+            }else if(index == 14){
+              this.index = 4;
+              this.scrollItem(110 * 3);
             } else if (index == 7) {
               //second scene name
               if (!this.secondSceneName) {
@@ -5409,7 +5578,7 @@
               let ref = item.ref;
               let status = '';
               let device_button_group = item.device_button_group;
-              if (mode == 'On Off Switch' || mode == 'RCU Scene Button') {
+              if (mode == 'On Off Switch' || mode == 'RCU Scene Button' || mode == 'Hdmicec') {
                 if (ref == 1) {
                   status = 'ON';
                 } else if (ref == 2) {

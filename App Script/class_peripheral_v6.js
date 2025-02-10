@@ -592,7 +592,7 @@ window.Peripheral = (function() {
 		        }, ()=>{
 		            iot_set_mesh_on_provisioning_success(self.prop.guid);
 		        });
-		    }else if(data=="03010100010000000000000000"){
+		    }else if(data.startsWith("030101")){
 		        iot_set_mesh_on_identify_success(self.prop.id);
 		    }else if(data=="030903"){
 		        self.disconnect().then(()=>{
@@ -3544,7 +3544,7 @@ return new Promise((resolve, reject) => {
                         resolve();
                     },
                     (e) => {
-                        reject(error);
+                        reject(e);
                     }
                 );
     		});
@@ -4377,6 +4377,7 @@ return new Promise((resolve, reject) => {
     		return new Promise((resolve, reject) => {
     		    const executeEnable = async () => {
         		    if(self.prop.authed){
+                		console.log("no need to find c.characteristic");
         		        resolve(true);
         		    }else{
         		        const notifyList = [];

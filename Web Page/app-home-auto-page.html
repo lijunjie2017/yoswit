@@ -6011,7 +6011,8 @@ export default async (props, ctx) => {
 							}
 						}
 						//update the virtual status
-						let virtualDataList = manufacturing_data.split("130504");
+						//"97000101000201000302bfbf040200000502000011030400000000120401801305080010000000000000"
+						let virtualDataList = manufacturing_data.split("130508");
 						let rcuStatus = virtualDataList[1];
 						let statusByteList = splitBytesAndConvertToBinaryArray(rcuStatus);
 						$(`.home-scanned-peripheral[guid="${guid}"][button_group="SCENE MUTIWAY ONOFF GANG1"]`).each(function(item){

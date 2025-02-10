@@ -77,8 +77,8 @@ window.iot_device_thermostat_form_init = function (json) {
   const restart_after_power_failure_options = ['On', 'Off', 'Restore'];
   const restart_after_power_failure_default = restart_after_power_failure_options[2];
 
-  const keypad_lock_after_backlight_off_options = ['On', 'Off'];
-  const keypad_lock_after_backlight_off_default = keypad_lock_after_backlight_off_options[0];
+  const keypad_lock_after_backlight_off_options = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
+  const keypad_lock_after_backlight_off_default = 100;
 
   const screen_lights_up_options = ['On', 'Off'];
   const screen_lights_up_default = screen_lights_up_options[0];
@@ -556,7 +556,7 @@ window.iot_device_thermostat_form_save = function (params) {
       let data = '9402000013';
       //check firmware
       if (window.peripheral && isset(window.peripheral[guid])) {
-        if (window.peripheral[guid].prop.firmware >= 12.3) {
+        if (window.peripheral[guid].prop.firmwareNo >= 12.3) {
           data = '9402000015';
         }
       }
@@ -603,11 +603,12 @@ window.iot_device_thermostat_form_save = function (params) {
       data += parseInt(`${formdata['frost_protection_setpoint']}`).toString(16).pad('00');
       data += parseInt(`${restart_after_power_failure_command[formdata['restart_after_power_failure']]}`).toString(16).pad('00');
       data += parseInt(`${formdata['backlight_off']}`).toString(16).pad('00');
-      data += parseInt(`${on_off_command[formdata['keypad_lock_after_backlight_off']]}`).toString(16).pad('00');
+      data += `00`;
       data += parseInt(`${formdata['backlight_brightness']}`).toString(16).pad('00');
-      data += `01`;
+      data += parseInt(`${formdata['keypad_lock_after_backlight_off']}`).toString(16).pad('00');
+      
       const humidity_offset = parseInt(`${formdata['humidity_offset']}`);
-      //debugger
+      
       if (humidity_offset < 0) {
         const unsignedInt = humidity_offset & 0xff; // 通过位与运算将有符号整数转换为无符号整数
         data += unsignedInt.toString(16).pad('00');
@@ -616,13 +617,13 @@ window.iot_device_thermostat_form_save = function (params) {
       }
       //   data += parseInt(`${on_off_command[formdata['push_mqtt_message_after_state_change']]}`).toString(16).pad('00');
       if (window.peripheral && isset(window.peripheral[guid])) {
-        if (window.peripheral[guid].prop.firmware >= 12.3) {
+        if (window.peripheral[guid].prop.firmwareNo >= 12.3) {
           
           data += parseInt(`${iot_device_thermostat_set_lower_tem_heat}`).toString(16).pad('00');
           data += parseInt(`${iot_device_thermostat_set_upper_tem_heat}`).toString(16).pad('00');
         }
       }
-
+      debugger
       console.log('>>>> thermostat ble data: ' + data);
 
       // ha_process_periperal_cmd(runtime.peripherals[guid].id, [

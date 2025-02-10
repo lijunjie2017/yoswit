@@ -718,11 +718,11 @@ window.initSettingTemplate = ()=>{
             class="auto-init card margin-bottom-half mx-0 my-3"
             ref="{{ device }}"
             init-func="iot_mode_setup_change_virtual_id_init"
-            setting-type="{{ self_setting_data.setting_type }}"
-            setting-name="{{ self_setting_data.name }}"
-            setting-value="{{ self_setting_data.setting }}"
+            setting-type="{{ link_virtual_data.setting_type }}"
+            setting-name="{{ link_virtual_data.name }}"
+            setting-value="{{ link_virtual_data.setting }}"
             button-group="{{device_button_group }}"
-            dependencies="{{self_setting_data.dependencies}}"
+            dependencies="{{link_virtual_data.dependencies}}"
             slot-index="{{slot_index}}"
         >
             <input name="link_virtual_id" type="hidden" value="" />
@@ -734,11 +734,11 @@ window.initSettingTemplate = ()=>{
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
-                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
-                        {% if self_setting_data.setting == '' %}
-                        
+                        <h5 class="no-margin-bottom">{{ _(link_virtual_data.setting_type) }}</h5>
+                        {% if link_virtual_data.setting == '' %}
+                        <p class="setting-value text-muted size-12"></p>
                         {% else %}
-                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        <p class="setting-value text-muted size-12">{{ _(link_virtual_data.setting) }}</p>
                         {% endif %}
                     </div>
                     <div class="col-auto">
@@ -2226,6 +2226,43 @@ window.initSettingTemplate = ()=>{
                         <p class="setting-value text-muted size-12">5</p>
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _(per_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Minimum Brightness";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        init-func="iot_mode_setup_min_brightness_init" 
+        dependencies="{{min_brightness.dependencies}}"
+        setting-type="{{ min_brightness.setting_type }}"
+        setting-name="{{ min_brightness.name }}"
+        setting-value="{{ min_brightness.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="min_brightness" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">cable</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _('Minimum Brightness') }}</h5>
+                        {% if min_brightness.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(min_brightness.setting+'%') }}</p>
                         {% endif %}
                     </div>
                     <div class="col-auto">

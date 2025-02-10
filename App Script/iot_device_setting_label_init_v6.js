@@ -95,6 +95,18 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
                 name : '',
                 dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
             }
+            data.link_virtual_data = {
+                setting_type : 'Linked Virtual Id',
+                setting : '',
+                name : '',
+                dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+            }
+            data.min_brightness = {
+                setting_type : 'Minimum Brightness',
+                setting : '',
+                name : '',
+                dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+            }
             device_setting_list.forEach(device_item=>{
                 console.log(device_item);
                 if(device_item.setting_type == setting_item.label){
@@ -144,6 +156,24 @@ window.iot_device_setting_label_init = (title,subdevice_name,profile_device_name
                 if(device_item.setting_type == brightness_key){
                     data.brightness_data = {
                         setting_type : 'Backlight Brightness',
+                        setting : device_item.setting,
+                        name : device_item.name,
+                        dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+                    }
+                }
+                let link_virtual_key = `Linked Virtual Id_${data.device_button_group}`;
+                if(device_item.setting_type == link_virtual_key){
+                    data.link_virtual_data = {
+                        setting_type : 'Linked Virtual Id',
+                        setting : device_item.setting,
+                        name : device_item.name,
+                        dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""
+                    }
+                }
+                let min_brightness_key = `Minimum Brightness_${data.device_button_group}`
+                if(device_item.setting_type == min_brightness_key){
+                    data.min_brightness = {
+                        setting_type : 'Minimum Brightness',
                         setting : device_item.setting,
                         name : device_item.name,
                         dependencies : isset(setting_item.dependencies)?setting_item.dependencies:""

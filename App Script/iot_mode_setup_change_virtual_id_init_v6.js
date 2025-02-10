@@ -128,7 +128,7 @@ window.iot_mode_setup_change_virtual_id_init = function(params) {
                             return Promise.reject(new Error("Unsupport option!"));
                         }
                     }).then(() => {
-                        return iot_device_setting_sync_server(guid, setting_type, virtualId);
+                        return iot_device_setting_sync_server(guid, setting_type+'_'+button_group, virtualId);
                     }).then(() => {
                         params.obj.attr("setting-value", virtualId);
                         params.obj.find(".setting-value").html(_(virtualId));

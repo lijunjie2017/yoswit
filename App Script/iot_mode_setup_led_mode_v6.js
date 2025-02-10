@@ -11,8 +11,12 @@ window.iot_mode_setup_led_mode_auto_init = function(params) {
         "Always Off": "810A01",
         "Sync": "810A03",
         "Radar Reverse": "810A82",
-        "Radar Always On": "810A82",
-        "Radar Sync": "810A82"
+        "Radar Always On": "810A80",
+        "Radar Sync": "810A83",
+        "Reverse And Disable Turn Off" : "810A42",
+        "Sync And Disable Turn Off" : "810A43",
+        "Radar Reverse And Disable Turn Off" : "810Ac2",
+        "Radar Sync And Disable Turn Off" : "810Ac3",
     };
 
     const inputEl = params.obj.find("input[name=led_mode]");
@@ -68,9 +72,7 @@ window.iot_mode_setup_led_mode_auto_init = function(params) {
                             }
                             //if the firmware is old
                             let firmware = window.peripheral[guid].prop.firmwareNo;
-                            if(firmware > 12.0){
-                                data = `${data}${parseInt(gang).toString(16).pad('00')}`;
-                            }
+                            data = `${data}${parseInt(gang).toString(16).pad('00')}`;
                             return window.peripheral[guid].write([
                                 {
                                   service: 'ff80',
