@@ -157,6 +157,18 @@
                 </div>
                 <div class="row" style="margin: 20px 0">
                   <div class="col">
+                    <a href="#" v-on:click="postCommand(21)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>ON</span></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(22)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>OFF</span></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
                     <a href="#" v-on:click="postCommand(20)" class="button button-large button-raised" style="padding: 30px 0px"
                       ><i class="icon material-icons">power_settings_new</i></a
                     >
@@ -171,6 +183,13 @@
                   <div class="col">
                     <a href="#" v-on:click="toDebugPage()" class="button button-large button-raised" style="padding: 30px 0px"
                       ><i class="icon material-icons">description</i></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(100)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">keyboard_command_key</i></a
                     >
                   </div>
                 </div>
@@ -383,14 +402,37 @@
             }else if (type == 20){  
               //08
               command = `${pre_command}30380D`;
+            }else if(type == 21){
+              //01
+              command = `972102016b6120312030310d`;
+            }else if(type == 22){
+              //00
+              command = `972102016b6120312030300d`;
             }
-            await window.peripheral[guid].write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: command,
-              },
-            ]);
+            if(type == 100){
+              mainView.router.navigate(`/mobile-app/command-debug?guid=${guid}`);
+              return
+            }
+            await window.peripheral[guid].doHdmiCec([{
+              gang: 1,
+              command: command
+            }]);
+            if(type == 21){
+              setTimeout(async()=>{
+                await window.peripheral[guid].doHdmiCec([{
+                  gang: 1,
+                  command: command
+                }]);
+              },1000*2);
+            }
+            
+            // await window.peripheral[guid].write([
+            //   {
+            //     service: 'ff80',
+            //     characteristic: 'ff81',
+            //     data: command,
+            //   },
+            // ]);
           },
         },
       });

@@ -1,0 +1,250 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Scene Command List') }}</div>
+        <div class="right">
+          <a link icon-only @click="${()=>downloadTxtFile()}">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">download</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <div class="block-title command-item-inner" style="padding: 0px 15px">{{_('Trigger List')}}</div>
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in triggers" :key="index">
+                <div class="item-content">
+                  <div class="item-media">{{item.scene_id}}</div>
+                  <div class="item-inner">
+                    <div
+                      class="command-item-inner"
+                      style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word; word-break: break-all"
+                    >
+                      {{item.command}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="code-block" style="padding: 10px 15px; font-size: 18px" v-if="triggers.length == 0">
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No Triggers')}}</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <div class="block-title command-item-inner" style="padding: 0px 15px">{{_('Action List')}}</div>
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in actions" :key="index">
+                <div class="item-content">
+                  <div class="item-media">{{item.scene_id}}</div>
+                  <div class="item-inner">
+                    <div
+                      class="command-item-inner"
+                      style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word; word-break: break-all"
+                    >
+                      {{item.command}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="code-block" style="padding: 10px 15px; font-size: 18px" v-if="actions.length == 0">
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No Actions')}}</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { guid } = $f7route.query;
+    const downloadTxtFile = () => {
+      const mackey = core_utils_get_mac_address_from_guid(guid, true);
+      const pageContent = document.documentElement.outerHTML;
+      const doms = $('.command-item-inner');
+      let content = '';
+      doms.forEach((ele) => {
+        content += `${$(ele).html()}\n`;
+      });
+      const blob = new Blob([content], { type: 'text/plain' });
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function () {
+          resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      })
+        .then((data) => {
+          console.log(data);
+          return Capacitor.Plugins.Filesystem.writeFile({
+            path: `${mackey}_scene_command.txt`,
+            data: data,
+            directory: 'CACHE',
+            recursive: true,
+          });
+        })
+        .then(() => {
+          return Capacitor.Plugins.Filesystem.getUri({
+            path: `${mackey}_scene_command.txt`,
+            directory: 'CACHE',
+          });
+        })
+        .then((rs) => {
+          return new Promise((resolve, _) => {
+            app.preloader.hide();
+            return Capacitor.Plugins.Share.share({
+              title: `${mackey}_scene_command.txt`,
+              dialogTitle: `${mackey}_scene_command.txt`,
+              url: rs.uri,
+            }).then(() => {
+              debugger;
+              logList = [];
+              window.logTotalLogList[subdevice] = [];
+              $update();
+              resolve();
+            });
+          });
+        })
+        .catch((e) => {
+          console.log(e);
+          app.preloader.hide();
+
+          app.dialog.alert(e);
+        });
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          command: '',
+          triggers: [],
+          actions: [],
+        },
+        computed: {},
+        watch: {},
+        mounted() {
+          this.download();
+        },
+        methods: {
+          async download() {
+            app.dialog.preloader();
+            setTimeout(() => {
+              app.dialog.close();
+            }, 15 * 1000);
+            //load the scene ble data
+            try {
+              await peripheral[guid].connect();
+              let device_id = peripheral[guid].prop.id;
+              this.localTrigerSceneList = [];
+              this.localActionSceneList = [];
+              await ble.startNotification(
+                device_id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log('rs', rs);
+                  if ((rs.startsWith('8f20') || rs.startsWith('8f22')) && rs.length > 8) {
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    const foundIndex = this.localTrigerSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
+                    if (foundIndex === -1) {
+                      this.triggers.push({
+                        scene_id: rs.slice(6, 8),
+                        command: rs,
+                      });
+                    }
+                  } else if ((rs.startsWith('8f10') || rs.startsWith('8f12')) && rs.length > 8) {
+                    //this means command is action
+                    if (rs.slice(6, 8) == '00') {
+                      return;
+                    }
+                    const foundIndex = this.localActionSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
+                    if (foundIndex === -1) {
+                      this.actions.push({
+                        scene_id: rs.slice(6, 8),
+                        command: rs,
+                      });
+                    }
+                  } else if (rs.startsWith('8f1000ff') || rs.startsWith('8f1200ff')) {
+                    app.dialog.close();
+                    ble.stopNotification(peripheral[guid].prop.id, 'ff80', 'ff82');
+                    //compareLocalAndErpData();
+                  }
+                },
+                (err) => {
+                  //app.dialog.close();
+                  //app.dialog.alert(err);
+                }
+              );
+              let read_action_command = '8F1200FF';
+              let read_trriger_command = `8F220000FF`;
+              await peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_trriger_command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_action_command,
+                },
+              ]);
+            } catch (error) {
+              app.dialog.close();
+              const toast = app.toast.create({
+                position: 'bottom',
+                closeTimeout: 3000,
+                text: erp.get_log_description(error),
+              });
+              toast.open();
+              //app.dialog.alert(error);
+            }
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

@@ -1,0 +1,441 @@
+<template>
+  <style>
+    [v-cloak] {
+      display: none;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .fade-in {
+      animation-name: fadeIn;
+      animation-duration: 500ms;
+    }
+
+    html.device-ios #vdp-main-view .page .navbar {
+      height: calc(var(--f7-navbar-height));
+    }
+
+    html.device-ios #vdp-main-view .page .navbar .navbar-inner {
+      padding: var(--fimobile-padding) var(--fimobile-padding) var(--fimobile-padding) var(--fimobile-padding);
+    }
+
+    .vdp-main .vdp-main__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #ffffff;
+      box-sizing: border-box;
+      padding: 0.75rem;
+      box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .vdp-sidebar .vdp-sidebar__menu {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .vdp-sidebar .vdp-sidebar__menu .list.menu-list ul::after,
+    .vdp-sidebar .vdp-sidebar__menu .list.menu-list ul::before {
+      content: none;
+    }
+
+    /* #vdp-main-view .page .page-content {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    } */
+
+    #vdp-main-view .page .page-content {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-bottom: 0 !important;
+      box-sizing: border-box;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: 100%;
+      width: 100%;
+    }
+
+    #vdp-main-view .page .navbar {
+      height: calc(var(--f7-navbar-height) + var(--f7-safe-area-top));
+    }
+
+    #vdp-main-view.view .toolbar-top ~ .page-content {
+      padding-top: calc(
+        var(--f7-page-navbar-offset, 0px) + var(--f7-page-toolbar-top-offset, 0px) + var(--f7-page-subnavbar-offset, 0px) +
+          var(--f7-page-searchbar-offset, 0px) + var(--f7-page-content-extra-padding-top, 0px)
+      );
+    }
+  </style>
+
+  <div
+    id="vue-app"
+    class="position-relative"
+    style="
+      height: 100%;
+      width: 100%;
+      padding-left: var(--f7-safe-area-left);
+      padding-right: var(--f7-safe-area-right);
+      padding-top: var(--f7-safe-area-top);
+      padding-bottom: var(--f7-safe-area-bottom);
+      box-sizing: border-box;
+    "
+    block-name="{{ block.name }}"
+    v-cloak
+  >
+    {% raw %}
+    <div
+      class="main-container position-relative display-flex flex-direction-row align-items-center justify-content-center"
+      style="width: 100%; height: 100%; overflow: hidden"
+    >
+      <!-- Sidebar -->
+      <div
+        class="vdp-sidebar display-flex flex-direction-column align-items-center justify-content-center"
+        style="flex: 3; background-color: #ffffff; height: 100%"
+        ref="vdpSidebar"
+      >
+        <div
+          class="vdp-sidebar__header position-relative bg-color-primary display-flex flex-direction-row align-items-center justify-content-center text-color-white"
+          style="flex: 2.5; overflow: hidden; width: 100%; font-size: 1.5rem; font-weight: bold"
+        >
+          <div
+            class="position-relative display-flex flex-direction-row align-items-center justify-content-center"
+            style="padding: 0 2.25rem; box-sizing: border-box"
+          >
+            <img style="object-fit: contain; width: 100%" :src="erp.setting.menuLogoUri" v-on:click="goHome" />
+          </div>
+        </div>
+
+        <div class="vdp-sidebar__menu" style="flex: 8.5; overflow: hidden">
+          <div class="position-relative" style="width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; box-sizing: border-box">
+            <div class="list menu-list m-0 position-relative" style="height: 100%">
+              <ul style="height: 100%; display: flex; flex-direction: column">
+                <li style="flex: 1" v-for="menu in getSidebarMenu" v-bind:key="menu.route" v-on:click="onMenuClick(menu)">
+                  <div
+                    class="item-content item-link no-active-state p-0"
+                    :class="{ 'item-selected': activeRoute === menu.route }"
+                    style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"
+                  >
+                    <div class="item-media" style="min-width: auto; padding: 0">
+                      <i class="icon material-icons" style="font-size: 28px">{{ menu.icon }}</i>
+                    </div>
+                    <div
+                      class="item-inner m-0 p-0"
+                      style="display: flex; flex-direction: row; align-items: center; justify-content: center; min-height: auto"
+                    >
+                      <div class="item-title" style="font-size: 20px; line-height: 20px">{{ menu.title }}</div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main -->
+      <div
+        class="vdp-main display-flex flex-direction-column align-items-center justify-content-center"
+        style="flex: 7; background-color: antiquewhite; height: 100%; overflow: hidden"
+      >
+        <div class="vdp-main__header" ref="vdpMainHeader" style="flex: 1; overflow: hidden; width: 100%; font-size: 1.25rem">
+          <div class="time">{{ now }}</div>
+
+          <div class="weather">
+            <i class="icon material-icons" v-if="temperature" style="font-size: 1.25rem">device_thermostat</i>
+            <span v-if="temperature" style="margin-left: 0.25rem">{{ temperature }}°C</span>
+            <span style="padding: 0 0.5rem"><!-- -- --></span>
+            <i class="icon material-icons" v-if="humidity" style="font-size: 1.25rem">water_drop</i>
+            <span v-if="humidity" style="margin-left: 0.25rem">{{ humidity }}%</span>
+          </div>
+        </div>
+
+        <div class="vdp-main__content position-relative" style="flex: 9; box-sizing: border-box; overflow: hidden; width: 100%">
+          <div class="position-relative" style="width: 100%; height: 100%; overflow: hidden; box-sizing: border-box">
+            <div id="vdp-main-view" ref="vdpMainView" class="view position-relative" style="width: 100%; height: 100%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endraw %}
+  </div>
+</template>
+
+<script name="initialization">
+  'use script';
+  let globalVueApp = null;
+
+  window.vdpMainView = null;
+
+  // reset screen adapter
+  (() => {
+    document
+      .querySelector('meta[name="viewport"]')
+      .setAttribute(
+        'content',
+        `width=device-width, initial-scale=1.0, maximum-scale=10.0, minimum-scale=1.0, user-scalable=no, minimal-ui`
+      );
+  })();
+
+  ctx.$on('pageInit', (e, page) => {
+    function forbiddenNetworkChangeBanner() {
+      http2.setAllowEmitNetworkChange(false);
+
+      // remove offline css
+      $('#offline-css').remove();
+      $('.offline-message').remove();
+    }
+
+    try {
+      forbiddenNetworkChangeBanner();
+    } catch (error) {
+      // ignore
+    }
+  });
+
+  ctx.$on('pageMounted', (e, page) => {
+    globalVueApp = new Vue({
+      components: {},
+      el: page.el.querySelector('#vue-app[block-name="{{ block.name }}"]'),
+      data: {
+        now: dayjs().format('YYYY-MM-DD HH:mm A'),
+        temperature: '',
+        humidity: '',
+        activeRoute: '',
+        isCalling: false,
+      },
+      computed: {
+        getSidebarMenu() {
+          try {
+            const menus = JSON.parse(`{{ block.web_template_values.sidebar_menu | dump | safe }}`);
+            return menus;
+          } catch (error) {
+            return [];
+          }
+        },
+        getTemperaturePlace() {
+          return `{{ block.web_template_values.temperature_place | safe }}`;
+        },
+        getHumidityPlace() {
+          return `{{ block.web_template_values.humidity_place | safe }}`;
+        },
+        getMainPageRoute() {
+          return `{{ block.web_template_values.main_page_route | safe }}`.trim() || '/';
+        },
+        getMOKeypadID() {
+          return `{{ block.web_template_values.mo_keypad_id }}`.trim();
+        },
+      },
+      mounted() {
+        this.createVDPMainView();
+
+        this.loopRefreshDatetime();
+
+        this.loadWeather();
+      },
+      beforeDestroy() {
+        if (this.$refreshDatetimeId) {
+          clearTimeout(this.$refreshDatetimeId);
+        }
+
+        if (this.$refreshWeatherId) {
+          clearTimeout(this.$refreshWeatherId);
+        }
+
+        try {
+          this.destroyVDPMainView();
+        } catch (error) {
+          // ignore
+        }
+      },
+      methods: {
+        createVDPMainView() {
+          if (this.$vdpMainView) {
+            return;
+          }
+
+          const view = app.views.create(this.$refs.vdpMainView, {
+            url: this.getMainPageRoute,
+            main: false,
+            stackPages: true,
+            iosSwipeBack: false,
+            dynamicNavbar: true,
+          });
+
+          const onRouteChange = window.lodash.debounce(
+            () => {
+              // watch active route, only use first route
+              if (view.router.history.length >= 1) {
+                const pageRoute = view.router.history[0];
+                // parse path, remove query and hash
+                this.activeRoute = pageRoute.split('?')[0].split('#')[0];
+              } else {
+                this.activeRoute = '';
+              }
+            },
+            500,
+            {
+              leading: true,
+              trailing: false,
+            }
+          );
+
+          // view.router.on('routeChange', onRouteChange);
+          view.router.on('routeChanged', onRouteChange);
+
+          this.$vdpMainView = view;
+          window.vdpMainView = this.$vdpMainView;
+
+          this.goHome();
+        },
+        destroyVDPMainView() {
+          if (this.$vdpMainView) {
+            this.$vdpMainView.destroy();
+            this.$vdpMainView = null;
+          }
+        },
+        loopRefreshDatetime() {
+          this.$refreshDatetimeId = setTimeout(() => {
+            this.now = dayjs().format('YYYY-MM-DD HH:mm A');
+
+            this.loopRefreshDatetime();
+          }, 1000 * 60);
+        },
+        async onMenuClick(menu) {
+          if (menu.type === 'Link') {
+            if (this.$vdpMainView) {
+              this.activeRoute = menu.route.split('?')[0].split('#')[0];
+
+              this.$vdpMainView.router.navigate(menu.route, {
+                clearPreviousHistory: true,
+                force: true,
+              });
+            }
+          } else if (menu.type === 'Function') {
+            const callFn = menu.route;
+
+            if (callFn === 'call-mo') {
+              this.callMO();
+            } else {
+              app.dialog.alert('Not implemented yet');
+            }
+          }
+        },
+        goHome() {
+          this.onMenuClick({
+            route: this.getMainPageRoute,
+            type: 'Link',
+          });
+        },
+        async loadWeather() {
+          // 1 hour to refresh
+          let loopTimeout = 1000 * 60 * 60;
+
+          try {
+            const result = await erp.script.app_weather_report_request('rhrread', {
+              weather_temp_place: this.getTemperaturePlace,
+              weather_hum_place: this.getHumidityPlace,
+              ignore_mem_cache: true,
+              ignore_unit: true,
+              ignore_empty_result: true,
+            });
+
+            this.temperature = result.temperature;
+            this.humidity = result.humidity;
+          } catch (error) {
+            // TODO
+          } finally {
+            this.$refreshWeatherId = setTimeout(() => {
+              this.loadWeather();
+            }, loopTimeout);
+          }
+        },
+        async callMO() {
+          try {
+            if (this.isCalling) {
+              return;
+            }
+
+            this.isCalling = true;
+
+            const response = await http2.request({
+              url: encodeURI('/api/resource/Flat'),
+              method: 'GET',
+              timeout: 15,
+              params: {
+                fields: JSON.stringify(['name', 'chat_room']),
+                filters: JSON.stringify([
+                  ['keypad_id', '=', this.getMOKeypadID],
+                  ['disabled', '=', '0'],
+                ]),
+              },
+            });
+
+            if (response.data.data.length <= 0) {
+              app.dialog.alert(_('Flat not found.'));
+              return;
+            }
+
+            const flat = response.data.data[0];
+            if (!flat.chat_room) {
+              app.dialog.alert(_('User not found.'));
+              return;
+            }
+
+            const room_id = JitsiController.createConferenceId();
+            http2
+              .request({
+                url: encodeURI('/api/resource/Chat Room Call History'),
+                method: 'POST',
+                timeout: 15,
+                data: {
+                  chat_room: flat.chat_room,
+                  device_gateway: erp.info.device_gateway.name,
+                  jitsi_room: 'https://iotavh1.tgt.hk/' + room_id,
+                  status: 'Incoming Call',
+                  remark: 'Incoming Call',
+                },
+              })
+              .catch(() => {
+                // ignore
+              });
+
+            this.$jitsi = JitsiController.startMeeting(room_id, {
+              x: 0,
+              y: 0,
+              width: '100%',
+              height: '100%',
+              isModerator: true,
+              showVideoMuteSwitch: false,
+              showAudioMuteSwitch: true,
+              startVideoMute: true,
+              startAudioMute: false,
+              timeout: 30000,
+            });
+
+            this.$jitsi.on('destroy', () => {
+              this.$jitsi = null;
+              this.isCalling = false;
+            });
+          } catch (error) {
+            this.isCalling = false;
+          }
+        },
+      },
+    });
+  });
+
+  ctx.$onUnmounted(() => {
+    globalVueApp && globalVueApp.$destroy();
+  });
+</script>

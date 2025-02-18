@@ -407,8 +407,15 @@
 const renderSignalItem = (props, {
 	$h
 }) => {
+	let device_models = erp.doctype.device_model ? JSON.parse(JSON.stringify(erp.doctype.device_model)) : {};
+	let wifiModel = [];
+	for(let device_model in device_models){
+		if(device_models[device_model].mode_type == 'Wifi'){
+			wifiModel.push(device_models[device_model].model_code);
+		}
+	}
 	//defined the wifi model
-	let wifiModel = ['YO360','M360s', 'YO360-R2W','YO121-AC','YO304','YO780-Scene-6G', 'YO780-Scene-12G','YO780-Scene-4G',,'YO780-Scene-3G','YO780-Scene-2G','YO780-Scene-1G', 'YO780', 'YO105','YO790DC','YO121-AC-R2W'];
+	//let wifiModel = ['YO360','M360s', 'YO360-R2W','YO121-AC','YO304','YO780-Scene-6G', 'YO780-Scene-12G','YO780-Scene-4G',,'YO780-Scene-3G','YO780-Scene-2G','YO780-Scene-1G', 'YO780', 'YO105','YO790DC','YO121-AC-R2W'];
 	let this_model = props.kitem.device_model;
 	let wifiIndex = wifiModel.indexOf(this_model);
 	let wifiShowStatus = wifiIndex > -1 ? true : false;
@@ -1730,11 +1737,13 @@ const renderMainButton = (props, {
 			}
 		}, 1);
 	};
-
+	
 	const iot_get_music_player_password = (item) => {
 		//if not in profile ,false
+		//app.dialog.preloader();
 		if (!item.name) {
-			app.dialog.alert(`${tran('You do not have permission to use this device.')}`);
+			//app.dialog.close();
+			app.dialog.alert(`${_('You do not have permission to use this device.')}`);
 			return false;
 		}
 		//first get the unique key form the function;
@@ -1759,8 +1768,10 @@ const renderMainButton = (props, {
 		let status = compareTimeToMusicPlayer(deviceTime);
 		if (!status) {
 			//update the time of the music player
+			//app.dialog.close();
 			//input the time
 			app.dialog.prompt('Please enter the length of stay in days', async (days) => {
+				app.dialog.preloader();
 				const regex = /^\d+(\.\d+)?$/;
 				if (!regex.test(days)) {
 					app.dialog.alert('Please enter the correct value');
@@ -1772,7 +1783,7 @@ const renderMainButton = (props, {
 					let list = [currentDate.format('YYYY-MM-DD HH:mm:ss'), futureDate.format('YYYY-MM-DD HH:mm:ss')];
 					let this_password = getRandomNumbers().join("");
 					try {
-						await window.peripheral[props.kitem.device].doConnect();
+						//await window.peripheral[props.kitem.device].doConnect();
 						//get the years and months and the days and the hours and the seconds
 						let this_time_list = calculateFutureTime(days);
 						let this_year = this_time_list[0];
@@ -1782,23 +1793,50 @@ const renderMainButton = (props, {
 						let this_minute = this_time_list[4];
 						let this_second = this_time_list[5];
 						let data = `9800000008${this_password.convertToHex()}${this_second.toString(16).pad('00')}${this_minute.toString(16).pad('00')}${this_hour.toString(16).pad('00')}${this_day.toString(16).pad('00')}${this_month.toString(16).pad('00')}${iot_utils_to_little_endian_hex(this_year,2)}`;
-						
-						await window.peripheral[props.kitem.device].write([{
+						await window.peripheral[props.kitem.device].doMusicPlayer([{
 							service: 'ff80',
 							characteristic: 'ff81',
-							data: data,
+							command: data,
 						}]);
+						// await window.peripheral[props.kitem.device].write([{
+						// 	service: 'ff80',
+						// 	characteristic: 'ff81',
+						// 	data: data,
+						// }]);
 						await iot_device_setting_sync_server(item.device, 'TimeStream', JSON.stringify(list));
 						await iot_device_setting_sync_server(item.device, 'ConnectKey', this_password);
-						let sheet = app.sheet.create({
+						erp.music_player_sheet = app.sheet.create({
 							content: `\
-									<div class="sheet-modal">\
+									<div class="sheet-modal" style="height:370px;">\
 										<div class="toolbar">\
-											<div class="toolbar-inner justify-content-flex-end">\
+											<div class="toolbar-inner justify-content-space-between">\
+												<a  class="icon material-icons" ref="${item.device}" func="reset_music_player_password">refresh</a>\
 												<a  class="link sheet-close">Close</a>\
 											</div>\
 										</div>\
-										<div class="sheet-modal-inner display-flex justify-content-center align-content-center align-items-center">\
+										<div class="sheet-modal-inner" style="height:150px;">\
+											<div class="list list-strong-ios list-dividers-ios inset-ios">\
+												<ul>\
+													<li class="code-block" style="padding: 5px 15px; font-size: 18px">\
+														<div class="item-content">\
+															<div class="item-media">${_('Check-in time.')}</div>\
+															<div class="item-inner">\
+																<div class="item-after">${list[0]}</div>\
+															</div>\
+														</div>\
+													</li>\
+													<li class="code-block" style="padding: 5px 15px; font-size: 18px">\
+														<div class="item-content">\
+															<div class="item-media">${_('Check-out time.')}</div>\
+															<div class="item-inner">\
+																<div class="item-after">${list[1]}</div>\
+															</div>\
+														</div>\
+													</li>\
+												</ul>\
+											</div>\
+										</div>\
+										<div style="height:170px;" class="sheet-modal-inner display-flex justify-content-center align-content-center align-items-center">\
 											<div class="circle-password">${this_password[0]}</div>\
 											<div class="circle-password">${this_password[1]}</div>\
 											<div class="circle-password">${this_password[2]}</div>\
@@ -1807,24 +1845,61 @@ const renderMainButton = (props, {
 									</div>\
 								`
 						});
-						sheet.open();
+						app.dialog.close();
+						erp.music_player_sheet.open();
 						//app.dialog.alert(`${tran('Connection Key: ')}${this_password}`, runtime.appInfo.name, () => {});
 					} catch (error) {
+						app.dialog.close();
 						app.dialog.alert(`${_('Get the music player password failed')}`);
 					}
 				}
-			}, () => {})
+			}, () => {
+				while (true) {
+						try {
+							const dialog = app.dialog.close();
+							if (!dialog) {
+								break;
+							}
+						} catch (e) {
+							break;
+						}
+					}
+			})
 		} else {
 			if (erp_keys) {
-				let sheet = app.sheet.create({
+				app.dialog.close();
+				erp.music_player_sheet = app.sheet.create({
 					content: `\
-							<div class="sheet-modal">\
+							<div class="sheet-modal" style="height:370px;">\
 								<div class="toolbar">\
-									<div class="toolbar-inner justify-content-flex-end">\
+									<div class="toolbar-inner justify-content-space-between">\
+										<a  class="link icon material-icons" ref="${item.device}" func="reset_music_player_password">refresh</a>\
 										<a  class="link sheet-close">Close</a>\
 									</div>\
 								</div>\
-								<div class="sheet-modal-inner display-flex justify-content-center align-content-center align-items-center">\
+								<div class="sheet-modal-inner" style="height:150px;">\
+									<div class="list list-strong-ios list-dividers-ios inset-ios">\
+										<ul>\
+											<li class="code-block" style="padding: 5px 15px; font-size: 18px">\
+												<div class="item-content">\
+													<div class="item-media">${_('Check-in Time')}</div>\
+													<div class="item-inner">\
+														<div class="item-after">${deviceTime[0]}</div>\
+													</div>\
+												</div>\
+											</li>\
+											<li class="code-block" style="padding: 5px 15px; font-size: 18px">\
+												<div class="item-content">\
+													<div class="item-media">${_('Check-out Time')}</div>\
+													<div class="item-inner">\
+														<div class="item-after">${deviceTime[1]}</div>\
+													</div>\
+												</div>\
+											</li>\
+										</ul>\
+									</div>\
+								</div>\
+								<div style="height:170px;" class="sheet-modal-inner display-flex justify-content-center align-content-center align-items-center">\
 									<div class="circle-password">${erp_keys[0]}</div>\
 									<div class="circle-password">${erp_keys[1]}</div>\
 									<div class="circle-password">${erp_keys[2]}</div>\
@@ -1833,7 +1908,7 @@ const renderMainButton = (props, {
 							</div>\
 						`
 				});
-				sheet.open();
+				erp.music_player_sheet.open();
 				//app.dialog.alert(`${tran('Connection Key: ')}${erp_keys}`, runtime.appInfo.name, () => {});
 			}
 		}
@@ -1876,7 +1951,11 @@ const renderMainButton = (props, {
 	const iot_music_player_change_source = async(kitem)=>{
 		let subdevice_name = kitem.name;
 		try{
-			await window.peripheral[kitem.device].doMusicPlayer();
+			await window.peripheral[kitem.device].doMusicPlayer([{
+				service: 'ff80',
+				characteristic: 'ff81',
+				command: '9807',
+			}]);
 			if(kitem.config == 'phone_iphone'){
 				kitem.config = 'tv';
 			}else{
@@ -1958,7 +2037,7 @@ const renderMainButton = (props, {
 			let music_config = props.kitem.config;
 			return () => $h`
 					<a class="control-panel-right">
-						<div class="left button button-raised button-big circle"  @click="${()=>iot_get_music_player_password(props.kitem)}">
+						<div class="left button button-raised button-big circle key-button" ref="${props.kitem.device}"  @click="${()=>iot_get_music_player_password(props.kitem)}">
 								<i class="material-icons">key</i>
 						</div>
 						<div class="left button button-raised button-big circle"  @click="${()=>iot_music_player_change_source(props.kitem)}">
@@ -2351,6 +2430,30 @@ const renderMainButton = (props, {
 const iotEntryPasswordVerify = () => {
 
 }
+window.reset_music_player_password = (dom)=>{
+		//clean the data and send the data to erp
+		console.log("dom",dom)
+		let deviceObj = cloneDeep(erp.info.device);
+		//delet the device data
+		let settings = [];
+		if(deviceObj[dom.ref] && deviceObj[dom.ref].settings){
+			settings = deviceObj[dom.ref].settings;
+		}
+		let targetList = [];
+		settings.forEach(item => {
+			if (item.setting_type != "TimeStream" && item.setting_type != "ConnectKey") {
+				targetList.push(item);
+			}
+		});
+		console.log("targetList",targetList)
+		deviceObj[dom.ref].settings = targetList;
+		erp.info.device[dom.ref] = deviceObj[dom.ref];
+		console.log("erp.info.device",erp.info.device[dom.ref])
+		app.sheet.close();
+		//trigger the event
+		$(`.key-button[ref="${dom.ref}"]`).trigger("click");
+		//iot_get_music_player_password(item);
+	}
 //fixed the mac issue
 const fixedMacRever = (kitem)=>{
 	app.dialog.confirm(`${_('Device configuration has some issues, do you want to fix them?')}`,()=>{
@@ -5162,7 +5265,11 @@ export default async (props, ctx) => {
 						if(runCommand[i].device_button_group.startsWith("ONOFF GANG")){
 							if(runCommand[i].device_mode == "Music Player"){
 								//if have differ config ,how to fixed?
-								await peripheral[runCommand[i].guid].doMusicPlayer();
+								await peripheral[runCommand[i].guid].doMusicPlayer([{
+									service: 'ff80',
+									characteristic: 'ff81',
+									command: '9807',
+								}]);
 							}else{
 								await peripheral[runCommand[i].guid].onoff([{
 									gang : bleHelper.getGangId(runCommand[i].device_button_group),
@@ -6012,7 +6119,8 @@ export default async (props, ctx) => {
 						}
 						//update the virtual status
 						//"97000101000201000302bfbf040200000502000011030400000000120401801305080010000000000000"
-						let virtualDataList = manufacturing_data.split("130508");
+						//"97000101000201000302ffff0402000005020000110304000000001204018013051002006000000000000000000000000000"
+						let virtualDataList = manufacturing_data.split("130510");
 						let rcuStatus = virtualDataList[1];
 						let statusByteList = splitBytesAndConvertToBinaryArray(rcuStatus);
 						$(`.home-scanned-peripheral[guid="${guid}"][button_group="SCENE MUTIWAY ONOFF GANG1"]`).each(function(item){

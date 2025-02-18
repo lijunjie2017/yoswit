@@ -430,10 +430,11 @@
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
           async download() {
-            app.dialog.preloader();
-            setTimeout(() => {
-              app.dialog.close();
-            }, 15 * 1000);
+            
+            //app.dialog.preloader();
+            // setTimeout(() => {
+            //   app.dialog.close();
+            // }, 15 * 1000);
             //load the scene ble data
             let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
             let guid = '';
@@ -442,6 +443,8 @@
                 guid = item.device;
               }
             });
+            mainView.router.navigate(`/mobile-app/scene-debug?guid=${guid}`);
+            return;
             try {
               // if(peripheral[guid].prop.connected){
               //   await peripheral[guid].disconnect();

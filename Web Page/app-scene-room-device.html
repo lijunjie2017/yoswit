@@ -119,6 +119,18 @@
                           class="button button-raised button-big circle"
                           style="float: left;"
                           v-if="subItem.virtualStatus"
+                          v-on:click="chooseVirtualType(subItem)"
+                        >
+                          <input type="hidden" name="bind_virtual_type" value="" />
+                          <div>
+                            <span v-if="subItem.virtualIdType && subItem.virtualIdType != 0" style="font-size: 14px;">{{subItem.virtualIdType == 1?'Rcu':subItem.virtualIdType == 2?'Led':'Both'}}</span>
+                            <i v-else class="material-icons" style="line-height: 70px !important; font-size: 25px !important">settings</i>
+                          </div>
+                        </div>
+                        <div
+                          class="button button-raised button-big circle"
+                          style="float: left;"
+                          v-if="subItem.virtualStatus"
                           v-on:click="chooseVirtualId(subItem)"
                         >
                           <input type="hidden" name="bind_virtual_id" value="" />
@@ -483,6 +495,7 @@
             devices.forEach((item) => {
               //this param is used to check if the YO780 is in the virtual id
               item.virtualStatus = false;
+              item.virtualIdType = 1;
               item.virtualId = '';
               //var the right button type
               if(type == 1){
@@ -581,7 +594,7 @@
             console.log(item);
             const inputEl = $("input[name=bind_virtual_id]");
             let virtual_id_list = [];
-            for(let i = 0;i <= 32;i++){
+            for(let i = 0;i <= 64;i++){
               virtual_id_list.push(i);
             }
             this.virtualSelect = app.picker.create({  
@@ -596,6 +609,34 @@
                 change: (picker) => {
                   console.log(picker.value);
                   item.virtualId = picker.value[0];
+                },
+                open: (picker) => {
+                  console.log(picker);
+                  $(picker.$el).find(".toolbar-save-link").on("click", () => {
+                    console.log(picker.value);
+                  });
+                },
+              },
+            });
+            this.virtualSelect.open();
+          },
+          chooseVirtualType(item){
+            console.log(item);
+            const inputEl = $("input[name=bind_virtual_type]");
+            let virtual_id_list = [1,2,3];
+            let virtual_id_value = ['Rcu','Led','Both']
+            this.virtualSelect = app.picker.create({  
+              inputEl: inputEl,
+              cols:[
+                {
+                  values: virtual_id_list,
+                  displayValues: virtual_id_value,
+                }
+              ],
+              on: {
+                change: (picker) => {
+                  console.log(picker.value);
+                  item.virtualIdType = picker.value;
                 },
                 open: (picker) => {
                   console.log(picker);
@@ -931,6 +972,9 @@
               }else if(device_mode == 'RCU Controller'){
                 if(item.chooseType == 2){
                   item.ref = 2;
+                }
+                if(item.virtualId){
+                  item.name = `${item.name}-${item.virtualId}`;
                 }
               }
             });

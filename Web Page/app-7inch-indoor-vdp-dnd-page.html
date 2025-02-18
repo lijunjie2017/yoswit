@@ -1,0 +1,83 @@
+<template>
+  <div class="page">
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <style></style>
+
+        <div class="block">
+          <div class="display-flex justify-content-center align-items-center">
+            <i class="material-icons" style="font-size: 80px" v-on:click="changeRcuStatus(item)">shield_moon</i>
+          </div>
+        </div>
+        <div class="block" style="padding: 0 10px;">
+          <!-- this is the dnd setting list -->
+          <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px;padding:15px 20px;">
+            <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+              <div class="trigger-text" style="font-size: 20px;">{{_('Non-Interrupting Mode')}}</div>
+              <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="switchDnd">
+                <i class="material-icons text-color-gray" style="font-size: 80px" v-if="!dndOnly">toggle_off</i>
+                <i class="material-icons text-color-theme" style="font-size: 80px" v-if="dndOnly">toggle_on</i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $ref = ctx.$ref,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let vueApp = null;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          dndOnly: false,
+          dndKey:'7Inch_indoor_dnd_only',
+        },
+        mounted() {
+          this.getDndStatus();
+        },
+        methods: {
+          switchDnd() {
+            this.dndOnly = !this.dndOnly;
+            let this_data = {
+              'dndOnly': this.dndOnly,
+            };
+            db.set(this.dndKey, JSON.stringify(this_data));
+          },
+          async getDndStatus() {
+            try {
+              let this_data = JSON.parse(await db.get(this.dndKey));
+              console.log(this_data);
+              this.dndOnly = this_data.dndOnly;
+            } catch (error) {
+              console.log(error);
+            }
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+    return $render;
+  };
+</script>

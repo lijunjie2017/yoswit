@@ -46,6 +46,7 @@ window.Peripheral = (function() {
             connecting:false,
             lastMqttChechsum:"",
             lastProfileMqttChechsum:"",
+            settingMesh:false,
         };
         this.route = {
             BLUETOOTH:'bluetooth',
@@ -363,6 +364,7 @@ window.Peripheral = (function() {
             this.prop.connecting = false;
             this.prop.connected = false;
             this.prop.authed = false;
+            this.prop.settingMesh = false;
             
             $(`.home-scanned-peripheral[uuid="${this.prop.uuid}"]`).attr('bluetooth',0);
             $(`.home-scanned-peripheral[uuid="${this.prop.uuid}"]`).find('.control-panel-right[type-box="Dimming"]').attr('bluetooth',0);
@@ -1815,14 +1817,14 @@ window.Peripheral = (function() {
 			});
 		});
 	};
-		Peripheral.prototype.doMusicPlayer = function() {
+		Peripheral.prototype.doMusicPlayer = function(gangs) {
 			const self = this;
 				
 			return new Promise((resolve, reject) => {
 				const action = {
 						func:'doMusicPlayer',
 						args:[
-								
+							gangs
 						],
 						callback: {
 								resolve:resolve,
@@ -1836,15 +1838,18 @@ window.Peripheral = (function() {
 				}
 			});
 		};
-		Peripheral.prototype._doMusicPlayer = function() {
+		Peripheral.prototype._doMusicPlayer = function(gangs) {
 			const self = this;
 			let currentRoute = '';
-	
+			let commandItem = '';
+			for(let g of gangs){
+				commandItem = g.command;
+			}
 		const doBLE = () => {
 			return new Promise((resolve, reject) => {
 			let service = "ff80", characteristic = "ff81";
 			let commands = [];
-			let data = '9807';
+			let data = commandItem;
 			commands.push({
 				service: service,
 				characteristic: characteristic,
@@ -1868,7 +1873,7 @@ window.Peripheral = (function() {
 			}
 			let service = "ff80", characteristic = "ff81";
 			let commands = [];
-			let data = '9807';
+			let data = `02${self.prop.mac_reverse_key}${commandItem}`;
 			commands.push({
 				action: "write",
 				guid: findGuid,
@@ -1952,6 +1957,169 @@ window.Peripheral = (function() {
 			});
 		});
 	};
+	Peripheral.prototype.doHdmiCec = function(gangs) {
+		const self = this;
+			
+		return new Promise((resolve, reject) => {
+			const action = {
+					func:'doHdmiCec',
+					args:[
+						gangs
+					],
+					callback: {
+							resolve:resolve,
+							reject:reject
+					}
+			}
+			self.queue.push(action);
+			if (!self.isExecuting) {
+				self.isExecuting = true;
+				self.execute();
+			}
+		});
+	};
+	Peripheral.prototype._doHdmiCec = function(gangs) {
+		const self = this;
+		let currentRoute = '';
+	let commandItem = '';
+	for(let g of gangs){
+		commandItem = g.command;
+	}
+	const doBLE = () => {
+		return new Promise((resolve, reject) => {
+		let service = "ff80", characteristic = "ff81";
+		let commands = [];
+		let data = commandItem;
+		commands.push({
+			service: service,
+			characteristic: characteristic,
+			data: data,
+		});
+		
+			self.doMultipleWrite(commands).then((rs)=>{
+					resolve(1);
+			}).catch((error)=>{
+					reject(error);
+			});
+		});
+	};
+
+const doMESH = () => {
+	return new Promise((resolve, reject) => {
+			const findGuid = self.findLead();
+
+			let service = "ff80", characteristic = "ff81";
+			let commands = [];
+			data = `02${self.prop.mac_reverse_key}${commandItem}`;
+			commands.push({
+				service: service,
+				characteristic: characteristic,
+				data: data,
+			});
+			
+			peripheral[findGuid].write(commands).then((rs)=>{
+				resolve(2);
+			}).catch((error)=>{
+				reject(error);
+			});
+		});
+	};
+const doMOBMOB = () => {
+		return new Promise((resolve, reject) => {
+		let findGuid = self.findDefaultConnect();
+		if(!isset(findGuid)){
+			findGuid = self.prop.guid;
+		}
+		let service = "ff80", characteristic = "ff81";
+		let commands = [];
+		let data = `02${self.prop.mac_reverse_key}${commandItem}`;
+		commands.push({
+			action: "write",
+			guid: findGuid,
+			mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+			service_id: service,
+			char_id: characteristic,
+			value: data.toLowerCase()
+		});
+		let strList = self.prop.gateway.split('-');
+		let gatewayStr = '';
+		if(strList.length <= 2 ){
+				gatewayStr = self.prop.gateway.toLowerCase();
+		}else{
+				gatewayStr = self.prop.gateway;
+		}
+		console.log("commands",commands)
+		core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
+			command:"Control",
+			function:"bleHelper.perform",
+			params:commands,
+			callback:"",
+			raw:""
+		}, 0, false, false, false).then(() => {
+			resolve(3);
+		}).catch(reject);
+	});
+};
+	
+
+	return new Promise((resolve, reject) => {
+		Promise.race([
+			self.findRoute(),
+			self.timeout(10000).then(() => {
+					self.disconnect();
+				throw 7001;
+			})
+		])
+		.then((result) => {
+				currentRoute = result;
+						switch (currentRoute) {
+							case self.route.BLUETOOTH:
+									if(self.prop.connected){
+											return Promise.resolve();
+									}else{
+											return self.doConnect();
+									}
+									break;
+							case self.route.MOBMOB:
+									return Promise.resolve();
+									break;
+							case self.route.MESH:
+									return Promise.resolve();
+									break;
+							case self.route.NA:
+						//throw new Error('Device is not here');
+						bleHelper.openBluetooth();
+									break;
+						}
+		})
+		.then(() => {
+						switch (currentRoute) {
+							case self.route.BLUETOOTH:
+				return doBLE();
+									break;
+							case self.route.MOBMOB:
+				return doMOBMOB();
+									break;
+							case self.route.MESH:
+				return doMESH();
+									break;
+							case self.route.NA:
+								bleHelper.openBluetooth();
+									break;
+						}
+		})
+		.then((result) => {
+			resolve(result);
+		})
+		.catch((error) => {
+			reject(error);
+		})
+		.then(() => {
+			// Clean up resources
+			clearTimeout(self.timeout_timer);
+		});
+	});
+};
 	Peripheral.prototype.rcuOutput = function(gangs) {
 		const self = this;
 		
@@ -3513,6 +3681,7 @@ return new Promise((resolve, reject) => {
 	    }
         
         if(found2adc){
+            self.prop.settingMesh = true;
         	return new Promise((resolve, reject) => {
         		const action = {
         		    func:'identify',
@@ -3576,6 +3745,7 @@ return new Promise((resolve, reject) => {
 
     Peripheral.prototype.bindAppKey = function(){
         const self = this;
+        self.prop.settingMesh = true;
     	return new Promise((resolve, reject) => {
     		const action = {
     		    func:'bindAppKey',
@@ -3695,7 +3865,7 @@ return new Promise((resolve, reject) => {
 					
 			})
 			}else if(action.func=="doMusicPlayer"){
-				this._doMusicPlayer().then((rs) => {
+				this._doMusicPlayer(action.args[0]).then((rs) => {
 						action.callback.resolve(rs);
 						this.execute();
 				}).catch((error) => {
@@ -3706,6 +3876,18 @@ return new Promise((resolve, reject) => {
 				}).then(()=>{
 						
 				})
+		}else if(action.func=="doHdmiCec"){
+			this._doHdmiCec(action.args[0]).then((rs) => {
+				action.callback.resolve(rs);
+				this.execute();
+		}).catch((error) => {
+				//app.dialog.alert(_(erp.get_log_description(error)));
+				action.callback.reject(error);
+				this.queue = [];
+				this.isExecuting = false;
+		}).then(()=>{
+				
+		})
 		}else if(action.func=="doDnd"){
 			debugger
 			this._doDnd(action.args[0],action.args[1]).then((rs) => {
@@ -4386,8 +4568,8 @@ return new Promise((resolve, reject) => {
                 		        console.log("Find c.characteristic = "+c.characteristic);
                                 if(c.characteristic.toLowerCase() == "fff3"
                                 || c.characteristic.toLowerCase() == "ff82"
-                                || c.characteristic.toLowerCase() == "2adc"
-                                || c.characteristic.toLowerCase() == "2ade"){
+                                || (c.characteristic.toLowerCase() == "2adc" && self.prop.settingMesh)
+                                || (c.characteristic.toLowerCase() == "2ade" && self.prop.settingMesh)){
                                     notifyList.push({
                                         service: c.service,
                                         characteristic: c.characteristic

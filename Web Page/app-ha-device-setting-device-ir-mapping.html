@@ -2105,7 +2105,10 @@
             }
             try {
               
-              await http2.inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${fileName}`);
+              await http2.inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${fileName}`).then(entry=>{
+                console.log("entry",entry);
+                //entry.remove();
+              });
               this.initDataBase();
             } catch (error) {
               console.log('error', error);
@@ -2133,6 +2136,10 @@
                     this.initDataBase();
                   } catch (errorss) {
                     console.log("errorss",errorss)
+                    http2.inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${fileName}`).then(entry=>{
+                      console.log("entry error",entry);
+                      entry.remove();
+                    });
                     app.dialog.alert('Download Faild!');
                   }
                 },

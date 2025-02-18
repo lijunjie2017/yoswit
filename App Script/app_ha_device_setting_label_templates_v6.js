@@ -712,6 +712,44 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Manned Backlight Time";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_manned_backlight_time_mode_auto_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="manned_backlight_time" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light_mode</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == '' %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Linked Virtual Id";
     setting_label_template[setting_label] = `
         <div 
@@ -1361,6 +1399,29 @@ window.initSettingTemplate = ()=>{
                     <div class="col-auto">
                         <!-- href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Firmware_Upgrade_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" -->
                         <a href="/mobile-app/device-log?subdevice={{ profile_subdevice_name }}&guid={{guid}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Command Debug";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" ref="{{ device }}" init-func="iot_mode_setup_firmware_upgrade_auto_init" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">keyboard_command_key</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <!-- href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Firmware_Upgrade_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" -->
+                        <a href="/mobile-app/command-debug?subdevice={{ profile_subdevice_name }}&guid={{guid}}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>

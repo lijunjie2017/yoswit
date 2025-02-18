@@ -1,27 +1,38 @@
-window.iot_mode_setup_backlight_brightness_picker = {};
-window.iot_mode_setup_backlight_brightness_mode_auto_init = function(params) {
+window.iot_mode_setup_manned_backlight_time_picker = {};
+window.iot_mode_setup_manned_backlight_time_mode_auto_init = function(params) {
     const guid = params.ref;
     const setting_type = params.obj.attr("setting-type");
     const button_group = params.obj.attr("button-group");
     const slot_index = params.obj.attr("slot-index")?params.obj.attr("slot-index"):0;
     console.log("led mode");
     const command = {
-        "0%": "00",
-        "10%": "0a",
-        "20%": "14",
-        "30%": "1e",
-        "40%": "28",
-        "50%": "32",
-        "60%": "3c",
-        "70%": "46",
-        "80%": "50",
-        "90%": "5a",
-        "100%": "64"
+        "0s": "00",
+        "1s": "01",
+        "2s": "02",
+        "3s": "03",
+        "4s": "04",
+        "5s": "05",
+        "6s": "06",
+        "7s": "07",
+        "8s": "08",
+        "9s": "09",
+        "10s": "0a",
+        "11s": "0b",
+        "12s": "0c",
+        "13s": "0d",
+        "14s": "0e",
+        "15s": "0f",
+        "16s": "10",
+        "17s": "11",
+        "18s": "12",
+        "19s": "13",
+        "20s": "14"
+        
     };
 
-    const inputEl = params.obj.find("input[name=backlight_brightness]");
+    const inputEl = params.obj.find("input[name=manned_backlight_time]");
 
-    iot_mode_setup_backlight_brightness_picker = app.picker.create({
+    iot_mode_setup_manned_backlight_time_picker = app.picker.create({
         inputEl: inputEl,
         cols: [
             {
@@ -47,10 +58,10 @@ window.iot_mode_setup_backlight_brightness_mode_auto_init = function(params) {
         },
         on: {
             open: (picker) => {
-                iot_mode_setup_backlight_brightness_picker.setValue([params.obj.attr("setting-value")]);
+                iot_mode_setup_manned_backlight_time_picker.setValue([params.obj.attr("setting-value")]);
 
                 $(picker.$el).find(".toolbar-save-link").on("click", () => {
-                    iot_mode_setup_backlight_brightness_picker.close();
+                    iot_mode_setup_manned_backlight_time_picker.close();
 
                     const selected = inputEl.val();
 
@@ -70,7 +81,7 @@ window.iot_mode_setup_backlight_brightness_mode_auto_init = function(params) {
                             if(button_group.startsWith("ONOFF GANG")){
                                 gang = button_group.replace("ONOFF GANG","")*1;
                             }
-                            data = `8131${command[selected]}00`;
+                            data = `953500000200${command[selected]}`;
                             return window.peripheral[guid].write([
                                 {
                                   service: 'ff80',
@@ -100,6 +111,6 @@ window.iot_mode_setup_backlight_brightness_mode_auto_init = function(params) {
     });
 
     params.obj.find("#action").on("click", () => {
-        iot_mode_setup_backlight_brightness_picker.open();
+        iot_mode_setup_manned_backlight_time_picker.open();
     });
 }

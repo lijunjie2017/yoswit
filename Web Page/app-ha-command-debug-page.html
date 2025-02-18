@@ -1,0 +1,176 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Command Debug') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <ul>
+              <div class="item-input-wrap">
+                <textarea placeholder="command" v-model="command" style="padding: 15px"></textarea>
+              </div>
+            </ul>
+          </div>
+          <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+            <div class="col">
+              <div class="button button-fill button-save" v-on:click="postCommand()">{{_("Send")}}</div>
+            </div>
+          </div>
+        </div>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in notifications" :key="index">
+                <div style="font-size: 14px;color: #999;margin-right: 10px;word-wrap: break-word;">{{item}}</div>
+              </li>
+              <li class="code-block" style="padding: 30px 15px; font-size: 18px" v-if="notifications.length == 0">
+                <span style="font-size: 14px;color: #999;margin-right: 10px;display: inline-block;width: 140px;">{{_('No notifications')}}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+            <div class="col">
+              <div class="button button-fill button-save" v-on:click="postNotifications()">{{_("Notify")}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    window.htmi_log_list = [];
+    const { guid } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          command: '',
+          notifications: [],
+        },
+        computed: {},
+        watch: {},
+        mounted() {
+          this.postNotifications();
+        },
+        methods: {
+          async postCommand() {
+            let command = this.command;
+            try {
+              await window.peripheral[guid].write([{
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: command,
+              }])
+            } catch (e) {
+              app.dialog.alert(_(erp.get_log_description(e)));
+            }
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          async connectDevice() {
+            let device_id = window.peripheral[guid].prop.id;
+            return new Promise((resolve, reject) => {
+              ble.connect(
+                device_id,
+                (rs) => {
+                  resolve(rs);
+                },
+                (err) => {
+                  reject(err);
+                }
+              );
+            });
+          },
+          async commandDevice(command) {
+            let device_id = window.peripheral[guid].prop.id;
+            try {
+              await this.connectDevice();
+            }catch(error){
+              throw error;
+            }
+            debugger
+              return new Promise((resolve, reject) => {
+                ble.write(
+                  device_id,
+                'ff80',
+                'ff81',
+                command,
+                function (rs) {
+                  resolve(rs);
+                  //nothing to do, instead, need notify
+                },
+                function (error) {
+                  reject(error);
+                }
+              );
+            });
+          },
+          async postNotifications() {
+            //disconnect the device
+            this.notifications = [];
+            let connected = window.peripheral[guid].connected;
+            if (connected) {
+              await window.peripheral[guid].disconnect();
+            } else {
+              //connect the device
+              await this.connectDevice();
+            }
+            let device_id = window.peripheral[guid].prop.id;
+            ble.startNotification(
+              device_id,
+              'ff80',
+              'ff82',
+              (rs) => {
+                console.log('rs', rs);
+                this.notifications.push(rs);
+              },
+              (err) => {
+                reject(err);
+              }
+            );
+            let toast = app.toast.create({
+              text: _('Open Notifications'),
+              closeTimeout: 2000,
+            });
+            toast.open();
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
