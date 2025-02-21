@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <div class="page-content ptr-content" data-ptr-mousewheel="true" @ptr:refresh="${refreshFun}">
+    <div class="page-content ptr-content infinite-scroll-content infinite-scroll-top" data-ptr-mousewheel="true" data-infinite-distance="50" @ptr:refresh="${refreshFun}" @infinite=${loadMore}>
       <div class="ptr-preloader">
         <div class="preloader"></div>
         <div class="ptr-arrow"></div>
@@ -63,28 +63,28 @@
                     >
                     <span
                       class="text-muted size-12"
-                      v-if="log_item.device_model == 'YO360' && (log_item.command_type == 'add' || log_item.command_type == 'reduce')"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && (log_item.command_type == 'add' || log_item.command_type == 'reduce')"
                     ></span>
                     <span
                       class="text-muted size-12"
                       style="margin-left: 5px"
-                      v-if="log_item.device_model == 'YO360' && (log_item.command_type == 'add' || log_item.command_type == 'reduce')"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && (log_item.command_type == 'add' || log_item.command_type == 'reduce')"
                     >
                       {{log_item.temperature}}°C
                     </span>
-                    <span class="text-muted size-12" v-if="log_item.device_model == 'YO360' && log_item.command_type == 'mode'"></span>
+                    <span class="text-muted size-12" v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'mode'"></span>
                     <span
                       class="text-muted size-12"
                       style="margin-left: 5px"
-                      v-if="log_item.device_model == 'YO360' && log_item.command_type == 'mode'"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'mode'"
                     >
                       {{_(getModeInfo(log_item.mode))}}
                     </span>
-                    <span class="text-muted size-12" v-if="log_item.device_model == 'YO360' && log_item.command_type == 'fan'"></span>
+                    <span class="text-muted size-12" v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'fan'"></span>
                     <span
                       class="text-muted size-12"
                       style="margin-left: 5px"
-                      v-if="log_item.device_model == 'YO360' && log_item.command_type == 'fan'"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'fan'"
                     >
                       {{_(getSpeedInfo(log_item.speed))}}
                     </span>
@@ -126,11 +126,20 @@
                       <span style="margin-left: 5px">{{log_item.battery > 0 ? log_item.battery + _(' Bar'):''}}</span>
                     </span>
                     <!-- geomagnetic status log end  -->
+                     <!-- hdmicec status log start  -->
+                    <span
+                    class="text-muted size-12"
+                    style="margin-left: 5px; line-height: 24px"
+                    v-if="log_item.command_type == 'device_status_log_hdmicec' || log_item.device_model == 'YO103' || log_item.device_type == 'YO103'"
+                  >
+                    {{log_item.command_type.toUpperCase()}}
+                  </span>
+                  <!-- hdmicec status log end  -->
                     <!-- thermosta status log  -->
                     <span
                       class="text-muted size-12"
                       style="margin-left: 5px"
-                      v-if="log_item.device_model == 'YO360' && log_item.command_type == 'device_status_log_thermostat'"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'device_status_log_thermostat'"
                     >
                       <img style="width: 15px; height: 15px" :src="getModeInfoImg(log_item.mode)" alt="" />
                       <img
@@ -164,6 +173,7 @@
           <h3 class="text-align-center mt-3">{{_('No Records Found')}}</h3>
         </div>
       </div>
+      <div class="preloader infinite-scroll-preloader"></div>
       {% endraw %}
     </div>
   </div>
@@ -182,11 +192,19 @@
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
     let vueApp = null;
+    let allowInfinite = true;
+    let hasMoreItems = true;
+    let lastItem = 20;
     let { profile_subdevice, guid } = $f7route.query;
     const refreshFun = (e, done) => {
       vueApp.$refreshFun();
       done();
       $update();
+    };
+    const loadMore = () => {
+      if (!allowInfinite) return;
+      
+      vueApp.$loadMore();
     };
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
@@ -200,6 +218,7 @@
         },
         mounted() {
           Vue.prototype.$refreshFun = this.refreshFun;
+          Vue.prototype.$loadMore = this.loadMore;
           this.init();
           this.getData();
         },
@@ -207,6 +226,14 @@
           async refreshFun() {
             await this.pushData();
             this.getData();
+          },
+          async loadMore() {
+            allowInfinite = false;
+            debugger
+            this.start += this.page_length;
+            await this.getData();
+            
+            $update();
           },
           async pushData() {
             let data_1 = '9380'; //sensor data
@@ -300,7 +327,7 @@
             this.button_gang = bleHelper.getGangId(this_button_group);
             //console.log("this.button_gang",this.button_gang);
           },
-          getData() {
+          async getData() {
             // let reqUrl = encodeURI(
             //   '/api/resource/Device Control Log?fields=["*"]&filters=[["profile_subdevice","=","' + profile_subdevice + '"]]'
             // );
@@ -382,6 +409,10 @@
                           item.control_source = 'MobMob';
                           item.geomagnetic = gangList[84];
                           item.battery = gangList[83];
+                        }else if(device_button_group.startsWith('Hdmicec')){
+                          item.is_show_status = false;
+                          item.command_type = 'device_status_log_hdmicec';
+                          item.control_source = 'MobMob';
                         }
                         if (gang == 42) {
                           //means theomostat
@@ -416,7 +447,7 @@
                       // console.log("item",item);
                     } else {
                       //this is the device control log
-                      if (device_model == 'YO360') {
+                      if (device_model == 'YO360' || device_model == 'm360s') {
                         //console.log(item.device_attachment_status);
                         let objMap = this.fliterThermostatData(device_type_map.device_attachment_status || '');
                         if (!isset(objMap)) {
@@ -427,6 +458,9 @@
                         item.speed = objMap.speed;
                         item.temperature = objMap.temperature;
                         item.room_temperature = objMap.room_temperature;
+                      }
+                      if(item.device_mode == 'Hdmicec'){
+                        item.is_show_status = false;
                       }
                       if (item.device_mode == 'Curtain Switch') {
                         item.is_show_status = false;
@@ -439,7 +473,14 @@
                   }
                 });
                 //console.log("list",list);
-                this.log_list = list;
+                debugger
+                if(list.length && !allowInfinite){
+                  this.log_list = this.log_list.concat(list);
+                  allowInfinite = true;
+                }else{
+                  this.log_list = list;
+                }
+                console.log("this.log_list",this.log_list);
               })
               .catch((e) => {
                 debugger;

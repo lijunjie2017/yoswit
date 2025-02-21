@@ -115,6 +115,11 @@
                               <i class="material-icons" style="line-height: 25px!important;">arrow_forward_ios</i>
                           </div>
                         </a>
+                        <a class="right" v-if="subItem.mainType == 15">
+                          <div class="button button-raised button-big circle rf-sensor">
+                              <i class="material-icons" style="line-height: 30px!important;font-size: 30px!important;">check</i>
+                          </div>
+                        </a>
                         <div
                           class="button button-raised button-big circle"
                           style="float: left;"
@@ -511,7 +516,7 @@
               //YO780,YO780-Scene-12G,YO780-Scene-6G,YO780-Scene-4G,YO780-Scene-1G,YO105,YO790DC,YO205DC,YO203DC,YO202DS,YO201,YO161-H,YO161,M146-BRL
               let fliterList = ['YO780','YO780-Scene-12G','YO780-Scene-6G','YO780-Scene-4G','YO780-Scene-1G','YO105','YO790DC','YO205DC','YO203DC','YO202DS','YO201','YO161-H','YO161','M146-BRL','M146-BRR','M86-3DP','M86-3BR','M86-3MIR','M86-DP','M86-1G','YO203DC-24G','YO203DC-60G','YO205DC-60G','YO205DC-24G'];
               let fliterButtonGroup = ['RCU INPUT'];
-              if(type == 2){
+              if(type == 2 || type == 5){
                 if(fliterList.indexOf(item.device_model) > -1){
                   item.isHidden = true;
                   //check if the button group is in the fliterButtonGroup
@@ -531,7 +536,7 @@
                   }
                 }
               }
-              let triggerFliterList = ['YO105','YO121-BLE-LE','YO121-AC'];
+              let triggerFliterList = ['YO105','YO121-BLE-LE','YO121-AC','YO103','YO121-AC-R2W','M86-DP'];
               if(type == 1){
                 if(triggerFliterList.indexOf(item.device_model) > -1){
                   item.isHidden = true;
@@ -546,14 +551,14 @@
                 }
               }
               //rcu,open virtual id to choose
-              if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1'){
+              if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1' && type == 2){
                 item.isHidden = false;
                 item.virtualStatus = true;
               }
               //choose status
               item.chooseStatus = false;
               let model = item.device_model;
-              if (model == 'YO360') {
+              if (model == 'YO360' || model == 'M360s') {
                 item.modeStr = 2;
                 item.speedVaule = 4;
                 item.temperature = 26;
@@ -715,6 +720,12 @@
           },
           chooseTemplate(subItem) {
             this.clickStatus = true;
+            //if type is 5,only show the check
+            if(type == 5){
+              subItem.mainType = 15;
+              subItem.chooseStatus = true;
+              return;
+            }
             //subItem.chooseStatus = true;
             let button_group = subItem.device_button_group;
             let chooseList = [

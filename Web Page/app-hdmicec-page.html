@@ -221,14 +221,14 @@
 
     let vueApp = null;
     window.htmi_log_list = [];
-    const { guid } = $f7route.query;
+    const { guid, subdevice } = $f7route.query;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
           index: 1,
           power: 0,
-          logList : [],
+          logList: [],
           stepList: [
             {
               id: 1,
@@ -247,26 +247,26 @@
         computed: {},
         watch: {
           logList: function (val) {
-            console.log(val)
+            console.log(val);
             emitter.emit('listen_log_list', {
-              list : window.htmi_log_list
+              list: window.htmi_log_list,
             });
           },
         },
         mounted() {},
         methods: {
-          toTab(id){
+          toTab(id) {
             this.index = id;
-            this.stepList.forEach(item => {
+            this.stepList.forEach((item) => {
               item.isActive = item.id == id;
             });
           },
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
-          async openDebug(){
+          async openDebug() {
             app.dialog.preloader();
-            try{
+            try {
               await window.peripheral[guid].write([
                 {
                   service: 'ff80',
@@ -278,20 +278,20 @@
                   characteristic: 'ff81',
                   data: `810e`,
                 },
-            ]);
-            await this.sleep(1000*5);
-            await window.peripheral[guid].connect();  
-            await this.sleep(1000*2);
-            app.dialog.close();
-            this.showDebug();
-            app.dialog.alert(_('Open Debug'));
-            }catch(e){
+              ]);
+              await this.sleep(1000 * 5);
+              await window.peripheral[guid].connect();
+              await this.sleep(1000 * 2);
+              app.dialog.close();
+              this.showDebug();
+              app.dialog.alert(_('Open Debug'));
+            } catch (e) {
               console.log(e);
               app.dialog.close();
               app.dialog.alert(_(erp.get_log_description(e)));
             }
           },
-          async showDebug(){
+          async showDebug() {
             //mainView.router.navigate(`/mobile-app/hdmicec-page-log?guid=${guid}`);
             try {
               let device_id = window.peripheral[guid].prop.id;
@@ -306,8 +306,8 @@
                   if (rs.startsWith('97220201')) {
                     let str = this.hexToString(rs.substring(8, rs.length));
                     window.htmi_log_list.push({
-                      text : str,
-                      time : dayjs().format('YYYY-MM-DD HH:mm:ss')
+                      text: str,
+                      time: dayjs().format('YYYY-MM-DD HH:mm:ss'),
                     });
                     this.logList.push(str);
                   }
@@ -321,111 +321,161 @@
               app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
-          hexToString(hex){
+          hexToString(hex) {
             const hexArray = hex.match(/.{1,2}/g);
-            const str = hexArray.map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+            const str = hexArray.map((byte) => String.fromCharCode(parseInt(byte, 16))).join('');
             return str;
           },
-          toDebugPage(){
+          toDebugPage() {
             mainView.router.navigate(`/mobile-app/hdmicec-page-log?guid=${guid}`);
           },
-          stopNotification(){
+          stopNotification() {
             let device_id = window.peripheral[guid].prop.id;
-            return new Promise((resolve,reject)=>{
-              ble.stopNotification(device_id, 'ff80', 'ff82', (rs) => {
-                console.log(rs);
-                resolve(rs);
-              }, (err) => {
-                reject(err);
-              });
+            return new Promise((resolve, reject) => {
+              ble.stopNotification(
+                device_id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log(rs);
+                  resolve(rs);
+                },
+                (err) => {
+                  reject(err);
+                }
+              );
             });
           },
-          writeCommand(){
+          writeCommand() {
             this.logList.push('kh 0 01');
           },
           async postCommand(type) {
             let command = '';
+            let command_type = '';
             let pre_command = `972102016D63203020`;
             if (type == 1) {
               command = `9810000003b04401`;
+              command_type = 'UP';
             } else if (type == 2) {
               command = `9810000003b04403`;
+              command_type = 'LEFT';
             } else if (type == 3) {
               command = `9810000003b04400`;
+              command_type = 'OK';
             } else if (type == 4) {
               command = `9810000003b04404`;
+              command_type = 'RIGHT';
             } else if (type == 5) {
               command = `9810000003b04402`;
+              command_type = 'DOWN';
             } else if (type == 6) {
               command = `9810000003b04441`;
+              command_type = 'ADD';
             } else if (type == 7) {
               command = `9810000003b04442`;
+              command_type = 'SUB';
             } else if (type == 8) {
               command = `9810000003b0440d`;
+              command_type = 'BACK';
             } else if (type == 9) {
               command = `9810000003b04409`;
+              command_type = 'HOME';
             } else if (type == 10) {
               if (this.power == 0) {
                 this.power = 1;
                 command = `9810000003b0446d`;
+                command_type = 'ON';
               } else {
                 this.power = 0;
+                command = `9810000003b0446c`;
+                command_type = 'OFF';
               }
-              command = `9810000003b0446c`;
-            }else if (type == 11){
+            } else if (type == 11) {
               //[m][c][ ][Set ID][ ][Data][Cr]
               command = `${pre_command}34300D`;
-            }else if (type == 12){
+              command_type = 'UP';
+            } else if (type == 12) {
               //37
               command = `${pre_command}30370D`;
-            }else if (type == 13){
+              command_type = 'LEFT';
+            } else if (type == 13) {
               //44
               command = `${pre_command}34340D`;
+              command_type = 'OK';
             } else if (type == 14) {
               //06
               command = `${pre_command}30360D`;
+              command_type = 'RIGHT';
             } else if (type == 15) {
               //41
               command = `${pre_command}34310D`;
+              command_type = 'DOWN';
             } else if (type == 16) {
               //02
               command = `${pre_command}30320D`;
-            }else if (type == 17){  
+              command_type = 'ADD';
+            } else if (type == 17) {
               //03
               command = `${pre_command}30330D`;
-            }else if (type == 18){  
+              command_type = 'SUB';
+            } else if (type == 18) {
               //28
               command = `${pre_command}32380D`;
-            }else if (type == 19){ 
+              command_type = 'BACK';
+            } else if (type == 19) {
               //7c
               command = `${pre_command}37430D`;
-            }else if (type == 20){  
+              command_type = 'HOME';
+            } else if (type == 20) {
               //08
               command = `${pre_command}30380D`;
-            }else if(type == 21){
+              command_type = 'POWER';
+            } else if (type == 21) {
               //01
               command = `972102016b6120312030310d`;
-            }else if(type == 22){
+              command_type = 'ON';
+            } else if (type == 22) {
               //00
               command = `972102016b6120312030300d`;
+              command_type = 'OFF';
             }
-            if(type == 100){
+            if (type == 100) {
               mainView.router.navigate(`/mobile-app/command-debug?guid=${guid}`);
-              return
+              return;
             }
-            await window.peripheral[guid].doHdmiCec([{
-              gang: 1,
-              command: command
-            }]);
-            if(type == 21){
-              setTimeout(async()=>{
-                await window.peripheral[guid].doHdmiCec([{
+            await window.peripheral[guid]
+              .doHdmiCec([
+                {
                   gang: 1,
-                  command: command
-                }]);
-              },1000*2);
+                  command: command,
+                },
+              ])
+              .then(async (rs) => {
+                let control_source = await bleHelper.getControlSource(guid);
+                let device_type_map = {
+                  command_type: command_type,
+                  device_type: 'YO103',
+                  command: command,
+                };
+                window.upload_device_control_log(guid, 1, control_source, subdevice, device_type_map);
+              })
+              .catch((error) => {
+                console.log(error);
+                if (error == 7200) {
+                  erp.script.iot_entry_class_password_verify(props.kitem.device, props.kitem.name).then(() => {});
+                } else {
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              });
+            if (type == 21) {
+              // setTimeout(async()=>{
+              //   await window.peripheral[guid].doHdmiCec([{
+              //     gang: 1,
+              //     command: command
+              //   }]);
+              // },1000*2);
             }
-            
+
             // await window.peripheral[guid].write([
             //   {
             //     service: 'ff80',

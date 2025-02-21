@@ -1011,6 +1011,65 @@
                 </div>
               </div>
             </div>
+            <!-- index == 14 -->
+            <div id="step-14" class="view tab view-main" :class="[index == 14 ? 'tab-active' : '']" v-if="index == 14">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div
+                    class="action-box card"
+                    style="margin-left: 0; margin-right: 0; margin-top: 10px"
+                    v-if="this.templateName == 'Welcome Scene'"
+                  >
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">{{_('Enter Unmanned Mode')}}</div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="changeRadarEnterUnmannedModeStatus"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!radarEnterUnmannedModeStatus">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="radarEnterUnmannedModeStatus">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="action-box card"
+                    style="margin-left: 0; margin-right: 0; margin-top: 10px"
+                    v-if="this.templateName == 'Welcome Scene'"
+                  >
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">{{_('Exit Unmanned Mode')}}</div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="changeRadarExitUnmannedModeStatus"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!radarExitUnmannedModeStatus">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="radarExitUnmannedModeStatus">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="action-box card"
+                    style="margin-left: 0; margin-right: 0; margin-top: 10px"
+                    v-if="this.templateName == 'Welcome Scene'"
+                  >
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center" v-on:click="toRoomList('Choose Device Status',5)">
+                      <div class="trigger-text">{{_('Maintain Device Status')}}</div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="changeRadarExitUnmannedModeStatus"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 35px">keyboard_arrow_right</i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(14)">{{_("NEXT")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1294,6 +1353,46 @@
                 },
               ],
             },
+            welcome_scene: {
+              name: 'Welcome Scene',
+              step: [
+                {
+                  id: 1,
+                  relatedIndex: 0.5,
+                  name: '1',
+                },
+                {
+                  id: 2,
+                  relatedIndex: 1,
+                  name: '2',
+                },
+                {
+                  id: 9,
+                  relatedIndex: 14,
+                  name: '3',
+                },
+                {
+                  id: 3,
+                  relatedIndex: 2,
+                  name: '4',
+                },
+                {
+                  id: 4,
+                  relatedIndex: 3,
+                  name: '5',
+                },
+                {
+                  id: 5,
+                  relatedIndex: 4,
+                  name: '6',
+                },
+                {
+                  id: 5,
+                  relatedIndex: 5,
+                  name: '7',
+                },
+              ],
+            },
             room_scene_button: {
               name: 'Room Scene Button',
               step: [
@@ -1450,19 +1549,19 @@
                 },
               ],
             },
-            {
-              title: 'Gateway',
-              icon: 'wifi',
-              des: 'Scene stores in the gateway.',
-              list: [
-                {
-                  name: 'Gateway Scene',
-                  desription: '',
-                  icon: 'network_check',
-                  color: '#ff9500',
-                },
-              ],
-            },
+            // {
+            //   title: 'Gateway',
+            //   icon: 'wifi',
+            //   des: 'Scene stores in the gateway.',
+            //   list: [
+            //     {
+            //       name: 'Gateway Scene',
+            //       desription: '',
+            //       icon: 'network_check',
+            //       color: '#ff9500',
+            //     },
+            //   ],
+            // },
             {
               title: 'RCU',
               icon: 'phone_iphone',
@@ -1485,6 +1584,12 @@
                   desription: '',
                   icon: 'radar',
                   color: '#3e3936',
+                },
+                {
+                  name: 'Welcome Scene',
+                  desription: '',
+                  icon: 'sentiment_satisfied',
+                  color: '#ff9500',
                 },
                 {
                   name: 'RCU Curtain',
@@ -1575,6 +1680,9 @@
           subName: 0,
           gatewayTopic: '', //like mac-userId
           gatewayMapGuid: '',
+          radarEnterUnmannedModeStatus: false,
+          radarExitUnmannedModeStatus: true,
+          deviceActionCommandList: [],
         },
         watch: {
           index: function (val) {
@@ -1610,7 +1718,7 @@
                 status = 'Unoccupied';
               }
               //check if the tempalte is not rcu randar
-              if (this.templateName != 'RCU Radar') {
+              if (this.templateName != 'RCU Radar' && this.templateName != 'Welcome Scene') {
                 app.dialog.confirm(
                   _('The scene template is not a RCU Radar. Do you want to change?'),
                   () => {
@@ -2501,7 +2609,7 @@
             let rssi = deviceInfo.rssilv;
             if (rssi) {
               //check if the device is save in the ble,delete the scene
-              if (this.scenePostId && this.templateName != 'RCU Radar') {
+              if (this.scenePostId && this.templateName != 'RCU Radar' && this.templateName != 'Welcome Scene') {
                 app.dialog.alert(_('This scene has been saved in the ble, can not delete.If you want to delete, please delete the scene.'));
                 return;
               }
@@ -2690,7 +2798,14 @@
             console.log('missingNumbers', missingNumbers);
             return missingNumbers[0];
           },
-
+          changeRadarEnterUnmannedModeStatus() {
+            this.radarEnterUnmannedModeStatus = !this.radarEnterUnmannedModeStatus;
+            this.radarExitUnmannedModeStatus = false;
+          },
+          changeRadarExitUnmannedModeStatus() {
+            this.radarExitUnmannedModeStatus = !this.radarExitUnmannedModeStatus;
+            this.radarEnterUnmannedModeStatus = false;
+          },
           async changeVirtualStatus() {
             app.dialog.preloader();
             if (this.oneOnly) {
@@ -3683,13 +3798,13 @@
               let this_sceneId = this.actionLocation[rcuGuid];
               let last_command = ``;
               if (this.timercommand.length) {
-                last_command = `${this.randarCommand(parseInt(this_sceneId).toString(16).pad('00'), parseInt(this_sceneId).toString(16).pad('00'))}${(
+                last_command = `${this.radarNewCommand(parseInt(this_sceneId).toString(16).pad('00'), parseInt(this_sceneId).toString(16).pad('00'))}${(
                   this.timercommand.length / 2
                 )
                   .toString(16)
                   .pad('00')}${this.timercommand}`;
               } else {
-                last_command = `${this.randarCommand(parseInt(this_sceneId).toString(16).pad('00'), parseInt(this_sceneId).toString(16).pad('00'))}`;
+                last_command = `${this.radarNewCommand(parseInt(this_sceneId).toString(16).pad('00'), parseInt(this_sceneId).toString(16).pad('00'))}`;
               }
               debugger;
               this.trigger[0].triggercommand = last_command;
@@ -4696,7 +4811,8 @@
                   this.templateName == 'RCU Scene Button' ||
                   this.templateName == 'RCU Radar' ||
                   this.templateName == 'RCU Scene Toggle' ||
-                  this.templateName == 'RCU Curtain'
+                  this.templateName == 'RCU Curtain' ||
+                  this.templateName == 'Welcome Scene'
                 ) {
                   actioncommand += data;
                 } else if (button_group.startsWith('RCU')) {
@@ -4752,10 +4868,32 @@
                   }
                 }
               });
+              //check if have radarExitUnmannedModeStatus
+              if(this.templateName == 'Welcome Scene' && erp.info.device[guidItem].device_model == 'YO780'){
+                //021a4a094aec241307971f0180001100
+                let strList = actioncommand.split('');
+                if(this.radarExitUnmannedModeStatus){
+                  //check if have 13 in actioncommand
+                  let _command = `0497210600`;
+                  // if(actioncommand.startsWith('13')){
+                  //   strList.splice(2, 0, `${_command}`);
+                  // }else{
+                  //   strList.unshift(`${_command}`);
+                  // }
+                  strList.splice(16, 0, `${_command}`);
+                  actioncommand = strList.join('');
+                  // let list = actioncommand.split(/(\w{2})/).filter(part => part.length === 2);
+                  // alert(JSON.stringify(list));
+                  // list[0] = (parseInt(list[0],16)+5).toString(16).pad('00');
+                  // alert(list[0]);
+                  // actioncommand = list.join('');
+                }
+              }
               postList[guidItem]['actionCommand'] = actioncommand;
               controlIndex++;
             }
             console.log('postList', postList);
+            this.deviceActionCommandList = postList;
             //merge the command this.actionGuid
             let totalCommand = '';
             //first tindy the
@@ -4773,7 +4911,7 @@
               }
             });
             for (let i in postList) {
-              if (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar' || this.templateName == 'RCU Scene Toggle') {
+              if (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar' || this.templateName == 'RCU Scene Toggle' || this.templateName == 'Welcome Scene') {
                 if (
                   postList[i].device_mode == 'Triac Dimming' ||
                   postList[i].device_mode == '0-10v Dimming' ||
@@ -4988,8 +5126,17 @@
                   debugger;
                   totalActionCommand = `${totalActionCommand}0b02${core_utils_get_mac_address_from_guid(this.attachRcuGuid, true)}8f0200${parseInt(this.attachRcuId).toString(16).pad('00')}`;
                 }
+                //if radarExitUnmannedModeStatus
+                if(this.templateName == 'Welcome Scene'){
+                  totalActionCommand = this.tindyRadarUnmanedModeCommand(totalActionCommand,i);
+                }
+                //if the action length more than 240 bytes,should warn the user
+                if(totalActionCommand.length > (240+4)*2){
+                  app.dialog.alert(`${_('Action length is too long,please check the action.')}`);
+                  break;
+                }
                 console.log('totalActionCommand', totalActionCommand);
-                debugger;
+                //alert(totalActionCommand);
                 if (isClickRcuStatus && isClickRcuGuid == i) {
                   this.randarActionCommand['guid'] = i;
                   this.randarActionCommand['command'] = totalActionCommand;
@@ -5073,6 +5220,34 @@
             return;
             actioncommand = `${actioncommand_pre}${this.postActionBle(actualActionList)}`;
           },
+          tindyRadarUnmanedModeCommand(actioncommand,rcuGuid){
+            debugger
+            let returnCommand = actioncommand;
+            if(this.mainRcuGuid && rcuGuid != this.mainRcuGuid){
+              return returnCommand;
+            }
+            if(this.templateName == 'Welcome Scene'){
+              let _command = `1304972106${this.radarExitUnmannedModeStatus ? '00' : '01'}`;
+              //find the mqtt device 
+              let profile_devices = cloneDeep(erp.info.profile.profile_device);
+              let mqttDevice = [];
+              for(let i in this.deviceActionCommandList){
+                profile_devices.forEach(item=>{
+                  if(item.device == i && item.gateway && item.device_model != 'YO780'){
+                    mqttDevice.push(item);
+                  }
+                })
+              }
+              //contact the list 
+              let rcu_mac = core_utils_get_mac_address_from_guid(rcuGuid,true);
+              mqttDevice.forEach(item=>{
+                let device_mac = core_utils_get_mac_address_from_guid(item.device,true);
+                let _command_item = `02${rcu_mac}15${device_mac}${(_command.length/2).toString(16).pad('00')}${_command}`;
+                returnCommand += `${(_command_item.length/2).toString(16).pad('00')}${_command_item}`;
+              })
+            }
+            return returnCommand;
+          },
           getCurrentSceneId(guid) {
             let sceneObj = erp.info.scene;
             let sceneMap;
@@ -5123,6 +5298,10 @@
                   return;
                 } else if (this.templateName == 'Gateway Scene') {
                   this.index = 2;
+                  return;
+                } else if (this.templateName == 'Welcome Scene') {
+                  this.index = 14;
+                  this.scrollItem(110 * 2);
                   return;
                 }
                 let postPleStatus = true;
@@ -5204,6 +5383,9 @@
               } else {
                 this.saveActionInRcu();
               }
+            }else if(index == 14){
+              this.index = 2;
+              //this.scrollItem(110 * 2);
             }
           },
           toRoomList(title, type, mutiwayStatus) {

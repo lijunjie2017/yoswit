@@ -196,7 +196,7 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
-    setting_label = "Change Virtual BUtton";
+    setting_label = "Change Virtual Button";
     setting_label_template[setting_label] = `
         <div 
             class="auto-init card margin-bottom-half mx-0 my-3"
