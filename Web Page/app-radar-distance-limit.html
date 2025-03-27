@@ -1,0 +1,209 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Radar Distance Limit') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="view view-main">
+          <div class="card">
+            <div class="card-content card-content-padding overflow-hidden">
+              <div class="list">
+                <ul>
+                  <li class="item-content item-input no-padding-left">
+                    <div class="item-inner no-padding-right">
+                      <div class="item-title item-label" style="padding: 10px 15px">{{ _("Radar Distance Limit") }}
+                        <div style="font-size: 12px; color: #999;">{{ _('(The larger the value, the closer the distance.)') }}</div>
+                      </div>
+                      <div class="item-input-wrap pb-1">
+                        <div class="display-flex flex-direction-row px-3">
+                          <div
+                            class="range-slider"
+                            data-min="50"
+                            data-max="500"
+                            data-label="true"
+                            data-step="10"
+                            data-value="250"
+                            data-scale="true"
+                            data-scale-steps="5"
+                            data-scale-sub-steps="5"
+                            id="ir-cool-setpoint-limit-lower-slider"
+                          >
+                            <input type="range" name="setpoint_limit_lower" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+              <div class="col">
+                <div class="button button-fill button-save" v-on:click="save()">{{_("COMPLETE")}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on,
+      $update = ctx.$update;
+
+    let vueApp = null;
+    const { guid, subdevice } = $f7route.query;
+    const sortableAction = () => {
+      // sortable = !sortable;
+      // console.log(sortable);
+      // $update();
+      vueApp.$sortableAction();
+    };
+    const onPriceChange = (e) => {
+      const range = app.range.get(e.target);
+      console.log(range);
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          rangeMap: {},
+          volumeLimit: 0,
+          volumeUpper: 50,
+        },
+        computed: {},
+        watch: {},
+        mounted() {
+          this.initData();
+        },
+        methods: {
+          async save() {
+            //save in erp
+            app.dialog.preloader();
+            console.log(this.rangeMap['radar-distance-limit'].getValue());
+            this.volumeUpper = this.rangeMap['radar-distance-limit'].getValue();
+            //return
+            let map = {
+              volume_upper: this.volumeUpper,
+            };
+            try {
+              await iot_ble_check_enable();
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `9534000003${iot_utils_to_upper_endian_hex(parseInt(this.volumeUpper)*10000,3)}`,
+                },
+              ]);
+              await iot_device_setting_sync_server(guid, 'radar_distance_limit', this.volumeUpper);
+              //window.globalUpdate = true;
+              app.dialog.close();
+              app.dialog.alert(_('Save Successfully'));
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+          },
+          initData() {
+            let devices = cloneDeep(erp.info.device);
+            if (isset(devices[guid])) {
+              let settings = devices[guid].settings;
+              settings.forEach((item) => {
+                if (item.setting_type == 'radar_distance_limit') {
+                  this.volumeUpper = item.setting;
+                }
+              });
+            }
+            let key_1 = 'radar-distance-limit';
+            setTimeout(() => {
+              this.initRangeSlider(key_1, '#ir-cool-setpoint-limit-lower-slider');
+            }, 0);
+          },
+          initRangeSlider(key, el) {
+            if (!isset(this.rangeMap[key])) {
+              console.log($(el));
+              this.rangeMap[key] = app.range.create({
+                el: el,
+                value: this.volumeUpper,
+                min: 50,
+                max: 500,
+                step: 10,
+                draggableBar: false,
+                scale: true,
+                label: true,
+                scaleSteps: 5,
+                scaleSubSteps: 5,
+                formatScaleLabel: (v) => {
+                  if (v === 50 || v === 500) {
+                    return v + '';
+                  } else {
+                    return v;
+                  }
+                },
+                formatLabel: (v) => {
+                  return v + '';
+                },
+                on: {
+                  change: (range) => {
+                    console.log(range);
+                    // let rangeList = range.getValue();
+                    // console.log(rangeList);
+                    // this.volumeLimit = rangeList[0];
+                    // this.volumeUpper = rangeList[1];
+                  },
+                },
+              });
+              if (this.rangeMap[key]) {
+                this.rangeMap[key].setValue(this.volumeUpper);
+              }
+              console.log(this.rangeMap[key]);
+            }
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .range-knob {
+    width: 150%;
+    height: 150%;
+  }
+  .px-3 {
+    margin: 30px 0 !important;
+  }
+  .range-knob-label {
+    transform: translateY(0%) scale(1) !important;
+  }
+</style>

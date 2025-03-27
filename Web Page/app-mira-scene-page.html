@@ -1,0 +1,2904 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Hotel Control - Guest Mode') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="view view-main">
+          <div class="guest-box">
+            <div id="guest-0-div" class="list media-list no-margin">
+              <ul>
+                <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
+                  <!-- this show the bar of 4 item -->
+                  <div class="show-item" v-for="item in topDeviceList" :key="item.index" :style="{width:item.width,height:item.height}">
+                    <li class="swipeout display-flex">
+                      <div class="iconbtn swipeout-content" style="width: 100%">
+                        <dnd-button
+                          :type="item.buttonType"
+                          :guid="item.device"
+                          :button-group="item.device_button_group"
+                          :onoff-ref="item.ref"
+                          :status="item.device_status"
+                          :clean-status="item.clean_status || 0"
+                          :enable="item.enable"
+                          :radar-status="item.radar_status"
+                          :name="item.name"
+                          v-on:change-scene-enable="changeSceneEnableParent"
+                          v-on:change-dnd="changeDndParent"
+                          v-on:change-virtual-id="changeVirtualIdParent"
+                          v-on:change-scene-id="changeSceneIdParent"
+                        ></dnd-button>
+                      </div>
+                    </li>
+                  </div>
+                  <!-- this show the bar of 4 item end -->
+                </div>
+              </ul>
+            </div>
+            <div class="anthor-box">
+              <!-- this is the room bar -->
+              <div class="room-bar toolbar tabbar tabbar-scrollable toolbar-home-room">
+                <div class="toolbar-inner" style="padding-right: 40px">
+                  <a
+                    ref="0"
+                    class="tab-link"
+                    v-for="room in roomList"
+                    :key="room.name"
+                    :class="{'tab-link-active': room.isActive}"
+                    :id="'room-bar-title-'+room.name"
+                    v-on:click="showRoom(room.name,1)"
+                  >
+                    {{room.title}}
+                  </a>
+                </div>
+              </div>
+              <!-- this is the anthor device list -->
+              <div id="guest-1-div" class="list media-list no-margin">
+                <ul>
+                  <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
+                    <!-- this show the bar of 4 item -->
+                    <div
+                      class="show-item"
+                      v-for="item in tvAndThermostatList"
+                      :key="item.index"
+                      :style="{width:item.width,height:item.height}"
+                      v-if="item.roomHidden"
+                    >
+                      <li class="swipeout display-flex">
+                        <div class="iconbtn swipeout-content" style="width: 100%">
+                          <dnd-button
+                            :type="item.buttonType"
+                            :guid="item.device"
+                            :button-group="item.device_button_group"
+                            :name="item.name"
+                            :status="item.device_status"
+                            :device-attachment-status="item.device_attachment_status"
+                            v-on:change-air-temp="changeAirTempParent"
+                            v-on:change-air-mode="changeAirModeParent"
+                            v-on:onoff-click-item="onoffClickParent"
+                            v-on:change-virtual-id="changeVirtualIdParent"
+                            v-on:tv-control="tvControlParent"
+                            v-if="item.roomHidden"
+                          ></dnd-button>
+                        </div>
+                      </li>
+                    </div>
+                  </div>
+                </ul>
+              </div>
+            </div>
+            <div class="anthor-box">
+              <div id="guest-1-div" class="list media-list no-margin">
+                <ul>
+                  <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
+                    <!-- this show the bar of 4 item -->
+                    <div
+                      class="show-item"
+                      v-for="item in anthorDeviceList"
+                      :key="item.index"
+                      :style="{width:item.width,height:item.height}"
+                    >
+                      <li class="swipeout display-flex">
+                        <div class="iconbtn swipeout-content" style="width: 100%">
+                          <dnd-button
+                            :type="item.buttonType"
+                            :guid="item.device"
+                            :button-group="item.device_button_group"
+                            :name="item.name"
+                            :status="item.device_status"
+                            :device-attachment-status="item.device_attachment_status"
+                            :show-title="item.show_title"
+                            v-on:change-air-temp="changeAirTempParent"
+                            v-on:change-air-mode="changeAirModeParent"
+                            v-on:onoff-click-item="onoffClickParent"
+                            v-on:change-virtual-id="changeVirtualIdParent"
+                            v-on:change-scene-id="changeSceneIdParent"
+                          ></dnd-button>
+                        </div>
+                      </li>
+                    </div>
+                  </div>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on,
+      $update = ctx.$update;
+
+    let vueApp = null;
+    const { guid, subdevice } = $f7route.query;
+
+    /*
+    this is the component of the dnd-button
+    */
+    const dndButton = {
+      template: `
+    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" style="width: 100%;height: 80px;padding: 0 20px;" v-if="type == 'dnd'">
+      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeDnd(name,status,1)">
+        <img :src="fileUrl+'new_dnd_'+(status?'on':'off')+'.png'" alt="thermostat" style="width: 20px;height: 20px;" />
+      </button>
+      <button :class="['button button-raised button-big circle display-flex', cleanStatus != 0 ? 'btn-bg' : '']" @click="changeDnd(name,cleanStatus,2)">
+        <img :src="fileUrl+'new_clean_'+(cleanStatus?'on':'off')+'.png'" alt="thermostat" style="width: 20px;height: 20px;" />
+      </button>
+    </div>
+    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" 
+    :style="{width: '100%',height: '80px',padding: '0 20px','background-color': enable ? 'rgba(0,0,0,0)' : 'red'}" 
+    v-else-if="type == 'radar'">
+      <button class="button button-raised button-big circle radar-container" @click="changeSceneEnable(name)">
+        <div :class="['radar-container',radarStatus == 1 ? 'detected' : 'not-detected']" id="radar">
+          <div class="radar-circle">
+              <div class="radar-scan"></div>
+          </div>
+          <div class="ping"></div>
+          <div class="center-dot"></div>
+          <div class="target-blips">
+            <div class="blip blip-1"></div>
+            <div class="blip blip-2"></div>
+            <div class="blip blip-3"></div>
+          </div>
+        </div>
+      </button>
+    </div>
+    <div 
+    :class="['buttonStatus display-flex justify-content-space-between align-content-center align-items-center', status != 0 ? 'on_flag' : 'off_flag']" 
+    style="width: 100%;height: 80px;padding: 0 20px;" 
+    v-else-if="type == 'onoff'">
+      <button :class="['button button-raised button-big circle','onoff-item']" @click="onoffClick(name,status)">
+        
+      </button>
+    </div>
+    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" style="width: 100%;height: 80px;padding: 0 20px;" v-else-if="type == 'master'">
+      <button :class="['button button-raised button-big circle', status != 0 ? 'btn-bg' : '']" @click="changeVirtualId(name,status,1)">
+        <i class="material-icons">
+          power_settings_new 
+        </i>
+      </button>
+    </div>
+    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center"
+     style="width: 100%;height: 90px;padding: 0 20px;position: relative;" v-else-if="type == 'toggle'">
+      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeVirtualId(name,status,2)">
+        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" style="width: 20px;height: 20px;" />
+      </button>
+      <div style="position: absolute;top: 0;right: 10px;color: #8e8d93;background-color: var(--f7-block-strong-bg-color);font-size: 20px;font-weight: 600;" 
+      v-if="showTitle"
+      >
+      {{showTitle}}
+      </div>
+    </div>
+    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center"
+     style="width: 100%;height: 90px;padding: 0 20px;position: relative;" v-else-if="type == 'click'">
+      <button :class="['button button-raised button-big circle display-flex']" @click="changeSceneId(name)">
+        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup]['on_icon']+'.png'" style="width: 20px;height: 20px;" />
+      </button>
+      <div style="position: absolute;top: 0;right: 10px;color: #8e8d93;background-color: var(--f7-block-strong-bg-color);font-size: 20px;font-weight: 600;" 
+      v-if="showTitle"
+      >
+      {{showTitle}}
+      </div>
+    </div>
+    <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose' || type == 'dimming'">
+      <div style="height:100%;">
+        <div :class="['range-slider','rangeslider','range-slider-init']" 
+          :guid="guid"
+          :button-group="buttonGroup"
+          data-vertical="true"
+          data-label="true"
+          data-step="1"
+        ></div>
+        <img v-if="type == 'opclose'" 
+        :src="fileUrl+'products/YO121-BLE-LE.svg'" class="rangeIcon" alt="thermostat" />
+        <i v-if="type == 'dimming'" class="material-icons">
+          brightness_low
+        </i>
+      </div>
+    </div>
+    <div class="buttonStatus" style="width: 100%;height: 280px;padding: 0 20px;" v-else-if="type == 'tv'">
+      <div class="display-flex justify-content-space-between align-content-center align-items-center" style="margin-top: 10px;">
+        <button class="button button-raised button-big circle display-flex" @click="tvControl(name,16)">
+          <i class="material-icons">
+            add 
+          </i>
+        </button>
+        <button class="button button-raised button-big circle display-flex" @click="tvControl(name,17)">
+          <i class="material-icons">
+            remove 
+          </i>
+        </button>
+        <button class="button button-raised button-big circle display-flex" @click="tvControl(name,20)">
+          <i class="material-icons">
+            power_settings_new 
+          </i>
+        </button>
+      </div>
+      <div class="display-flex justify-content-center align-content-center align-items-center" style="width: 100%;margin-top: 10px;">
+        <button class="button button-raised button-big circle TVcontrol">
+          <div class="tvbtn tvup" @click="tvControl(name,11)"><i class="material-icons">keyboard_arrow_up</i> </div>
+          <div class="tvbtn tvdown" @click="tvControl(name,15)"><i class="material-icons">keyboard_arrow_down</i> </div>
+          <div class="tvbtn tvleft" @click="tvControl(name,12)"><i class="material-icons">chevron_left</i> </div>
+          <div class="tvbtn tvright" @click="tvControl(name,14)"><i class="material-icons">chevron_right</i></div>
+          <div class="tvbtn tvok button button-raised button-big circle" @click="tvControl(name,13)"><span>ok</span></div>
+        </button>
+       </div>
+      <div class="display-flex justify-content-space-between align-content-center align-items-center" style="margin-top: 10px;">
+        <button class="button button-raised button-big circle display-flex" @click="tvControl(name,19)">
+          <i class="material-icons">
+            home 
+          </i>
+        </button>
+        <button class="button button-raised button-big circle display-flex" @click="tvControl(name,18)">
+          <i class="material-icons">
+            undo 
+          </i>
+        </button>
+        <button class="button button-raised button-big circle" @click="tvControl(name,23)">
+          <i class="material-icons">
+            logout 
+          </i>
+        </button>
+      </div>
+    </div>
+    <div class="buttonStatus" style="width: 100%;height: 280px;padding: 0 20px;" v-else-if="type == 'thermostat'">
+      <div :class="['thermostat-box', 'display-flex', 'justify-content-space-between', 'align-content-center', 'align-items-center', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'off_flag' : 'on_flag']" 
+      style="margin-top: 10px;">
+        <button :class="['button button-raised button-big circle display-flex', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" @click="changeAirMode(deviceAttachmentStatus,1,name)">
+          <img :src="getAirMode(deviceAttachmentStatus)['mode'].img" alt="thermostat" style="width: 25px;height: 25px;" />
+        </button>
+        <button :class="['button button-raised button-big circle display-flex', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" @click="changeAirMode(deviceAttachmentStatus,2,name)">
+          <img :src="getAirMode(deviceAttachmentStatus)['speed'].img" alt="thermostat" style="width: 25px;height: 25px;" />
+        </button>
+        <button class="button button-raised button-big circle onoff-item" @click="changeAirMode(deviceAttachmentStatus,3,name)">
+          
+        </button>
+      </div>
+      <div class="thermostat-box-temp row">
+        <div class="col-100 display-flex justify-content-center align-items-center">
+            <div class="tempt">
+                <span class="control hidden tempt-set" style="font-size:60px;">{{getAirMode(deviceAttachmentStatus)['temperature'].value}}</span>
+                
+            </div>
+            <div class="mode control hidden">
+                <div>&deg;C</div>
+                <div>
+                    <img :style="{'width':'25px','height':'25px','visibility':getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'hidden' : 'visible'}" :src="getAirMode(deviceAttachmentStatus)['mode'].img">
+                </div>
+            </div>
+        </div>
+        <div class="col-100 display-flex justify-content-center align-items-center">
+            <div class="swing control hidden display-flex justify-content-center justify-content-center" style="width: 100%;text-align:center;">
+                <i class="material-icons">
+                  water_drop 
+                </i>
+                <span>{{getAirMode(deviceAttachmentStatus)['rh'].value}}</span><span>%</span>
+            </div>
+        </div>
+      </div>
+      <div class="thermostat-box display-flex justify-content-space-between align-content-center align-items-center" style="margin-top: 25px;">
+        <div class="col">
+          <div :class="['button button-raised button-big stop', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" style="width:60px;font-size:25px;line-height:60px;" @click="changeAirTemp(deviceAttachmentStatus,1,name)">-</div>
+        </div>
+        <div class="col" style="text-align:center;">
+          <span>{{getAirMode(deviceAttachmentStatus)['set_temperature'].value}}</span>℃
+        </div>
+        <div class="col">
+          <div :class="['button button-raised button-big stop', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" style="width:60px;font-size:25px;line-height:60px;" @click="changeAirTemp(deviceAttachmentStatus,2,name)">+</div>
+        </div>
+      </div>
+    </div>
+    `,
+      props: {
+        type: {
+          type: String,
+          default: 'dnd',
+        },
+        buttonGroup: {
+          type: String,
+          default: '',
+        },
+        guid: {
+          type: String,
+          default: '',
+        },
+        enable: {
+          type: Boolean,
+          default: true,
+        },
+        radarStatus: {
+          type: String,
+          default: 0,
+        },
+        name: {
+          type: String,
+          default: '',
+        },
+        status: {
+          type: String,
+          default: 0,
+        },
+        cleanStatus: {
+          type: String,
+          default: 0,
+        },
+        deviceAttachmentStatus: {
+          type: String,
+          default: '',
+        },
+        showTitle: {
+          type: String,
+          default: '',
+        },
+      },
+      data() {
+        return {
+          imgUrl: '',
+          value: '',
+          iconStatus: '',
+          fileUrl: 'https://my.yoswit.com/files/',
+        };
+      },
+      methods: {
+        toggleDetection() {
+          const radar = document.getElementById('radar');
+          if (radar.classList.contains('detected')) {
+            radar.classList.remove('detected');
+            radar.classList.add('not-detected');
+          } else {
+            radar.classList.remove('not-detected');
+            radar.classList.add('detected');
+          }
+        },
+        //tv control
+        tvControl(name, type) {
+          console.log('name', name);
+          console.log('type', type);
+          let command = '';
+          let command_type = '';
+          let pre_command = `972102016D63203020`;
+          if (type == 1) {
+            command = `9810000003b04401`;
+            command_type = 'UP';
+          } else if (type == 2) {
+            command = `9810000003b04403`;
+            command_type = 'LEFT';
+          } else if (type == 3) {
+            command = `9810000003b04400`;
+            command_type = 'OK';
+          } else if (type == 4) {
+            command = `9810000003b04404`;
+            command_type = 'RIGHT';
+          } else if (type == 5) {
+            command = `9810000003b04402`;
+            command_type = 'DOWN';
+          } else if (type == 6) {
+            command = `9810000003b04441`;
+            command_type = 'ADD';
+          } else if (type == 7) {
+            command = `9810000003b04442`;
+            command_type = 'SUB';
+          } else if (type == 8) {
+            command = `9810000003b0440d`;
+            command_type = 'BACK';
+          } else if (type == 9) {
+            command = `9810000003b04409`;
+            command_type = 'HOME';
+          } else if (type == 10) {
+            if (this.power == 0) {
+              this.power = 1;
+              command = `9810000003b0446d`;
+              command_type = 'ON';
+            } else {
+              this.power = 0;
+              command = `9810000003b0446c`;
+              command_type = 'OFF';
+            }
+          } else if (type == 11) {
+            //[m][c][ ][Set ID][ ][Data][Cr]
+            command = `${pre_command}34300D`;
+            command_type = 'UP';
+          } else if (type == 12) {
+            //37
+            command = `${pre_command}30370D`;
+            command_type = 'LEFT';
+          } else if (type == 13) {
+            //44
+            command = `${pre_command}34340D`;
+            command_type = 'OK';
+          } else if (type == 14) {
+            //06
+            command = `${pre_command}30360D`;
+            command_type = 'RIGHT';
+          } else if (type == 15) {
+            //41
+            command = `${pre_command}34310D`;
+            command_type = 'DOWN';
+          } else if (type == 16) {
+            //02
+            command = `${pre_command}30320D`;
+            command_type = 'ADD';
+          } else if (type == 17) {
+            //03
+            command = `${pre_command}30330D`;
+            command_type = 'SUB';
+          } else if (type == 18) {
+            //28
+            command = `${pre_command}32380D`;
+            command_type = 'BACK';
+          } else if (type == 19) {
+            //7c
+            command = `${pre_command}37430D`;
+            command_type = 'HOME';
+          } else if (type == 20) {
+            //08
+            command = `${pre_command}30380D`;
+            command_type = 'POWER';
+          } else if (type == 21) {
+            //01
+            command = `972102016b6120312030310d`;
+            command_type = 'ON';
+          } else if (type == 22) {
+            //00
+            command = `972102016b6120312030300d`;
+            command_type = 'OFF';
+          } else if (type == 23) {
+            //5B
+            command = `${pre_command}35420D`;
+            command_type = 'EXIT';
+          } else if (type == 24) {
+            //09
+            command = `${pre_command}30390D`;
+            command_type = 'MUTE';
+          } else if (type == 25) {
+            //39
+            command = `${pre_command}33390D`;
+            command_type = 'SUBTITLE';
+          }
+          if (type == 100) {
+            mainView.router.navigate(`/mobile-app/command-debug?guid=${guid}`);
+            return;
+          }
+          let obj = {
+            name: name,
+            command: command,
+            command_type: command_type,
+          };
+          this.$emit('tv-control', obj);
+        },
+        //on off item
+        onoffClick(name, status) {
+          console.log('name', name);
+          console.log('status', status);
+          let this_status = 0;
+          if (status == 0) {
+            this_status = 1;
+          } else {
+            this_status = 0;
+          }
+          let obj = {
+            name: name,
+            status: this_status,
+          };
+          this.$emit('onoff-click-item', obj);
+        },
+        getAirMode(deviceAttachmentStatus, index) {
+          //props.kitem.device_attachment_status = [1, mode_value, speed_vaule, temperature, room_temperature, 0].join(',');
+          //1, mode_value, 2speed_vaule, 3 room_temperature, 4 rh, 5 set_temperature, 6 power
+          /*
+          mode 2 cooling , 0 fan , 1 hot ==> img index 1 auto 2 cooling 3 dry 4 fan 5 hot
+          speed 1 auto , 2 one bar ,3 two bar ,4 three bar ==> img index 1 auto 2 one bar 3 two bar 4 three bar
+          */
+          const returnMode = (str) => {
+            let value = 0;
+            if (str == 2) {
+              value = 2;
+            } else if (str == 0) {
+              value = 4;
+            } else if (str == 1) {
+              value = 5;
+            }
+            return value;
+          };
+          const returnSpeed = (str) => {
+            let value = 0;
+            if (str == 1) {
+              value = 1;
+            } else if (str == 2) {
+              value = 2;
+            } else if (str == 3) {
+              value = 3;
+            } else if (str == 4) {
+              value = 4;
+            } else if (str == 0) {
+              value = 1;
+            }
+            return value;
+          };
+          let value_list = deviceAttachmentStatus.split(',');
+          let obj_map = {
+            'mode': {
+              value: value_list[1],
+              img: `style/img/air_condition/icon-mode-${returnMode(value_list[1])}.png`,
+            },
+            'speed': {
+              value: value_list[2] != 0 ? parseInt(value_list[2]) : 1,
+              img: `style/img/air_condition/icon-speed-${returnSpeed(value_list[2])}.png`,
+            },
+            'temperature': {
+              value: value_list[4] != 0 ? parseInt(value_list[4]) : 26,
+            },
+            'rh': {
+              value: value_list[5] != 0 ? parseInt(value_list[5]) : 50,
+            },
+            'set_temperature': {
+              value: value_list[3] != 0 ? parseInt(value_list[3]) : 26,
+            },
+            'power': {
+              value: value_list[0],
+            },
+          };
+
+          return obj_map;
+        },
+        changeAirMode(deviceAttachmentStatus, type, name) {
+          //1 mode , 2 speed , 3 power
+          console.log('deviceAttachmentStatus', deviceAttachmentStatus);
+          console.log('type', type);
+          let config = deviceAttachmentStatus;
+          let value_list = config.split(',');
+          let mode = value_list[1];
+          let speed = value_list[2];
+          let power = value_list[0];
+          if (type == 1) {
+            //mode
+            if (mode == 0) {
+              mode = 2;
+            } else if (mode == 1) {
+              mode = 0;
+            } else if (mode == 2) {
+              mode = 1;
+            }
+          } else if (type == 2) {
+            //speed
+            if (speed == 0) {
+              speed = 1;
+            } else if (speed == 1) {
+              speed = 2;
+            } else if (speed == 2) {
+              speed = 3;
+            } else if (speed == 3) {
+              speed = 4;
+            } else if (speed == 4) {
+              speed = 1;
+            }
+          } else if (type == 3) {
+            //power
+            power = power == 0 ? 1 : 0;
+          }
+          let new_config = config.split(',');
+          new_config[0] = power;
+          new_config[1] = mode;
+          new_config[2] = speed;
+          let new_config_str = new_config.join(',');
+          console.log('new_config_str', new_config_str);
+          let obj = {
+            name: name,
+            config: new_config_str,
+            type: type,
+          };
+          this.$emit('change-air-mode', obj);
+        },
+        changeAirTemp(deviceAttachmentStatus, type, name) {
+          console.log('deviceAttachmentStatus', deviceAttachmentStatus);
+          let config = deviceAttachmentStatus;
+          let value_list = config.split(',');
+          let temp = value_list[3] != 0 ? parseInt(value_list[3]) : 26;
+          if (type == 1) {
+            //decrease
+            temp = temp - 1;
+            console.log('decrease');
+          } else if (type == 2) {
+            //increase
+            temp = temp + 1;
+            console.log('increase');
+          }
+          let new_config = config.split(',');
+          new_config[3] = temp;
+          let new_config_str = new_config.join(',');
+          console.log('new_config_str', new_config_str);
+          let obj = {
+            name: name,
+            config: new_config_str,
+            type: type,
+          };
+          this.$emit('change-air-temp', obj);
+        },
+        changeSceneId(name){
+          this.$emit('change-scene-id', name);
+        },
+        changeVirtualId(name, status, type) {
+          //1 master 2 toggle
+          console.log('name', name);
+          let this_status = 0;
+          if (status == 0) {
+            this_status = 1;
+          } else {
+            this_status = 0;
+          }
+          let obj = {
+            name: name,
+            status: this_status,
+            type: type,
+          };
+          this.$emit('change-virtual-id', obj);
+        },
+        changeSceneEnable(name) {
+          console.log('name', name);
+          let obj = {
+            name: name,
+            enable: !this.enable,
+          };
+          this.$emit('change-scene-enable', obj);
+        },
+        changeDnd(name, status, type) {
+          console.log('name', name);
+          let this_status = 0;
+          if (status == 0) {
+            this_status = 1;
+          } else {
+            this_status = 0;
+          }
+          let obj = {
+            name: name,
+            status: this_status,
+            type: type,
+          };
+          this.$emit('change-dnd', obj);
+        },
+      },
+      mounted() {
+        // setInterval(this.toggleDetection, 5000);
+      },
+    };
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          deviceList: [],
+          topDeviceList: [],
+          anthorDeviceList: [],
+          tvAndThermostatList: [],
+          rangeList: [],
+          totalSubdevices: [],
+          deviceControlLimit: {},
+          roomList: [],
+          showHome: true,
+        },
+        computed: {},
+        watch: {},
+        components: {
+          'dnd-button': dndButton,
+        },
+        mounted() {
+          window.lastClickTime = {};
+          window.timeoutId = null;
+          this.initFun();
+          this.initEmitter();
+        },
+        methods: {
+          initEmitter() {
+            emitter.on('on_peripheral_changed', this.onPeripheralChanged);
+          },
+          async initFun() {
+            await this.initPeripheral();
+            await this.initScan();
+            await this.initSubdevice();
+            await this.initData();
+          },
+          showRoom(name, status) {
+            console.log('name', name);
+            console.log('status', status);
+            if (name == '0') {
+              this.roomList.forEach((room) => {
+                room.isActive = false;
+              });
+              this.showHome = true;
+              this.anthorDeviceList.forEach((item) => {
+                item.roomHidden = true;
+              });
+            } else {
+              this.showHome = false;
+              this.roomList.forEach((room) => {
+                room.isActive = false;
+              });
+              this.roomList.find((room) => room.name == name).isActive = true;
+              //find the device and hidden
+              this.tvAndThermostatList.forEach((item) => {
+                if (item.profile_room == name) {
+                  item.roomHidden = true;
+                } else {
+                  item.roomHidden = false;
+                }
+              });
+            }
+          },
+          async initData() {
+            try {
+              //load the erp data
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
+              let method = 'GET';
+              let response = await http.request(url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+              });
+              console.log('response', response);
+              let list = response.data.data.profile_subdevice || [];
+              let devices = cloneDeep(erp.info.profile.profile_device);
+              let mapList = list.filter((item) => {
+                return item.guest_mode == 1;
+              });
+              let tempList = [];
+              let anthorList = [];
+              mapList.sort((a, b) => {
+                return a.guest_mode_idx - b.guest_mode_idx;
+              });
+              console.log('mapList', mapList);
+              mapList.forEach((item, index) => {
+                if (item.guest_mode == 1) {
+                  item.index = item.guest_mode_idx;
+                  item.imgUrl = item.image;
+                  item.v_id = item.config;
+                  let device = devices.find((device) => device.name == item.profile_device);
+                  item.device_model = device.device_model;
+                  item.mac_address = device.device_name;
+                  //this.actionList.push(item);
+                  if (index < 4) {
+                    tempList.push(item);
+                  } else {
+                    let mapObj = this.getSubdeviceProp(item.name);
+                    item.device_status = isset(mapObj) ? mapObj.device_status : 0;
+                    anthorList.push(item);
+                  }
+                }
+              });
+              console.log('tempList', tempList);
+              //group the clean and dnd
+              tempList.forEach((item, index) => {
+                item.device_status = isset(item.status) ? item.status : 0;
+                if (index == 0) {
+                  tempList.forEach((kitem, kindex) => {
+                    if (kindex == 1) {
+                      item.clean_virtual_id = kitem.config;
+                      item.clean_name = kitem.name;
+                      item.clean_status = isset(kitem.status) ? kitem.status : 0;
+                      // let mapObj = this.getSubdeviceProp(kitem.name);
+                      // item.clean_status = isset(mapObj) ? mapObj.device_status : 0;
+                    }
+                  });
+                  item.buttonType = 'dnd';
+                  item.width = '49%';
+                } else if (isset(item.config) && item.config.includes('scene_id')) {
+                  item.buttonType = 'radar';
+                  item.width = '24%';
+                } else {
+                  item.buttonType = 'master';
+                  item.width = '24%';
+                }
+                if (index != 1) {
+                  // let mapObj = this.getSubdeviceProp(item.name);
+                  // item.device_status = isset(mapObj) ? mapObj.device_status : 0;
+                  item.radar_status = 0;
+                  item.enable = true;
+                  //find the scene_id=14&enable=true
+                  if (isset(item.config)) {
+                    if (item.config.includes('scene_id=')) {
+                      let scene_id = item.config.split('scene_id=')[1].split('&')[0];
+                      let enable = item.config.split('enable=')[1];
+                      item.scene_id = scene_id;
+                      if (enable == 'true') {
+                        item.enable = true;
+                      } else {
+                        item.enable = false;
+                      }
+                    }
+                  }
+                  this.topDeviceList.push(item);
+                }
+              });
+              anthorList.forEach((item, index) => {
+                item.roomHidden = true;
+                if (item.device_button_group == 'Hdmicec') {
+                  item.buttonType = 'tv';
+                  item.width = '49%';
+                  //init the room list
+                  if (!this.roomList.find((room) => room.name == item.profile_room)) {
+                    this.roomList.push({
+                      name: item.profile_room,
+                      title: tran(item.room_name),
+                      isActive: false,
+                    });
+                  }
+                } else if (item.device_button_group == 'Thermostat') {
+                  item.buttonType = 'thermostat';
+                  item.width = '49%';
+                  let mapObj = this.getSubdeviceProp(item.name);
+                  item.device_attachment_status = isset(mapObj) ? mapObj.device_attachment_status : '';
+                  console.log('item.device_attachment_status', item.device_attachment_status);
+                  let value_list = item.device_attachment_status.split(',');
+                  //add the proprs
+                  //props.kitem.device_attachment_status = [1, mode_value, speed_vaule, temperature, room_temperature, 0].join(',');
+                  item.fan = value_list[2];
+                  item.set_temp = value_list[3] ? parseInt(value_list[3]) : 26;
+                  item.temp = value_list[4] ? parseInt(value_list[4]) : 26;
+                  item.rh = value_list[5] ? parseInt(value_list[5]) : 50;
+                  item.power = value_list[0];
+                  item.mode_value = value_list[1];
+                  //init the room list
+                  if (!this.roomList.find((room) => room.name == item.profile_room)) {
+                    this.roomList.push({
+                      name: item.profile_room,
+                      title: tran(item.room_name),
+                      isActive: false,
+                    });
+                  }
+                } else if (item.device_button_group == 'OPENCLOSE WIFI UART') {
+                  item.buttonType = 'opclose';
+                  item.width = '24%';
+                } else if (item.device_button_group.startsWith('RCU DIMMING')) {
+                  item.buttonType = 'dimming';
+                  item.width = '24%';
+                }else if(item.device_button_group.startsWith('SCENE VIRTUAL R READING LIGHT')){
+                  item.buttonType = 'toggle';
+                  item.width = '24%';
+                  item.device_status = isset(item.status) ? item.status : 0;
+                  item.show_title = 'R';
+                }else if(item.device_button_group.startsWith('SCENE VIRTUAL L READING LIGHT')){
+                  // debugger
+                  item.buttonType = 'toggle';
+                  item.width = '24%';
+                  item.device_status = isset(item.status) ? item.status : 0;
+                  item.show_title = 'L';
+                }else if(
+                  item.device_button_group.startsWith('SCENE VIRTUAL BRIGHTEN') || 
+                  item.device_button_group.startsWith('SCENE VIRTUAL 25') || 
+                  item.device_button_group.startsWith('SCENE VIRTUAL 50') || 
+                  item.device_button_group.startsWith('SCENE VIRTUAL 100') || 
+                  item.device_button_group.startsWith('SCENE VIRTUAL DIM') ||
+                  item.device_button_group.startsWith('SCENE VIRTUAL DINING') ||
+                  item.device_button_group.startsWith('SCENE VIRTUAL REST') ||
+                  item.device_button_group.startsWith('SCENE VIRTUAL MOVIE')
+                ){
+                  item.buttonType = 'click';
+                  item.width = '24%';
+                  item.device_status = 1;
+                } else if (
+                  isset(item.config) &&
+                  item.device_button_group.startsWith('SCENE VIRTUAL') &&
+                  !item.config.includes('scene_id')
+                ) {
+                  item.buttonType = 'toggle';
+                  item.width = '24%';
+                  item.device_status = isset(item.status) ? item.status : 0;
+                } else if (isset(item.config) && item.config.includes('scene_id')) {
+                  item.buttonType = 'radar';
+                  item.width = '24%';
+                } else {
+                  item.buttonType = 'onoff';
+                  item.width = '24%';
+                }
+              });
+
+              this.anthorDeviceList = anthorList.filter(
+                (item) => item.device_button_group != 'Thermostat' && item.device_button_group != 'Hdmicec'
+              );
+              let tvAndThermostatList = anthorList.filter(
+                (item) => item.device_button_group == 'Thermostat' || item.device_button_group == 'Hdmicec'
+              );
+              //only show the same room
+              tvAndThermostatList.forEach((item) => {
+                let roomName = this.roomList[0].name;
+                this.roomList[0].isActive = true;
+                if (item.profile_room != roomName) {
+                  item.roomHidden = false;
+                } else {
+                  item.roomHidden = true;
+                }
+              });
+              this.tvAndThermostatList = tvAndThermostatList;
+              console.log('list', this.topDeviceList);
+              console.log('anthorList', this.anthorDeviceList);
+              await this.initRange();
+              //console.log('rangeList', this.rangeList);
+              //debugger
+              this.initGateway();
+              //this page top is dnd clean radar master button
+            } catch (error) {
+              console.log(error);
+            }
+          },
+          getSubdeviceProp(name) {
+            let subdevice = this.totalSubdevices.find((item) => item.name == name);
+            return subdevice ? subdevice : null;
+          },
+          renderRcuScene(trigger_data, guid) {
+            debugger;
+            let obj_map = {
+              'control_source': 'MobMob',
+              'command_type': 'rcu_scene_trigger',
+              'scene_template': '',
+              'scene_title': '',
+              'scene_id': '',
+            };
+            let list = trigger_data.match(/.{1,2}/g);
+            let scene_id = list[3];
+            let scene_map = erp.info.scene;
+            for (let i in scene_map) {
+              let scene_id_list = scene_map[i].scene_device_location || [];
+              for (let j in scene_id_list) {
+                if (parseInt(scene_id_list[j].storage_id).toString(16).pad('00') == scene_id && scene_id_list[j].device == guid) {
+                  obj_map.scene_title = scene_map[i].title;
+                  obj_map.scene_id = scene_id;
+                  obj_map.scene_status = list[4];
+                  obj_map.scene_template = scene_map[i].scene_template;
+                  obj_map.trigger_data = scene_map[i].trigger_data;
+                  break;
+                }
+              }
+            }
+            return obj_map;
+          },
+          rangeChangeFun(defaultValue, customParam) {
+            let renderStatus = true;
+            console.log('customParam', customParam);
+            if (isset(this.deviceControlLimit[customParam.device])) {
+              renderStatus = this.deviceControlLimit[customParam.device];
+            }
+            if (!renderStatus) {
+              return;
+            }
+            const rangeControlForCurtain = async () => {
+              console.log('defaultValue', defaultValue);
+              console.log('customParam', customParam);
+              let otherModelStatus = false;
+              if (customParam.device_model == 'YO121-AC-R2W') otherModelStatus = true;
+              let thisvalue = defaultValue.value;
+              let device_button_group = customParam.device_button_group;
+              let reverse =
+                device_button_group.startsWith('OPENCLOSE UART REVERSE') || device_button_group.startsWith('OPENCLOSE WIFI UART REVERSE')
+                  ? true
+                  : false;
+              if (thisvalue > 0) {
+                customParam.device_status = thisvalue;
+              } else {
+                customParam.device_status = 0;
+              }
+              if (reverse) {
+                data = `55AA060102${(100 - thisvalue).toString(16).pad('00')}FF`;
+                if (otherModelStatus) {
+                  data = `55fefe0304${(100 - customParam.device_status * 1).toString(16).pad('00')}`;
+                }
+              } else {
+                data = `55AA060102${thisvalue.toString(16).pad('00')}FF`;
+                if (otherModelStatus) {
+                  data = `55fefe0304${customParam.device_status.toString(16).pad('00')}`;
+                }
+              }
+              if (otherModelStatus) {
+                data += erp.script.core_util_calculate_crc16_for_motor(data);
+              } else {
+                data += core_util_calculate_crc16_modbus_for_doa(data);
+              }
+              let command = '8602' + data.toLowerCase();
+              window.peripheral[customParam.device]
+                .curtainmotor([
+                  {
+                    gang: bleHelper.getGangId(customParam.device_button_group),
+                    value: thisvalue,
+                    command: command,
+                  },
+                ])
+                .then(async () => {
+                  let control_source = await bleHelper.getControlSource(customParam.device);
+                  window.upload_device_control_log(customParam.device, customParam.device_status, control_source, customParam.name);
+                })
+                .catch((error) => {
+                  if (error == 7200) {
+                    erp.script.iot_entry_class_password_verify(props.kitem.device, props.kitem.name).then(() => {});
+                  } else {
+                    app.dialog.alert(_(erp.get_log_description(error)));
+                  }
+                });
+            };
+            const rangeControlForDimming = async (defaultValue, customParam) => {
+              let range_value = parseInt(((defaultValue.value * 1.0) / 100.0) * 255.0);
+              peripheral[customParam.device]
+                .rcuDimming([
+                  {
+                    gang: bleHelper.getGangId(customParam.device_button_group),
+                    value: range_value,
+                  },
+                ])
+                .then(async () => {
+                  let control_source = await bleHelper.getControlSource(customParam.device);
+                  window.upload_device_control_log(customParam.device, customParam.device_status, control_source, customParam.name);
+                })
+                .catch((error) => {
+                  if (error == 7200) {
+                    erp.script.iot_entry_class_password_verify(customParam.device, customParam.name).then(() => {});
+                  } else {
+                    app.dialog.alert(_(erp.get_log_description(error)));
+                  }
+                });
+            };
+            if (customParam.device_button_group.startsWith('OPENCLOSE')) {
+              rangeControlForCurtain(defaultValue, customParam);
+            } else if (customParam.device_button_group.startsWith('DIMMING') || customParam.device_button_group.startsWith('RCU DIMMING')) {
+              rangeControlForDimming(defaultValue, customParam);
+            }
+          },
+          initRange() {
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                let completed = 0; // 完成计数器
+                const total = this.anthorDeviceList.filter((item) => item.buttonType === 'dimming' || item.buttonType === 'opclose').length; // 需要处理的总数
+
+                if (total === 0) {
+                  resolve(); // 无任务直接完成
+                  return;
+                }
+
+                this.anthorDeviceList.forEach((item) => {
+                  if (item.buttonType === 'dimming' || item.buttonType === 'opclose') {
+                    const key = `range_box_${item.device}_${item.device_button_group}`;
+
+                    if (!this.rangeList[key]) {
+                      this.rangeList[key] = {};
+                    }
+
+                    // 假设 app.range.create 是同步操作（否则需包装为 Promise）
+                    //if the curtain range,the max is 100,if dimming the range is 255
+                    let set_value = 0;
+                    if (item.device_button_group.startsWith('OPENCLOSE')) {
+                      set_value = parseInt(item.device_status);
+                    } else {
+                      set_value = Math.ceil(((parseInt(item.device_status) * 1.0) / 255.0) * 100.0) || 0;
+                    }
+                    this.rangeList[key] = app.range.create({
+                      el: `.rangeslider[guid="${item.device}"][button-group="${item.device_button_group}"]`,
+                      max: 100,
+                      min: 0,
+                      value: set_value,
+                      on: {
+                        changed: ((currentItem) => (defaultValue) => {
+                          this.rangeChangeFun(defaultValue, currentItem);
+                        })(item),
+                      },
+                    });
+
+                    completed++; // 同步操作直接计数
+                    if (completed === total) {
+                      resolve(); // 所有循环任务完成
+                    }
+                  }
+                });
+              }, 500);
+            });
+          },
+          //init the new peripheral
+          async initPeripheral() {
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            if (Capacitor.platform !== 'ios') {
+              app.dialog.preloader(_('Initializing the page, please wait...'));
+            }
+            let res = (await db.get('peripheral')) || null;
+            if (Capacitor.platform !== 'ios') {
+              app.dialog.close();
+            }
+            if (isset(res)) {
+              const storedPeripheral = JSON.parse(res);
+              const newStoredPeripheral = {};
+              for (let guid in storedPeripheral) {
+                let exist = false;
+                for (let i in profile_device) {
+                  if (profile_device[i].device == guid) {
+                    exist = true;
+                  }
+                }
+                if (!exist) continue;
+                newStoredPeripheral[guid] = storedPeripheral[guid];
+                if (!isset(peripheral[guid])) {
+                  peripheral[guid] = new Peripheral(storedPeripheral[guid]);
+                } else {
+                  peripheral[guid].update(storedPeripheral[guid]);
+                }
+              }
+              await db.set('peripheral', JSON.stringify(storedPeripheral));
+            }
+          },
+          //init the scan
+          async initScan() {
+            await bleManager.stopScan();
+            await bleManager.wait(200);
+            bleManager.scan(this.onDiscovery, async (error) => {
+              //alert(error);
+              //app.dialog.alert(_(erp.get_log_description(error)));
+            });
+          },
+          onDiscovery(p) {
+            setTimeout(() => {
+              delete p.password;
+              delete p.connected;
+              delete p.connecting;
+              if (!isset(peripheral[p.guid]) && p.guid) {
+                peripheral[p.guid] = new Peripheral(p);
+              } else if (!p.guid) {
+                if (!isset(peripheral[p.id])) {
+                  peripheral[p.id] = new Peripheral(p);
+                } else {
+                  peripheral[p.id].update(p);
+                }
+              } else {
+                peripheral[p.guid].update(p);
+              }
+            }, 10);
+          },
+          onPeripheralChanged(p) {
+            console.log('onPeripheralChanged', p);
+            //update the subdevice
+            if (p.guid == '3963396536653065363533321203611d') {
+              // console.log('p', p);
+            }
+            this.topDeviceList.forEach((item) => {
+              if (item.device == p.guid) {
+                this.update_subdevice_by_peripheral(item, p, false);
+              }
+            });
+            this.anthorDeviceList.forEach((item) => {
+              if (item.device == p.guid) {
+                this.update_subdevice_by_peripheral(item, p, true);
+              }
+            });
+          },
+          //this is init the subdevice func
+          async initSubdevice() {
+            let device_models = cloneDeep(erp.doctype.device_model);
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let device_button_groups = erp.info.device_button_group || {};
+            let device_button_commands = erp.info.device_command || {};
+            let devices = cloneDeep(erp.info.device);
+            device_models = Object.values(device_models).reduce((acc, obj) => {
+              acc[obj.name] = obj;
+              return acc;
+            }, {});
+            profile_device = profile_device.reduce((acc, item) => {
+              acc[item.name] = item;
+              return acc;
+            }, {});
+            subdevices.forEach((subdevice) => {
+              const vp = {};
+              subdevice.signalRfresh = false; //refresh the signal item
+              subdevice.device_virtual_status = isset(subdevice.status) ? subdevice.status : 0;
+              this.update_subdevice_by_device_button_group(subdevice, device_button_groups[subdevice['device_button_group']]);
+              this.update_subdevice_by_subdevice_function(subdevice, subdevice.function);
+              this.update_peripheral_by_subdevice(vp, subdevice);
+
+              if (devices[subdevice.device]) {
+                this.update_peripheral_by_device(vp, devices[subdevice.device]);
+                //this.update_subdevice_by_device(subdevice, devices[subdevice.device]);
+              }
+              if (profile_device[subdevice.profile_device]) {
+                this.update_peripheral_by_profile_device(vp, profile_device[subdevice.profile_device]);
+                this.update_subdevice_by_profile_device(subdevice, profile_device[subdevice.profile_device]);
+
+                if (device_models[profile_device[subdevice.profile_device].device_model]) {
+                  this.update_subdevice_by_device_model(subdevice, device_models[profile_device[subdevice.profile_device].device_model]);
+                }
+              }
+              this.update_subdevice_by_peripheral(subdevice, peripheral[subdevice.device]?.getProp() || {});
+              if (!isset(peripheral[vp.guid])) {
+                peripheral[vp.guid] = new Peripheral(vp);
+              } else {
+                peripheral[vp.guid].update(vp);
+              }
+            });
+            this.totalSubdevices = subdevices;
+            console.log('totalSubdevices', this.totalSubdevices);
+          },
+          update_subdevice_by_device_button_group(s, p) {
+            if (!isset(p)) return;
+            s['device_button_group_type'] = p ? p.device_type : '';
+            s['device_button_group_list'] = p ? p.button_group_list : '';
+            s['device_button_group_sub_list'] = p.button_group_sub_list;
+            s['device_command'] = p.device_command;
+          },
+          update_subdevice_by_subdevice_function(s, config) {
+            if (!isset(config)) return;
+            try {
+              let configMap = JSON.parse(config);
+              if (configMap['device_type']) {
+                s['device_button_group_type'] = configMap['device_type'];
+              }
+            } catch (error) {
+              console.log(error);
+            }
+          },
+          update_peripheral_by_subdevice(s, p) {
+            s['gangs'] = [0, 0, 0, 0, 0, 0, 0, 0];
+            if (isset(p.device) && p.device != '') {
+              s['guid'] = p.device;
+              s['hexModel'] = p.device.slice(-6, -2).toUpperCase();
+              s['hexBatch'] = p.device.slice(-2).toUpperCase();
+              s['device_mode'] = p.device_mode || 'Unknown';
+            }
+          },
+          update_peripheral_by_device(s, p) {
+            s['device_mode'] = s['device_mode'] == 'Unknown' ? p.device_mode : s['device_mode'];
+            s['mac_address'] = p.mac_address;
+            s['firmware'] = p.firmware;
+          },
+          update_peripheral_by_profile_device(s, p) {
+            s['name'] = p.device_name;
+            s['password'] = p.password;
+            s['gateway'] = p.gateway;
+            s['default_connect'] = p.default_connect;
+            s['network_id'] = p.network_id;
+            s['network_position'] = p.network_position;
+          },
+          update_subdevice_by_profile_device(s, p) {
+            s['password'] = p.password;
+            s['device_model'] = p.device_model;
+            s['device_name'] = p.device_name ? p.device_name.substring(0, 12) : '';
+            s['network_id'] = p.network_id;
+            s['network_position'] = p.network_position;
+            //if have no guid,warning
+            if (!s['device']) {
+              s['guid_status'] = false;
+            } else {
+              s['guid_status'] = true;
+            }
+          },
+          update_subdevice_by_device_model(s, p) {
+            s['thumb'] = p.image;
+            s['device_mode'] = s.device_mode ? s.device_mode : p.device_mode;
+          },
+          update_subdevice_by_subdevice_function(s, config) {
+            if (!isset(config)) return;
+            try {
+              let configMap = JSON.parse(config);
+              if (configMap['device_type']) {
+                s['device_button_group_type'] = configMap['device_type'];
+              }
+            } catch (error) {
+              console.log(error);
+            }
+          },
+          async update_subdevice_by_peripheral(s, p, render_status = true) {
+            let device_status = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
+            let device_config = p.guid ? peripheral[p.guid].getGangConfig(s.name) : 'ir|0|25,1,2,1,0,1'; //ir|0|25,1,2,1,0,1
+            if (p.guid == '3963396536653065363533321203611d') {
+              console.log('device_status', device_status);
+            }
+            s['device_config'] = device_config;
+            s['rssilv'] = isset(peripheral[p.guid]) ? peripheral[p.guid].prop.rssilv : 0;
+            s['mn_head_set'] = p.mn_head_set || 0;
+            s['mn_head_connected'] = p.mn_head_connected || 0;
+            s['mn_tail_set'] = p.mn_tail_set || 0;
+            s['mn_tail_connected'] = p.mn_tail_connected || 0;
+            s['bluetooth'] = p.connected ? 1 : p.connecting ? 2 : 0;
+            s['mobmob'] = p.is_mobmob;
+            s['is_mobile_gateway'] = p.is_mobile_gateway;
+            s['connecting'] = p.connecting;
+            s['connected'] = p.connected;
+            s['device_attachment_status'] = `0,0,0,26,26,0`;
+            s['bluetooth_count'] = p.bluetooth_count;
+            if (render_status) {
+              s['device_status'] = device_status;
+            }
+            s['device_virtual_status'] = isset(s['device_virtual_status']) ? s['device_virtual_status'] : 0;
+            //battery_ref
+            s['battery'] = p.guid ? peripheral[p.guid].getLatestStatus()[0][83] : 0;
+            s['dc_status'] = p.guid ? peripheral[p.guid].getLatestStatus()[0][84] : 0;
+            let hexModel = p.hexModel;
+            if (hexModel == '021B' || hexModel == '0363' || hexModel == '0375') {
+              //thermostat
+              if (s['click_status']) {
+                //return
+                s['device_attachment_status'] = peripheral[p.guid].getAttachmentStatus(s.device_button_group, true).join(',');
+                console.log("s['device_attachment_status']", s['device_attachment_status']);
+              } else {
+                s['device_attachment_status'] = peripheral[p.guid].getAttachmentStatus(s.device_button_group).join(',');
+              }
+            } else if (s.device_button_group.startsWith('DIMMING') || s.device_button_group.startsWith('RCU DIMMING')) {
+              this.deviceControlLimit[s.device] = false;
+
+              let range_key = `range_box_${s.device}_${s.device_button_group}`;
+              if (isset(this.rangeList[range_key])) {
+                const v = Math.ceil(((device_status * 1.0) / 255.0) * 100.0) || 0;
+                s['device_status'] = v;
+                this.rangeList[range_key].setValue(v);
+                this.deviceControlLimit[s.device] = true;
+              }
+              setTimeout(() => {
+                this.deviceControlLimit[s.device] = true;
+              }, 1000);
+            } else if (s.device_button_group.startsWith('OPENCLOSE UART') || s.device_button_group.startsWith('OPENCLOSE WIFI UART')) {
+              if (true) {
+                //revert
+                this.deviceControlLimit[s.device] = false;
+                if (
+                  s.device_button_group.startsWith('OPENCLOSE UART REVERSE') ||
+                  s.device_button_group.startsWith('OPENCLOSE WIFI UART REVERSE')
+                ) {
+                  if (device_status > 100) {
+                    device_status = 0;
+                  } else {
+                    device_status = peripheral[p.guid].prop.status.control[0][48];
+                  }
+                  //s.device_status = device_status;
+                }
+                let key = `range_box_${s.device}_${s.device_button_group}`;
+                if (isset(this.rangeList[key])) {
+                  s['click_button'] = true;
+                  this.rangeList[key].setValue(device_status > 1 ? device_status : 0);
+                  this.deviceControlLimit[s.device] = true;
+                }
+              }
+              if (device_status > 100) {
+                device_status = 0;
+              }
+            } else if (s.device_button_group.startsWith('4in1 Sensor')) {
+              if (device_status > 0) {
+                //have people;
+                // setTimeout(() => {
+                //   $("li.device[guid='" + p.guid + "'] .rf-sensor i").html('directions_walk');
+                // }, 500);
+              } else {
+                //$("li.device[guid='" + p.guid + "'] .rf-sensor i").text('block');
+              }
+            } else if (s.device_button_group.startsWith('RCU INPUT')) {
+              let gang = bleHelper.getGangId(s.device_button_group) * 1;
+              let gangs = peripheral[p.guid] ? peripheral[p.guid].prop.status.mobmob[0] : [];
+              s['input'] = gangs[gang];
+            }
+          },
+          //end of init the subdevice func
+          //init the gateway
+          async initGateway() {
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway()));
+            const gatewayMap = {};
+            for (let i in profile_device) {
+              if (!profile_device[i].gateway || profile_device[i].gateway.trim() == '') continue;
+              const gatewayhash = md5(md5(profile_device[i].gateway));
+              if (selfgatewayhash == gatewayhash) {
+                // self gateway, need to listen to cmd
+                if (!isset(gatewayMap[`${gatewayhash}`])) {
+                  gatewayMap[`${gatewayhash}`] = true;
+                  const cmd_topic = `cmd/${gatewayhash}`;
+                  core_mqtt_subscribe(cmd_topic, 0, false);
+                  emitter.off(cmd_topic);
+                  emitter.on(cmd_topic, this.on_gateway_commands_received);
+                  //if find this mobile as hub,should update the UI page
+                  mobileAsHubStatus = true;
+                  const debounce_init = core_utils_debounce(initPopup, 2000, {
+                    leading: true,
+                    trailing: false,
+                  });
+                  if (pageType != 2) {
+                    debounce_init();
+                  }
+                  //resetIdleTimer();
+                }
+              } else {
+                // other gateway, need to listen to status and will
+                if (!isset(gatewayMap[`${gatewayhash}`])) {
+                  gatewayMap[`${gatewayhash}`] = true;
+                  //check if gateway is online / offline
+                  let will_topic = '';
+                  let gatewayhashList = profile_device[i].gateway.split('-');
+                  if (gatewayhashList.length > 2) {
+                    will_topic = `will/${gatewayhash}`;
+                  } else {
+                    will_topic = `will/${md5(md5(profile_device[i].gateway.toLowerCase()))}`;
+                  }
+                  core_mqtt_subscribe(will_topic, 1, false);
+                  emitter.off(will_topic);
+                  emitter.on(will_topic, this.on_gateway_will_changed);
+
+                  //get the devices' status from gateway
+                  const status_topic = `status/${gatewayhash}`;
+                  core_mqtt_subscribe(status_topic, 1, false);
+                  emitter.off(status_topic);
+                  emitter.on(status_topic, this.on_gateway_device_changed);
+
+                  //refresh gateway
+                  setTimeout(() => {
+                    core_mqtt_publish(
+                      `cmd/${gatewayhash}`,
+                      {
+                        'command': 'Pubmsg',
+                        'function': 'bleHelper.pubmsg',
+                        'params': '',
+                        'callback': '',
+                        'raw': '',
+                      },
+                      0,
+                      false,
+                      false,
+                      false
+                    )
+                      .then(() => {})
+                      .catch((reject) => {});
+                  }, 3000);
+                }
+              }
+            }
+            this.initProfileTopic();
+          },
+          on_gateway_commands_received(data) {
+            console.log('on_gateway_commands_received', data);
+          },
+          on_gateway_will_changed(data) {
+            let is_mobmob = 1;
+            let is_mobile_gateway = 0;
+            if (data.message.includes('Offline')) {
+              is_mobmob = 0;
+            }
+            const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway().toLowerCase()));
+            for (let guid in peripheral) {
+              let p = peripheral[guid].getProp();
+              if (!p.gateway) {
+                peripheral[guid].update({
+                  'is_mobmob': 0,
+                });
+                continue;
+              }
+              if (p.gateway.trim() == '') {
+                peripheral[guid].update({
+                  'is_mobmob': 0,
+                });
+                continue;
+              }
+              let checkhash = '';
+              //console.log('p.gateway.split',p.gateway.split('-').length)
+              if (p.gateway.split('-').length <= 2) {
+                checkhash = `will/${md5(md5(p.gateway.toLowerCase()))}`;
+              } else {
+                checkhash = `will/${md5(md5(p.gateway))}`;
+                if (checkhash == data.topic) {
+                  //debugger
+                  is_mobile_gateway = 1;
+                }
+              }
+              //console.log('checkhash',checkhash)
+              if (`will/${selfgatewayhash}` == checkhash) {
+                peripheral[guid].update({
+                  'is_mobmob': 0,
+                });
+                continue;
+              }
+
+              if (checkhash != data.topic) continue;
+              peripheral[guid].update({
+                'is_mobmob': is_mobmob,
+                'is_mobile_gateway': is_mobile_gateway,
+              });
+            }
+          },
+          on_gateway_device_changed(data) {
+            let message = data.message;
+            console.log('on_gateway_device_changed', data);
+            if (isset(message) && message) {
+              let deviceObj = JSON.parse(message);
+              let deviceInfo = deviceObj.Info;
+              deviceInfo.retain = data.retain;
+              let guid = deviceInfo.Guid;
+              if (isset(guid) && guid) {
+                let deviceItem = window.peripheral[guid].prop;
+                let manufacturing_data = deviceInfo.manufacturing_data || deviceInfo.ctrl_data;
+                if (isset(deviceObj.Thermostat)) {
+                  if ((deviceItem.rssi >= 0 || !isset(deviceItem.rssi)) && isset(data.retain) && !data.retain) {
+                    //have no ble
+                    let thermostat = deviceObj.Thermostat;
+                    window.peripheral[guid].prop.status.mobmob[0][42] = thermostat.power;
+                    window.peripheral[guid].prop.status.mobmob[0][43] = thermostat.mode;
+                    window.peripheral[guid].prop.status.mobmob[0][44] = thermostat.fan;
+                    window.peripheral[guid].prop.status.mobmob[0][45] = thermostat.set_temp;
+                    window.peripheral[guid].prop.status.mobmob[0][46] = thermostat.temp;
+                    window.peripheral[guid].prop.status.mobmob[0][47] = thermostat.rh;
+                    window.peripheral[guid].prop.status.mobmob[1] =
+                      DateFormatter.format(new Date(new Date().getTime()), 'Y-m-d H:i:s') +
+                      '.' +
+                      (new Date().getMilliseconds() % 1000).toString().pad('0000');
+                    window.peripheral[guid].onPropChanged();
+                  }
+                }
+                if (isset(deviceObj.Sensor)) {
+                  let sensor = deviceObj.Sensor;
+                  if (isset(peripheral[guid])) {
+                    // peripheral[guid].onChangeGateway(deviceInfo)
+                    const iaqData = deviceObj.Sensor;
+                    let list = [];
+                    const Temperature = parseInt(iaqData.temp ? iaqData.temp : iaqData.temperature ? iaqData.temperature : 26);
+                    const Humidity = parseInt(iaqData.rh ? iaqData : iaqData.humidity ? iaqData.humidity : 0);
+                    const VOC = iaqData.voc ? iaqData.voc : iaqData.VOC ? iaqData.VOC : 0;
+                    const CO2 = iaqData.eco2 ? iaqData.eco2 : iaqData['CO2'] ? iaqData['CO2'] : 0;
+                    //const h2 = iaqData.h2;
+                    //const etoh = iaqData.etoh;
+                    const NOISE = (iaqData.db ? iaqData.db : iaqData.noise ? iaqData.noise : 0).toFixed(1);
+                    const LUX = parseInt(iaqData.lux);
+                    const PM1 = iaqData.pm1.toFixed(1);
+                    const PM2_5 = iaqData['pm2.5'].toFixed(1);
+                    const PM4 = iaqData['pm4'].toFixed(1);
+                    const PM10 = iaqData['pm10'].toFixed(1);
+                    const PRESSURE = iaqData['pressure'] ? (iaqData['pressure'] / 1000).toFixed(1) : '--';
+                    const HCHO = isset(iaqData['HCHO']) ? iaqData['HCHO'].toFixed(1) : '--';
+                    const O3 = isset(iaqData['O3']) ? iaqData['O3'].toFixed(1) : '--';
+                    const CO = isset(iaqData['CO']) ? iaqData['CO'].toFixed(1) : '--';
+                    const NOX = isset(iaqData['NOx']) ? iaqData['NOx'].toFixed(1) : '--';
+                    const score = iaqData['score'];
+                    list.push(
+                      { type: 'Temperature', value: Temperature }, //
+                      { type: 'Humidity', value: Humidity }, //
+                      { type: 'VOC', value: VOC }, //
+                      { type: 'CO2', value: CO2 }, //
+                      { type: 'NOISE', value: NOISE }, //
+                      { type: 'LUX', value: LUX }, //
+                      { type: 'PM1', value: PM1 }, //
+                      { type: 'PM2_5', value: PM2_5 },
+                      { type: 'PM4', value: PM4 },
+                      { type: 'PM10', value: PM10 },
+                      { type: 'NOX', value: NOX },
+                      { type: 'PRESSURE', value: PRESSURE },
+                      { type: 'HCHO', value: HCHO },
+                      { type: 'O3', value: O3 },
+                      { type: 'CO', value: CO }
+                    );
+                    // let score_data = window.iaq_evaluate_rule('score', score);
+                  }
+                }
+                if (isset(manufacturing_data) && manufacturing_data) {
+                  let hexModel = deviceItem.hexModel;
+                  if (hexModel == '0361' || hexModel == '0351') {
+                    //curtain motor
+                    //debugger
+                    if (isset(peripheral[guid])) {
+                      peripheral[guid].onChangeGateway(deviceInfo);
+                    }
+                  } else if (hexModel == '0348') {
+                    //music player
+                    let commandData = manufacturing_data.substring(2, 4);
+                    const decimal = parseInt(commandData, 16);
+                    let binary = decimal.toString(2);
+                    while (binary.length < 8) {
+                      binary = '0' + binary;
+                    }
+                    let iconStr = 'phone_iphone';
+                    if (binary[0] == 1) {
+                      //tv
+                      iconStr = 'tv';
+                    } else {
+                      //phone
+                      iconStr = 'phone_iphone';
+                    }
+                    $update();
+                  } else if (hexModel == '0346') {
+                    //RCU
+                    //return
+                    //update the virtual status
+                    //"97000101000201000302bfbf040200000502000011030400000000120401801305080010000000000000"
+                    //"97000101000201000302ffff0402000005020000110304000000001204018013051002006000000000000000000000000000"
+                    let virtualDataList = manufacturing_data.split('130510');
+                    let rcuStatus = virtualDataList[1];
+                    let statusByteList = this.splitBytesAndConvertToBinaryArray(rcuStatus);
+                    console.log('statusByteList', statusByteList);
+                    //update the virtual id
+                    this.topDeviceList.forEach((item) => {
+                      if (item.device == guid) {
+                        //item.device_status = statusByteList[item.config - 1];
+                        if (item.config) {
+                          if (item.config.length < 4) {
+                            let this_index = parseInt(item.config, 16);
+                            item.device_status = statusByteList[this_index - 1];
+                            //check if have the clen
+                            if (isset(item.clean_status)) {
+                              let this_clean_index = parseInt(item.clean_virtual_id, 16);
+                              item.clean_status = statusByteList[this_clean_index - 1];
+                            }
+                          }
+                        }
+                      }
+                    });
+                    //check the anthor device
+                    this.anthorDeviceList.forEach((item) => {
+                      if (item.device == guid) {
+                        if (item.config) {
+                          if (item.config.length < 4) {
+                            let this_index = parseInt(item.config, 16);
+                            item.device_status = statusByteList[this_index - 1];
+                            //check if have the clen
+                            // if (isset(item.clean_status)) {
+                            //   let this_clean_index = parseInt(item.clean_virtual_id, 16);
+                            //   item.clean_status = statusByteList[this_clean_index - 1];
+                            // }
+                          }
+                        }
+                      }
+                    });
+                    // $(`.home-scanned-peripheral[guid="${guid}"][button_group="SCENE MUTIWAY ONOFF GANG1"]`).each(function (item) {
+                    //   let config = $(this).attr('config') * 1;
+                    //   $(this)
+                    //     .find('.rcu-virtual-button')
+                    //     .attr('ref', statusByteList[config - 1]);
+                    // });
+                    //randar
+                    let inputDataList = manufacturing_data.split('110304');
+                    let inputStatus = inputDataList[1].substring(0, 8);
+                    //console.log("inputDataList",inputDataList)
+                    //console.log("inputStatus",inputStatus);
+                    let inputStatusByteList = this.splitBytesAndConvertToBinaryArray(inputStatus);
+                    //input status
+                    if (isset(data.retain) && !data.retain) {
+                      //console.log("inputStatusByteList",inputStatusByteList)
+                      inputStatusByteList.forEach((item, index) => {
+                        let this_status = item > 0 ? 1 : 0;
+                        window.peripheral[guid].prop.status.mobmob[0][50 + index] = this_status;
+                      });
+                      window.peripheral[guid].prop.status.mobmob[1] = deviceInfo.date;
+                      window.peripheral[guid].onPropChanged();
+                    }
+                    let rcuDataList = this.tindyRcuData(manufacturing_data);
+                    //tindy the scene
+                    let trigger_status = deviceObj.Scene;
+                    if (trigger_status) {
+                      console.log('trigger_status', trigger_status);
+                      let obj_map = window.ble_rcu_input_render(trigger_status['trigger_status']);
+                      //change the radar status
+                      console.log('obj_map', obj_map);
+                      this.topDeviceList.forEach((item) => {
+                        if (item.device == guid) {
+                          if (isset(item.config)) {
+                            //find the scene_id=14&enable=true
+                            if (item.config.includes('scene_id=')) {
+                              let scene_id = item.config.split('scene_id=')[1].split('&')[0];
+                              let scene_id_16 = parseInt(scene_id).toString(16).pad('00').toUpperCase();
+                              console.log('scene_id_16', scene_id_16);
+                              let scene_status = obj_map[scene_id_16];
+                              console.log('scene_status', scene_status);
+                              item.radar_status = scene_status;
+                            }
+                          }
+                        }
+                      });
+                    }
+                    //overflow the status
+                    const indexMap = {
+                      '01': [32, 33],
+                      '02': [34, 35],
+                      '03': [36, 37],
+                      '04': [38, 39],
+                      '05': [40, 41],
+                    };
+                    const indexOnoffMap = {
+                      '01': [12, 13, 14, 15],
+                      '02': [16, 17, 18, 19],
+                      '03': [20, 21, 22, 23],
+                      '04': [24, 25, 26, 27],
+                      '05': [28, 29, 30, 31],
+                    };
+                    rcuDataList.forEach((item) => {
+                      if (item.type === '02' && item.index in indexMap) {
+                        const [firstIndex, secondIndex] = indexMap[item.index];
+                        deviceItem.status['mobmob'][0][firstIndex] = parseInt(item.data.substring(0, 2), 16);
+                        deviceItem.status['mobmob'][0][secondIndex] = parseInt(item.data.substring(2, 4), 16);
+                      }
+                      if (item.type === '01' && item.index in indexMap) {
+                        let this_ref = parseInt(item.data, 16).toString(2).pad('0000');
+                        //debugger
+                        const [firstIndex, secondIndex, thirdIndex, flourIndex] = indexOnoffMap[item.index];
+                        deviceItem.status['mobmob'][0][firstIndex] = this_ref[3];
+                        deviceItem.status['mobmob'][0][secondIndex] = this_ref[2];
+                        deviceItem.status['mobmob'][0][thirdIndex] = this_ref[1];
+                        deviceItem.status['mobmob'][0][flourIndex] = this_ref[0];
+                      }
+                    });
+                    deviceItem.status['mobmob'][1] = deviceInfo.date;
+                    //if this gateway status date > contorl status date,overflow
+                    if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]) {
+                      deviceItem.status['control'][0] = deviceItem.status['mobmob'][0];
+                      // deviceItem.status['control'][1] = deviceInfo.date;
+                      //update the last value
+                      for (let i = 0; i < deviceItem.status.last[0].length; i++) {
+                        if (deviceItem.status['mobmob'][0][i] > 0) {
+                          deviceItem.status.last[0][i] = deviceItem.status['mobmob'][0][i];
+                        }
+                      }
+
+                      //change ui
+                      rcuDataList.forEach((item) => {
+                        this.anthorDeviceList.forEach((kitem) => {
+                          let button_group = kitem.device_button_group;
+                          let slot_index = kitem.config;
+                          if (
+                            button_group.startsWith('RCU DIMMING') &&
+                            item.type == '02' &&
+                            item.index == slot_index &&
+                            kitem.device == guid
+                          ) {
+                            let this_gang = parseInt(button_group.replace('RCU DIMMING', ''));
+                            let dimming_gang = this_gang - 2 * (parseInt(slot_index) - 1);
+                            let this_ref = ``;
+                            this_ref =
+                              dimming_gang == 1 ? parseInt(item.data.substring(0, 2), 16) : parseInt(item.data.substring(2, 4), 16);
+                            let gangs = window.bleHelper.getGangId(button_group) * 1;
+
+                            let device_status = window.peripheral[guid].getGangStatus(button_group);
+                            kitem.device_status = device_status;
+                            let range_key = `range_box_${kitem.device}_${kitem.device_button_group}`;
+                            if (isset(this.rangeList[range_key])) {
+                              const v = Math.ceil(((parseInt(device_status) * 1.0) / 255.0) * 100.0) || 0;
+                              this.deviceControlLimit[kitem.device] = false;
+                              deviceItem.click_button = true;
+                              this.rangeList[range_key].setValue(v);
+                              deviceItem.click_button = null;
+                              this.deviceControlLimit[kitem.device] = true;
+                            }
+                          } else if (
+                            button_group.startsWith('RCU ONOFF GANG') &&
+                            item.device == guid &&
+                            item.type == '01' &&
+                            item.index == slot_index
+                          ) {
+                            // let this_gang = parseInt(button_group.replace("RCU ONOFF GANG", ""));
+                            // let this_ref = ``;
+                            // let class_gang = bleHelper.getGangId(kitem.device_button_group);
+                            // this_ref =  parseInt(item.data, 16).toString(2).pad("00");
+                          }
+                        });
+                      });
+                    }
+                  }
+                }
+                //gateways device
+                if (isset(deviceObj.Device)) {
+                  let mobmobDevices = deviceObj.Device;
+                  for (let thisGuid in mobmobDevices) {
+                    if (isset(peripheral[thisGuid])) {
+                      //get the default connect
+                      let profile_devices = cloneDeep(erp.info.profile.profile_device);
+                      profile_devices.forEach((item) => {
+                        if (item.device == thisGuid) {
+                          mobmobDevices[thisGuid].default_connect = item.default_connect;
+                        }
+                      });
+                      let deviceItme = peripheral[thisGuid].prop;
+                      let manufacturing_data = deviceItme.manufacturing_data;
+                      //if old curtain motor,don't change the gateway
+                      if (mobmobDevices[thisGuid].hexModel == '0179') {
+                        continue;
+                      }
+                      peripheral[thisGuid].onChangeGateway(mobmobDevices[thisGuid]);
+                    }
+                  }
+                }
+              }
+            }
+          },
+          splitBytesAndConvertToBinaryArray(character) {
+            let bytes = character.match(/.{1,2}/g);
+            let binaryArray = bytes
+              .map((byte) => {
+                let binaryByte = (parseInt(byte, 16) >>> 0).toString(2).padStart(8, '0');
+                return binaryByte.split('').map(Number);
+              })
+              .flat();
+            return binaryArray;
+          },
+          tindyRcuData(str) {
+            let result = [];
+            let i = 4;
+            while (i < str.length) {
+              let index = str.substring(i, i + 2);
+              let type = str.substring(i + 2, i + 4);
+              let dataLength = type === '01' ? 2 : type === '02' ? 4 : 0;
+              let data = str.substring(i + 4, i + 4 + dataLength);
+
+              result.push({
+                index,
+                type,
+                data,
+              });
+
+              if (index === '05') break;
+
+              i += 4 + dataLength;
+            }
+            return result;
+          },
+          //init gateway end
+
+          //init the profile topic
+          async initProfileTopic() {
+            if (!isset(erp['checksum'])) {
+              erp['checksum'] = {};
+            }
+            if (isset(erp.info.profile)) {
+              const profilehash = md5(md5(erp.info.profile.name));
+              const cmd_topic = `status/${profilehash}`;
+              core_mqtt_subscribe(cmd_topic, 0, false);
+              emitter.off(cmd_topic);
+              emitter.on(cmd_topic, this.on_profile_topic_received);
+            }
+          },
+          on_profile_topic_received(data) {
+            let message = data.message;
+            if (isset(message) && message) {
+              let deviceObj = JSON.parse(message);
+              if (isset(erp.checksum['profile_mqtt']) && erp.checksum['profile_mqtt'] == md5(JSON.stringify(deviceObj))) {
+                return;
+              }
+              erp.checksum['profile_mqtt'] = md5(JSON.stringify(deviceObj));
+
+              for (let guid in deviceObj.Device) {
+                let p = {
+                  guid: guid,
+                  mac_address: deviceObj.Device[guid].mac_address,
+                  status: {
+                    mqtt: deviceObj.Device[guid].status,
+                  },
+                };
+                if (!isset(peripheral[guid])) {
+                  peripheral[guid] = new Peripheral(p);
+                } else {
+                  if (peripheral[guid].getProp().status.mqtt[1] < p.status.mqtt[1]) {
+                    peripheral[guid].update(p);
+                  }
+                }
+              }
+
+              for (let subdevice_name in deviceObj.Virtual) {
+                let guid = deviceObj.Virtual[subdevice_name].guid;
+
+                if (!isset(peripheral[guid])) {
+                  continue;
+                }
+
+                if (
+                  !isset(peripheral[guid].getProp().config[subdevice_name]) ||
+                  !isset(peripheral[guid].getProp().config[subdevice_name].mqtt)
+                ) {
+                  peripheral[guid].setMqttGangConfig(subdevice_name, deviceObj.Virtual[subdevice_name].config);
+                  continue;
+                }
+
+                if (peripheral[guid].getProp().config[subdevice_name].mqtt[1] >= deviceObj.Virtual[subdevice_name].config[1]) {
+                  continue;
+                }
+
+                peripheral[guid].setMqttGangConfig(subdevice_name, deviceObj.Virtual[subdevice_name].config);
+              }
+            }
+          },
+          async updateMoreProfileSubdevice(nameList) {
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            nameList.forEach((kitem) => {
+              let subdevice = subdevices.find((item) => item.name == kitem.name);
+              let keys = Object.keys(kitem);
+              keys.forEach((key) => {
+                let value = kitem[key];
+                subdevice[key] = value;
+              });
+            });
+            return new Promise((resolve, reject) => {
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
+              http2
+                .request(url, {
+                  method: 'PUT',
+                  data: {
+                    profile_subdevice: subdevices,
+                  },
+                })
+                .then((res) => {
+                  resolve(res);
+                })
+                .catch((err) => {
+                  reject(err);
+                });
+            });
+          },
+          //init profile topic end
+          async updateProfileSubdevice(name, obj) {
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let subdevice = subdevices.find((item) => item.name == name);
+            let keys = Object.keys(obj);
+            keys.forEach((key) => {
+              let value = obj[key];
+              subdevice[key] = value;
+            });
+            // console.log('subdevice', subdevice);
+            return new Promise((resolve, reject) => {
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
+              http2
+                .request(url, {
+                  method: 'PUT',
+                  data: {
+                    profile_subdevice: subdevices,
+                  },
+                })
+                .then((res) => {
+                  resolve(res);
+                })
+                .catch((err) => {
+                  reject(err);
+                });
+            });
+          },
+          tvControlParent(obj) {
+            console.log('obj', obj);
+            let { name, command, command_type } = obj;
+            let guid = '';
+            let subdevice = this.tvAndThermostatList.find((item) => item.name == name);
+            if (subdevice) {
+              guid = subdevice.device;
+            }
+            debugger
+            window.peripheral[guid]
+              .doHdmiCec([
+                {
+                  gang: 1,
+                  command: command,
+                },
+              ])
+              .then(async () => {
+                let control_source = await bleHelper.getControlSource(guid);
+                let device_type_map = {
+                  command_type: command_type,
+                  device_type: 'YO103',
+                  command: command,
+                };
+                window.upload_device_control_log(guid, 1, control_source, name, device_type_map);
+              })
+              .catch((error) => {
+                if (error == 7200) {
+                  erp.script.iot_entry_class_password_verify(guid, name).then(() => {});
+                } else {
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              });
+          },
+          onoffClickParent(obj) {
+            let { name, status } = obj;
+            console.log('obj', obj);
+            let subdevice = this.anthorDeviceList.find((item) => item.name == name);
+            if (subdevice) {
+              subdevice.device_status = status;
+            }
+            //send command to the device
+            let guid = subdevice.device;
+            window.peripheral[guid]
+              .rcuOnoff([
+                {
+                  gang: bleHelper.getGangId(subdevice.device_button_group),
+                  on: status,
+                },
+              ])
+              .then(async () => {
+                let control_source = await bleHelper.getControlSource(guid);
+                window.upload_device_control_log(guid, status, control_source, name);
+              })
+              .catch((error) => {
+                if (error == 7200) {
+                  erp.script.iot_entry_class_password_verify(guid, name).then(() => {});
+                } else {
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              });
+          },
+          changeAirModeParent(obj) {
+            console.log('obj', obj);
+            //1 mode , 2 speed , 3 power
+            let { name, config, type } = obj;
+            let guid = '';
+            let subdevice = this.tvAndThermostatList.find((item) => item.name == name);
+            if (subdevice) {
+              guid = subdevice.device;
+              subdevice.device_attachment_status = config;
+              subdevice.device_status = 1;
+            }
+            let valueList = config.split(',');
+            let mode_value = valueList[1];
+            let speed_value = valueList[2];
+            let power_value = valueList[0];
+            let command = '';
+            let command_type = '';
+            let gang = 42;
+            let post_value = '';
+            if (type == 1) {
+              command = `9404000001${parseInt(mode_value).toString(16).pad('00')}`;
+              command_type = 'mode';
+              post_value = mode_value;
+            } else if (type == 2) {
+              command = `9405000001${parseInt(speed_value).toString(16).pad('00')}`;
+              command_type = 'speed';
+              post_value = speed_value;
+            } else if (type == 3) {
+              command = `9403000001${parseInt(power_value).toString(16).pad('00')}`;
+              command_type = 'ONOFF';
+              post_value = power_value;
+            }
+            window.peripheral[guid]
+              .thermostat([
+                {
+                  gang: gang,
+                  value: post_value,
+                  command: command,
+                },
+              ])
+              .then(async () => {
+                let control_source = await bleHelper.getControlSource(guid);
+                let device_type_map = {
+                  command_type: command_type,
+                  device_attachment_status: config,
+                  device_type: subdevice.device_model,
+                  command: command,
+                };
+                //window.upload_device_control_log(guid, 1, control_source, name, device_type_map);
+              })
+              .catch((error) => {
+                if (error == 7200) {
+                  erp.script.iot_entry_class_password_verify(guid, name).then(() => {});
+                } else {
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              });
+          },
+          changeAirTempParent(obj) {
+            console.log('obj', obj);
+            //type 1 is decrease, 2 is increase
+            let { name, config, type } = obj;
+            let guid = '';
+            let post_status = true;
+            let subdevice = this.tvAndThermostatList.find((item) => item.name == name);
+            if (subdevice) {
+              guid = subdevice.device;
+            }
+            let valueList = config.split(',');
+            let temp = valueList[3];
+            let mode_value = valueList[1];
+
+            //send command to the device
+            let this_gang = 42;
+            let post_value = ``;
+            let devices = cloneDeep(erp.info.device);
+            let device = devices[guid];
+            let mode_seetting = '';
+            let speed_setting = '';
+            let setpoint_limit_lower_cooling = '';
+            let setpoint_limit_upper_cooling = '';
+            let setpoint_limit_lower_heat = '';
+            let setpoint_limit_upper_heat = '';
+            if (isset(device)) {
+              let list = device.settings;
+              list.forEach((item) => {
+                if (item.setting_type === 'mode_selection') {
+                  mode_seetting = item.setting;
+                }
+                if (item.setting_type === 'fan_speed') {
+                  speed_setting = item.setting;
+                }
+                if (item.setting_type === 'setpoint_limit_lower') {
+                  setpoint_limit_lower_cooling = item.setting;
+                }
+                if (item.setting_type === 'setpoint_limit_upper') {
+                  setpoint_limit_upper_cooling = item.setting;
+                }
+                if (item.setting_type === 'setpoint_limit_lower_heat') {
+                  setpoint_limit_lower_heat = item.setting;
+                }
+                if (item.setting_type === 'setpoint_limit_upper_heat') {
+                  setpoint_limit_upper_heat = item.setting;
+                }
+              });
+            }
+            //init the lastClickTime
+            if (!isset(window.lastClickTime[guid])) {
+              window.lastClickTime[guid] = 0;
+            }
+            if (mode_value == 2) {
+              //cooling
+              if (setpoint_limit_lower_cooling && type == 1) {
+                if (parseInt(temp) == parseInt(setpoint_limit_lower_cooling) - 1) {
+                  post_status = false;
+                }
+              } else if (setpoint_limit_upper_cooling && type == 2) {
+                if (parseInt(temp) == parseInt(setpoint_limit_upper_cooling) + 1) {
+                  post_status = false;
+                }
+              } else {
+                if (temp == 4) {
+                  post_status = false;
+                }
+              }
+            } else if (mode_value == 1) {
+              //heating
+              if (setpoint_limit_lower_heat && type == 1) {
+                if (parseInt(temp) == parseInt(setpoint_limit_lower_heat) - 1) {
+                  post_status = false;
+                }
+              } else if (setpoint_limit_upper_heat && type == 2) {
+                if (parseInt(temp) == parseInt(setpoint_limit_upper_heat) + 1) {
+                  post_status = false;
+                }
+              } else {
+                if (temp == 33) {
+                  post_status = false;
+                }
+              }
+            } else {
+              if (temp == 4 || temp == 33) {
+                post_status = false;
+              }
+            }
+            if (!post_status) {
+              return;
+            }
+            let currentTime = new Date().getTime();
+            // if (currentTime - window.lastClickTime[guid] < 1500 || window.lastClickTime[guid] == 0) {
+            //   if (subdevice) {
+            //     subdevice.device_attachment_status = config;
+            //     subdevice.device_status = 1;
+            //   }
+            //   window.lastClickTime[guid] = currentTime;
+            //   if (timeoutId) {
+            //     window.peripheral[guid].prop.status.control[0][45] = temp;
+            //     window.peripheral[guid].prop.status.control[1] =
+            //       DateFormatter.format(new Date(new Date().getTime() + 15000), 'Y-m-d H:i:s') +
+            //       '.' +
+            //       (new Date().getMilliseconds() % 1000).toString().pad('0000');
+            //     clearTimeout(timeoutId);
+            //   }
+            //   timeoutId = setTimeout(() => {}, 1500);
+            //   return;
+            // }
+            if (subdevice) {
+              subdevice.device_attachment_status = config;
+              subdevice.device_status = 1;
+            }
+            window.peripheral[guid]
+              .thermostat([
+                {
+                  gang: 45,
+                  value: temp,
+                  command: `9406000001${parseInt(temp).toString(16).pad('00')}`,
+                },
+              ])
+              .then(async () => {
+                let control_source = await bleHelper.getControlSource(guid);
+                let device_type_map = {
+                  command_type: type == 1 ? 'reduce' : 'add',
+                  device_attachment_status: config,
+                  device_type: device.device_model,
+                  command: `9406000001${parseInt(temp).toString(16).pad('00')}`,
+                };
+                window.upload_device_control_log(guid, 1, control_source, name, device_type_map);
+              })
+              .catch((err) => {
+                if (err == 7200) {
+                  erp.script.iot_entry_class_password_verify(guid, name).then(() => {});
+                } else {
+                  app.dialog.alert(_(erp.get_log_description(err)));
+                }
+              });
+          },
+          async changeSceneIdParent(name) {
+            console.log(name);
+            let subdevice = this.anthorDeviceList.find((item) => item.name == name);
+            let guid = '';
+            let sceneId = '';
+            if(subdevice){
+              let config = subdevice.config;
+              //find the scene id
+              let scenes = cloneDeep(erp.info.scene)
+              for(let i in scenes){
+                let scene_virtual_button = scenes[i].scene_virtual_button;
+                  let scene_device_location = scenes[i].scene_device_location;
+                  for(let j in scene_virtual_button){
+                    if(parseInt(scene_virtual_button[j].virtual_button_id)  == parseInt(config,16) ){
+                      let device_location_map = scene_device_location.find((item) => item.device == subdevice.device);
+                      sceneId = device_location_map.storage_id;
+                      break;
+                    }
+                  }
+              }
+              console.log(sceneId);
+              if(sceneId){
+                let command = `8f0200${parseInt(sceneId).toString(16).pad("00")}`;
+                await window.peripheral[guid].rcuDoScene([
+                  {
+                    gang: 1,
+                    command: command,
+                  },
+                ]);
+              }
+            }
+          },
+          async changeVirtualIdParent(obj) {
+            let { name, status, type } = obj;
+            let guid = '';
+            let v_id = '';
+            let subdevice = null;
+            if (type == 1) {
+              subdevice = this.topDeviceList.find((item) => item.name == name);
+            } else {
+              subdevice = this.anthorDeviceList.find((item) => item.name == name);
+            }
+            if (subdevice) {
+              guid = subdevice.device;
+              v_id = subdevice.config;
+              subdevice.device_status = status;
+            }
+
+            try {
+              let command = `972103${v_id}${status ? '01' : '00'}`;
+              await window.peripheral[guid].rcuDoScene([
+                {
+                  gang: 1,
+                  command: command,
+                },
+              ]);
+              //update the profile subdevice
+              await this.updateProfileSubdevice(name, subdevice);
+            } catch (error) {
+              console.log('error', error);
+            }
+            await this.updateProfileSubdevice(name, {
+              status: `${status ? '1' : '0'}`,
+            });
+          },
+          async changeDndParent(obj) {
+            console.log('obj', obj);
+            let { name, status, type } = obj;
+            let v_id = '';
+            let guid = '';
+            let clean_name = '';
+            this.topDeviceList.forEach((item) => {
+              if (item.name == name) {
+                v_id = item.config;
+                clean_name = item.clean_name;
+                if (type == 2) {
+                  //clean
+                  v_id = item.clean_virtual_id;
+                }
+                guid = item.device;
+                if (type == 1) {
+                  //dnd
+                  item.device_status = status;
+                  item.clean_status = 0;
+                } else {
+                  //clean
+                  item.clean_status = status;
+                  item.device_status = 0;
+                }
+              }
+            });
+            //send the command to the rcu
+            let command = `972103${v_id}${status ? '01' : '00'}`;
+            console.log('command', command);
+            try {
+              await window.peripheral[guid].rcuDoScene([
+                {
+                  gang: 1,
+                  command: command,
+                },
+              ]);
+              //update the profile subdevice
+              if (type == 2) {
+                await this.updateMoreProfileSubdevice([
+                  {
+                    name: name,
+                    status: `0`,
+                  },
+                  {
+                    name: clean_name,
+                    status: `${status ? '1' : '0'}`,
+                  },
+                ]);
+              } else {
+                await this.updateMoreProfileSubdevice([
+                  {
+                    name: name,
+                    status: `${status ? '1' : '0'}`,
+                  },
+                  {
+                    name: clean_name,
+                    status: `0`,
+                  },
+                ]);
+              }
+            } catch (err) {
+              console.log('err', err);
+            }
+          },
+          //this is the child change the scene enable
+          async changeSceneEnableParent(obj) {
+            let { name, enable } = obj;
+            let scene_id = '';
+            let guid = '';
+            this.topDeviceList.forEach((item) => {
+              if (item.name == name) {
+                item.enable = enable;
+                scene_id = item.scene_id;
+                guid = item.device;
+              }
+            });
+            //send the command to the rcu
+            //8F2D0000+index+01/00  scene disable/enable
+            let command = `8f2d0000${parseInt(scene_id).toString(16).pad('00')}${enable ? '00' : '01'}`;
+            console.log('command', command);
+            try {
+              await window.peripheral[guid].rcuDoScene([
+                {
+                  gang: 1,
+                  command: command,
+                },
+              ]);
+              //update the profile subdevice
+              await this.updateProfileSubdevice(name, {
+                config: `scene_id=${scene_id}&enable=${enable}`,
+              });
+            } catch (err) {
+              console.log('err', err);
+            }
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+      emitter.off('on_peripheral_changed');
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .guest-mode-item {
+    padding: 4px;
+  }
+  .btn-bg {
+    background: var(--f7-theme-color) !important;
+    color: #fff !important;
+  }
+  .show-item {
+    width: 49%;
+    background: var(--f7-block-strong-bg-color);
+    border-radius: 15px;
+    overflow: hidden;
+    /* min-height: 70px; */
+    margin-bottom: 6px;
+    margin-right: 1%;
+  }
+
+  .page-content .customSwiper-a-l {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .page-content .customSwiper-a-l > a {
+    display: block;
+    width: 50px;
+    height: 50px;
+  }
+
+  .page-content .show-item li {
+    height: 100%;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .page-content .show-item .button.button-raised {
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    line-height: 14px;
+    /* margin: 0 1px; */
+  }
+
+  .page-content .iconbtn {
+    /* width: 50%; */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .page-content .buttonStatus {
+    height: 100%;
+    position: relative;
+  }
+
+  .page-content .buttonStatus .pie-chart ~ i {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+  }
+
+  .page-content .buttonStatus .button {
+    overflow: visible;
+  }
+
+  .page-content .buttonStatus .range-slider ~ i {
+    position: absolute;
+    bottom: 14px;
+    right: 50%;
+    margin-right: -18px;
+    color: #8e8d93;
+    z-index: 100;
+    font-size: 36px;
+  }
+
+  .page-content .buttonStatus .range-slider {
+    width: 24vw;
+    /* height: 90%; */
+  }
+
+  .page-content .buttonStatus .range-slider .range-bar {
+    border-radius: 10px;
+    z-index: 10;
+    width: 24vw;
+    left: 0;
+    background-color: #fff;
+  }
+
+  /* .page-content .buttonStatus .range-slider .range-bar .range-bar-active {
+      background: rgba(0, 0, 0, 0.8);
+    } */
+
+  .page-content .buttonStatus .range-slider .range-knob-wrap {
+    /* display: none; */
+    height: 0;
+  }
+
+  .page-content .buttonStatus .range-slider .range-knob {
+    display: none;
+  }
+
+  .page-content .buttonStatus .range-slider .range-knob-active-state .range-knob {
+    display: none;
+  }
+
+  .page-content .buttonStatus .range-slider .range-knob-wrap.range-knob-active-state {
+    /* display: none; */
+    height: 10px;
+  }
+
+  .page-content .buttonStatus .range-knob-wrap {
+    z-index: 110;
+  }
+
+  .page-content .buttonStatus .range-knob-active-state .range-knob-label {
+    width: var(--f7-range-label-size);
+  }
+
+  .page-content .buttonStatus .stepper > div {
+    width: 30px;
+  }
+
+  .page-content .buttonStatus .button {
+    display: block;
+    margin: 0;
+  }
+
+  .page-content .buttonStatus .button i {
+    vertical-align: middle;
+  }
+
+  .page-content .buttonStatus img.rangeIcon {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    margin-left: -20px;
+    z-index: 101;
+  }
+
+  .page-content .buttonStatus img.iconImgBtn {
+    width: 36px;
+    height: 36px;
+    vertical-align: middle;
+  }
+
+  .page-content .show-item .button.button-raised p.showValue {
+    line-height: 30px !important;
+  }
+
+  /* .page-content .show-item . */
+
+  .page-content .onoffbtn {
+    margin-right: 20px;
+  }
+
+  .dndcontrol {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    /* height: 140px; */
+    width: 100%;
+    position: relative;
+    top: 0;
+    left: 0px;
+    right: 0 !important;
+  }
+
+  .page-content .button.TVcontrol.circle {
+    width: 120px;
+    height: 120px;
+
+    position: relative;
+  }
+
+  .TVcontrol .tvbtn {
+    position: absolute;
+    font-size: 18px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .TVcontrol .tvup {
+    top: -8px;
+    left: 42px;
+  }
+
+  .TVcontrol .tvdown {
+    bottom: 2px;
+    left: 42px;
+  }
+
+  .TVcontrol .tvleft {
+    top: 34px;
+    left: -8px;
+  }
+
+  .TVcontrol .tvright {
+    top: 34px;
+    right: -8px;
+  }
+
+  .page-content .TVcontrol .tvok.button {
+    width: 40px;
+    height: 40px;
+    top: 38px;
+    left: 40px;
+  }
+
+  .page-content .TVcontrol .tvok.button span {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    line-height: 40px;
+  }
+
+  .rctrolItem {
+    position: relative;
+  }
+
+  .ACcontrol {
+    display: flex;
+    align-items: center;
+    width: 100px;
+    text-align: center;
+    color: #888;
+  }
+
+  .ACButton {
+    flex-direction: row;
+  }
+
+  .ACButton > div {
+    width: 50%;
+  }
+
+  .temperature {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .temperature > div {
+    width: 40px;
+    height: 40px;
+  }
+
+  .temperature .thermostat {
+    line-height: 50px;
+    width: 80px;
+  }
+
+  .temperature .thermostat .material-icons {
+    /* line-height: 50px; */
+    vertical-align: middle;
+  }
+
+  .windspeed {
+    display: flex;
+    justify-content: center;
+  }
+
+  .windspeed > div {
+    width: 120px;
+    height: 40px;
+  }
+
+  .page-content .TVcontrol.button.button-rased {
+    width: 50%;
+    height: 100%;
+  }
+  .off_flag > .button.onoff-item {
+    background-color: var(--f7-block-strong-bg-color);
+    color: #8e8d93;
+    border-color: #8e8d93;
+  }
+  .off_flag > .button.onoff-item:after {
+    content: 'OFF';
+  }
+  .on_flag > .button.onoff-item {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .on_flag > .button.onoff-item:after {
+    content: 'ON';
+  }
+  .radar-container {
+    position: relative;
+    width: 60px;
+    height: 60px;
+  }
+
+  .radar-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* background-color: rgba(16, 52, 84, 0.2); */
+    overflow: hidden;
+  }
+
+  .detected .radar-circle {
+    box-shadow: 0 0 5px rgba(26, 215, 192, 0.5);
+  }
+
+  .not-detected .radar-circle {
+    box-shadow: 0 0 5px rgba(215, 26, 26, 0.5);
+  }
+
+  .radar-scan {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform-origin: 0 0;
+    animation: scan 4s linear infinite;
+  }
+
+  .detected .radar-scan {
+    background: linear-gradient(90deg, rgba(26, 215, 192, 0.8) 0%, rgba(26, 215, 192, 0.1) 50%, transparent 100%);
+  }
+
+  .not-detected .radar-scan {
+    background: linear-gradient(90deg, rgba(215, 26, 26, 0.8) 0%, rgba(215, 26, 26, 0.1) 50%, transparent 100%);
+  }
+
+  .ping {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: transparent;
+    border: 1px solid rgba(26, 215, 192, 0.7);
+    opacity: 0;
+    transform: scale(0.1);
+  }
+
+  .detected .ping {
+    animation: ping 2s ease-out infinite;
+    background-color: rgba(26, 215, 192, 0.1);
+  }
+
+  .not-detected .ping {
+    animation: ping 4s ease-out infinite;
+    border-color: rgba(215, 26, 26, 0.7);
+  }
+
+  .center-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: rgba(26, 215, 192, 1);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .detected .center-dot {
+    background-color: rgba(26, 215, 192, 1);
+    box-shadow: 0 0 8px 2px rgba(26, 215, 192, 0.8);
+  }
+
+  .not-detected .center-dot {
+    background-color: rgba(215, 26, 26, 1);
+    box-shadow: 0 0 8px 2px rgba(215, 26, 26, 0.8);
+  }
+
+  /* Multiple target blips positioned with CSS */
+  .target-blips {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+  }
+
+  .detected .target-blips {
+    opacity: 1;
+  }
+
+  .blip {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background-color: rgba(26, 215, 192, 1);
+    border-radius: 50%;
+    box-shadow: 0 0 5px 2px rgba(26, 215, 192, 0.8);
+  }
+
+  .blip-1 {
+    top: 30%;
+    left: 60%;
+    animation: blip-pulse 2.1s ease-in-out infinite;
+  }
+
+  .blip-2 {
+    top: 65%;
+    left: 40%;
+    animation: blip-pulse 1.7s ease-in-out infinite 0.5s;
+  }
+
+  .blip-3 {
+    top: 45%;
+    left: 75%;
+    animation: blip-pulse 2.3s ease-in-out infinite 0.3s;
+  }
+
+  .status-text {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: monospace;
+    font-size: 10px;
+    color: rgba(26, 215, 192, 1);
+    white-space: nowrap;
+  }
+
+  .not-detected .status-text {
+    color: rgba(215, 26, 26, 1);
+  }
+
+  .detected .status-text::after {
+    content: 'Person Detected';
+  }
+
+  .not-detected .status-text::after {
+    content: 'No Detection';
+  }
+
+  @keyframes scan {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes ping {
+    0% {
+      opacity: 1;
+      transform: scale(0.1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes blip-pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.5);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  .tabbar .tab-link-highlight {
+    bottom: 0;
+    display: none;
+  }
+  .tabbar .tab-link-active,
+  .tabbar-labels .tab-link-active {
+    background-color: var(--f7-button-fill-bg-color, var(--f7-theme-color));
+    color: #fff;
+  }
+  .list ul:after{
+    content:none;
+  }
+  .list ul:before{
+    content:none;
+  }
+</style>

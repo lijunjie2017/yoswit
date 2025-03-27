@@ -750,6 +750,42 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Radar Distance";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">light_mode</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == '' %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="/mobile-app/radar-distance-limit?guid={{guid}}&subdevice={{subdevice}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Linked Virtual Id";
     setting_label_template[setting_label] = `
         <div 
@@ -777,6 +813,82 @@ window.initSettingTemplate = ()=>{
                         <p class="setting-value text-muted size-12"></p>
                         {% else %}
                         <p class="setting-value text-muted size-12">{{ _(link_virtual_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Link Scene On";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_link_scene_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="link_scene_id" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">wb_iridescent</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == '' %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Link Scene Off";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_link_scene_off_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="link_scene_off_id" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">wb_iridescent</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == '' %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
                         {% endif %}
                     </div>
                     <div class="col-auto">
@@ -1429,6 +1541,29 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "IR Debug";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" ref="{{ device }}" init-func="iot_mode_setup_firmware_upgrade_auto_init" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">keyboard_command_key</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <!-- href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Firmware_Upgrade_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" -->
+                        <a href="/mobile-app/ir-test-page?subdevice={{ profile_subdevice_name }}&guid={{guid}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Catch Log";
     setting_label_template[setting_label] = `
         <div class="card margin-bottom-half mx-0 my-3" ref="{{ device }}" init-func="iot_mode_setup_firmware_upgrade_auto_init" dependencies="{{self_setting_data.dependencies}}">
@@ -1508,6 +1643,62 @@ window.initSettingTemplate = ()=>{
                     </div>
                     <div class="col-auto">
                         <a href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Thermostat_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Setpoint Limit";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        >
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">device_thermostat</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/mobile-app/ir-setpoint-limit?guid={{device}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Volume Limit";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        >
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">device_thermostat</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/mobile-app/music-volume-limit?guid={{device}}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>

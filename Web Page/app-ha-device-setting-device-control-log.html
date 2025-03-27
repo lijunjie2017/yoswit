@@ -13,7 +13,13 @@
       </div>
     </div>
 
-    <div class="page-content ptr-content infinite-scroll-content infinite-scroll-top" data-ptr-mousewheel="true" data-infinite-distance="50" @ptr:refresh="${refreshFun}" @infinite=${loadMore}>
+    <div
+      class="page-content ptr-content infinite-scroll-content"
+      data-ptr-mousewheel="true"
+      data-infinite-distance="50"
+      @ptr:refresh="${refreshFun}"
+      @infinite="${loadMore}"
+    >
       <div class="ptr-preloader">
         <div class="preloader"></div>
         <div class="ptr-arrow"></div>
@@ -41,6 +47,7 @@
                     :bluetooth="log_item.control_source == 'Bluetooth'?1:0"
                     :mobmob="log_item.control_source == 'MobMob'?1:0"
                     :mesh="log_item.control_source == 'Network'?1:0"
+                    :google="log_item.control_source == 'Google Home'?1:0"
                     :http="log_item.control_source == 'Http'?1:0"
                     :manual="log_item.control_source == 'Manual'?1:0"
                   >
@@ -50,6 +57,9 @@
                     <div v-else-if="log_item.control_source == 'Http'" class="http"></div>
                     <div v-else-if="log_item.control_source == 'Manual'" class="manual">
                       <i class="material-icons text-color-orange" style="font-size: 20px">touch_app</i>
+                    </div>
+                    <div v-else-if="log_item.control_source == 'Google Home'" class="google" style="margin-right: 10px">
+                      <i class="material-icons text-color-orange" style="font-size: 20px">home_app_logo</i>
                     </div>
                     <span class="text-muted size-12" v-if="log_item.is_show_status"></span>
                     <span class="text-muted size-12" style="line-height: 24px" v-if="log_item.is_show_status"
@@ -67,23 +77,29 @@
                     ></span>
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px"
+                      style="margin-left: 5px;line-height: 24px"
                       v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && (log_item.command_type == 'add' || log_item.command_type == 'reduce')"
                     >
                       {{log_item.temperature}}°C
                     </span>
-                    <span class="text-muted size-12" v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'mode'"></span>
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'mode'"
+                    ></span>
+                    <span
+                      class="text-muted size-12"
+                      style="margin-left: 5px;line-height: 24px"
                       v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'mode'"
                     >
                       {{_(getModeInfo(log_item.mode))}}
                     </span>
-                    <span class="text-muted size-12" v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'fan'"></span>
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px"
+                      v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'fan'"
+                    ></span>
+                    <span
+                      class="text-muted size-12"
+                      style="margin-left: 5px;line-height: 24px"
                       v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'fan'"
                     >
                       {{_(getSpeedInfo(log_item.speed))}}
@@ -91,7 +107,7 @@
                     <!-- onoff status log start  -->
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px; text-align: center"
+                      style="margin-left: 5px; text-align: center;line-height: 24px"
                       v-if="log_item.command_type == 'device_status_log_onoff'"
                     >
                       {{log_item.gang_1 > 0 ? _('ON'):_('OFF')}}
@@ -107,6 +123,16 @@
                       <span style="margin-left: 5px" v-if="log_item.dimming > 0">({{Math.ceil(log_item.dimming/255*100)}}%)</span>
                     </span>
                     <!-- dimming status log end  -->
+                    <!-- curtain motor status log start  -->
+                    <span
+                      class="text-muted size-12"
+                      style="margin-left: 5px; line-height: 24px"
+                      v-if="log_item.command_type == 'device_status_log_curtain_motor'"
+                    >
+                      {{log_item.curtain_status > 2 ? _('ON'):_('OFF')}}
+                      <span style="margin-left: 5px" v-if="log_item.curtain_status > 2">({{log_item.curtain_status}}%)</span>
+                    </span>
+                    <!-- curtain motor status log end  -->
                     <!-- door open status log start  -->
                     <span
                       class="text-muted size-12"
@@ -126,15 +152,25 @@
                       <span style="margin-left: 5px">{{log_item.battery > 0 ? log_item.battery + _(' Bar'):''}}</span>
                     </span>
                     <!-- geomagnetic status log end  -->
-                     <!-- hdmicec status log start  -->
+                    <!-- hdmicec status log start  -->
                     <span
-                    class="text-muted size-12"
-                    style="margin-left: 5px; line-height: 24px"
-                    v-if="log_item.command_type == 'device_status_log_hdmicec' || log_item.device_model == 'YO103' || log_item.device_type == 'YO103'"
-                  >
-                    {{log_item.command_type.toUpperCase()}}
-                  </span>
-                  <!-- hdmicec status log end  -->
+                      class="text-muted size-12"
+                      style="margin-left: 5px; line-height: 24px"
+                      v-if="log_item.command_type == 'device_status_log_hdmicec' || log_item.device_model == 'YO103' || log_item.device_type == 'YO103'"
+                    >
+                      {{log_item.command_type == 'device_status_log_hdmicec'?_('OFF'):log_item.command_type.toUpperCase()}}
+                    </span>
+                    <!-- hdmicec status log end  -->
+                    <!-- scene status log start  -->
+                    <span
+                      class="text-muted size-12"
+                      style="margin-left: 5px; line-height: 24px"
+                      v-if="log_item.command_type == 'rcu_scene_trigger' && log_item.scene_title"
+                    >
+                      {{log_item.scene_title?log_item.scene_title:parseInt(item.scene_id,16) }}
+                      <i class="material-icons text-color-theme" style="font-size: 20px;position: absolute;top:35px;">play_arrow</i>
+                    </span>
+                    <!-- scene status log end  -->
                     <!-- thermosta status log  -->
                     <span
                       class="text-muted size-12"
@@ -173,8 +209,9 @@
           <h3 class="text-align-center mt-3">{{_('No Records Found')}}</h3>
         </div>
       </div>
+      ${hasMoreItems && $h`
       <div class="preloader infinite-scroll-preloader"></div>
-      {% endraw %}
+      `} {% endraw %}
     </div>
   </div>
 </template>
@@ -194,16 +231,21 @@
     let vueApp = null;
     let allowInfinite = true;
     let hasMoreItems = true;
+    let refresh_data = false;
     let lastItem = 20;
     let { profile_subdevice, guid } = $f7route.query;
     const refreshFun = (e, done) => {
+      refresh_data = true;
       vueApp.$refreshFun();
       done();
       $update();
     };
     const loadMore = () => {
+      console.log('loadMore');
+      refresh_data = false;
+      debugger;
       if (!allowInfinite) return;
-      
+
       vueApp.$loadMore();
     };
     $on('pageMounted', (e, page) => {
@@ -211,10 +253,12 @@
         el: '#device-control-log-box',
         data: {
           log_list: [],
+          scene_map: {},
           start: 0,
           page_length: 20,
           guid: guid,
           button_gang: 0,
+          more_data: true,
         },
         mounted() {
           Vue.prototype.$refreshFun = this.refreshFun;
@@ -224,15 +268,17 @@
         },
         methods: {
           async refreshFun() {
+            this.start = 0;
+            //this.log_list = [];
             await this.pushData();
             this.getData();
           },
           async loadMore() {
             allowInfinite = false;
-            debugger
+            debugger;
             this.start += this.page_length;
             await this.getData();
-            
+
             $update();
           },
           async pushData() {
@@ -325,6 +371,9 @@
               }
             });
             this.button_gang = bleHelper.getGangId(this_button_group);
+            //init the scene list
+            let scnenes = cloneDeep(erp.info.scene);
+            this.scene_map = scnenes;
             //console.log("this.button_gang",this.button_gang);
           },
           async getData() {
@@ -340,6 +389,7 @@
                 responseType: 'json',
               })
               .then((log_data) => {
+                debugger;
                 // console.log(log_data);
                 let list = log_data.data.data;
                 //check if the device is attached
@@ -370,6 +420,17 @@
                         item.is_show = true;
                         return;
                       }
+                      if (isset(device_map['trigger_data']) && device_map['trigger_data']) {
+                        let trigger_data = device_map['trigger_data'];
+                        console.log("trigger_data",trigger_data)
+                        let obj_map = this.renderRcuScene(trigger_data,device_map.guid);
+                        if (obj_map) {
+                          item.is_show_status = false;
+                          item = Object.assign(item, obj_map);
+                          console.log('item', item);
+                          return;
+                        }
+                      }
                       // console.log(gangList);
                       //get the device model info and button group
                       let device_default_template_list = [];
@@ -377,6 +438,7 @@
                         device_default_template_list =
                           erp.doctype.device_model[deviceMap.prop.hexModel.toUpperCase()]['device_default_template'];
                       }
+                      debugger;
                       device_default_template_list.forEach((kitem) => {
                         let device_button_group = kitem.device_button_group;
                         let device_mode = kitem.mode;
@@ -398,6 +460,11 @@
                           item.is_show_status = false;
                           item.command_type = 'device_status_log_curtain_switch';
                           return;
+                        }else if(device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')){
+                          item.is_show_status = false;
+                          item.command_type = 'device_status_log_curtain_motor';
+                          item.control_source = 'MobMob';
+                          item.curtain_status = gangList[48];
                         } else if (device_button_group.startsWith('Door Open')) {
                           item.is_show_status = false;
                           item.command_type = 'device_status_log_door_open';
@@ -409,11 +476,12 @@
                           item.control_source = 'MobMob';
                           item.geomagnetic = gangList[84];
                           item.battery = gangList[83];
-                        }else if(device_button_group.startsWith('Hdmicec')){
+                        } else if (device_button_group.startsWith('Hdmicec')) {
                           item.is_show_status = false;
                           item.command_type = 'device_status_log_hdmicec';
                           item.control_source = 'MobMob';
                         }
+                        debugger;
                         if (gang == 42) {
                           //means theomostat
                           let mode_str = 4;
@@ -459,7 +527,7 @@
                         item.temperature = objMap.temperature;
                         item.room_temperature = objMap.room_temperature;
                       }
-                      if(item.device_mode == 'Hdmicec'){
+                      if (item.device_mode == 'Hdmicec') {
                         item.is_show_status = false;
                       }
                       if (item.device_mode == 'Curtain Switch') {
@@ -473,14 +541,31 @@
                   }
                 });
                 //console.log("list",list);
-                debugger
-                if(list.length && !allowInfinite){
+                debugger;
+                if (list.length && !allowInfinite) {
                   this.log_list = this.log_list.concat(list);
                   allowInfinite = true;
-                }else{
+                } else if (list.length && allowInfinite) {
                   this.log_list = list;
+                  allowInfinite = true;
+                  $update();
+                } else if (!list.length) {
+                  allowInfinite = false;
+                  hasMoreItems = false;
+                  if (!refresh_data) {
+                    let toast = $f7.toast.create({
+                      text: 'No more data',
+                      closeTimeout: 2000,
+                    });
+                    toast.open();
+                  }
+                  $update();
                 }
-                console.log("this.log_list",this.log_list);
+                if (list.length < 10) {
+                  hasMoreItems = false;
+                  $update();
+                }
+                console.log('this.log_list', this.log_list);
               })
               .catch((e) => {
                 debugger;
@@ -523,6 +608,35 @@
             };
             return speed_map[speed];
           },
+          renderRcuScene(trigger_data,guid) {
+            let obj_map = {
+              'control_source': 'MobMob',
+              'command_type': 'rcu_scene_trigger',
+              'scene_template': '',
+              'scene_title': '',
+              'scene_id': '',
+              'trigger_data' : '',
+              'scene_status': 0,
+            };
+            //"trigger_data": "8f0b002101",
+            let list = trigger_data.match(/.{1,2}/g);
+            let scene_id = list[3];
+            let scene_map = this.scene_map;
+            for (let i in scene_map) {
+              let scene_id_list = scene_map[i].scene_device_location || [];
+              for (let j in scene_id_list) {
+                if (parseInt(scene_id_list[j].storage_id).toString(16).pad('00') == scene_id && scene_id_list[j].device == guid) {
+                  obj_map.scene_title = scene_map[i].title;
+                  obj_map.scene_id = scene_id;
+                  obj_map.scene_status = list[4];
+                  obj_map.scene_template = scene_map[i].scene_template;
+                  obj_map.trigger_data = scene_map[i].trigger_data
+                  break;
+                }
+              }
+            }
+            return obj_map;
+          },
           fliterThermostatData(str) {
             if (!str) {
               return null;
@@ -549,6 +663,9 @@
               0,
             ]; //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
             let manufactureData = device_map.ctrl_data || device_map.manufacturing_data;
+            if (!isset(manufactureData)) {
+              return gangs;
+            }
             let sensorData = device_map.sensor_data;
             let sceneData = device_map.scene_data;
             let io = manufactureData && manufactureData.length == 26 ? parseInt(manufactureData.substring(16, 18), 16) : '00';
@@ -559,6 +676,21 @@
                 gangs[83] = battery_ref;
                 let dc_ref = parseInt(sensorData.substring(14, 16), 16) & 0x02;
                 gangs[84] = dc_ref;
+                if (deviceMap.prop.hexModel == '021B' || deviceMap.prop.hexModel == '0375') {
+                  let rsList = window.iot_ble_iaq_change_list(sensorData);
+                  for (let i in rsList) {
+                    const str = rsList[i].hex;
+                    const type = rsList[i].type;
+                    const index = rsList[i].index;
+                    let value = core_utils_ieee_float_convert(str);
+                    if (type == 'Temperature') {
+                      gangs[45] = parseInt(value);
+                    }
+                    if (type == 'Humidity') {
+                      gangs[47] = parseInt(value);
+                    }
+                  }
+                }
               }
               return gangs;
             }

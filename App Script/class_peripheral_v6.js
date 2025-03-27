@@ -286,7 +286,7 @@ window.Peripheral = (function() {
 				    if(self.prop.hexModel.toUpperCase() == '0346' || self.prop.hexModel.toUpperCase() == '0179'){
 				        self.prop.status.bluetooth[1] = '1970-01-01 00:00:00';
 				    }else{
-				        self.prop.status.bluetooth[1] =DateFormatter.format((new Date(new Date().getTime() - 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+				        self.prop.status.bluetooth[1] =DateFormatter.format(new Date(), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 				    }
 						if(self.prop.status.control[1]=='1970-01-01 00:00:00'){
 								self.prop.status.control = JSON.parse(JSON.stringify(self.prop.status.bluetooth))
@@ -623,7 +623,7 @@ window.Peripheral = (function() {
     						//if dimming
     						let dimmingIo = parseInt(io, 16);
     						self.prop.status.bluetooth[0][8] = dimmingIo;
-                //self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 2000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+                self.prop.status.bluetooth[1] = DateFormatter.format((new Date(new Date().getTime() + 10000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
                 self.onPropChanged();
             }else if(data.startsWith("8b")){
     					//update the door sensor
@@ -821,7 +821,7 @@ window.Peripheral = (function() {
     };
 	Peripheral.prototype.onChangeGateway = function(p){
 		const self = this;
-		let data = p.manufacturing_data;
+		let data = p.manufacturing_data || p.ctrl_data;
 		if(isset(p.raw_data) && p.raw_data!='' && p.raw_data.length < data.length){
 			data = p.raw_data;
 		}
@@ -947,14 +947,28 @@ window.Peripheral = (function() {
 			}
 			// self.prop.status.mobmob[1] = self.prop.status.bluetooth[1];
 		}
-		if(p.date >= self.prop.status.control[1] && p.date >= self.prop.status.bluetooth[1]){
-			//upddate the status
+		//check if curtain have mqtt data 
+		if(self.prop.hexModel == '0361' || self.prop.hexModel == '0351'){
+			let curtainStatus = io;
 			if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
 				self.prop.status.last[0][48] = 100 - self.prop.status.last[0][48]*1;
 				self.prop.status.control[0][48] = 100 - self.prop.status.control[0][48]*1;
+			}else if(self.prop.device_mode && self.prop.device_mode.includes('Curtain Motor')){
+				self.prop.status.control[0][48] = curtainStatus*1;
+				if(curtainStatus*1 > 1){
+					self.prop.status.last[0][48] = curtainStatus*1;
+				}
 			}
 			self.onPropChanged();
 		}
+		// if(p.date >= self.prop.status.control[1] && p.date >= self.prop.status.bluetooth[1]){
+		// 	//upddate the status
+		// 	if(self.prop.device_mode && self.prop.device_mode.includes('Reverse')){
+		// 		self.prop.status.last[0][48] = 100 - self.prop.status.last[0][48]*1;
+		// 		self.prop.status.control[0][48] = 100 - self.prop.status.control[0][48]*1;
+		// 	}
+		// 	self.onPropChanged();
+		// }
 	}
     Peripheral.prototype.connect = function() {
 			
@@ -1007,27 +1021,34 @@ window.Peripheral = (function() {
     	self.isExecuting = false;
         
     	return new Promise((resolve, reject) => {
-			ble.refreshDeviceCache(self.prop.id, 0, ()=>{
-    			setTimeout(()=>{
-    				ble.disconnect(self.prop.id, (rs)=>{
-    					self.onConnectionChanged('disconnected');
-    					resolve();
-    				}, (error)=>{
-    					self.onConnectionChanged('disconnected');
-    					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
-    				});
-    			}, 500);
-			}, ()=>{
-    			setTimeout(()=>{
-    				ble.disconnect(self.prop.id, (rs)=>{
-    					self.onConnectionChanged('disconnected');
-    					resolve();
-    				}, (error)=>{
-    					self.onConnectionChanged('disconnected');
-    					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
-    				});
-    			}, 500);
-			});
+				ble.disconnect(self.prop.id, (rs)=>{
+					self.onConnectionChanged('disconnected');
+					resolve();
+				}, (error)=>{
+					self.onConnectionChanged('disconnected');
+					reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
+				});
+			// ble.refreshDeviceCache(self.prop.id, 0, ()=>{
+    	// 		setTimeout(()=>{
+    	// 			ble.disconnect(self.prop.id, (rs)=>{
+    	// 				self.onConnectionChanged('disconnected');
+    	// 				resolve();
+    	// 			}, (error)=>{
+    	// 				self.onConnectionChanged('disconnected');
+    	// 				reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
+    	// 			});
+    	// 		}, 500);
+			// }, ()=>{
+    	// 		setTimeout(()=>{
+    	// 			ble.disconnect(self.prop.id, (rs)=>{
+    	// 				self.onConnectionChanged('disconnected');
+    	// 				resolve();
+    	// 			}, (error)=>{
+    	// 				self.onConnectionChanged('disconnected');
+    	// 				reject(6006); //BLE_PERIPHERAL_DISCONNECT_FAIL
+    	// 			});
+    	// 		}, 500);
+			// });
     	});
     };
     Peripheral.prototype.write = function(commands) {
@@ -1111,7 +1132,7 @@ window.Peripheral = (function() {
 				}
 		    }
 	    }
-		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 5000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
         
         
     	return new Promise((resolve, reject) => {
@@ -1360,7 +1381,7 @@ window.Peripheral = (function() {
                 	    break;
                 	case self.route.NA:
     				    //throw new Error('Device is not here');
-								bleHelper.openBluetooth();
+								return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -1376,12 +1397,16 @@ window.Peripheral = (function() {
 						return doMESHOnoff(gangs);
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+								return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
     		.then((result) => {
-    			resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
     		})
     		.catch((error) => {
     			reject(error);
@@ -1623,7 +1648,7 @@ window.Peripheral = (function() {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+										return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -1639,12 +1664,16 @@ window.Peripheral = (function() {
 						return doMESH(gangs);
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+										return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
     		.then((result) => {
-    			resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
     		})
     		.catch((error) => {
     			reject(error);
@@ -1788,7 +1817,7 @@ window.Peripheral = (function() {
 										break;
 								case self.route.NA:
 							//throw new Error('Device is not here');
-							bleHelper.openBluetooth();
+							return bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -1801,12 +1830,16 @@ window.Peripheral = (function() {
 					return doMOBMOB();
 										break;
 								case self.route.NA:
-									bleHelper.openBluetooth();
+									return bleHelper.openBluetooth();
 										break;
 							}
 			})
 			.then((result) => {
-				resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
 			})
 			.catch((error) => {
 				reject(error);
@@ -1928,7 +1961,7 @@ window.Peripheral = (function() {
 										break;
 								case self.route.NA:
 							//throw new Error('Device is not here');
-							bleHelper.openBluetooth();
+							return bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -1941,12 +1974,16 @@ window.Peripheral = (function() {
 					return doMOBMOB();
 										break;
 								case self.route.NA:
-									bleHelper.openBluetooth();
+									return bleHelper.openBluetooth();
 										break;
 							}
 			})
 			.then((result) => {
-				resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
 			})
 			.catch((error) => {
 				reject(error);
@@ -2088,7 +2125,7 @@ const doMOBMOB = () => {
 									break;
 							case self.route.NA:
 						//throw new Error('Device is not here');
-						bleHelper.openBluetooth();
+						return bleHelper.openBluetooth();
 									break;
 						}
 		})
@@ -2104,12 +2141,16 @@ const doMOBMOB = () => {
 				return doMESH();
 									break;
 							case self.route.NA:
-								bleHelper.openBluetooth();
+								return bleHelper.openBluetooth();
 									break;
 						}
 		})
 		.then((result) => {
-			resolve(result);
+			if(!isset(result)){
+				reject(6300);
+			}else{
+				resolve(result);
+			}
 		})
 		.catch((error) => {
 			reject(error);
@@ -2119,6 +2160,160 @@ const doMOBMOB = () => {
 			clearTimeout(self.timeout_timer);
 		});
 	});
+};
+Peripheral.prototype.rcuDoScene = function(gangs) {
+	const self = this;
+	
+	for(let g of gangs){
+		if(g.gang<49 || g.gang>82) continue;
+		self.prop.status.control[0][g.gang] = g.value;
+	}
+		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+		
+	return new Promise((resolve, reject) => {
+		const action = {
+				func:'rcuDoScene',
+				args:[
+						gangs
+				],
+				callback: {
+						resolve:resolve,
+						reject:reject
+				}
+		}
+		self.queue.push(action);
+		if (!self.isExecuting) {
+			self.isExecuting = true;
+			self.execute();
+		}
+	});
+};
+Peripheral.prototype._rcuDoScene = function(gangs) {
+	const self = this;
+	let currentRoute = '';
+	let commandItem = '';
+	for(let g of gangs){
+		commandItem = g.command;
+	}
+
+const doBLE = (gangs) => {
+	return new Promise((resolve, reject) => {
+	let service = "ff80", characteristic = "ff81";
+	let commands = [];
+	let data = commandItem;
+	commands.push({
+		service: service,
+		characteristic: characteristic,
+		data: data,
+	});
+	self.onPropChanged();
+	
+	self.doMultipleWrite(commands).then((rs)=>{
+			resolve(1);
+	}).catch((error)=>{
+			reject(error);
+	});
+	});
+};
+
+
+const doMOBMOB = (gangs) => {
+	return new Promise((resolve, reject) => {
+	let findGuid = self.findDefaultConnect();
+	if(!isset(findGuid)){
+		findGuid = self.prop.guid;
+	}
+	let service = "ff80", characteristic = "ff81";
+	let commands = [];
+	let data = `02${self.prop.mac_reverse_key}${commandItem}`;
+	commands.push({
+		action: "write",
+		guid: findGuid,
+		mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+		service_id: service,
+		char_id: characteristic,
+		value: data.toLowerCase()
+	});
+	let strList = self.prop.gateway.split('-');
+	let gatewayStr = '';
+	if(strList.length <= 2 ){
+			gatewayStr = self.prop.gateway.toLowerCase();
+	}else{
+			gatewayStr = self.prop.gateway;
+	}
+	core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
+		command:"Control",
+		function:"bleHelper.perform",
+		params:commands,
+		callback:"",
+		raw:""
+	}, 0, false, false, false).then(() => {
+		resolve(3);
+	}).catch(reject);
+});
+};
+
+
+return new Promise((resolve, reject) => {
+	Promise.race([
+		self.findRoute(),
+		self.timeout(10000).then(() => {
+				self.disconnect();
+			throw 7001;
+		})
+	])
+	.then((result) => {
+			currentRoute = result;
+					switch (currentRoute) {
+						case self.route.BLUETOOTH:
+								if(self.prop.connected){
+										return Promise.resolve();
+								}else{
+										return self.doConnect();
+								}
+								break;
+						case self.route.MOBMOB:
+								return Promise.resolve();
+								break;
+						case self.route.MESH:
+								return Promise.resolve();
+								break;
+						case self.route.NA:
+							return bleHelper.openBluetooth();
+								break;
+					}
+	})
+	.then(() => {
+					switch (currentRoute) {
+						case self.route.BLUETOOTH:
+			return doBLE(gangs);
+								break;
+						case self.route.MOBMOB:
+			return doMOBMOB(gangs);
+								break;
+						case self.route.MESH:
+			return doMESH(gangs);
+								break;
+						case self.route.NA:
+							return bleHelper.openBluetooth();
+								break;
+					}
+	})
+	.then((result) => {
+		if(!isset(result)){
+			reject(6300);
+		}else{
+			resolve(result);
+		}
+	})
+	.catch((error) => {
+		reject(error);
+	})
+	.then(() => {
+		// Clean up resources
+		clearTimeout(self.timeout_timer);
+	});
+});
 };
 	Peripheral.prototype.rcuOutput = function(gangs) {
 		const self = this;
@@ -2294,7 +2489,7 @@ const doMOBMOB = (gangs) => {
 									return Promise.resolve();
 									break;
 							case self.route.NA:
-								bleHelper.openBluetooth();
+								return bleHelper.openBluetooth();
 									break;
 						}
 		})
@@ -2310,12 +2505,16 @@ const doMOBMOB = (gangs) => {
 				return doMESH(gangs);
 									break;
 							case self.route.NA:
-								bleHelper.openBluetooth();
+								return bleHelper.openBluetooth();
 									break;
 						}
 		})
 		.then((result) => {
-			resolve(result);
+			if(!isset(result)){
+				reject(6300);
+			}else{
+				resolve(result);
+			}
 		})
 		.catch((error) => {
 			reject(error);
@@ -2495,7 +2694,7 @@ return new Promise((resolve, reject) => {
 								return Promise.resolve();
 								break;
 						case self.route.NA:
-							bleHelper.openBluetooth();
+							return bleHelper.openBluetooth();
 								break;
 					}
 	})
@@ -2511,12 +2710,16 @@ return new Promise((resolve, reject) => {
 			return doMESH(gangs);
 								break;
 						case self.route.NA:
-							bleHelper.openBluetooth();
+							return bleHelper.openBluetooth();
 								break;
 					}
 	})
 	.then((result) => {
-		resolve(result);
+		if(!isset(result)){
+			reject(6300);
+		}else{
+			resolve(result);
+		}
 	})
 	.catch((error) => {
 		reject(error);
@@ -2721,7 +2924,7 @@ return new Promise((resolve, reject) => {
 										return Promise.resolve();
 										break;
 								case self.route.NA:
-									bleHelper.openBluetooth();
+									return bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -2737,12 +2940,16 @@ return new Promise((resolve, reject) => {
 					return doMESHDimming(gangs);
 										break;
 								case self.route.NA:
-									bleHelper.openBluetooth();
+									return bleHelper.openBluetooth();
 										break;
 							}
 			})
 			.then((result) => {
-				resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
 			})
 			.catch((error) => {
 				reject(error);
@@ -2931,7 +3138,7 @@ return new Promise((resolve, reject) => {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+										return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -2947,12 +3154,16 @@ return new Promise((resolve, reject) => {
 						return doMESH(gangs);
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+										return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
     		.then((result) => {
-    			resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
     		})
     		.catch((error) => {
     			reject(error);
@@ -3124,7 +3335,7 @@ return new Promise((resolve, reject) => {
 						return Promise.resolve();
 						break;
 					case self.route.NA:
-						bleHelper.openBluetooth();
+						return bleHelper.openBluetooth();
 						break;
 				}
 			})
@@ -3140,12 +3351,16 @@ return new Promise((resolve, reject) => {
 					    return doMESH(gangs);
 						break;
 					case self.route.NA:
-						bleHelper.openBluetooth();
+						return bleHelper.openBluetooth();
 						break;
 				}
 			})
 			.then((result) => {
-				resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
 			})
 			.catch((error) => {
 				reject(error);
@@ -3322,7 +3537,7 @@ return new Promise((resolve, reject) => {
 										return Promise.resolve();
 										break;
 								case self.route.NA:
-									bleHelper.openBluetooth();
+									return bleHelper.openBluetooth();
 										break;
 							}
 			})
@@ -3338,12 +3553,16 @@ return new Promise((resolve, reject) => {
 					return doMESH(gangs);
 										break;
 								case self.route.NA:
-									bleHelper.openBluetooth();
+									return bleHelper.openBluetooth();
 										break;
 							}
 			})
 			.then((result) => {
-				resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
 			})
 			.catch((error) => {
 				reject(error);
@@ -3549,7 +3768,7 @@ return new Promise((resolve, reject) => {
                 	    return Promise.resolve();
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+										return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -3565,12 +3784,16 @@ return new Promise((resolve, reject) => {
 						return doMESHSendIR(data);
                 	    break;
                 	case self.route.NA:
-										bleHelper.openBluetooth();
+										return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
     		.then((result) => {
-    			resolve(result);
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
     		})
     		.catch((error) => {
     			reject(error);
@@ -3901,18 +4124,30 @@ return new Promise((resolve, reject) => {
 			}).then(()=>{
 						
 			})
-		}else if(action.func=="thermostat"){
-				this._thermostat(action.args[0]).then((rs) => {
-						action.callback.resolve(rs);
-						this.execute();
-				}).catch((error) => {
-						//app.dialog.alert(_(erp.get_log_description(error)));
-						action.callback.reject(error);
-						this.queue = [];
-						this.isExecuting = false;
-				}).then(()=>{
+		}else if(action.func=="rcuDoScene"){
+			this._rcuDoScene(action.args[0],action.args[1]).then((rs) => {
+					action.callback.resolve(rs);
+					this.execute();
+			}).catch((error) => {
+					//app.dialog.alert(_(erp.get_log_description(error)));
+					action.callback.reject(error);
+					this.queue = [];
+					this.isExecuting = false;
+			}).then(()=>{
 						
-				})
+			})
+		}else if(action.func=="thermostat"){
+			this._thermostat(action.args[0]).then((rs) => {
+					action.callback.resolve(rs);
+					this.execute();
+			}).catch((error) => {
+					//app.dialog.alert(_(erp.get_log_description(error)));
+					action.callback.reject(error);
+					this.queue = [];
+					this.isExecuting = false;
+			}).then(()=>{
+					
+			})
 		}else if(action.func=="curtainmotor"){
 			this._curtainmotor(action.args[0]).then((rs) => {
 					action.callback.resolve(rs);

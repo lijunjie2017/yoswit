@@ -61,7 +61,7 @@
                         "
                       >
                         {{_(item.title)}}
-                        <div v-if="item.virtualId" class="text-color-white" style="font-size: 12px;">{{_('V-ID: ')}}{{item.virtualId}}</div>
+                        <div v-if="item.virtualId" class="text-color-white" style="font-size: 12px">{{_('V-ID: ')}}{{item.virtualId}}</div>
                       </div>
                     </div>
                     <div class="item-after">
@@ -75,9 +75,16 @@
                       <a
                         class="button button-small button-round button-fill icon-button"
                         v-on:click="toDetail(item)"
-                        style="width: 40px; height: 40px; border-radius: 50%;margin-left: 10px;"
+                        style="width: 40px; height: 40px; border-radius: 50%; margin-left: 10px"
                       >
                         <i class="f7-icons" style="font-size: 18px">doc_text_search</i>
+                      </a>
+                      <a
+                        class="button button-small button-round button-fill icon-button"
+                        v-on:click="createSubdevice(item)"
+                        style="width: 40px; height: 40px; border-radius: 50%; margin-left: 10px"
+                      >
+                        <i class="icon material-icons" style="font-size: 18px">input</i>
                       </a>
                       <a
                         class="button button-small button-round button-fill icon-button"
@@ -142,29 +149,48 @@
       });
       let triggerCommand = `8f210000ff`;
       let actionCommand = `8f1100ff`;
+      let deleteRawSwtting = '8f1400ff';
+      let deleteToogle = `972203ff02`;
+      let deleteToggleOn = `972203ff01`;
+      let deleteToggleOff = `972203ff00`;
       app.dialog.confirm(
         `${_('Confirm Deletion?')}`,
         () => {
           app.dialog.preloader();
+          let bleList = [{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: triggerCommand,
+          },{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: actionCommand,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: deleteRawSwtting,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: deleteToogle,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: deleteToggleOn,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: deleteToggleOff,
+          },
+        ];
           if (window.peripheral[guid].prop.connected) {
             window.peripheral[guid].disconnect().then(() => {
               window.peripheral[guid]
-                .write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: triggerCommand,
-                  },
-                ])
-                .then(() => {
-                  return window.peripheral[guid].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: actionCommand,
-                    },
-                  ]);
-                })
+                .write(bleList)
                 .then(() => {
                   app.dialog.close();
                   //disconnect the peripheral
@@ -179,22 +205,7 @@
             });
           } else {
             window.peripheral[guid]
-              .write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: triggerCommand,
-                },
-              ])
-              .then(() => {
-                return window.peripheral[guid].write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: actionCommand,
-                  },
-                ]);
-              })
+              .write(bleList)
               .then(() => {
                 app.dialog.close();
                 app.dialog.alert('BLE Clear Successfully');
@@ -370,7 +381,7 @@
                 },
                 () => {}
               );
-              return
+              return;
             }
             app.dialog.confirm(
               `${_('Confirm Deletion?')}`,
@@ -382,12 +393,15 @@
                 }, 15 * 1000);
                 let scenes = cloneDeep(erp.info.scene);
                 let list = [];
+                let sceneMap = null;
                 for (let i in scenes) {
                   if (item.name == scenes[i].name) {
                     list = scenes[i].scene_device_location;
+                    sceneMap = scenes[i];
                   }
                 }
                 try {
+                  let bleList = [];
                   for (let i in list) {
                     let delActionCommand = `8F1100${parseInt(list[i].storage_id).toString(16).pad('00')}`;
                     let delTriggerCommand = `8F210000${parseInt(list[i].storage_id).toString(16).pad('00')}`;
@@ -406,6 +420,33 @@
                         data: delTriggerCommand,
                       },
                     ]);
+                  };
+                  //delete the toggle command
+                  if(sceneMap.scene_template == 'RCU Scene New Toggle'){
+                    let virtualIdList = sceneMap.scene_virtual_button;
+                    for(let i in virtualIdList){
+                      let virtualId = virtualIdList[i].virtual_button_id;
+                      let delToggleCommand = `972203${parseInt(virtualId).toString(16).pad('00')}02`;
+                      let delToggleOnCommand = `972203${parseInt(virtualId).toString(16).pad('00')}01`;
+                      let delToggleOffCommand = `972203${parseInt(virtualId).toString(16).pad('00')}00`;
+                      await window.peripheral[list[i].device].write([
+                        {
+                          service: 'ff80',
+                          characteristic: 'ff81',
+                          data: delToggleCommand,
+                        },
+                        {
+                          service: 'ff80',
+                          characteristic: 'ff81',
+                          data: delToggleOnCommand,
+                        },
+                        {
+                          service: 'ff80',
+                          characteristic: 'ff81',
+                          data: delToggleOffCommand,
+                        }
+                      ])
+                    }
                   }
                   let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
                     method: 'DELETE',
@@ -430,7 +471,6 @@
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
           async download() {
-            
             //app.dialog.preloader();
             // setTimeout(() => {
             //   app.dialog.close();
@@ -608,7 +648,7 @@
               }
               if (isset(subdevice_name) && subdevice_name) {
                 if (subdevice_name == scenes[i].profile_subdevice) {
-                  if(scenes[i].scene_virtual_button.length > 0){
+                  if (scenes[i].scene_virtual_button.length > 0) {
                     scenes[i].virtualId = scenes[i].scene_virtual_button[0].virtual_button_id;
                   }
                   this.sceneList.push(scenes[i]);
@@ -647,14 +687,14 @@
             app.dialog.preloader();
             let list = item.scene_device_location;
             for (let i in list) {
-              let command = `8f0200${parseInt(list[i].storage_id).toString(16).pad("00") }`;
+              let command = `8f0200${parseInt(list[i].storage_id).toString(16).pad('00')}`;
               console.log('command', command);
-              try{
+              try {
                 await window.peripheral[list[i].device].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: command,
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
                   },
                 ]);
               } catch (error) {
@@ -672,6 +712,196 @@
           },
           toDetail(item) {
             mainView.router.navigate(`/mobile-app/scene-guid-operate-page?name=${item.name}&sub_name=${subdevice_name}`);
+          },
+          createSubdevice(item) {
+            let list = item.scene_virtual_button || [];
+            let idList = item.scene_device_location || [];
+            let guid = '';
+            let v_id = '';
+            let scene_id = '';
+            if(list.length){
+              guid = list[0].device;
+              v_id = list[0].virtual_button_id;
+            }else{
+              if(idList.length > 1){
+                //get the guid
+                idList.forEach(item=>{
+                  let deviceMap = erp.info.device[item.device];
+                  let settings = deviceMap.settings;
+                  settings.forEach(kitem=>{
+                    if(kitem.setting_type == 'main_rcu'){
+                      if(kitem.setting == 1){
+                        guid = item.device;
+                        scene_id = item.storage_id;
+                      }
+                    }
+                  })
+                })
+                scene_id = idList.map(item=>{
+                  return item.storage_id;
+                })
+              }else if(idList.length == 1){
+                guid = idList[0].device;
+                scene_id = idList[0].storage_id;
+              }
+            }
+            console.log('guid', guid);
+            //check if null
+            if(!guid){
+              app.dialog.alert(_('Sorry, this scene cannot create devices.'));
+              return;
+            }
+            /*
+            1.首先弹出一个弹框
+            2.弹框下有三个部分，第一部分是一个select，第二个是input框，第三个是提交按钮
+            3.参考framework7生成
+            */
+            let roomList = erp.info.profile.profile_room;
+            // 动态生成选项
+            const selectHtml = roomList.map(t => 
+              `<option value="${t.name}">${tran(t.title)}</option>`
+            ).join('');
+            //创建动态Button Group
+            let buttonGroupMap = window.ble_button_group_icon_map();
+            let buttonGroupList = Object.keys(buttonGroupMap);
+            const buttonGroupHtml = buttonGroupList.map(item=>{
+              return `<option style="font-size: 12px;" value="${item}">${item}</option>`
+            }).join('');
+            // 创建弹窗实例
+            const modal = app.dialog.create({
+              title: _('Create Subdevice'),
+              content: `
+              <div class="dialog-form">
+                <!-- 设备类型下拉框 -->
+                <div class="item-content">
+                  <div class="list">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">${_("Room Name")}</div>
+                          <div class="item-input-wrap">
+                            <select id="subdeviceType" class="select">
+                            ${selectHtml}
+                            </select>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">${_("Button Group")}</div>
+                          <div class="item-input-wrap">
+                            <select id="buttonGroup" class="select" style="font-size: 12px;">
+                            ${buttonGroupHtml}
+                            </select>
+                          </div>
+                        </div>
+                      </li>
+                      <!-- 设备名称输入 -->
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">${_("Device Name")}</div>
+                          <div class="item-input-wrap">
+                            <input 
+                              id="subdeviceName" 
+                              type="text" 
+                              placeholder="${_("Input your device name.")}"
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            `,
+              buttons: [
+                {
+                  text: _('Cancel'),
+                  id: 'cancelSubdevice',
+                  color: 'gray',
+                  onClick: (dialog) => {
+                    dialog.close(); // 直接关闭弹窗
+                  },
+                },
+                {
+                  text: _('Submit'),
+                  color: 'blue',
+                  id: 'submitSubdevice',
+                  onClick:  (dialog, e)=> {
+                    // 获取输入值
+                    const deviceType = dialog.$el.find('#subdeviceType').val();
+                    const deviceName = dialog.$el.find('#subdeviceName').val();
+                    const buttonGroup = dialog.$el.find('#buttonGroup').val();
+                    // 简单验证
+                    if (!deviceName.trim()) {
+                      app.dialog.alert(_('Device name cannot be empty.'));
+                      return;
+                    }
+                    //get the profile device name
+                    let profile_device = cloneDeep(erp.info.profile.profile_device);
+                    let profile_device_map = profile_device.filter(item=>{
+                      return item.device === guid;
+                    })
+                    debugger
+                    this.validateSubdevice(v_id).then(res => {
+                      let subUrl = `/api/resource/Profile Subdevice`;
+                      let subMethod = 'POST';
+                      let this_data = {
+                        parenttype: 'Profile',
+                        parent: erp.info.profile.name,
+                        parentfield: 'profile_subdevice',
+                        profile_room: deviceType,
+                        profile_device: profile_device_map[0].name,
+                        device: guid,
+                        title: deviceName,
+                        device_button_group: buttonGroup,
+                        device_mode: 'RCU Controller',
+                        config: `${v_id?parseInt(v_id).toString(16).pad("00"):'scene_id='+scene_id+'&enable=true'}`,
+                      }
+                      return http.request(encodeURI(subUrl), {
+                          method: "POST",
+                          serializer: 'json',
+                          responseType: 'json',
+                          data: this_data,
+                          debug: true,
+                        });
+                    }).then(async(res)=>{
+                      // 关闭弹窗
+                      dialog.close();
+                      await ha_profile_ready();
+                      window.globalUpdate = true;
+                      app.dialog.alert(_('Create subdevice successfully.'));
+                    }).catch(error=>{
+                      // 关闭弹窗
+                      dialog.close();
+                      app.dialog.alert(error);
+                    })
+                  },
+                },
+              ],
+              // 弹窗打开后回调
+              onOpen: function (dialog) {
+                // 自动聚焦输入框
+                dialog.$el.find('#subdeviceName').focus();
+              },
+            });
+
+            // 打开弹窗
+            modal.open();
+          },
+          validateSubdevice(v_id){
+            return new Promise((resolve, reject) => {
+              //check if have the same virtual id
+              let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+              let device_map = profile_subdevices.filter(item => {
+                return item.virtual_id == parseInt(v_id).toString(16).pad("00");
+              });
+              if(device_map.length > 0){
+                reject(_('The device has already been created.'));
+              }else{
+                resolve(true);
+              }
+            });
           },
         },
       });

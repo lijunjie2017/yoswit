@@ -199,13 +199,114 @@ window.iot_setup_mesh_test_init = async function(params) {
                     setmesh_start_produce_timer(40);
                     if(selected == '-1' || !isset(iot_mesh_config['networks'][selected])){
                         console.log("ble.createNetwork");
-                        ble.createNetwork(function(rs){
+                        // ble.createNetwork(function(rs){
+                        //     iot_setup_mesh_update_step(2);
+                        //     setTimeout(function(){
+                        //         iot_set_mesh_step1(guid, 0);
+                        //     }, 2000);
+                        // }, function(e){
+                        //     alert("E1:"+e);
+                        // });
+                        
+                        ble.importNetwork(JSON.stringify(`{
+                        	"$schema": "http://json-schema.org/draft-04/schema#",
+                        	"id": "https://www.bluetooth.com/specifications/specs/mesh-cdb-1-0-1-schema.json#",
+                        	"version": "1.0.1",
+                        	"meshUUID": "${generateUUIDv4()}",
+                        	"meshName": "nRF Mesh Network",
+                        	"timestamp": "${getCurrentISOFormat()}",
+                        	"partial": false,
+                        	"netKeys": [
+                        		{
+                        			"name": "Network Key 1",
+                        			"index": 0,
+                        			"key": "${generateMeshKey()}",
+                        			"phase": 0,
+                        			"minSecurity": "secure",
+                        			"timestamp": "${getCurrentISOFormat()}"
+                        		}
+                        	],
+                        	"appKeys": [
+                        		{
+                        			"name": "Application Key 1",
+                        			"index": 0,
+                        			"boundNetKey": 0,
+                        			"key": "${generateMeshKey()}"
+                        		}
+                        	],
+                        	"provisioners": [
+                        		{
+                        			"provisionerName": "nRF Mesh Provisioner",
+                        			"UUID": "${generateUUIDv4()}",
+                        			"allocatedUnicastRange": [
+                        				{
+                        					"lowAddress": "0001",
+                        					"highAddress": "199A"
+                        				}
+                        			],
+                        			"allocatedGroupRange": [
+                        				{
+                        					"lowAddress": "C000",
+                        					"highAddress": "CC9A"
+                        				}
+                        			],
+                        			"allocatedSceneRange": [
+                        				{
+                        					"firstScene": "0001",
+                        					"lastScene": "3333"
+                        				}
+                        			]
+                        		}
+                        	],
+                        	"nodes": [
+                        		{
+                        			"UUID": "${generateUUIDv4()}",
+                        			"name": "nRF Mesh Provisioner",
+                        			"deviceKey": "${generateMeshKey()}",
+                        			"unicastAddress": "0001",
+                        			"security": "insecure",
+                        			"configComplete": false,
+                        			"features": {
+                        				"friend": 2,
+                        				"lowPower": 2,
+                        				"proxy": 2,
+                        				"relay": 2
+                        			},
+                        			"defaultTTL": 5,
+                        			"netKeys": [
+                        				{
+                        					"index": 0,
+                        					"updated": false
+                        				}
+                        			],
+                        			"appKeys": [],
+                        			"elements": [
+                        				{
+                        					"name": "Element: 0x0001",
+                        					"index": 0,
+                        					"location": "0000",
+                        					"models": [
+                        						{
+                        							"modelId": "0001",
+                        							"bind": [],
+                        							"subscribe": []
+                        						}
+                        					]
+                        				}
+                        			],
+                        			"excluded": false
+                        		}
+                        	],
+                        	"groups": [],
+                        	"scenes": [],
+                        	"networkExclusions": []
+                        }`), function(){
                             iot_setup_mesh_update_step(2);
                             setTimeout(function(){
                                 iot_set_mesh_step1(guid, 0);
-                            }, 2000);
+                            }, 500);
                         }, function(e){
-                            alert("E1:"+e);
+                            alert("E2:"+e);
                         });
                     }else{
                         console.log("ble.importNetwork");
@@ -296,15 +397,44 @@ window.setmesh_retry = () => {
 
 
 
+window.generateUUIDv4 = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0; // 生成 0-15 的随机整数
+    const v = c === 'x' ? r : (r & 0x3) | 0x8; // 对 'y' 设置固定高位为 1000（符合 UUID v4 规范）
+    return v.toString(16);
+  });
+};
 
 
+window.generateMeshKey = () => {
+  return Array.from({length: 32}, () => 
+    Math.floor(Math.random() * 16).toString(16).toUpperCase()
+  ).join('');
+}
 
 
-
-
-
-
-
+window.getCurrentISOFormat = () => {
+  const date = new Date();
+  
+  // 补零函数
+  const pad = (n) => String(n).padStart(2, '0');
+  
+  // 获取日期时间组件
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  
+  // 计算时区偏移
+  const timezoneOffset = -date.getTimezoneOffset(); // 转换为正数偏移
+  const offsetHours = pad(Math.floor(Math.abs(timezoneOffset) / 60));
+  const offsetMinutes = pad(Math.abs(timezoneOffset) % 60);
+  const offsetSign = timezoneOffset >= 0 ? '+' : '-';
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
+};
 
 
 

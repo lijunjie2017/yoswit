@@ -31,9 +31,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background-color: #ffffff;
+      background-color: var(--f7-card-bg-color);
       box-sizing: border-box;
-      padding: 0.75rem;
+      padding: 0.75rem 0 0.75rem 0.75rem;
       box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.2);
     }
 
@@ -101,7 +101,7 @@
       <!-- Sidebar -->
       <div
         class="vdp-sidebar display-flex flex-direction-column align-items-center justify-content-center"
-        style="flex: 3; background-color: #ffffff; height: 100%"
+        style="flex: 3; background-color: var(--f7-card-bg-color); height: 100%"
         ref="vdpSidebar"
       >
         <div
@@ -118,7 +118,7 @@
 
         <div class="vdp-sidebar__menu" style="flex: 8.5; overflow: hidden">
           <div class="position-relative" style="width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; box-sizing: border-box">
-            <div class="list menu-list m-0 position-relative" style="height: 100%">
+            <div class="list menu-list m-0 position-relative" style="height: 100%" v-bind:key="refreshKey">
               <ul style="height: 100%; display: flex; flex-direction: column">
                 <li style="flex: 1" v-for="menu in getSidebarMenu" v-bind:key="menu.route" v-on:click="onMenuClick(menu)">
                   <div
@@ -133,7 +133,7 @@
                       class="item-inner m-0 p-0"
                       style="display: flex; flex-direction: row; align-items: center; justify-content: center; min-height: auto"
                     >
-                      <div class="item-title" style="font-size: 20px; line-height: 20px">{{ menu.title }}</div>
+                      <div class="item-title" style="font-size: 20px; line-height: 20px">{{ _(menu.title) }}</div>
                     </div>
                   </div>
                 </li>
@@ -148,15 +148,23 @@
         class="vdp-main display-flex flex-direction-column align-items-center justify-content-center"
         style="flex: 7; background-color: antiquewhite; height: 100%; overflow: hidden"
       >
-        <div class="vdp-main__header" ref="vdpMainHeader" style="flex: 1; overflow: hidden; width: 100%; font-size: 1.25rem">
+        <div
+          class="vdp-main__header"
+          ref="vdpMainHeader"
+          style="flex: 1; overflow: hidden; width: 100%; font-size: 1.25rem"
+          v-bind:key="refreshKey"
+        >
           <div class="time">{{ now }}</div>
 
           <div class="weather">
-            <i class="icon material-icons" v-if="temperature" style="font-size: 1.25rem">device_thermostat</i>
+            <i class="icon material-icons" v-if="temperature" style="font-size: 1.25rem; vertical-align: -0.15em">device_thermostat</i>
             <span v-if="temperature" style="margin-left: 0.25rem">{{ temperature }}°C</span>
             <span style="padding: 0 0.5rem"><!-- -- --></span>
-            <i class="icon material-icons" v-if="humidity" style="font-size: 1.25rem">water_drop</i>
+            <i class="icon material-icons" v-if="humidity" style="font-size: 1.25rem; vertical-align: -0.15em">water_drop</i>
             <span v-if="humidity" style="margin-left: 0.25rem">{{ humidity }}%</span>
+            <i class="icon material-icons" style="font-size: 1.25rem; vertical-align: -0.15em; padding: 0.5rem 1rem" v-on:click="goSettings">
+              settings
+            </i>
           </div>
         </div>
 
@@ -208,6 +216,7 @@
       components: {},
       el: page.el.querySelector('#vue-app[block-name="{{ block.name }}"]'),
       data: {
+        refreshKey: 1,
         now: dayjs().format('YYYY-MM-DD HH:mm A'),
         temperature: '',
         humidity: '',
@@ -238,10 +247,14 @@
       },
       mounted() {
         this.createVDPMainView();
-
         this.loopRefreshDatetime();
-
         this.loadWeather();
+
+        this.$onAppChangeLanguage = () => {
+          this.goHome();
+          this.refreshKey += 1;
+        };
+        emitter.on('app:change:language', this.$onAppChangeLanguage);
       },
       beforeDestroy() {
         if (this.$refreshDatetimeId) {
@@ -257,6 +270,8 @@
         } catch (error) {
           // ignore
         }
+
+        emitter.off('app:change:language', this.$onAppChangeLanguage);
       },
       methods: {
         createVDPMainView() {
@@ -334,6 +349,12 @@
         goHome() {
           this.onMenuClick({
             route: this.getMainPageRoute,
+            type: 'Link',
+          });
+        },
+        goSettings() {
+          this.onMenuClick({
+            route: '/mobile-app/app-7inch-indoor-vdp-general-settings-page',
             type: 'Link',
           });
         },

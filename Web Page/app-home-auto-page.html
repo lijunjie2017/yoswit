@@ -157,8 +157,8 @@
 						`)}
 					</div>
 					${profilePermision && $h`
-					<div class="room-more-icon-box">
-						<a href="/mobile-app/ha-room-list?page_type=2" class="button">
+					<div class="room-more-icon-box" style="background-color: var(--f7-theme-color);">
+						<a href="/mobile-app/ha-room-list?page_type=2" class="button" style="color: #fff;">
 							<i class="material-icons">more_vert</i>
 						</a>
 					</div>
@@ -1201,7 +1201,6 @@ const renderMainButton = (props, {
 					data = `55fefe0304${props.kitem.device_status.toString(16).pad("00")}`;
 				}
 			}
-
 		}
 		if(otherModelStatus){
 			data += erp.script.core_util_calculate_crc16_for_motor(data);
@@ -1290,7 +1289,7 @@ const renderMainButton = (props, {
 		}
 		kitem['timeout'] = setTimeout(()=>{
 			kitem['click_status'] = null;
-		},10000)
+		},1000)
 		if (kitem.device_status == 0) {
 			if (
 				kitem.device_button_group.startsWith('RCU DIMMING') ||
@@ -1950,17 +1949,20 @@ const renderMainButton = (props, {
 	}
 	const iot_music_player_change_source = async(kitem)=>{
 		let subdevice_name = kitem.name;
+		let command = `9809000001`;
 		try{
+			if(kitem.config == 'phone_iphone'){
+				kitem.config = 'tv';
+				command = `980900000101`;
+			}else{
+				kitem.config = 'phone_iphone';
+				command = `980900000100`;
+			}
 			await window.peripheral[kitem.device].doMusicPlayer([{
 				service: 'ff80',
 				characteristic: 'ff81',
-				command: '9807',
+				command: command,
 			}]);
-			if(kitem.config == 'phone_iphone'){
-				kitem.config = 'tv';
-			}else{
-				kitem.config = 'phone_iphone';
-			}
 			//update profile
 			let this_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
 			this_subdevices.forEach(item=>{
@@ -2002,6 +2004,52 @@ const renderMainButton = (props, {
 				characteristic: 'ff81',
 				data: command,
 			}])
+		}catch(error){
+			app.dialog.alert(_(erp.get_log_description(error)));
+		}
+	}
+	const click_scene_virtual_button = (kitem)=>{
+		console.log(kitem)
+		let config = kitem.config;
+		let guid = kitem.device;
+		if(!config){
+			app.dialog.alert(`${_('Error')}`);
+			return 
+		}
+		if(kitem.device_virtual_status == 0){
+			kitem.device_virtual_status = 1;
+		}else{
+			kitem.device_virtual_status = 0;
+		}
+		$update();
+		let command = `972103${config}${kitem.device_virtual_status == 1?'01':'00'}`;
+		try{
+			window.peripheral[guid].rcuDoScene([{
+				gang : 1,
+				command: command,
+			}]).then(()=>{
+				//update the erp obj
+				let list = erp.info.profile.profile_subdevice;
+				list.forEach(item=>{
+					if(item.name == kitem.name){
+						item.status = kitem.device_virtual_status;
+					}
+				})
+				//update the status
+				let saveUrl = app_core_encode_link(`/api/method/appv6.updateSubdeviceStatus`);
+				debugger
+				return http.request(saveUrl, {
+						method: "POST",
+						responseType: "json",
+						serializer: 'json',
+						debug:true,
+						data: {
+							status: kitem.device_virtual_status,
+							device : kitem.device,
+							subdevice_name : kitem.name
+						}
+				})
+			})
 		}catch(error){
 			app.dialog.alert(_(erp.get_log_description(error)));
 		}
@@ -2386,6 +2434,14 @@ const renderMainButton = (props, {
 						<div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">power_settings_new</i></div></div>
 					</a>
 				</div>
+				`;
+	}else if(props.kitem.device_button_group.startsWith("SCENE VIRTUAL ONOFF GANG1")){
+		return () => $h`
+					<div class="control-panel-right" style="">
+						<a class="on_flag off_flag" ref="${props.kitem.device_virtual_status}" @click="${() => click_scene_virtual_button(props.kitem)}">
+							<div class="button button-raised button-big onoff"></div>
+						</a>
+					</div>
 				`;
 	}else if(props.kitem.device_button_group.startsWith("IAQ")){
 		// if(props.kitem.device_model == 'YO161'){
@@ -3061,13 +3117,21 @@ const renderBottomButton = (props, {
 		let swing_value = airconfig[3];
 		let direction_value = airconfig[2];
 		let temperature = airconfig[0]; //temperature
+		let devices = cloneDeep(erp.info.device);
+		let deviceMap = devices[kitem.device];
+		let deviceSettings = isset(deviceMap)?deviceMap.settings:[];
+		//debugger
 		switch (click_type) {
 			case "ARC_MODE":
-				if (mode_value == 1) {
-					mode_value = 0
+				if (mode_value == 5) {
+					mode_value = 4
 				} else if (mode_value == 2) {
-					mode_value = 1
-				} else if (mode_value == 0) {
+					mode_value = 5
+				} else if (mode_value == 4) {
+					mode_value = 2;
+				}else if(mode_value == 0){
+					mode_value = 4;
+				}else if(mode_value == 1){
 					mode_value = 2;
 				}
 				break;
@@ -3085,12 +3149,52 @@ const renderBottomButton = (props, {
 				}
 				break;
 			case "ARC_REDUCE_TEMP":
-				if (temperature != 5) {
+				//if fan mode ,can not reduce temperature
+				if(mode_value == 4){
+					return;
+				}
+				//get the limit temperature
+				//mode_value 2cool 5heat
+				let limitValue = 5;
+				
+				if(mode_value == 2){
+					deviceSettings.forEach(item=>{
+						if(item.setting_type == 'cool_setpoint_limit'){
+							limitValue = item.setting;
+						}
+					})
+				}
+				if(mode_value == 5){
+					deviceSettings.forEach(item=>{
+						if(item.setting_type == 'heat_setpoint_limit'){
+							limitValue = item.setting;
+						}
+					})
+				}
+				if (temperature > limitValue) {
 					temperature--;
 				}
 				break;
 			case "ARC_ADD_TEMP":
-				if (temperature != 32) {
+			if(mode_value == 4){
+					return;
+				}
+				let uppertValue = 5;
+				if(mode_value == 2){
+					deviceSettings.forEach(item=>{
+						if(item.setting_type == 'cool_setpoint_upper'){
+							uppertValue = item.setting;
+						}
+					})
+				}
+				if(mode_value == 5){
+					deviceSettings.forEach(item=>{
+						if(item.setting_type == 'heat_setpoint_upper'){
+							uppertValue = item.setting;
+						}
+					})
+				}
+				if (temperature < uppertValue) {
 					temperature++;
 				}
 				break;
@@ -3145,7 +3249,7 @@ const renderBottomButton = (props, {
 				
 			}else if (props.kitem.device_button_group.startsWith('RCU DIMMING') || props.kitem.device_button_group.startsWith('DIMMING') || props.kitem.device_button_group.startsWith('GV DIMMING')) {
 				const v = Math.ceil((props.kitem.device_status*1.0 / 255.0) * 100.0) || 0;
-						console.log("v",v)
+						// console.log("v",v)
 				    let range_key = `${props.kitem.device}_${props.kitem.device_button_group}`;
 						//console.log("range_silder_list[range_key]",range_silder_list[range_key]);
 				    if(!isset(range_silder_list[range_key])){
@@ -3437,14 +3541,17 @@ const renderBottomButton = (props, {
 		let temperature = airconfig[0]; //temperature
 		let room_temperature = 26; //room_temperature
 		let mode_str = 4;
-		let mode_ref = 0;
+		let mode_ref = 4;
 		props.kitem.device_status = airconfig[4];
-		if (mode_value == 1) {
-			mode_ref = 1;
+		if (mode_value == 5) {
+			mode_ref = 5;
 			mode_str = 5;
 		} else if (mode_value == 2) {
 			mode_ref = 2;
 			mode_str = 2;
+		}else if(mode_value == 4){
+			mode_ref = 4;
+			mode_str = 4;
 		}
 		if (speed_vaule == 0) {
 			speed_vaule = 1;
@@ -4083,6 +4190,7 @@ export default async (props, ctx) => {
 		subdevices.forEach(subdevice => {
 			const vp = {};
 			subdevice.signalRfresh = false;//refresh the signal item
+			subdevice.device_virtual_status = isset(subdevice.status)? subdevice.status : 0;
 			update_subdevice_by_device_button_group(subdevice, device_button_groups[subdevice['device_button_group']]);
 			update_subdevice_by_subdevice_function(subdevice,subdevice.function);
 			update_peripheral_by_subdevice(vp, subdevice);
@@ -5689,7 +5797,10 @@ export default async (props, ctx) => {
 			//alert(`device_status:${device_status}`)
 			console.log('device_status',device_status);
 		}
-		
+		// if(p.guid == '39383037326434386233303312020c1d'){
+		// 	console.log(peripheral[p.guid])
+		// 	console.log('device_status',device_status);
+		// }
 
 		s['device_config'] = device_config;
 		if(p.guid == '3334383531383763323636321203461d'){
@@ -5711,7 +5822,7 @@ export default async (props, ctx) => {
 		if(!s['click_status']){
 			s['device_status'] = device_status;
 		}
-
+		s['device_virtual_status'] = isset(s['device_virtual_status'])?s['device_virtual_status']:0
 		//battery_ref
 		s['battery'] = p.guid ? peripheral[p.guid].getLatestStatus()[0][83]:0;
 		s['dc_status'] = p.guid ? peripheral[p.guid].getLatestStatus()[0][84]:0;
@@ -5807,8 +5918,8 @@ export default async (props, ctx) => {
 			//gateway input
 			let gang = bleHelper.getGangId(s.device_button_group)*1;
 			let gangs = peripheral[p.guid].prop.status.mobmob[0];
-			console.log("gangs",gangs)
-			console.log("RCU INPUT",gangs[gang]);
+			// console.log("gangs",gangs)
+			// console.log("RCU INPUT",gangs[gang]);
 			s['input'] = gangs[gang];
 		}else if(s.device_button_group.startsWith("DOOR SIGN")){
 			//this must be check the 81(clear) and 82(dnd)
@@ -5880,8 +5991,6 @@ export default async (props, ctx) => {
 		}catch(error){
 			console.log(error);
 		}
-		
-		
 	}
 	const update_subdevice_by_device_button_group = (s, p) => {
 		if(!isset(p)) return
@@ -5970,6 +6079,7 @@ export default async (props, ctx) => {
 	const on_gateway_device_changed = (data) => {
 		let message = data.message;
 		console.log("message",JSON.parse(message))
+		
 		if (isset(message) && message) {
 			let deviceObj = JSON.parse(message);
 			let deviceInfo = deviceObj.Info;
@@ -6106,7 +6216,7 @@ export default async (props, ctx) => {
 							if(deviceList.length > 0){
 								//change the UI
 								setTimeout(()=>{
-									console.log($(".home-scanned-peripheral[guid='"+guid+"'][button_group='ONOFF GANG1']").find(".signal-panel .signal-view-main"))
+									//console.log($(".home-scanned-peripheral[guid='"+guid+"'][button_group='ONOFF GANG1']").find(".signal-panel .signal-view-main"))
 									$(".home-scanned-peripheral[guid='"+guid+"'][button_group='ONOFF GANG1']").find(".signal-panel .signal-view-main").attr('mesh',1);
 									$(".home-scanned-peripheral[guid='"+guid+"'][button_group='ONOFF GANG1']").find(".signal-panel .signal-view-main .mesh").text(deviceList.length+1);
 								},500)
@@ -6150,7 +6260,7 @@ export default async (props, ctx) => {
 						// })
 						//input status 
 						if((isset(data.retain) && !data.retain)){
-							console.log("inputStatusByteList",inputStatusByteList)
+							//console.log("inputStatusByteList",inputStatusByteList)
 							inputStatusByteList.forEach((item,index)=>{
 								let this_status = item>0?1:0;
 								window.peripheral[guid].prop.status.mobmob[0][50+index] = this_status;
@@ -6244,7 +6354,7 @@ export default async (props, ctx) => {
 									
 									let device_status = window.peripheral[guid].getGangStatus(button_group);
 									kitem.device_status = device_status;
-									console.log("device_status-----------------------------------------",device_status)
+									//console.log("device_status-----------------------------------------",device_status)
 									
 									$update();
 									// if($(`.home-scanned-peripheral[guid="${guid}"][button_group="${button_group}"]`).length){

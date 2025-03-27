@@ -551,10 +551,10 @@
                 }
               }
               //rcu,open virtual id to choose
-              if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1' && type == 2){
-                item.isHidden = false;
-                item.virtualStatus = true;
-              }
+              // if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1' && type == 2){
+              //   item.isHidden = false;
+              //   item.virtualStatus = true;
+              // }
               //choose status
               item.chooseStatus = false;
               let model = item.device_model;
@@ -721,7 +721,7 @@
           chooseTemplate(subItem) {
             this.clickStatus = true;
             //if type is 5,only show the check
-            if(type == 5){
+            if(type == 5 || type == 7){
               subItem.mainType = 15;
               subItem.chooseStatus = true;
               return;
@@ -914,6 +914,7 @@
           //tindy the command of the choose list
           async tindyCommand() {
             let this_list = this.subdevices.filter((item) => item.chooseStatus);
+            
             this_list.forEach((item) => {
               let { device_button_group, name, device, ref,device_mode ,device_model} = item;
               let mackey = core_utils_get_mac_address_from_guid(device, true);
@@ -954,30 +955,28 @@
                 let otherModelStatus = false;
                 if(device_model == 'YO121-AC-R2W') otherModelStatus = true;
                 if(item.ref == 2){
-                  let data = `55AA050101036DDC`;
+                  let data = `860255AA050101036DDC`;
                   data += core_util_calculate_crc16_modbus_for_doa(data);
                   if(otherModelStatus){
-                    data = `55fefe030338e5`;
+                    data = `8930`;
                   }
-                  command = `02${mackey}8602${data}`;
+                  command = `02${mackey}${data}`;
                   item.action_command = command;
                 }else if (device_button_group.includes('REVERSE')) {
-                  let data = `55AA060102${parseInt(100-item.ref).toString(16).pad('00')}FF`;
+                  let data = `860255AA060102${parseInt(100-item.ref).toString(16).pad('00')}FF`;
                   data += core_util_calculate_crc16_modbus_for_doa(data);
                   if(otherModelStatus){
-                    data = `55fefe0304${parseInt(100-item.ref).toString(16).pad('00')}`;
-                    data += erp.script.core_util_calculate_crc16_for_motor(data);
+                    data = `8900${parseInt(100-item.ref).toString(16).pad('00')}`;
                   }
-                  command = `02${mackey}8602${data}`;
+                  command = `02${mackey}${data}`;
                   item.action_command = command;
                 }else{
-                  let data = `55AA060102${parseInt(item.ref).toString(16).pad('00')}FF`;
+                  let data = `860255AA060102${parseInt(item.ref).toString(16).pad('00')}FF`;
                   data += core_util_calculate_crc16_modbus_for_doa(data);
                   if(otherModelStatus){
-                    data = `55fefe0304${parseInt(item.ref).toString(16).pad('00')}`;
-                    data += erp.script.core_util_calculate_crc16_for_motor(data);
+                    data = `8900${parseInt(item.ref).toString(16).pad('00')}`;
                   }
-                  command = `02${mackey}8602${data}`;
+                  command = `02${mackey}${data}`;
                   item.action_command = command;
                 }
               }else if(device_mode == 'RCU Controller'){
@@ -990,7 +989,15 @@
               }
             });
             console.log('this_list', this_list);
+            debugger
             //send to page
+            if(type == 5){
+              emitter.emit('save_device_status', {
+                data: JSON.stringify(this_list),
+              });
+              mainView.router.back(mainView.history[mainView.history.length - 2], { force: false });
+              return;
+            }
             emitter.emit('save_action', {
               data: JSON.stringify(this_list),
             });

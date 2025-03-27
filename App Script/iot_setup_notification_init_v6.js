@@ -87,7 +87,7 @@ window.iot_setup_notification_init = function(params) {
                                 }
                             }
                             //check the door firmware version
-                            let firmware = window.peripheral[guid]?.prop?.firmware;
+                            let firmware = window.peripheral[guid]?window.peripheral[guid].prop.firmware:'';
                             let this_ref = '';
                             let post_type = '';
                             if(selected == 'Door Open'){

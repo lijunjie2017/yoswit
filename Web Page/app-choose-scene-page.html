@@ -1,0 +1,229 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Choose Scene') }}</div>
+        <div class="right">
+          <a link icon-only @click="${()=>batch_save()}">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="view view-main">
+          <div class="list media-list no-margin">
+            <ul>
+              <div class="scene-room-device-item">
+                <div class="li-item" v-for="(subItem,index) in sceneList" :key="subItem.name">
+                  <li class="device swipeout">
+                    <div class="item-content swipeout-content">
+                      <a class="item-link item-content no-chevron no-ripple no-active-state" style="width: 100%">
+                        <div
+                          class="device-thumb item-media"
+                          :style="{
+                            'background-image' : 'url('+subItem.imgUrl+')',
+                            'background-position' : 'center',
+                            'background-size' : 'contain',
+                            'position' : 'relative'
+                          }"
+                        ></div>
+                        <div class="item-inner">
+                          <div class="item-title-row">
+                            <div class="item-title ellipsis" lang="en" style="width: 180px">{{tran(subItem.title)}}</div>
+                          </div>
+                          <div class="item-subtitle">{{ subItem.scene_template }}</div>
+                          <div class="signal-panel item-text height-21" style="width: 120%">
+                            <div>
+                              <div class="status-info text-color-primary" v-if="subItem.v_id">{{_("V-ID")}}/{{subItem.v_id}}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                      <div class="control-panel-right" >
+                        <a class="right" v-on:click="${()=>chooseScene(subItem)}" v-if="subItem.mainType == 0">
+                          <div class="button button-raised button-big circle rf-sensor">
+                              <i class="material-icons" style="line-height: 25px!important;">block</i>
+                          </div>
+                        </a>
+                        <a class="right" v-on:click="${()=>chooseScene(subItem)}" v-if="subItem.mainType == 16 && type != 7">
+                          <div class="button button-raised button-big circle rf-sensor">
+                              <i class="material-icons" style="line-height: 30px!important;font-size: 30px!important;">check</i>
+                          </div>
+                        </a>
+                        <a
+                          :class="subItem.ref == 0?'off_flag':'on_flag'"
+                          :onoff="subItem.ref"
+                          v-if="subItem.mainType == 16 && type == 7"
+                          v-on:click="onOffItem(subItem)"
+                        >
+                          <div class="button button-raised button-big onoff"></div>
+                        </a>
+                      </div>
+                    </div>
+                    <div class="swipeout-actions-right">
+                      <a v-on:click="cancelTemplate(subItem)" class="link color-red">
+                        <i class="icon material-icons">cancel</i>
+                      </a>
+                    </div>
+                  </li>
+                </div>
+              </div>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { guid, subdevice,type } = $f7route.query;
+    const batch_save = () => {
+      vueApp.$batchSave();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          sceneList: [],
+          type : type || 1
+        },
+        computed: {},
+        watch: {},
+        mounted() {
+          this.initData();
+          Vue.prototype.$batchSave = this.tindyCommand;
+        },
+        methods: {
+          initData() {
+            let list = cloneDeep(erp.info.scene);
+            for(let i in list) {
+              list[i].mainType = 0;
+              list[i].ref = 1;
+              list[i].operate_type = 6;
+              list[i].imgUrl = 'https://my.yoswit.com/files/YO780.svg';
+              //get the scnen virtual id
+              let scene_virtual_button = list[i].scene_virtual_button || [];
+              if(scene_virtual_button.length > 0){
+                list[i].v_id = scene_virtual_button[0].virtual_button_id;
+                list[i].guid = scene_virtual_button[0].device;
+                list[i].device = scene_virtual_button[0].device;
+              }
+              this.sceneList.push(list[i]);
+            }
+          },
+          toRoomList(title, type, operateType) {
+            let url = `/mobile-app/scene-room-device?type=${type}&title=${encodeURIComponent(tran(title))}`;
+            mainView.router.navigate(url);
+          },
+          toSceneList(title, type, operateType) {
+            let url = `/mobile-app/scene-room-device?type=${type}&title=${encodeURIComponent(tran(title))}`;
+            mainView.router.navigate(url);
+          },
+          chooseScene(item) {
+            console.log(item);
+            if(item.mainType == 6){
+              item.mainType = 0;
+            } else {
+              item.mainType = 16;
+            }
+          },
+          onOffItem(item){
+            if (item.ref == 0) {
+              item.ref = 1;
+            } else { 
+              item.ref = 0;
+            }
+          },
+          cancelTemplate(subItem) {
+            subItem.mainType = 0;
+            subItem.chooseStatus = false;
+          },
+          deleteActionItem(name) {
+            console.log(name);
+          },
+          tindyCommand() {
+            let this_list = this.sceneList.filter((item) => item.mainType == 16);
+            //send to page
+            for(let i in this_list) {
+              this_list[i].mode = 'RCU Controller';
+              this_list[i].device_mode = 'RCU Controller';
+              this_list[i].device_button_group = 'ONOFF GANG1';
+              this_list[i].virtualId = this_list[i].v_id;
+              delete this_list[i].action;
+              delete this_list[i].trigger;
+              delete this_list[i].condition;
+              delete this_list[i].ui_configuration;
+            }
+            debugger
+            if(this.type == 8){
+              emitter.emit('save_scene_status', {
+                data: JSON.stringify(this_list),
+              });
+              mainView.router.back(mainView.history[mainView.history.length - 2], { force: false });
+              return;
+            }
+            emitter.emit('save_scene_action', {
+              data: JSON.stringify(this_list),
+            });
+            mainView.router.back(mainView.history[mainView.history.length - 2], { force: false });
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .show-item {
+    width: 49%;
+    background: #fff;
+    border-radius: 15px;
+    overflow: hidden;
+    min-height: 150px;
+    margin-bottom: 15px;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+  .off_flag > .button.onoff {
+    background-color: var(--f7-block-strong-bg-color);
+    color: #8e8d93;
+    border-color: #8e8d93;
+  }
+  .off_flag > .button.onoff:after {
+    content: 'OFF';
+  }
+</style>

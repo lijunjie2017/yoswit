@@ -281,7 +281,11 @@
                       }
                     })
                     .then(()=>{
-                      this.checkConnectDone();
+                      this.statusList[3].title = _('Compelete');
+                      this.statusList[3].status = 1;
+                      //delete the list
+                      this.statusList.splice(4, 1);
+                      window.globalUpdate = true;
                     })
                     .catch(err=>{
                       this.statusList[2].status = 2;

@@ -167,10 +167,27 @@
                     >
                   </div>
                 </div>
-                <div class="row" style="margin: 20px 0">
+                <!-- <div class="row" style="margin: 20px 0">
                   <div class="col">
                     <a href="#" v-on:click="postCommand(20)" class="button button-large button-raised" style="padding: 30px 0px"
                       ><i class="icon material-icons">power_settings_new</i></a
+                    >
+                  </div>
+                </div> -->
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(23)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">logout</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(24)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">volume_mute</i></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(25)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><i class="icon material-icons">subtitles</i></a
                     >
                   </div>
                 </div>
@@ -206,7 +223,7 @@
           </div>
         </div>
       </div>
-
+      
       {% endraw %}
     </div>
   </div>
@@ -438,6 +455,18 @@
               //00
               command = `972102016b6120312030300d`;
               command_type = 'OFF';
+            } else if (type == 23) {
+              //5B
+              command = `${pre_command}35420D`;
+              command_type = 'EXIT';
+            } else if (type == 24) {
+              //09
+              command = `${pre_command}30390D`;
+              command_type = 'MUTE';
+            } else if (type == 25) {
+              //39
+              command = `${pre_command}33390D`;
+              command_type = 'SUBTITLE';
             }
             if (type == 100) {
               mainView.router.navigate(`/mobile-app/command-debug?guid=${guid}`);

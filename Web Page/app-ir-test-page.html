@@ -1,0 +1,254 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('IR Pannel') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="block">
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(1)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>ON</span></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(2)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>OFF</span></a
+                    >
+                  </div>
+                </div>
+                <div class="row" style="margin: 20px 0">
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(3)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>Swing-ON</span></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(4)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>Swing-ON</span></a
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    window.htmi_log_list = [];
+    const { guid, subdevice } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1,
+          power: 0,
+          logList: [],
+          stepList: [
+            {
+              id: 1,
+              name: 'TEST',
+              relatedIndex: 1,
+              isActive: true,
+            }
+          ],
+        },
+        computed: {},
+        watch: {
+          logList: function (val) {
+            console.log(val);
+            emitter.emit('listen_log_list', {
+              list: window.htmi_log_list,
+            });
+          },
+        },
+        mounted() {},
+        methods: {
+          toTab(id) {
+            this.index = id;
+            this.stepList.forEach((item) => {
+              item.isActive = item.id == id;
+            });
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          async openDebug() {
+            app.dialog.preloader();
+            try {
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `972002010100000180250000`,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `810e`,
+                },
+              ]);
+              await this.sleep(1000 * 5);
+              await window.peripheral[guid].connect();
+              await this.sleep(1000 * 2);
+              app.dialog.close();
+              this.showDebug();
+              app.dialog.alert(_('Open Debug'));
+            } catch (e) {
+              console.log(e);
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(e)));
+            }
+          },
+          async showDebug() {
+            //mainView.router.navigate(`/mobile-app/hdmicec-page-log?guid=${guid}`);
+            try {
+              let device_id = window.peripheral[guid].prop.id;
+              //await ble.withPromises.stopNotification(device_id);
+              //await this.stopNotification();
+              await ble.startNotification(
+                device_id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log(rs);
+                  if (rs.startsWith('97220201')) {
+                    let str = this.hexToString(rs.substring(8, rs.length));
+                    window.htmi_log_list.push({
+                      text: str,
+                      time: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+                    });
+                    this.logList.push(str);
+                  }
+                },
+                (err) => {
+                  //app.dialog.close();
+                  //app.dialog.alert(err);
+                }
+              );
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          hexToString(hex) {
+            const hexArray = hex.match(/.{1,2}/g);
+            const str = hexArray.map((byte) => String.fromCharCode(parseInt(byte, 16))).join('');
+            return str;
+          },
+          toDebugPage() {
+            mainView.router.navigate(`/mobile-app/hdmicec-page-log?guid=${guid}`);
+          },
+          stopNotification() {
+            let device_id = window.peripheral[guid].prop.id;
+            return new Promise((resolve, reject) => {
+              ble.stopNotification(
+                device_id,
+                'ff80',
+                'ff82',
+                (rs) => {
+                  console.log(rs);
+                  resolve(rs);
+                },
+                (err) => {
+                  reject(err);
+                }
+              );
+            });
+          },
+          writeCommand() {
+            this.logList.push('kh 0 01');
+          },
+          async postCommand(type) {
+            /*
+            1.关:87003001034d17040201000102030000ffa4
+            2.开:87003001034d17040101010102030000ffa4
+            3.摆:87003001034d17040200010502030000ffa8     关
+            4.摆:87003001034d17040201010502030000ffa9     开
+                             000102030405060708091011
+            */
+            let command = '';
+            if (type == 1) {
+              command = `87003001034d17040101010102030000ffa4`;
+            } else if (type == 2) {
+              command = `87003001034d17040201000102030000ffa4`;
+            } else if (type == 3) {
+              command = `87003001034d17040201010502030000ffa9`;
+            } else if (type == 4) {
+              command = `87003001034d17040200010502030000ffa8`;
+            }
+            try{
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command,
+                },
+              ]);
+            }catch(error){
+              console.log(error);
+                if (error == 7200) {
+                  erp.script.iot_entry_class_password_verify(props.kitem.device, props.kitem.name).then(() => {});
+                } else {
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+            }
+            if (type == 21) {
+              // setTimeout(async()=>{
+              //   await window.peripheral[guid].doHdmiCec([{
+              //     gang: 1,
+              //     command: command
+              //   }]);
+              // },1000*2);
+            }
+
+            // await window.peripheral[guid].write([
+            //   {
+            //     service: 'ff80',
+            //     characteristic: 'ff81',
+            //     data: command,
+            //   },
+            // ]);
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

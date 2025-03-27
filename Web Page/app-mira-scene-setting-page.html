@@ -1,0 +1,369 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Guest Mode Configurator') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only sortable-toggle" data-sortable=".sortable" @click="${()=>sortableAction()}">
+            <i class="icon material-icons">filter_list</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="view view-main">
+          <div class="card">
+            <div class="card-content card-content-padding">
+              <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 40px">
+                <div class="action-list list media-list no-margin sortable">
+                  <ul>
+                    <li class="device swipeout" v-for="(item,index) in actionList" :key="item.name">
+                      <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                        <div
+                          class="device-thumb item-media"
+                          :style="{
+                              'background-position': 'center',
+                              'background-size': 'contain',
+                              'position': 'relative',
+                              'background-image': 'url('+item.imgUrl+')'}
+                            "
+                        ></div>
+                        <div class="item-inner">
+                          <div class="item-title-row">
+                            <div class="item-title ellipsis" lang="en" style="width: 200px">{{item.title}}</div>
+                          </div>
+                          <div class="item-subtitle" v-if="item.mainType == 16">{{ item.scene_template }}</div>
+                          <div class="item-subtitle" v-else>{{ item.device_model }}-{{ item.mac_address }}</div>
+                          <div class="signal-panel item-text height-21" v-if="item.mainType != 16">
+                            {{tran(item.room_name)}}/
+                            <span v-if="item.v_id">{{_("V-ID")}}/{{item.v_id?item.v_id:_('Not Set')}}</span>
+                          </div>
+                        </div>
+                        <div class="margin-right" v-if="sortable" v-on:click="deleteActionItem(item.name)">
+                          <i class="material-icons text-color-gray">delete</i>
+                        </div>
+                      </div>
+                      <div class="swipeout-actions-right" v-if="item.operate_type == 6">
+                        <a
+                          v-on:click="dndAction(item)"
+                          :class="{'link':true,'color-gray':item.dnd?false:true,'color-orange':item.dnd?true:false}"
+                        >
+                          <i class="icon material-icons">notifications_off</i>
+                        </a>
+                        <a
+                          v-on:click="cleanAction(item)"
+                          :class="{'link':true,'color-grey':item.clean?false:true,'color-orange':item.clean?true:false}"
+                        >
+                          <i class="icon material-icons">cleaning_services</i>
+                        </a>
+                      </div>
+                      <div class="sortable-handler"></div>
+                    </li>
+                  </ul>
+                </div>
+                <div
+                  class="add-box add-action display-flex justify-content-flex-start align-items-center"
+                  v-on:click="toRoomList('Choose Action Device',5)"
+                >
+                  <i class="material-icons">add_circle</i>
+                  <div class="trigger-text margin-left">{{_("Add Actions")}}</div>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="saveScene()">{{_("SAVE")}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on,
+      $update = ctx.$update;
+
+    let vueApp = null;
+    let sortable = true;
+    window.htmi_log_list = [];
+    const { guid, subdevice } = $f7route.query;
+    const sortableAction = () => {
+      // sortable = !sortable;
+      // console.log(sortable);
+      // $update();
+      vueApp.$sortableAction();
+    };
+    $on('sortableSort', (listEl, data) => {
+      const { from, to } = data;
+      vueApp.$sortableSort(from, to);
+    });
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          actionList: [],
+          sortable: sortable,
+        },
+        computed: {},
+        watch: {},
+        mounted() {
+          this.initData();
+          Vue.prototype.$sortableAction = this.sortableAction;
+          Vue.prototype.$sortableSort = this.sortableSort;
+          emitter.on('save_scene_action', (data) => {
+            console.log(data);
+            let list = JSON.parse(data.data);
+            //console.log(list);
+            list.forEach((element) => {
+              element.width = '49%';
+              element.dnd = false;
+              element.clean = false;
+              this.actionList.push(element);
+            });
+            console.log(this.actionList);
+          });
+          //save_device_status
+          emitter.on('save_device_status', (data) => {
+            console.log(data);
+            let list = JSON.parse(data.data);
+            //console.log(list);
+            list.forEach((element) => {
+              //check the button group
+              let device_button_group = element.device_button_group;
+              let group_list = [
+                'Thermostat',
+                'DIMMING',
+                'RCU DIMMING',
+                'OPENCLOSE GANG',
+                'OPENCLOSE UART',
+                'OPENCLOSE WIFI UART',
+                'Air Conditioner',
+                'IR-DIY',
+                'IAQ',
+              ];
+              if (group_list.some((group) => device_button_group.startsWith(group))) {
+                element.width = '49%';
+                element.operate_type = 2;
+              } else {
+                element.width = '49%';
+                element.operate_type = 1;
+              }
+              this.actionList.push(element);
+            });
+          });
+          emitter.on('save_action', (data) => {
+            console.log(data);
+            let list = JSON.parse(data.data);
+            //console.log(list);
+            list.forEach((element) => {
+              //check the button group
+              let device_button_group = element.device_button_group;
+              let group_list = [
+                'Thermostat',
+                'DIMMING',
+                'RCU DIMMING',
+                'OPENCLOSE GANG',
+                'OPENCLOSE UART',
+                'OPENCLOSE WIFI UART',
+                'Air Conditioner',
+                'IR-DIY',
+                'IAQ',
+              ];
+              if (group_list.some((group) => device_button_group.startsWith(group))) {
+                element.width = '49%';
+                element.operate_type = 2;
+              } else {
+                element.width = '49%';
+                element.operate_type = 1;
+              }
+              this.actionList.push(element);
+            });
+            console.log(this.actionList);
+          });
+        },
+        methods: {
+          async initData() {
+            try {
+              //load the erp data
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
+              let method = 'GET';
+              let response = await http.request(url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+              });
+              console.log('response', response);
+              let list = response.data.data.profile_subdevice || [];
+              let devices = cloneDeep(erp.info.profile.profile_device);
+              let mapList = list.filter((item) => {
+                return item.guest_mode == 1;
+              });
+              mapList.sort((a, b) => {
+                return a.guest_mode_idx - b.guest_mode_idx;
+              });
+              mapList.forEach((item, index) => {
+                if (item.guest_mode == 1) {
+                  item.index = item.guest_mode_idx;
+                  item.imgUrl = item.image;
+                  item.v_id = item.config;
+                  let device = devices.find((device) => device.name == item.profile_device);
+                  item.device_model = device.device_model;
+                  item.mac_address = device.device_name;
+                  this.actionList.push(item);
+                }
+              });
+              console.log('list', this.actionList);
+            } catch (error) {
+              console.log(error);
+            }
+          },
+          sortableSort(from, to) {
+            console.log(`元素从 ${from} 移动到 ${to}`);
+            const movedItem = this.actionList.splice(from, 1)[0];
+            this.actionList.splice(to, 0, movedItem);
+            console.log('actionList', this.actionList);
+          },
+          sortableAction() {
+            console.log('sortableAction');
+            this.sortable = !this.sortable;
+          },
+          toRoomList(title, type, operateType) {
+            let url = `/mobile-app/scene-room-device?type=${type}&title=${encodeURIComponent(tran(title))}`;
+            mainView.router.navigate(url);
+          },
+          toSceneList(title, type, operateType) {
+            let url = `/mobile-app/choose-scene-page?type=${type}&title=${encodeURIComponent(tran(title))}`;
+            mainView.router.navigate(url);
+          },
+          deleteActionItem(name) {
+            console.log(name);
+            const index = this.actionList.findIndex((item) => item.name === name);
+            if (index >= 0) {
+              this.actionList.splice(index, 1);
+            }
+          },
+          dndAction(item) {
+            item.dnd = !item.dnd;
+            if (item.dnd) {
+              item.width = '100%';
+            } else {
+              item.width = '49%';
+            }
+          },
+          cleanAction(item) {
+            item.clean = !item.clean;
+          },
+          
+          async saveScene() {
+            console.log(this.actionList);
+            app.dialog.preloader();
+            //orlder by the index
+            let orderList = [];
+
+            this.actionList.forEach((item, index) => {
+              item.order_index = index;
+              orderList.push(item);
+            });
+            console.log('orderList', orderList);
+            //get the erp profile subdevice
+            let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+            profile_subdevice.forEach((subdevice) => {
+              subdevice.guest_mode = 0;
+              subdevice.guest_mode_idx = 0;
+              orderList.forEach((item) => {
+                if (item.name == subdevice.name) {
+                  subdevice.guest_mode_idx = item.order_index;
+                  subdevice.guest_mode = 1;
+                  subdevice.image = item.imgUrl;
+                }
+              });
+            });
+            console.log('profile_subdevice', profile_subdevice);
+            //save in the erp profile
+            let url = `/api/resource/Profile/${erp.info.profile.name}`;
+            let method = 'PUT';
+            try {
+              let postStatus = await http.request(url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  profile_subdevice: profile_subdevice,
+                }, 
+              });
+              console.log('postStatus', postStatus);
+              await ha_profile_ready();
+              app.dialog.close();
+              app.dialog.confirm('Save Successfully', 'Save Successfully', () => {
+                mainView.router.back();
+              });
+              // app.dialog.alert('Save Successfully');
+              // setTimeout(() => {
+              //   $('.dialog-buttons .dialog-button-bold').text(_('confirm'));
+              // },10)
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+            return;
+            //save in the local database
+            let key = 'mira_scene_guset_config';
+            await db.set(key, JSON.stringify(this.actionList));
+            app.dialog.confirm('Save Successfully', 'Save Successfully', () => {
+              mainView.router.back();
+            });
+
+            // mainView.router.back();
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .show-item {
+    width: 49%;
+    background: #fff;
+    border-radius: 15px;
+    overflow: hidden;
+    min-height: 150px;
+    margin-bottom: 15px;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+</style>

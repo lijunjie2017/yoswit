@@ -58,6 +58,10 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     'Manual Dim Steps': {},
     'Delay Lastfor': {},
     'Device Mapping': {},
+    'Led Mode' : {},
+    'Backlight Brightness' : {},
+    'Manned Backlight Brightness' : {},
+    'Manned Backlight Time' : {},
   };
   let commandList = [];
 
@@ -132,6 +136,9 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     //4.update the config
     //this value is object
     //command_data = `02${ower_mac}81080${this_gang}fe${new_mac}ff0${targer_gang}00`;
+    if(!value.pairing_guid){
+        return
+    }
     let firmware = window.peripheral[guid].prop.firmware;
     let ower_mac = core_utils_get_mac_address_from_guid(guid, true);
     let new_mac = core_utils_get_mac_address_from_guid(value.pairing_guid, true);
@@ -700,6 +707,32 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     return command_list;
   };
 
+  //get Led Mode
+
+  //get Backlight Brightness
+
+  //get Manned Backlight Brightness
+
+  //get Manned Backlight Time
+
+  //rcu mode_list
+
+  //rcu init_slot_03
+
+  //rcu door_bell
+
+  //rcu clean_dnd
+
+  //rcu main_rcu
+
+  //rcu via_485
+
+  //rcu active_io
+
+  //rcu Minimum Brightness_RCU DIMMING9
+
+  
+
   switch (type) {
     case 'Set Time':
       let command = get_set_time_command();
@@ -855,6 +888,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       });
       break;
     case 'Device Pairing':
+      if(type.includes('Virtual Device Pairing')) break;
       let obj = get_device_mapping_command(value);
       commandList.push({
         command: obj.data,

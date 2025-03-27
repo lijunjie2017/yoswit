@@ -39,7 +39,7 @@
                 </div>
                 <div class="item-subtitle">
                   ${ subDevice.model }-${ subDevice.device_button_group === 'OPEN_LOCK' || subDevice.device_button_group ===
-                  'WRITE_WIEGAND_4963'?subDevice.device:subDevice.mac_address }
+                  'WRITE_WIEGAND_4963'?subDevice.device:subDevice.mac_address.substring(0,12) }
                 </div>
                 <div class="item-text">${subDevice.device}</div>
               </div>
@@ -73,7 +73,7 @@
         <div class="device-create">
           <div class="block" style="text-align: center">
             <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-            <p>${tran('You don\'t have any devices, create one.')}</p>
+            <p>${_('You don\'t have any devices, create one.')}</p>
           </div>
           <div class="block block-strong">
             <p class="row">
@@ -132,7 +132,7 @@
         profile_device.forEach((kitem) => {
           if (kitem.name === item.profile_device) {
             item.model = kitem.device_model;
-            item.mac_address = kitem.device_name;
+            item.mac_address = kitem.device_name.substring(0,12);
           }
         });
         for (let i in device_models) {
