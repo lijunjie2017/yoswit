@@ -1,5 +1,5 @@
 window.manual_dim_bar_list = [];
-window.ha_control_template_render = (guid, device_model, device_button_group,id) => {
+window.ha_control_template_render = (guid, device_model, device_button_group, id) => {
   //get the device_model and image
   const device_models = cloneDeep(erp.doctype.device_model);
   let device_default_template = [];
@@ -17,7 +17,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
     let device_button_group = $(element.$el).attr('button_group');
     let guid = $(element.$el).attr('guid');
     let id = $(element.$el).attr('id');
-    initPeripheral(guid,id);
+    initPeripheral(guid, id);
     console.log('thisvalue', thisvalue);
     let data = ``;
     let otherModelStatus = false;
@@ -50,24 +50,26 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
         let command = '8602' + data.toLowerCase();
         try {
-          debugger
+          debugger;
           //alert(JSON.stringify(peripheral[guid]))
-          peripheral[guid].curtainmotor([
-            {
-              gang: bleHelper.getGangId(device_button_group),
-              value: thisvalue,
-              command: command,
-            },
-          ]).catch((error)=>{
-            app.dialog.alert(_(erp.get_log_description(error)));
-          });
+          peripheral[guid]
+            .curtainmotor([
+              {
+                gang: bleHelper.getGangId(device_button_group),
+                value: thisvalue,
+                command: command,
+              },
+            ])
+            .catch((error) => {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            });
         } catch (error) {
           app.dialog.alert(_(erp.get_log_description(error)));
         }
       } else {
         try {
           let direction = thisvalue > 0 ? 'open' : 'close';
-          peripheral[guid].openClose(bleHelper.getGangId(device_button_group), direction, true).catch((error)=>{
+          peripheral[guid].openClose(bleHelper.getGangId(device_button_group), direction, true).catch((error) => {
             app.dialog.alert(_(erp.get_log_description(error)));
           });
         } catch (error) {
@@ -75,6 +77,61 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
         }
       }
     }
+  };
+
+  const range_change_for_scene_button = (element) => {
+    console.log($(element.$el).attr('button_group'));
+    let device_button_group = $(element.$el).attr('button_group');
+    let guid = $(element.$el).attr('guid');
+    let id = $(element.$el).attr('id');
+    let name = $(element.$el).attr('name');
+    let thisvalue = element.value;
+    console.log('name', name);
+    console.log('thisvalue', thisvalue);
+    initPeripheral(guid, id);
+    if (window.peripheral[guid]) {
+      if (name == 'manual') {
+        //radar
+        //limit 50*10000 - 500 * 10000, value越大，雷达距离越近
+        let value = Math.min(30, Math.max(0, thisvalue));
+        const minActual = 50 * 10000;
+        const maxActual = 500 * 10000;
+        const actualValue = maxActual - (value / 30) * (maxActual - minActual);
+        let radar_value = Math.round(actualValue);
+        console.log('radar_value', radar_value);
+        let command = `9534000003${iot_utils_to_upper_endian_hex(radar_value, 3)}`;
+        try {
+          window.peripheral[guid].write([
+            {
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: command,
+            },
+          ]);
+        } catch (error) {
+          app.dialog.alert(_(erp.get_log_description(error)));
+        }
+      } else if (name == 'backlight') {
+        //backlight
+        let post_value = Math.ceil((thisvalue * 255) / 100);
+        let command = `8131${parseInt(post_value).toString(16).pad('00')}`;
+        try {
+          window.peripheral[guid].write([
+            {
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: command,
+            },
+          ]);
+        } catch (error) {
+          app.dialog.alert(_(erp.get_log_description(error)));
+        }
+      }
+    } else {
+      app.dialog.alert(_('Device not found'));
+    }
+
+    // initPeripheral(guid, id);
   };
   const range_change_fun_for_dimming = (element) => {
     console.log($(element.$el).attr('button_group'));
@@ -83,7 +140,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
     let id = $(element.$el).attr('id');
     let thisvalue = element.value;
     console.log('thisvalue', thisvalue);
-    initPeripheral(guid,id);
+    initPeripheral(guid, id);
     let v = Math.ceil((thisvalue / 100) * 255);
     if (thisvalue > 0) {
       $(`.manua-onoff[guid="${guid}"][device_button_group="${device_button_group}"]`).attr('ref', 1);
@@ -91,41 +148,60 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       $(`.manua-onoff[guid="${guid}"][device_button_group="${device_button_group}"]`).attr('ref', 0);
     }
     if (peripheral[guid]) {
-      try {
-        peripheral[guid].dimming([
-          {
-            gang: bleHelper.getGangId(device_button_group),
-            value: v,
-          },
-        ]).catch((error)=>{
+      if (device_button_group.includes('RCU DIMMING')) {
+        try {
+          peripheral[guid].rcuDimming([
+            {
+              gang: bleHelper.getGangId(device_button_group),
+              value: v,
+            },
+          ]);
+        } catch (error) {
           app.dialog.alert(_(erp.get_log_description(error)));
-        });
-      } catch (error) {
-        app.dialog.alert(_(erp.get_log_description(error)));
+        }
+      } else {
+        try {
+          peripheral[guid]
+            .dimming([
+              {
+                gang: bleHelper.getGangId(device_button_group),
+                value: v,
+              },
+            ])
+            .catch((error) => {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            });
+        } catch (error) {
+          app.dialog.alert(_(erp.get_log_description(error)));
+        }
       }
     }
   };
-  const initDimBar = (device_button_group) => {
-    let range_key = `${guid}_${device_button_group}_manual`;
+  const initDimBar = (device_button_group, max_value = 100, scaleSteps = 5, name = 'manual') => {
+    let range_key = `${guid}_${device_button_group}_${name}`;
     if (!isset(manual_dim_bar_list[range_key])) {
       manual_dim_bar_list[range_key] = {};
     }
     manual_dim_bar_list[range_key] = app.range.create({
-      el: `.range-slider[guid="${guid}"][button_group="${device_button_group}"][name="manual"]`,
+      el: `.range-slider[guid="${guid}"][button_group="${device_button_group}"][name="${name}"]`,
       value: 0,
       min: 0,
-      max: 100,
+      max: max_value,
       draggableBar: false,
       label: true,
       step: 1,
       scale: true,
-      scaleSteps: 5,
+      scaleSteps: scaleSteps,
       scaleSubSteps: 4,
       on: {
         changed:
-          device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE GANG') || device_button_group.startsWith('OPENCLOSE WIFI UART')
+          device_button_group.startsWith('OPENCLOSE UART') ||
+          device_button_group.startsWith('OPENCLOSE GANG') ||
+          device_button_group.startsWith('OPENCLOSE WIFI UART')
             ? range_change_fun
-            : range_change_fun_for_dimming,
+            : device_button_group.startsWith('ONOFF GANG') || device_button_group.startsWith('Thermostat')
+              ? range_change_for_scene_button
+              : range_change_fun_for_dimming,
       },
     });
   };
@@ -170,7 +246,8 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
     return `
   <div>
   <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
-    <a class="item-content">
+    <div class="item-content swipeout-content">
+    <a class="item-link item-content no-chevron no-ripple no-active-state" style="width:100%;">
       <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
       </div>
       <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
@@ -197,6 +274,25 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
         </div>
       </div>
     </a>
+    <div class="swipeout-actions-right">
+        <a
+          func="click_gateway_wifi_setting"
+          link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+          class="link color-orange"
+          guid="${guid}"
+          id="${id}"
+          ><i class="icon material-icons" style="line-height: 15px!important;">settings</i></a
+        >
+        <a
+          func="reset_wifi_setting"
+          link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+          class="link color-red"
+          guid="${guid}"
+          id="${id}"
+          ><i class="icon material-icons" style="line-height: 15px!important;">link_off</i></a
+        >
+      </div>
+    </div>
   </li>
   <li class="device home-scanned-peripheral home-scanned-peripheral-smart display-flex curtain-subdevice">
     <div class="row padding-tb flex-direction-column justify-content-center">
@@ -218,6 +314,90 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
   `;
   };
 
+  const scene_button_template = (device_button_group, title) => {
+    return `
+  <div>
+    <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
+      <div class="item-content swipeout-content">
+        <a class="item-link item-content no-chevron no-ripple no-active-state">
+          <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
+          </div>
+        <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
+          <div class="item-title-row">
+            <div class="item-title ellipsis"style="width: 190px">${model_map.model_code} ${title}</div>
+          </div>
+          <div class="item-subtitle" style="margin-top: 3px;margin-bottom: 3px;">${_(core_utils_get_mac_address_from_guid(guid))}</div>
+          <div class="signal-panel-manual item-text height-21" style="width: 120%" signal="5" bluetooth="0" guid="${guid}">
+            <div class="signal-view-main">
+              <div class="signal"></div>
+              <div class="bluetooth"></div>
+              <div class="wifiicon ${model_map.mode_type == 'Wifi' ? '' : 'device-none'}">
+                <i class="material-icons text-color-red" style="font-size:22px;">wifi_off</i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="control-panel-right" style="">
+          <a class="on_flag off_flag manua-onoff" style="margin-right:-10px;" ref="0" func="scene_button_change" guid="${guid}" device_button_group="${device_button_group}" id="${id}">
+            <div class="button button-raised button-big onoff"></div>
+          </a>
+        </div>
+      </a>
+      <div class="swipeout-actions-right">
+        <a
+          func="click_gateway_wifi_setting"
+          link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+          class="link color-orange"
+          guid="${guid}"
+          id="${id}"
+          ><i class="icon material-icons" style="line-height: 15px!important;">settings</i></a
+        >
+        <a
+          func="reset_wifi_setting"
+          link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+          class="link color-red"
+          guid="${guid}"
+          id="${id}"
+          ><i class="icon material-icons" style="line-height: 15px!important;">link_off</i></a
+        >
+      </div>
+    </div>
+    </li>
+    <li class="device home-scanned-peripheral home-scanned-peripheral-smart display-flex curtain-subdevice">
+      <div class="row padding-tb flex-direction-column justify-content-center">
+        <div class="col-100 medium-100 large-100">
+          <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+            <div class="tip-title"><i class="icon material-icons" style="margin-right:8px;">location_off</i></div>
+            <div class="range-slider range-slider-home-auto range-slider-init"
+                button_group="${device_button_group}"
+                guid="${guid}"
+                name="manual"
+                id="${id}"
+            ></div>  
+            <div class="tip-title"><i class="icon material-icons" style="margin-left:8px;">location_on</i></div>
+          </div>
+        </div>
+      </div>
+    </li>
+    <li class="device home-scanned-peripheral home-scanned-peripheral-smart display-flex curtain-subdevice">
+      <div class="row padding-tb flex-direction-column justify-content-center">
+        <div class="col-100 medium-100 large-100">
+          <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+            <div class="tip-title"><i class="icon material-icons" style="margin-right:8px;">brightness_low</i></div>
+            <div class="range-slider range-slider-home-auto range-slider-init"
+                button_group="${device_button_group}"
+                guid="${guid}"
+                name="backlight"
+                id="${id}"
+            ></div>  
+            <div class="tip-title"><i class="icon material-icons" style="margin-left:8px;">brightness_high</i></div>
+          </div>
+        </div>
+      </div>
+    </li>
+  </div>
+  `;
+  };
   const dimming_template = (device_button_group, title) => {
     return `
   <div>
@@ -241,7 +421,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
           </div>
         </div>
         <div class="control-panel-right" style="">
-          <a class="on_flag off_flag manua-onoff" ref="0" func="manual_onoff" guid="${guid}" device_button_group="${device_button_group}" id="${id}">
+          <a class="on_flag off_flag manua-onoff" style="margin-right:-10px;" ref="0" func="manual_onoff" guid="${guid}" device_button_group="${device_button_group}" id="${id}">
             <div class="button button-raised button-big onoff"></div>
           </a>
         </div>
@@ -267,7 +447,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
   `;
   };
 
-  const thermostat_template = (device_button_group, title) => {
+  const thermostat_template = (device_button_group, title, isRadar = false) => {
     return `
   <div>
     <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
@@ -300,6 +480,14 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
           id="${id}"
           ><i class="icon material-icons" style="line-height: 15px!important;">settings</i></a
         >
+        <a
+          func="reset_wifi_setting"
+          link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+          class="link color-red"
+          guid="${guid}"
+          id="${id}"
+          ><i class="icon material-icons" style="line-height: 15px!important;">link_off</i></a
+        >
       </div>
       <div class="control-panel-right" style="">
         <a class="on_flag off_flag manua-onoff" ref="0" func="manual_onoff" guid="${guid}" device_button_group="${device_button_group}" id="${id}">
@@ -327,6 +515,22 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
             <a href="#" class="col manual-thermostat-change" command-type="add" guid="${guid}" device_button_group="${device_button_group}" ref="26" id="${id}" func="manual_thermostat_change">
               <div class="button button-raised button-big stop" style="width:70px;font-size:25px;">+</div>
             </a>  
+          </div>
+        </div>
+      </div>
+    </li>
+    <li class="device home-scanned-peripheral home-scanned-peripheral-smart display-flex curtain-subdevice">
+      <div class="row padding-tb flex-direction-column justify-content-center">
+        <div class="col-100 medium-100 large-100">
+          <div class="content display-flex justify-content-center" style="margin-left: 15px;margin-right:15px;">
+            <div class="tip-title"><i class="icon material-icons" style="margin-right:8px;">location_off</i></div>
+            <div class="range-slider range-slider-home-auto range-slider-init"
+                button_group="${device_button_group}"
+                guid="${guid}"
+                name="manual"
+                id="${id}"
+            ></div>  
+            <div class="tip-title"><i class="icon material-icons" style="margin-left:8px;">location_on</i></div>
           </div>
         </div>
       </div>
@@ -395,6 +599,51 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
   </div>
   `;
   };
+
+  //radar template
+  const radar_template = (device_button_group, title) => {
+    return `
+  <div>
+    <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
+    <div class="item-content swipeout-content">
+      <a class="item-link item-content no-chevron no-ripple no-active-state">
+        <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
+        </div>
+        <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
+          <div class="item-title-row">
+            <div class="item-title ellipsis"style="width: 190px">${model_map.model_code} ${title}</div>
+          </div>
+          <div class="item-subtitle" style="margin-top: 3px;margin-bottom: 3px;">${_(core_utils_get_mac_address_from_guid(guid))}</div>
+          <div class="signal-panel-manual item-text height-21" style="width: 120%" signal="5" bluetooth="0" guid="${guid}">
+            <div class="signal-view-main">
+              <div class="signal"></div>
+              <div class="bluetooth"></div>
+            </div>
+          </div>
+        </div>
+        </a>
+        <div class="swipeout-actions-right">
+          <a
+            guid="${guid}" 
+            device_button_group="${device_button_group}"
+            func="click_connect_manual"
+            class="link color-cust-purple"
+            id="${id}"
+            ><i class="icon material-icons" style="line-height: 15px!important;">settings_bluetooth</i></a
+          >
+        </div>
+        <div class="control-panel-right" style="">
+          <a class="right" guid="${guid}" device_button_group="${device_button_group}" id="${id}" func="click_connect_manual">
+            <div class="button button-raised button-big circle manual-radar-sensor">
+                <i class="material-icons" style="line-height: 25px!important;">block</i>
+            </div>
+          </a>
+        </div>
+      </div>
+    </li>
+  </div>
+  `;
+  };
   //door senser
   const door_senser_template = (device_button_group, title) => {
     return `
@@ -430,9 +679,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
         <div class="control-panel-right" style="">
           <a class="right" guid="${guid}" device_button_group="${device_button_group}" id="${id}" func="click_connect_manual">
             <div class="button button-raised button-big circle manual-door-senser" style="background-color: grey;">
-                <img src="${
-                'https://my.yoswit.com/files/app/door_close.svg'
-              }" style="width:25px;height:25px" alt=""/>
+                <img src="${'https://my.yoswit.com/files/app/door_close.svg'}" style="width:25px;height:25px" alt=""/>
             </div>
           </a>
         </div>
@@ -474,6 +721,14 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
             guid="${guid}"
             id="${id}"
             ><i class="icon material-icons" style="line-height: 15px!important;">settings</i></a
+          >
+          <a
+            func="reset_wifi_setting"
+            link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+            class="link color-red"
+            guid="${guid}"
+            id="${id}"
+            ><i class="icon material-icons" style="line-height: 15px!important;">link_off</i></a
           >
         </div>
         <div class="control-panel-right" style="">
@@ -522,6 +777,14 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
           guid="${guid}"
 					><i class="icon material-icons" style="line-height: 15px!important;">settings</i></a
 				>
+        <a
+          func="reset_wifi_setting"
+          link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+          class="link color-red"
+          guid="${guid}"
+          id="${id}"
+          ><i class="icon material-icons" style="line-height: 15px!important;">link_off</i></a
+        >
       </div>
       <div class="control-panel-right" style="">
         <a class="right manual-ir-change" guid="${guid}" device_button_group="${device_button_group}" id="${id}" func="click_connect_manual">
@@ -750,6 +1013,97 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
   `;
   };
 
+  //RCU template
+  const rcu_output_template = (device_button_group, title) => {
+    /*
+    1. should check the mode have different gang
+    2. shouold load different template for different gang
+    */
+    return `
+  <div>
+  <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
+  <div class="item-content swipeout-content">
+    <a class="item-content">
+      <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
+      </div>
+      <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
+        <div class="item-title-row">
+          <div class="item-title ellipsis"style="width: 190px">${model_map.model_code} ${title}</div>
+        </div>
+        <div class="item-subtitle" style="margin-top: 3px;margin-bottom: 3px;">${_(core_utils_get_mac_address_from_guid(guid))}</div>
+          <div class="signal-panel-manual item-text height-21" style="width: 120%" signal="5" bluetooth="0" guid="${guid}" device_button_group="${device_button_group}">
+            <div class="signal-view-main">
+              <div class="signal"></div>
+              <div class="bluetooth"></div>
+              <div class="wifiicon ${model_map.mode_type == 'Wifi' ? '' : 'device-none'}">
+                <i class="material-icons text-color-red" style="font-size:22px;">wifi_off</i>
+              </div>
+            </div>
+          </div>
+        </div>  
+      </div>
+    </a>
+    <div class="control-panel-right" style="">
+      <a class="on_flag off_flag manua-onoff" ref="0" func="click_all_output" guid="${guid}" device_button_group="${device_button_group}" id="${id}">
+        <div class="button button-raised button-big onoff"></div>
+      </a>
+      <a class="right manual-ir-change" guid="${guid}" device_button_group="${device_button_group}" id="${id}" ref="0" func="change_all_output">
+          <div class="button button-raised button-big circle">
+              <i class="material-icons" style="line-height: 25px!important;">usb</i>
+          </div>
+        </a>
+    </div>
+  </div>
+  </li>
+  </div>
+    `;
+  };
+
+  //RCU INPUT template
+  const rcu_input_template = (device_button_group, title) => {
+    return `
+  <div>
+  <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
+  <div class="item-content swipeout-content">
+    <a class="item-content">
+      <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
+      </div>
+      <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
+        <div class="item-title-row">
+          <div class="item-title ellipsis"style="width: 190px">${model_map.model_code} ${title}</div>
+        </div>
+        <div class="item-subtitle" style="margin-top: 3px;margin-bottom: 3px;">${_(core_utils_get_mac_address_from_guid(guid))}</div>
+          <div class="signal-panel-manual item-text height-21" style="width: 120%" signal="5" bluetooth="0" guid="${guid}" device_button_group="${device_button_group}">
+            <div class="signal-view-main">
+              <div class="signal rcu-input-manual"></div>
+              <div class="bluetooth"></div>
+              <div class="wifiicon ${model_map.mode_type == 'Wifi' ? '' : 'device-none'}">
+                <i class="material-icons text-color-red" style="font-size:22px;">wifi_off</i>
+              </div>
+            </div>
+          </div>
+        </div>  
+      </div>
+    </a>
+    <div class="control-panel-right" style="">
+      <a class="right manual-ir-change" guid="${guid}" device_button_group="${device_button_group}" id="${id}" ref="0">
+          <div class="button button-raised button-big circle">
+              <!-- done_all or do_not_disturb_on -->
+              <i class="material-icons all-input-on" style="line-height: 25px!important;">do_not_disturb_on</i>
+          </div>
+      </a>  
+      <a class="right manual-ir-change" guid="${guid}" device_button_group="${device_button_group}" id="${id}" ref="0" func="change_all_intput">
+          <div class="button button-raised button-big circle">
+              <i class="material-icons" style="line-height: 25px!important;">cable</i>
+          </div>
+          
+      </a>
+    </div>
+  </div>
+  </li>
+  </div>
+    `;
+  };
   let html = '';
   for (let i in device_default_template) {
     let device_button_group = device_default_template[i].device_button_group;
@@ -757,7 +1111,11 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       continue;
     }
     let gang = '';
-    if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE GANG') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
+    if (
+      device_button_group.startsWith('OPENCLOSE UART') ||
+      device_button_group.startsWith('OPENCLOSE GANG') ||
+      device_button_group.startsWith('OPENCLOSE WIFI UART')
+    ) {
       if (device_default_template[i].device_button_group && device_default_template[i].device_button_group.startsWith('OPENCLOSE GANG')) {
         gang = device_default_template[i].device_button_group.replace('OPENCLOSE GANG', '');
       }
@@ -770,8 +1128,23 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       setTimeout(() => {
         initDimBar(device_default_template[i].device_button_group);
       }, 500);
+    } else if (device_button_group.startsWith('RCU DIMMING')) {
+      let gang_title = `2GD-`;
+      gang = device_default_template[i].device_button_group.replace('RCU DIMMING', '');
+      gang_title = `${gang_title}${gang}`;
+      html += dimming_template(device_button_group, gang_title);
+      setTimeout(() => {
+        initDimBar(device_default_template[i].device_button_group);
+      }, 500);
     } else if (device_button_group.startsWith('Thermostat')) {
-      html += thermostat_template(device_button_group, gang);
+      if (device_default_template[i].parent == 'M360s') {
+        html += thermostat_template(device_button_group, gang, true);
+        setTimeout(() => {
+          initDimBar(device_default_template[i].device_button_group, 30, 6, 'manual');
+        }, 500);
+      } else {
+        html += thermostat_template(device_button_group, gang);
+      }
       setTimeout(() => {
         $(`.thermostat-subdevice-manual`).css({ 'height': '0px' });
         $(`.thermostat-subdevice-manual .item-inner`).css({ 'display': 'none' });
@@ -782,9 +1155,39 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
       html += gateway_template(device_button_group, '');
     } else if (device_button_group.includes('IAQ')) {
       html += iaq_template(device_button_group, '');
-    }else if(device_button_group.includes('Door Open')){
+    } else if (device_button_group.includes('Door Open')) {
       html += door_senser_template(device_button_group, '');
-    } else {
+    } else if (device_button_group.includes('4in1 Sensor')) {
+      html += radar_template(device_button_group, '');
+    } else if (device_button_group.includes('RCU ONOFF GANG')) {
+      let gang_title = `4G-`;
+      gang = device_default_template[i].device_button_group.replace('RCU ONOFF GANG', '');
+      //get the gang id
+      gang_title = `${gang_title}${gang}`;
+      html += onoff_template(device_button_group, gang_title);
+    } else if (device_button_group.includes('RCU OUTPUT33')) {
+      let gang_title = `OUTPUT`;
+      html += rcu_output_template(device_button_group, gang_title);
+    } else if (device_button_group.includes('DOOR SIGN')) {
+      let gang_title = `INPUT`;
+      html += rcu_input_template(device_button_group, gang_title);
+    } else if (device_button_group == 'ONOFF GANG1' && device_default_template[i].mode == 'RCU Scene Button') {
+      //scene_button_template
+      let gang_length = device_default_template.length;
+      gang = `1-${gang_length}`;
+      html += scene_button_template(device_button_group, gang);
+      setTimeout(() => {
+        initDimBar(device_default_template[i].device_button_group, 100, 5, 'backlight');
+        initDimBar(device_default_template[i].device_button_group, 30, 6, 'manual');
+      }, 500);
+    } else if (device_button_group.includes('ONOFF GANG') && device_default_template[i].mode == 'Music Player') {
+      html += gateway_template(device_button_group, '');
+    } else if (
+      device_button_group.includes('ONOFF GANG') &&
+      device_default_template[i].mode != 'RCU Controller' &&
+      device_default_template[i].mode != 'RCU Scene Button' &&
+      device_default_template[i].mode != 'Music Player'
+    ) {
       gang = device_default_template[i].device_button_group.replace('ONOFF GANG', '');
       html += onoff_template(device_button_group, gang);
     }
@@ -792,19 +1195,77 @@ window.ha_control_template_render = (guid, device_model, device_button_group,id)
   return html;
 };
 
+window.splitBytesAndConvertToBinaryArray = (character) => {
+  let bytes = character.match(/.{1,2}/g);
+  let binaryArray = bytes
+    .map((byte) => {
+      let binaryByte = (parseInt(byte, 16) >>> 0).toString(2).padStart(8, '0');
+      return binaryByte.split('').map(Number);
+    })
+    .flat();
+  return binaryArray;
+};
+
+window.scene_button_change = (params) => {
+  const ref = params.ref;
+  const guid = params.obj.attr('guid');
+  const device_button_group = params.obj.attr('device_button_group');
+  const id = params.obj.attr('id');
+  debugger;
+  initPeripheral(guid, id);
+  let command = `972101ff${parseInt(ref == 0 ? 1 : 0)
+    .toString(16)
+    .pad('00')}`;
+  if (peripheral[guid]) {
+    params.obj.attr('ref', ref == 0 ? 1 : 0);
+    try {
+      peripheral[guid].write([
+        {
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: command,
+        },
+      ]);
+    } catch (error) {
+      app.dialog.alert(_(erp.get_log_description(error)));
+    }
+  } else {
+    app.dialog.alert(_('Device not found'));
+  }
+};
+
 window.manual_onoff = (params) => {
   const ref = params.ref;
   const guid = params.obj.attr('guid');
   const device_button_group = params.obj.attr('device_button_group');
-  const id = params.obj.attr('id'); 
-  debugger
-  initPeripheral(guid,id);
-  if (device_button_group.startsWith('DIMMING')) {
+  const id = params.obj.attr('id');
+  debugger;
+  initPeripheral(guid, id);
+  if (device_button_group.startsWith('DIMMING') || device_button_group.includes('RCU DIMMING')) {
     let range_key = `${guid}_${device_button_group}_manual`;
     manual_dim_bar_list[range_key].setValue(ref == 0 ? 100 : 0);
     $(`.manua-onoff[guid="${guid}"][device_button_group="${device_button_group}"]`).attr('ref', ref == 0 ? 1 : 0);
 
     return false;
+  } else if (device_button_group.includes('RCU ONOFF GANG')) {
+    if (peripheral[guid]) {
+      if (ref == 0) {
+        params.obj.attr('ref', 1);
+      } else {
+        params.obj.attr('ref', 0);
+      }
+      peripheral[guid]
+        .rcuOnoff([
+          {
+            gang: bleHelper.getGangId(device_button_group),
+            on: ref == 0 ? true : false,
+          },
+        ])
+        .then((rs) => {})
+        .catch((error) => {
+          app.dialog.alert(_(erp.get_log_description(error)));
+        });
+    }
   } else if (device_button_group.startsWith('Thermostat')) {
     $(`.manua-onoff[guid="${guid}"][device_button_group="${device_button_group}"]`).attr('ref', ref == 0 ? 1 : 0);
     if (ref == 0) {
@@ -822,15 +1283,17 @@ window.manual_onoff = (params) => {
           parseInt(ref == 0 ? 1 : 0)
             .toString(16)
             .pad('00');
-        peripheral[guid].thermostat([
-          {
-            gang: 42,
-            value: ref == 0 ? 1 : 0,
-            command: data,
-          },
-        ]).catch((error)=>{
-          app.dialog.alert(_(erp.get_log_description(error)));
-        });
+        peripheral[guid]
+          .thermostat([
+            {
+              gang: 42,
+              value: ref == 0 ? 1 : 0,
+              command: data,
+            },
+          ])
+          .catch((error) => {
+            app.dialog.alert(_(erp.get_log_description(error)));
+          });
       } catch (error) {
         app.dialog.alert(_(erp.get_log_description(error)));
       }
@@ -840,7 +1303,7 @@ window.manual_onoff = (params) => {
     if (peripheral[guid]) {
       try {
         $(`.manua-onoff[guid="${guid}"][device_button_group="${device_button_group}"]`).attr('ref', ref == 0 ? 1 : 0);
-        debugger
+        debugger;
         //alert(JSON.stringify(peripheral[guid]));
         peripheral[guid]
           .onoff([
@@ -851,11 +1314,15 @@ window.manual_onoff = (params) => {
           ])
           .then((rs) => {
             let gang = device_button_group.replace('ONOFF GANG', '');
-            peripheral[guid].write([{
-              service: 'ff80',
-              characteristic: 'ff81',
-              data: `972101${parseInt(gang).toString(16).pad('00')}${parseInt(ref == 0 ? 1 : 0).toString(16).pad('00')}`
-            }])
+            peripheral[guid].write([
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: `972101${parseInt(gang).toString(16).pad('00')}${parseInt(ref == 0 ? 1 : 0)
+                  .toString(16)
+                  .pad('00')}`,
+              },
+            ]);
             console.log(rs);
           })
           .catch((error) => {
@@ -883,7 +1350,94 @@ window.manual_onoff = (params) => {
   //   }
   // }
 };
-
+window.change_all_output = (params) => {
+  const guid = params.obj.attr('guid');
+  const id = params.obj.attr('id');
+  const ref = params.obj.attr('ref');
+  let command = '13';
+  initPeripheral(guid, id);
+  if (ref == 0) {
+    params.obj.attr('ref', 1);
+    params.obj.find('.circle').addClass('bg-color-theme');
+  } else {
+    params.obj.attr('ref', 0);
+    params.obj.find('.circle').removeClass('bg-color-theme');
+  }
+  //set 32 io to output
+  for (let i = 1; i <= 32; i++) {
+    let gang = i;
+    command += `05972001${parseInt(gang).toString(16).pad('00')}${ref == 0 ? '02' : '00'}`;
+  }
+  console.log(command);
+  try {
+    peripheral[guid].write([
+      {
+        service: 'ff80',
+        characteristic: 'ff81',
+        data: command,
+      },
+    ]);
+  } catch (error) {
+    app.dialog.alert(_(erp.get_log_description(error)));
+  }
+};
+window.click_all_output = (params) => {
+  const guid = params.obj.attr('guid');
+  const id = params.obj.attr('id');
+  const ref = params.obj.attr('ref');
+  let command = '13';
+  if (ref == 0) {
+    params.obj.attr('ref', 1);
+  } else {
+    params.obj.attr('ref', 0);
+  }
+  for (let i = 1; i <= 32; i++) {
+    let gang = i;
+    command += `05972101${parseInt(gang).toString(16).pad('00')}${ref == 0 ? '01' : '00'}`;
+  }
+  console.log(command);
+  try {
+    peripheral[guid].write([
+      {
+        service: 'ff80',
+        characteristic: 'ff81',
+        data: command,
+      },
+    ]);
+  } catch (error) {
+    app.dialog.alert(_(erp.get_log_description(error)));
+  }
+};
+window.change_all_intput = (params) => {
+  const guid = params.obj.attr('guid');
+  const id = params.obj.attr('id');
+  const ref = params.obj.attr('ref');
+  let command = '13';
+  if (ref == 0) {
+    params.obj.attr('ref', 1);
+    params.obj.find('.circle').addClass('bg-color-theme');
+  } else {
+    params.obj.attr('ref', 0);
+    params.obj.find('.circle').removeClass('bg-color-theme');
+  }
+  //set 32 io to input
+  for (let i = 1; i <= 32; i++) {
+    let gang = i;
+    command += `05972001${parseInt(gang).toString(16).pad('00')}${ref == 0 ? '01' : '00'}`;
+  }
+  console.log(command);
+  try {
+    peripheral[guid].write([
+      {
+        service: 'ff80',
+        characteristic: 'ff81',
+        data: command,
+      },
+    ]);
+  } catch (error) {
+    app.dialog.alert(_(erp.get_log_description(error)));
+  }
+};
 window.manual_curtain_motor = (params) => {
   const ref = params.ref;
   const guid = params.obj.attr('guid');
@@ -909,15 +1463,17 @@ window.manual_curtain_motor = (params) => {
       if (peripheral[guid]) {
         let command = '8602' + data.toLowerCase();
         try {
-          peripheral[guid].curtainmotor([
-            {
-              gang: bleHelper.getGangId(device_button_group),
-              value: ref == 0 ? 0 : 100,
-              command: command,
-            },
-          ]).catch((error)=>{
-            app.dialog.alert(_(erp.get_log_description(error)));
-          });
+          peripheral[guid]
+            .curtainmotor([
+              {
+                gang: bleHelper.getGangId(device_button_group),
+                value: ref == 0 ? 0 : 100,
+                command: command,
+              },
+            ])
+            .catch((error) => {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            });
         } catch (error) {
           app.dialog.alert(_(erp.get_log_description(error)));
         }
@@ -925,7 +1481,7 @@ window.manual_curtain_motor = (params) => {
     } else {
       try {
         let direction = 'stop';
-        peripheral[guid].openClose(bleHelper.getGangId(device_button_group), direction, true).catch((error)=>{
+        peripheral[guid].openClose(bleHelper.getGangId(device_button_group), direction, true).catch((error) => {
           app.dialog.alert(_(erp.get_log_description(error)));
         });
       } catch (error) {
@@ -1032,15 +1588,17 @@ window.manual_thermostat_change = (params) => {
   }
   if (peripheral[guid]) {
     try {
-      peripheral[guid].thermostat([
-        {
-          gang: this_gang,
-          value: post_value,
-          command: post_command,
-        },
-      ]).catch((error)=>{
-        app.dialog.alert(_(erp.get_log_description(error)));
-      });
+      peripheral[guid]
+        .thermostat([
+          {
+            gang: this_gang,
+            value: post_value,
+            command: post_command,
+          },
+        ])
+        .catch((error) => {
+          app.dialog.alert(_(erp.get_log_description(error)));
+        });
     } catch (error) {
       app.dialog.alert(_(erp.get_log_description(error)));
     }
@@ -1163,10 +1721,10 @@ window.manual_ir_change = (params) => {
     `${temperature_value},${speed_value},${direction_value},${swing_value},${onoff_value},${mode_value}`
   );
   console.log(ref_command);
-  initPeripheral(guid,id);
+  initPeripheral(guid, id);
   if (peripheral[guid]) {
     try {
-      peripheral[guid].sendIR(ref_command).catch((error)=>{
+      peripheral[guid].sendIR(ref_command).catch((error) => {
         app.dialog.alert(_(erp.get_log_description(error)));
       });
     } catch (error) {
@@ -1178,10 +1736,10 @@ window.manual_ir_change = (params) => {
 //ble icon connect
 window.click_connect_manual = (params) => {
   const guid = params.obj.attr('guid');
-  const id = params.obj.attr('id'); 
+  const id = params.obj.attr('id');
   const device_button_group = params.obj.attr('device_button_group');
   console.log(guid, device_button_group);
-  initPeripheral(guid,id);
+  initPeripheral(guid, id);
   if (device_button_group.includes('IAQ')) {
     if (isset(peripheral[guid])) {
       let connected = peripheral[guid].prop.connected;
@@ -1193,30 +1751,34 @@ window.click_connect_manual = (params) => {
           .then((rs) => {
             $(`.iaq-subdevice[guid="${guid}"]`).removeClass('device-none');
             if (deviceInfo.operatingSystem === 'ios') {
-              peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: `9380`,
-                },
-              ]).catch((error)=>{
-                app.dialog.alert(_(erp.get_log_description(error)));
-              });
+              peripheral[guid]
+                .write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `9380`,
+                  },
+                ])
+                .catch((error) => {
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                });
             } else {
               ble.requestMtu(
                 peripheral[guid].prop.id,
                 512,
                 () => {
                   console.log('>>>> device request mtu success');
-                  peripheral[guid].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: `9380`,
-                    },
-                  ]).catch((error)=>{
-                    app.dialog.alert(_(erp.get_log_description(error)));
-                  });
+                  peripheral[guid]
+                    .write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: `9380`,
+                      },
+                    ])
+                    .catch((error) => {
+                      app.dialog.alert(_(erp.get_log_description(error)));
+                    });
                 },
                 (err) => {
                   console.log('>>>> device request mtu fail: ' + err);
@@ -1230,7 +1792,7 @@ window.click_connect_manual = (params) => {
           });
       }
     }
-  } else {
+  }else {
     if (isset(peripheral[guid])) {
       let connected = peripheral[guid].prop.connected;
       if (connected) {
@@ -1240,6 +1802,20 @@ window.click_connect_manual = (params) => {
           .connect()
           .then((rs) => {
             //$(`.signal-panel-manual[guid="${guid}"]`).attr('bluetooth',1);
+            if(device_button_group.includes('4in1 Sensor')){
+              peripheral[guid]
+              .write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `9381`,
+                },
+              ]).then((rs)=>{
+                console.log(rs);
+              }).catch((error)=>{
+                app.dialog.alert(_(erp.get_log_description(error)));
+              });
+            }
           })
           .catch((error) => {
             //$(`.signal-panel-manual[guid="${guid}"]`).attr('bluetooth',0);
@@ -1248,6 +1824,49 @@ window.click_connect_manual = (params) => {
       }
     }
   }
+};
+
+window.reset_wifi_setting = (params) => {
+  const guid = params.obj.attr('guid');
+  const id = params.obj.attr('id');
+  console.log(guid, id);
+  app.dialog.confirm(
+    _('Are you sure you want to reset the Wi-Fi settings?'),
+    async () => {
+      initPeripheral(guid, id);
+      if (peripheral[guid]) {
+        app.dialog.preloader();
+        let ssid = '';
+        let ssid_password = '';
+        let ssid_data = '932000' + ssid.length.toString(16).pad('0000') + ssid.convertToHex();
+        let ssid_password_data = '932100' + ssid_password.length.toString(16).pad('0000') + ssid_password.convertToHex();
+        try {
+          await peripheral[guid].write([
+            {
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: ssid_data,
+            },
+            {
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: ssid_password_data,
+            },
+          ]);
+          //change the wifi icon
+          $(`.signal-panel-manual[guid="${guid}"]`).find('.wifiicon i').removeClass('text-color-green');
+          $(`.signal-panel-manual[guid="${guid}"]`).find('.wifiicon i').addClass('text-color-red');
+          $(`.signal-panel-manual[guid="${guid}"]`).find('.wifiicon i').html('wifi_off');
+          app.dialog.close();
+          app.dialog.alert(_('Wi-Fi settings have been reset.'));
+        } catch (error) {
+          app.dialog.close();
+          app.dialog.alert(_(erp.get_log_description(error)));
+        }
+      }
+    },
+    () => {}
+  );
 };
 
 window.click_gateway_wifi_setting = (params) => {
@@ -1360,7 +1979,7 @@ window.click_gateway_wifi_setting = (params) => {
         window.$wifiTopicFun = async (res) => {
           console.log('component res', res);
           let message = res.message;
-          if (message == 'Online') {
+          if (message.includes('Online')) {
             clearTimeout(window.$subscribeTimer);
             clearTimeout(window.$this_timer);
             $(".signal-panel-manual[guid='" + guid + "']")
@@ -1381,7 +2000,7 @@ window.click_gateway_wifi_setting = (params) => {
       };
       try {
         app.dialog.preloader(_('Bluetooth connection in progress.'));
-        initPeripheral(guid,id);
+        initPeripheral(guid, id);
         await window.peripheral[guid].connect();
         await saveSsid();
         await saveSsidPassword();
@@ -1408,7 +2027,7 @@ window.click_gateway_wifi_setting = (params) => {
   //window.location.href = `/mobile-app/gateway-wifi-setting?guid=${guid}`;
 };
 
-window.initPeripheral = (guid,id) => {
+window.initPeripheral = (guid, id) => {
   //this function only use in manufacturing page
   if (!isset(peripheral[guid])) {
     for (let i in manufacturing_periperals) {
@@ -1428,13 +2047,13 @@ window.initPeripheral = (guid,id) => {
   }
 };
 
-window.getFirmwareNo = (firmware)=>{
+window.getFirmwareNo = (firmware) => {
   const versionPattern = /^\d+\.\d+\.\d+$/;
-  if(versionPattern.test(firmware)){
-      firmware = `7.0`;
+  if (versionPattern.test(firmware)) {
+    firmware = `7.0`;
   }
   let firmwareNo = firmware.replace(/[^0-9.]/g, '');
   firmwareNo = firmwareNo.split('.');
-  firmwareNo = firmwareNo[0] + '.' + (firmwareNo.length>1 ? firmwareNo.slice(1).join('') : '0');
+  firmwareNo = firmwareNo[0] + '.' + (firmwareNo.length > 1 ? firmwareNo.slice(1).join('') : '0');
   return firmwareNo;
-}
+};

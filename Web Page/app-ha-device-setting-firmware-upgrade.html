@@ -178,7 +178,7 @@
 
     const promisifyConnect = (device_id) => {
       let isConnect = false;
-
+      debugger
       return new Promise((resolve, reject) => {
         ble.connect(
           device_id,
@@ -348,7 +348,7 @@
 
     async function init() {
       await getFirmwareInfomation();
-
+      debugger
       try {
         if (isLogged) {
           isDeveloper = erp.info.user.roles.some((e) => e.role.includes('Developer'));
@@ -357,7 +357,7 @@
         console.error(err);
       }
       const uuid = getUUID();
-      if (!uuid) return;
+      //if (!uuid) return;
 
       try {
         app.preloader.show();
@@ -464,16 +464,89 @@
         isIniting.value = false;
       }
     }
+    //check device online
+    function checkDeviceOnlineAndVersion(gatewayhash,expectedVersion){
+      return new Promise((resolve) => {
+        const will_topic = `will/${gatewayhash}`;
+        const status_topic = `status/${gatewayhash}`;
+        let timeoutId = null;
+        let isOnline = false;
+        let versionMatched = false;
+        const cleanup = () => {
+            clearTimeout(timeoutId);
+            emitter.off(will_topic, handleWillMessage);
+            emitter.off(status_topic, handleStatusMessage);
+        };
+        const handleWillMessage  = (payload) => {
+          console.log('handleWillMessage: ',payload);
+          if (payload.message.toLowerCase().includes('online') && !isOnline) {
+                isOnline = true;
+                checkVersionStatus();
+          }
+        };
+        const handleStatusMessage = (payload) => {
+          console.log('handleStatusMessage: ',payload);
+            try {
+                const data = JSON.parse(payload.message); 
+                if (data.Info.version.toLowerCase() === expectedVersion.toLowerCase()) {
+                    versionMatched = true;
+                    completeCheck(true);
+                }
+            } catch (e) {
+                console.log(e)
+            }
+        };
+        const completeCheck = (result) => {
+            cleanup();
+            resolve(result);
+        };
+        const checkVersionStatus = () => {
+            if (versionMatched) {
+                completeCheck(true);
+                return;
+            }
+            
+            // 主动请求设备状态
+            core_mqtt_publish(`cmd/${gatewayhash}`, {
+                command: "Pubmsg",
+                function: "bleHelper.pubmsg",
+                params: "",
+                callback: "",
+                raw: ""
+            }, 0, false, false, false).catch(console.error);
+        };
+        core_mqtt_subscribe(will_topic, 1, false);
+        core_mqtt_subscribe(status_topic, 1, false);
 
+        emitter.on(will_topic, handleWillMessage);
+        emitter.on(status_topic, handleStatusMessage);
+        timeoutId = setTimeout(() => {
+            completeCheck(isOnline && versionMatched);
+        }, 60000*5);
+        // 双重检测机制
+        setTimeout(() => {
+            // 先检测当前是否已在线
+            core_mqtt_publish(`cmd/${gatewayhash}`, {
+                command: "Pubmsg",
+                function: "bleHelper.pubmsg",
+                params: "",
+                callback: "",
+                raw: ""
+            }, 0, false, false, false)
+            .then(() => checkVersionStatus())
+            .catch(console.error);
+        }, 500);
+      });
+    }
     /**
      * Wifi Action
      */
     async function updateWifiFirmware() {
       try {
         const uuid = getUUID();
-        if (!uuid) {
-          throw '6300';
-        }
+        // if (!uuid) {
+        //   throw '6300';
+        // }
 
         updateStatus('Upgrading');
 
@@ -494,7 +567,60 @@
         console.log('Upgrade Command: ' + command);
 
         // await promisifyWrite(uuid, 'ff80', 'ff81', command);
-        await promisifyConnect(uuid);
+        try{
+          await promisifyConnect(uuid);
+        }catch(err){
+          //try to send the wifi ota command
+          //get the gateway of device
+          let devices = cloneDeep(erp.info.profile.profile_device);
+          let device_map = devices.find(e => e.device === guid);
+          debugger
+          if(device_map){
+            let gateway_address = device_map.gateway;
+            if(!gateway_address){
+              throw '6300';
+            }else{
+              //send the mqtt command 
+              let topic = `cmd/${md5(md5(gateway_address.toLowerCase()))}`;
+              let command = {
+                command: "OTA",
+                function: "bleHelper.ota",
+                params: full_firmware_name,
+                callback: "",
+                raw: ""
+              }
+              await core_mqtt_publish(topic, command, 0, false, false, false);
+              fake_progress.setProgress(0.1);
+              updatePercent();
+              await sleep(1000*30);
+              fake_progress.setProgress(0.3);
+              updatePercent();
+              await sleep(1000*30);
+              fake_progress.setProgress(0.5);
+              updatePercent();
+              await sleep(1000*30);
+              fake_progress.setProgress(0.7);
+              updatePercent();
+              await sleep(1000*60);
+              fake_progress.setProgress(0.85);
+              updatePercent();
+              await sleep(1000*30);
+              //check the update status
+              let result = await checkDeviceOnlineAndVersion(md5(md5(gateway_address.toLowerCase())),latest_full_firmware);
+              if(!result){
+                throw '6300';
+              }else{
+                fake_progress.setProgress(100);
+                emitter.emit('ha:device:firmware:upgrade', { guid: guid });
+                updateStatus('Success');
+              }
+
+            }
+          }else{
+            throw '6300';
+          }
+        }
+        
 
         fake_progress.setProgress(0.1);
         updatePercent();

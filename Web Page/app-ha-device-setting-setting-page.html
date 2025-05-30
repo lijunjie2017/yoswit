@@ -56,6 +56,14 @@
         await iot_device_setting_label_init(title,name,profile_device_name,guid,device_mode,slot_index);
         await iot_mode_setup_layout_auto_init();
         await iot_mode_setup_check_device_connection({ref : guid});
+        bleManager.clear();
+        await bleManager.stopScan();
+        if(erp.peripheral_timer_settimeout.length){
+          for(const timeoutId of erp.peripheral_timer_settimeout){
+            clearTimeout(timeoutId);
+          }
+          erp.peripheral_timer_settimeout = [];
+        }
       })
     return $render;
   };

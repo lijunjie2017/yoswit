@@ -43,6 +43,16 @@
             <div class="device-mobile-as-hub" @click="${()=>clickForMobile()}"></div>
 						`}
           </a>
+					${(engineerMode && engineerModeStatus == false) && $h`
+					<a link icon-only @click="${()=>changeEngineerModeStatus(true)}" style="margin-right: 10px;">
+						<i class="icon material-icons md-only text-color-gray" style="font-size: 40px;">toggle_off</i>
+					</a>
+					`}
+					${(engineerMode && engineerModeStatus == true) && $h`
+						<a link icon-only @click="${()=>changeEngineerModeStatus(false)}" style="margin-right: 10px;">
+							<i class="icon material-icons md-only text-color-theme" style="font-size: 40px;">toggle_on</i>
+						</a>
+						`}
 					${listCssStatus == 'Card' && $h`
 					<a link icon-only @click="${()=>changeListCss(1)}">
 						<i class="icon material-icons md-only">grid_view</i>
@@ -65,7 +75,7 @@
 					<div class="banner-swiper-container swiper-container-auto swiper-container home-swiper" style="z-index: 5; position: fixed">
 						<div class="swiper-wrapper">
 							${scenes.map((sceneItem)=> $h`
-								<div class="swiper-slide home-swiper-slide" key="${sceneItem.name}" style="background-image: url('https://dev.mob-mob.com/files/scene.jpg');background-size: cover;">
+								<div class="swiper-slide home-swiper-slide" key="${sceneItem.name}" style="height: 100%;background-position: center;background-image: url(${sceneItem.image?sceneItem.image:'https://dev.mob-mob.com/files/scene.jpg'});background-size: cover;">
 									<div class="home-swiper-slide-inner">
 										<div style="margin: 8px 16px 8px 30px">
 											<div style="text-align: left; float: left; width: 50%; line-height: 29px; padding-top: 5px">
@@ -118,6 +128,28 @@
 							`)}
 						</div>
 					</div>
+				
+					<!-- profile change -->
+					${fixedTop != 0 && $h`
+					<div class="toolbar title sliding" style="padding:10px 0 ;background: var(--f7-bars-bg-color);position: fixed;height: 60px;">
+						<div class="logo-small display-flex justify-content-center align-items-center" style="width: 100%;text-align: center;height: 100%;">
+							<img style="margin-right: 8px;" src="{{ frappe.get_url(nav_app_logo_image) if nav_app_logo_image else appSetting.iconImageUri }}" />
+							<a href="/mobile-app/profile-list" class="link">
+								${erp.info.profile ? $h`
+								<font class="profile_title" style="text-overflow: ellipsis; max-width: 250px; overflow: hidden;font-size: 16px;font-weight: 500;">
+									${ erp.info.profile.flat ? tran(erp.info.profile.flat) + '-' : '' }${ tran(erp.info.profile.profile_name) }
+								</font>
+								` : $h`
+								<font class="profile_title" style="text-overflow: ellipsis; max-width: 250px; overflow: hidden;font-size: 16px;font-weight: 500;"> ${ tran('Default') } </font>
+								`}
+								<div class="home-title-profile-popover" style="margin-left: 5px">
+									<i class="icon f7-icons" style="font-size: 14px">chevron_down</i>
+								</div>
+							</a>
+						</div>
+					</div> 
+					`}
+					<!-- profile change end -->
 					
 					<!-- home room toolbar -->
 				${subdevices.length > 0 && $h`
@@ -126,9 +158,10 @@
 					style="
 						z-index: 5;
 						position: fixed;
-						${page_margin_top>100?'margin-top:104px;': ''}
+						${page_margin_top>100?'margin-top:104px;':''}
 						${show_noroom?'display:none;':''}
 						${show_nosubdevice?'display:none;':''}
+						${fixedTop != 0?'margin-top:60px;':''}
 					"
 				>
 					<div class="toolbar-inner" style="padding-right:40px">
@@ -204,7 +237,7 @@
 					</div>
 				
 					${subdevices.length > 0 && $h`
-						<div style="height: ${page_margin_top}px;"></div>
+						<div style="height: ${page_margin_top+fixedTop}px;"></div>
 				`}
 				
 				<!-- rooms -->
@@ -337,7 +370,7 @@
 					`}
 							`)}
 				</div>
-				${profilePermision && $h`	
+				${!engineerModeStatus && $h`	
 				<div id="room-0-div" class="list media-list no-margin ${show_unassigned?'':'device-none'}">
 					<ul>
 						<li class="room">
@@ -537,7 +570,7 @@ const renderSignalItem = (props, {
 			<div class="signal-view-main" signal="${isset(props.kitem.rssilv)?props.kitem.rssilv:0}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}" mesh="${props.kitem.network_id>0?1:0}" mobilehub="${props.kitem.is_mobile_gateway?props.kitem.is_mobile_gateway:0}">
 			<div class="signal"></div>
 			<div class="bluetooth">${props.kitem.bluetooth_count && props.kitem.bluetooth_count > 0?props.kitem.bluetooth_count:''}</div>
-			<div class="mesh" @click="${()=>fixNetwork(props.kitem,is_mesh_status)}">
+			<div class="mesh" guid="${props.kitem.device}" @click="${()=>fixNetwork(props.kitem,is_mesh_status)}">
 				${(props.kitem.network_id>0 && !is_mesh_status) && $h`
 				<i class="prioritys icon material-icons text-color-red" style="font-size: 20px;position: relative;top: -6px;">priority_high</i>
 				`}
@@ -691,7 +724,7 @@ const renderSwipeLeftPanel = (props, {
 					><i class="icon material-icons">motion_photos_auto</i></a
 				>
 				<a
-					href="/frappe/list/Timer/APP_HA_Device_Timer_V5/Profile Subdevice Timer/null/16/profile_subdevice=${props.kitem.name}/"
+					href="/mobile-app/timer-guid-list?guid=${props.kitem.device}&subdevice_name=${props.kitem.name}"
 					class="link color-cust-blue ${deviceTimerPermision?'':'device-none'}"
 					><i class="icon material-icons">alarm</i></a
 				>
@@ -767,6 +800,13 @@ const renderSwipeRightPanel = (props, {
 	return () => $h`
 			<div class="swipeout-actions-right">
 				<a
+					class="link color-cust-purple ${engineerModeStatus?'':'device-none'}"
+					guid="${kitem.device}"
+					ref="${kitem.device}|${kitem.mac_address}|${kitem.device_model}|${''}|${''}|${''}|${kitem.device_model}|${'YO0012'}|${kitem.profile_device}"
+					func="iot_check_all_settings"
+					><i class="icon material-icons">construction</i></a
+				>
+				<a
 					href="/mobile-app/setting-page?title=${_('Edit')} ${encodeURIComponent(tran(kitem.title))}&guid=${ kitem.device }&name=${kitem.name}&profile_device_name=${kitem.profile_device}&device_mode=${kitem.device_mode}&slot_index=${kitem.config?kitem.config:''}"
 					class="link color-orange"
 					><i class="icon material-icons">settings</i></a
@@ -805,6 +845,7 @@ const renderSwipeRightPanel = (props, {
 		`;
 };
 
+let engineerModeStatus = false;
 
 const renderMainButton = (props, {
 	$h,
@@ -3179,7 +3220,7 @@ const renderBottomButton = (props, {
 			if(mode_value == 4){
 					return;
 				}
-				let uppertValue = 5;
+				let uppertValue = 35;
 				if(mode_value == 2){
 					deviceSettings.forEach(item=>{
 						if(item.setting_type == 'cool_setpoint_upper'){
@@ -3861,6 +3902,7 @@ export default async (props, ctx) => {
 		$onUnmounted = ctx.$onUnmounted;
 		let networkChangeFun;
 		let updateTime = 0;
+		let fixedTop = 0;
 	//if wifi failed change the wifi status
 	if(networkChangeFun){
 		emitter.off("onNetworkChange",networkChangeFun)
@@ -3932,6 +3974,9 @@ export default async (props, ctx) => {
 	})
 	// init variable,easy to seach ,initialization
 	const title = $f7route.query.title ?_($f7route.query.title) : _('Smart Office');
+	if(title == 'Engineering Mode'){
+		fixedTop = 60;
+	}
 	const isHomePage = !!$f7route.query.is_home_page;
 	let listCssStatus = 'List';
 	window.scanned_periperals = {};
@@ -3940,6 +3985,8 @@ export default async (props, ctx) => {
 	let mobileAsHubPopup;
 	//profile permission
 	let profilePermision = true;
+	let engineerMode = false;
+	
 	let leftMenuPermision = false;
 	let rooms = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_room)) : [];
 	let subdevices = erp.info.profile ? JSON.parse(JSON.stringify(erp.info.profile.profile_subdevice)) : [];
@@ -4671,19 +4718,31 @@ export default async (props, ctx) => {
 			clearTimeout(clearTime);
 		}
 	}
+	const changeEngineerModeStatus = (status)=>{
+		engineerModeStatus = status;
+		console.log("engineerModeStatus",engineerModeStatus);
+		$update();
+	}
 	//App Developer
 	const getRolePermision = ()=>{
 		let roleList = erp.info.user.roles || [];
 		roleList.forEach(item=>{
-			if(item.role == "App Developer"){
+			if(item.role == "App Developer" || item.role == "App Developer - Tier 1"){
 				leftMenuPermision = true;
+				// engineerMode = true;
+			}
+			if(item.role == "Engineer"){
+				engineerMode = true;
 			}
 		})
 	}
+
 	const getProfilePermision = ()=>{
 		return new Promise((resolve,reject)=>{
+			// let url = `/api/method/appv6.getProfileUserPermision?name=${erp.info.profile.name}`;
+			let url = `/api/method/get_user_permission_4_doctype?doctype=Profile&user=${users[users.current].usr}`;
 			http2.request(
-          encodeURI(`/api/method/appv6.getProfileUserPermision?name=${erp.info.profile.name}`),
+          encodeURI(url),
           {
             method: 'GET',
             serializer: 'json',
@@ -4693,22 +4752,26 @@ export default async (props, ctx) => {
         ).then(res=>{
 					let userList = [];
 					let owner = '';
-					if(res.data.permision){
-						userList = res.data.permision.shared;
-						owner = res.data.permision.owner;
-						let selfUser = users[users.current].usr;
-						userList.forEach(userItem=>{
-							if(userItem.user == selfUser && userItem.write == 1){
-								profilePermision = true
-							}
-						});
-						if(owner == selfUser){
-							profilePermision = true
-						}
-						resolve({allow : profilePermision});
-						//userList = userList.map((item)=>item.owner)
-						console.log("userList",userList);
+					console.log("res",res);
+					if(res.data){
+						resolve(res.data.message);
 					}
+					// if(res.data.permision){
+					// 	userList = res.data.permision.shared;
+					// 	owner = res.data.permision.owner;
+					// 	let selfUser = users[users.current].usr;
+					// 	userList.forEach(userItem=>{
+					// 		if(userItem.user == selfUser && userItem.write == 1){
+					// 			profilePermision = true
+					// 		}
+					// 	});
+					// 	if(owner == selfUser){
+					// 		profilePermision = true
+					// 	}
+					// 	resolve({allow : profilePermision});
+					// 	//userList = userList.map((item)=>item.owner)
+					// 	console.log("userList",userList);
+					// }
 				}).catch(error=>{
 					reject(error);
 				})
@@ -4760,7 +4823,27 @@ export default async (props, ctx) => {
 		}
 		done();
 	};
-
+	const update_mesh_device = (p)=>{
+		// defined the hexModel
+		let model_map = cloneDeep(erp.doctype.device_model);
+		let device_model = model_map[p.hexModel.toUpperCase()];
+		if(device_model){
+			let device_mode = device_model.mode;
+			if(device_mode == 'RCU Scene Button'){
+				let manufactureData = p.manufactureData;
+				if(!manufactureData)return
+				let networkSize = parseInt(manufactureData.slice(0,2),16);
+				// console.log("networkSize",networkSize)
+				if(networkSize){
+					$(`.home-scanned-peripheral-smart[guid="${p.guid}"]`).attr("mesh",1);
+					$(`.mesh[guid="${p.guid}"]`).text(networkSize);
+				}else{
+					$(`.home-scanned-peripheral-smart[guid="${p.guid}"]`).attr("mesh",0);
+					$(`.mesh[guid="${p.guid}"]`).text('');
+				}
+			}
+		}
+	}
 	const render_ui = () => {
 		show_noroom = !rooms.length ? true : false;
 		show_nosubdevice = (rooms.length && !subdevices.length && !Object.keys(peripheral).length) ? true : false;
@@ -5743,7 +5826,7 @@ export default async (props, ctx) => {
 	emitter.on('on_peripheral_changed', on_peripheral_changed);
 
 	const on_discovery = (p) => {
-		if(p.id == 'E4:E1:12:A0:BE:45'){
+		if(p.id == '48:CA:43:98:81:FE'){
 			//console.log(p)
 		}
 		setTimeout(() => {
@@ -5767,6 +5850,8 @@ export default async (props, ctx) => {
 			// }else {
 			// 	peripheral[p.guid].update(p);
 			// }
+			//update the mesh device
+			//update_mesh_device(p);
 			render_ui();
 		}, 10);
 	};
@@ -5775,6 +5860,7 @@ export default async (props, ctx) => {
 		await bleManager.stopScan();
 		await bleManager.wait(200);
 
+        console.log("start scan")
 		bleManager.scan(on_discovery, async (error) => {
 		    //alert(error);
 				//app.dialog.alert(_(erp.get_log_description(error)));
@@ -6503,14 +6589,16 @@ export default async (props, ctx) => {
 	//events
 	$on("pageAfterIn",()=>{
 		//debugger
-		console.log(range_silder_list)
+		//console.log(range_silder_list)
 		for(let i in range_silder_list){
-			console.log(range_silder_list[i].getValue())
+			//console.log(range_silder_list[i].getValue())
 		}
 		if(isset(window.globalUpdate)){
 			mainView.router.refreshPage();
 			window.globalUpdate = null;
 		}
+		//should open the scan 
+		scan();
 	}) 
 	$onBeforeMount(async() => {
 		document.removeEventListener("touchstart", handleUserActivity);
@@ -6527,7 +6615,11 @@ export default async (props, ctx) => {
 		try{
 			getRolePermision();
 			let permisionData = await getProfilePermision();
-			profilePermision = permisionData.allow;
+			console.log("permisionData",permisionData);
+			if(permisionData['write']){
+				profilePermision = true;
+				engineerMode = true;
+			}
 			//console.log("permisionData",permisionData);
 		}catch(error){
 			console.log("permision_error",error)
@@ -6969,4 +7061,19 @@ export default async (props, ctx) => {
 		.page-content *[mesh='1'] .mesh{
 			color: grey;
 		}
+		@keyframes rotate {
+			from {
+				transform: rotate(0deg);
+			}
+			to {
+				transform: rotate(360deg);
+			}
+		}
+	.rotate-animation {
+		animation: rotate 2s linear infinite;
+		display: inline-block; /* 确保transform生效 */
+	}
+	.rotate-animation.paused {
+		animation: none;
+	}
 </style>

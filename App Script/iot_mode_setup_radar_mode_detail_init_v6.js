@@ -103,7 +103,7 @@ window.iot_mode_setup_radar_mode_detail_init = function (json, mode) {
                   <li class="item-content item-input item-input-with-info" v-for="(value, index) in staticRange" :key="index">
                     <div class="item-inner">
                       <div class="item-input-wrap">
-                        <input class="text-align-center" required validate pattern="^(?:[0-9]|[1-9][0-9]|100)$" type="text" v-model="staticRange[index]" />
+                        <input class="text-align-center" :readonly="index == 1 || index == 0" required validate pattern="^(?:[0-9]|[1-9][0-9]|100)$" type="text" v-model="staticRange[index]" />
                         <div class="item-input-info text-align-center">{{ getReference(staticReferenceRange[index]) }}</div>
                       </div>
                     </div>

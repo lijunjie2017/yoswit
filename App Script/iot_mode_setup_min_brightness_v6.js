@@ -13,8 +13,8 @@ window.iot_mode_setup_min_brightness_init = function(params) {
         cols: [
             {
                 textAlign: "center",
-                values: [5,6,7,8,9,10,11,12,13,14,15],
-                displayValues: ['5%','6%','7%','8%','9%','10%','11%','12%','13%','14%','15%']
+                values: [5,6,7,8,9,10,11,12,13,14,15,20,25,30],
+                displayValues: ['5%','6%','7%','8%','9%','10%','11%','12%','13%','14%','15%','20%','25%','30%']
             }
         ],
         formatValue: function(values) {

@@ -1,0 +1,453 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('IAQ') }}</div>
+        <div class="right" @click="${()=>refreshFun()}">
+          <a link icon-only><i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">refresh</i></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="room-box">
+        <div class="media-list no-margin ${deviceList.length>0?'list':''}">
+          <ul>
+            ${deviceList.map((item)=> $h`
+            <li class="room">
+              <div class="item-content">
+                <div class="item-inner">
+                  <div class="item-title-row">
+                    <div class="item-title" lang="en" lang-packet="Unassigned" @click="${()=>controller_common_home_collapse(item)}" ref="0">
+                      <i class="room-collapse material-icons" id="collapse-0">${item.collapseStatus?'chevron_right':'expand_more'}</i>
+                      ${ _(item.iaq_area_name) }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+            ${item.deviceList.map((zitem)=> $h`
+            <li class="device home-scanned-peripheral swipeout swipeout-delete-manual" field="parent_${item.iaq_area_name}">
+              <div class="item-content swipeout-content">
+                <a class="item-link item-content no-chevron no-ripple no-active-state">
+                  <div
+                    class="device-thumb item-media"
+                    style="
+                      background-position: center;
+                      background-size: contain;
+                      position: relative;
+                      background-image: url('https://dev.mob-mob.com/files/iaq3.png');
+                    "
+                  ></div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title ellipsis" lang="en" style="width: 180px" title="${tran(zitem.iaq_area_name)}">
+                        ${tran(zitem.iaq_area_name)}
+                      </div>
+                    </div>
+                    <div class="item-subtitle">${'IAQ Sensor'}-${ zitem.iaq_mac }</div>
+                    <div class="signal-panel item-text height-21" style="width: 120%">
+                      <div>
+                          <div class="signal"></div>
+                          <div class="bluetooth"></div>
+                          <div class="mobmob"></div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+                <div class="control-panel-right">
+                    {# <a class="right iaq-button-score-a" button-signal="ARC_ON_OFF">
+                        <div class="button iaq-button-score button-raised button-big circle display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="background-color:${returnScoreColor(zitem.show_aqi?zitem.show_aqi:0).color};line-height:18px;padding-top:10px;color:#fff;">
+          
+                            <span class="score text-color-white" style="height:29px;font-size:23px;">${zitem.show_aqi?zitem.show_aqi:0}</span>
+                            <div class="score-desc text-color-white" style="font-size: 12px;transform: scale(0.7);height:29px;line-height:29px;">${returnScoreColor(zitem.show_aqi?zitem.show_aqi:0).tip}</div>
+                        </div>
+                    </a> #}
+                </div>
+              </div>
+            </li>
+            <li class="device iaq-subdevice home-scanned-peripheral" style="height:auto;" field="parent_${item.iaq_area_name}">
+              <div class="display-flex justify-content-start align-content-center align-items-center" style="flex-wrap:wrap;height:auto;width:100%;">
+                ${zitem.list.map((kitem)=>$h`
+                  ${kitem.param == "temperature"? $h`
+                <!-- Temperature -->
+                  <div class="main-btn" style="width: 33.3%;">
+                      <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('Temperature',parseInt(kitem.points[0].value)).bgcolor};">
+                                  <img class="" src="${'https://my.yoswit.com/'}/files/app/Temperature_1.svg" alt="" style="width: 25px;height:25px;"/>
+                              </div>
+                              <div class="title-btn display-flex justify-content-center align-items-center">
+                                  <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
+                                  <span class="unit">℃</span> 
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  `: $h`
+                  <a></a>
+                  `}
+                  ${kitem.param == "pm25"? $h`
+                  <!-- PM2.5 -->
+                  <div class="main-btn" style="width: 33.3%;">
+                      <div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+                          <div class="PM2_5 display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('PM2_5',parseInt(kitem.points[0].value)).bgcolor};">
+                                  <img class="" src="${'https://my.yoswit.com/'}/files/app/PM2.5_1.svg" alt="" style="width: 25px;height:25px;"/>
+                              </div>
+                              <div class="title-btn display-flex justify-content-center align-items-center">
+                                  <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
+                                  <span class="unit">${kitem.units}</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  `: $h`
+                  <a></a>
+                  `}
+                  ${kitem.param == "pm10"? $h`
+                  <!-- PM10 -->
+                  <div class="main-btn" style="width: 33.3%;">
+                      <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div class="PM10 display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('PM10',parseInt(kitem.points[0].value)).bgcolor}">
+                                  <img class="" src="${'https://my.yoswit.com/'}/files/app/PM10_1.svg" alt="" style="width: 25px;height:25px;"/>
+                              </div>
+                              <div class="title-btn display-flex justify-content-center align-items-center">
+                                  <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
+                                  <span class="unit">${kitem.units}</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  `: $h`
+                  <a></a>
+                  `}
+                  ${kitem.param == "humidity"? $h`
+                  <!-- Humidity -->
+                  <div class="main-btn" style="width: 33.3%;">
+                      <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div class="Humidity display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('Humidity',parseInt(kitem.points[0].value)).bgcolor};">
+                                  <img class="" src="${'https://my.yoswit.com/'}/files/app/Humidity_1.svg" alt="" style="width: 25px;height:25px;"/>
+                              </div>
+                              <div class="title-btn display-flex justify-content-center align-items-center">
+                                  <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
+                                  <span class="unit">${kitem.units}</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  `: $h`
+                  <a></a>
+                  `}
+                  ${kitem.param == "co2"? $h`
+                  <!-- CO2 -->
+                  <div class="main-btn" style="width: 33.3%;">
+                      <div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+                          <div class="CO2 display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('CO2',parseInt(kitem.points[0].value)).bgcolor};">
+                                  <img class="" src="${'https://my.yoswit.com/'}/files/app/CO2_1.svg" alt="" style="width: 25px;height:25px;"/>
+                              </div>
+                              <div class="title-btn display-flex justify-content-center align-items-center">
+                                <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
+                                <span class="unit">${kitem.units}</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  `: $h` 
+                  <a></a>
+                  `}
+                  ${kitem.param == "tvoc-sgp"? $h`
+                  <!-- TVOCs -->
+                  <div class="main-btn" style="width: 33.3%;">
+                      <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div class="VOC display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('VOC',parseInt(kitem.points[0].value)).bgcolor};">
+                                  <img class="" src="${'https://my.yoswit.com/'}/files/app/VOC_1.svg" alt="" style="width: 25px;height:25px;"/>
+                              </div>
+                              <div class="title-btn display-flex justify-content-center align-items-center">
+                                  <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
+                                  <span class="unit">${kitem.units}</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  `: $h`
+                  <a></a>
+                  `}
+                `)}
+              </div>
+            </li>
+            `)}
+            `)}
+          </ul>
+        </div>
+        ${deviceList.length == 0 && $h`
+          <no-record-found tip="Coming Soon"></no-record-found>  
+        `}
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let dataObj = null;
+    let deviceList = [];
+    let roomList = [];
+    let iaqDataList = [];
+    let timers = null;
+    const refreshFun = async()=>{
+      await init();
+    }
+    const controller_common_home_collapse = (item)=>{
+      let key = `parent_${item.iaq_area_name}`;
+      if(!item.collapseStatus){
+        item.collapseStatus = true;
+        $(`li[field="${key}"]`).hide();
+      }else{
+        item.collapseStatus = false;
+        $(`li[field="${key}"]`).show();
+      }
+      $update();
+    }
+    const returnScoreColor = (value)=>{
+      const intValue = parseInt(value, 10);
+      const colors = ['#00a96a', '#ffc31e', '#f97e2f', '#fb3e3f', '#943a5a', '#530c36'];
+      const tipList = ['Good', 'Moderate', 'Unhealthy','Unhealthy','Very unhealthy','Hazardous']
+      let obj = {
+        tip : 'Good',
+        color : '00a96a'
+      }
+      if (intValue >= 0 && intValue <= 50) {
+         obj.color = colors[0];
+         obj.tip = tipList[0];
+      } else if (intValue >= 51 && intValue <= 100) {
+         obj.color = colors[1];
+         obj.tip = tipList[1];
+      } else if (intValue >= 101 && intValue <= 150) {
+         obj.color = colors[2];
+         obj.tip = tipList[2];
+      } else if (intValue >= 151 && intValue <= 200) {
+         obj.color = colors[3];
+         obj.tip = tipList[3];
+      } else if (intValue >= 201 && intValue <= 300) {
+         obj.color = colors[4];
+         obj.tip = tipList[4];
+      } else {
+         obj.color = colors[5];
+         obj.tip = tipList[5];
+      }
+      return obj;
+    }
+    const getFlatData = async () => {
+      let url = `/api/method/appv6.getFlatForWebpage?flat=${erp.info.profile.flat}`;
+      try {
+        let list = await http.request(encodeURI(url), {
+          method: 'GET',
+          serializer: 'json',
+          responseType: 'json',
+          timeout: 3,
+        });
+        //console.log(list)
+        let data = list.data.data;
+        let linkList = data.page_list;
+        if (linkList.length) {
+          for(let i in linkList){
+            //await getDeviceData(linkList[i].link_name);
+            let pageData = JSON.parse(linkList[i].page_blocks[0].web_template_values);
+            let keyList = ["iaq_area_name","iaq_uuid","iaq_ip","iaq_floor","iaq_sn","iaq_mac"]
+            let result = extractValues(pageData,keyList);
+            for(let i in result){
+              let floorList = [];
+              deviceList.forEach(item=>{
+                floorList.push(item.iaq_area_name)
+              })
+              //console.log('floorList',floorList)
+              if(floorList.indexOf(result[i].iaq_floor) == -1){
+                deviceList.push({
+                  iaq_area_name : result[i].iaq_floor,
+                  iaq_uuid : result[i].iaq_uuid,
+                  isTitle : true,
+                  deviceList : []
+                })
+              }
+              deviceList.forEach(item=>{
+                if(item.iaq_area_name === result[i].iaq_floor){
+                  result[i].list = [];
+                  item.deviceList.push(result[i]);
+                }
+              })
+              $update();
+            }
+            for(let i in result){
+              getIaqData(result[i].iaq_uuid,result[i]);
+            }
+          }
+          $update();
+          // linkList.forEach(async (item) => {
+          //   await getDeviceData(item.link_name);
+          // });
+        }
+      } catch (err) {
+        console.log(err)
+      }
+    };
+    const getDeviceData = async (name) => {
+      let url = `/api/resource/Web Page/${name}`;
+      try {
+        let list = await http.request(url, {
+          method: 'GET',
+          serializer: 'json',
+          responseType: 'json',
+          timeout: 3,
+        });
+        let data = list.data.data;
+        let pageList = data.page_blocks;
+        if (pageList.length) {
+          pageList.forEach(async (item) => {
+            let pageData = JSON.parse(item.web_template_values);
+            let keyList = ["iaq_area_name","iaq_uuid","iaq_ip","iaq_floor","iaq_sn","iaq_mac"]
+            let result = extractValues(pageData,keyList);
+            for(let i in result){
+              let floorList = [];
+              deviceList.forEach(item=>{
+                floorList.push(item.iaq_area_name)
+              })
+              //console.log('floorList',floorList)
+              if(floorList.indexOf(result[i].iaq_floor) == -1){
+                deviceList.push({
+                  iaq_area_name : result[i].iaq_floor,
+                  iaq_uuid : result[i].iaq_uuid,
+                  isTitle : true,
+                  deviceList : [] 
+                })
+              }
+              debugger 
+              deviceList.forEach(item=>{
+                if(item.iaq_area_name === result[i].iaq_floor){
+                  item.deviceList.push(result[i]);
+                }
+              })
+              //console.log("deviceList",deviceList)
+            }
+            $update();
+            for(let i in result){
+              await getIaqData(result[i].iaq_uuid,result[i]);
+            }
+          });
+          $update();
+        }
+      } catch (err) {}
+    };
+    const getIaqData = async(uuid)=>{
+      let url = `https://api.kaiterra.com/v1/account/me/device/${uuid}?select=meta,data&key=${'NmY0MzEyOGRkMzY3NDFmN2JkOWVkZGMwM2RkOTk0NmMwYWRm'}`;
+      try{
+        let list = await http.request(encodeURI(url), {
+          method: 'GET',
+          serializer: 'json',
+          responseType: 'json',
+          timeout: 3,
+        });
+        //console.log(list);
+        let obj = list.data
+        let dataList = list.data.data;
+        let aqi = 0;
+        dataList.forEach(item=>{
+          if(item.param === 'tvoc-sgp'){
+            aqi = item.points[0].aqi;
+          }
+        })
+        deviceList.forEach(item=>{
+          item.deviceList.forEach(kitem=>{
+            if(kitem.iaq_uuid === uuid){
+              kitem.show_aqi = aqi;
+              kitem.list = dataList;
+            }
+          })
+        })
+        //deviceList.push(result);
+        //console.log(deviceList);
+        // dataList.forEach(item=>{
+        //   item.uuid = obj.id;
+        //   item.show_aqi = aqi;
+        // })
+        // iaqDataList = iaqDataList.concat(dataList);
+        // console.log('iaqDataList',iaqDataList)
+        $update();
+      }catch(err){
+
+      }
+    }
+    const init = async() => {
+      deviceList = [];
+      iaqDataList = [];
+      await getFlatData();
+    };
+    //this is the tool fun
+    const extractValues = (data, keyPrefixes) => {
+      let resultArray = [];
+      for (var i = 1; i <= 3; i++) {
+        var obj = {};
+
+        for (let j = 0; j < keyPrefixes.length; j++) {
+          let key = keyPrefixes[j] + '_' + i;
+          if (isset(data[key])) {
+            obj[keyPrefixes[j]] = data[key];
+          }
+        }
+        if(Object.keys(obj).length != 0){
+          resultArray.push(obj);
+        }
+      }
+      return resultArray;
+    };
+    $onMounted(async() => {
+      await init();
+      timers = setInterval(async()=>{
+        await init();
+      },1000*60)
+    });
+    $onUnmounted(()=>{
+      clearInterval(timers);
+      timers = null;
+    })
+    return $render;
+  };
+</script>
+
+<style>
+  .box-btn {
+    margin-bottom: 7.5px;
+    margin-top: 7.5px;
+  }
+  .box-left {
+    border-left: 1px solid var(--f7-list-item-border-color);
+  }
+  .unit {
+    font-size: 11px;
+  }
+  .title-btn {
+    width: 100%;
+    margin-left: 5px;
+  }
+</style>

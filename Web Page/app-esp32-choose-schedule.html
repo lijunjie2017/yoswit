@@ -1,0 +1,657 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Schedule') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only" @click="${()=>saveButtonGroup()}">
+            <i class="icon material-icons">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="list list-strong list-dividers-ios simple-list virtual-list searchbar-found" style="margin-top: 0px">
+          <ul>
+            <li class="device-item" style="padding: 0px; min-height: 70px" v-for="item in scheduleList" :key="item.name">
+              <div class="item-content" style="width: 100%">
+                <div class="item-inner">
+                  <div class="item-title display-flex flex-direction-column justify-content-center">
+                    <div class="item-title-item ellipsis" lang="en" style="line-height: 20px">
+                      {{ item.name }}
+                      <span v-if="item.to_time">{{item.to_time}}</span>
+                      <span v-if="item.from_time">{{item.from_time}}</span>
+                    </div>
+                    <div
+                      style="line-height: 20px; width: 280px; flex-wrap: wrap"
+                      class="display-flex flex-direction-row justify-content-flex-start"
+                    >
+                      <span
+                        class="button-command text-color-gray"
+                        v-for="sub in item.time_slot"
+                        :key="sub.date"
+                        style="margin-right: 10px; margin-top: 5px"
+                        >{{ sub.date }}</span
+                      >
+                    </div>
+                  </div>
+                  <div class="item-after">
+                    <div
+                      class="button button-raised button-big circle popup-open"
+                      data-popup=".demo-popup-timer"
+                      style="margin-top: 0px"
+                      v-on:click="clickButtonGroup(item)"
+                    >
+                      <div>
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important" v-if="item.ischeck"
+                          >check</i
+                        >
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important" v-else>block</i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="fab fab-right-bottom popup-open" data-popup=".demo-popup">
+          <a style="text-align: center" v-on:click="addSchedule()">
+            <i class="icon material-icons">add</i>
+          </a>
+        </div>
+        <!-- Add Schedule -->
+        <div class="popup demo-popup-timer">
+          <div class="page">
+            <div class="navbar">
+              <div class="navbar-bg"></div>
+              <div class="navbar-inner">
+                <div class="title">Add Time</div>
+                <div class="right"><a class="link popup-close">Close</a></div>
+              </div>
+            </div>
+            <div class="page-content">
+              <div class="block">
+                <div class="card">
+                  <div class="card-content card-content-padding">
+                    <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+                      <ul>
+                        <li class="radio-box choose-time-box card device-hidden" @click="${()=>openTimes(1)}">
+                          <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+                            <div class="item-title">{{_('Time From')}}</div>
+                            <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                              <input
+                                class="text-color-gray"
+                                type="text"
+                                name="time"
+                                value=""
+                                placeholder="Time From"
+                                readonly="readonly"
+                                id="device-timer-time-picker-from"
+                                style="width: 45%; text-align: end"
+                              />
+                              <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="radio-box choose-time-box card device-hidden" @click="${()=>openTimes(1)}">
+                          <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+                            <div class="item-title">{{_('Time To')}}</div>
+                            <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                              <input
+                                class="text-color-gray"
+                                type="text"
+                                name="time"
+                                value=""
+                                placeholder="Time To"
+                                readonly="readonly"
+                                id="device-timer-time-picker-to"
+                                style="width: 45%; text-align: end"
+                              />
+                              <i class="icon material-icons md-only text-color-gray">chevron_right</i>
+                            </div>
+                          </div>
+                        </li>
+                        
+                        <div class="action-box card">
+                          <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                            <div class="trigger-text">{{_('Whole Day')}}</div>
+                            <div
+                              class="trigger-right display-flex justify-content-space-between align-items-cente"
+                              v-on:click="isWholeDay = !isWholeDay"
+                            >
+                              <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!isWholeDay">toggle_off</i>
+                              <i class="material-icons text-color-theme" style="font-size: 50px" v-if="isWholeDay">toggle_on</i>
+                            </div>
+                          </div>
+                        </div>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="confirmAddTime()">{{_("Complete")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Add Schedule end -->
+        <div class="popup demo-popup">
+          <div class="page">
+            <div class="navbar">
+              <div class="navbar-bg"></div>
+              <div class="navbar-inner">
+                <div class="title">Add Schedule</div>
+                <div class="right"><a class="link popup-close">Close</a></div>
+              </div>
+            </div>
+            <div class="page-content">
+              <div class="block">
+                <div class="card">
+                  <div class="card-content card-content-padding">
+                    <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+                      <ul>
+                        <li class="item-content item-input">
+                          <div class="item-inner no-padding-right">
+                            <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Schedule Name")}}</div>
+                            <div class="item-input-wrap">
+                              <input
+                                type="text"
+                                name="scheduleName"
+                                v-model="scheduleName"
+                                :placeholder="_('Please enter the schedule name.')"
+                                required
+                                validate
+                              />
+                            </div>
+                          </div>
+                        </li>
+                        <li v-for="item in dateList" :key="item.id">
+                          <div class="item-content item-input">
+                            <div class="item-inner no-padding-right">
+                              <div
+                                class="item-title item-label display-flex justify-content-space-between align-items-center"
+                                lang="en"
+                                style="font-size: 16px"
+                              >
+                                <span>{{ item.title }}</span>
+                                <span class="material-icons" style="margin-right: 15px" v-on:click="deleteDate(item)">delete</span>
+                              </div>
+                              <div class="item-input-wrap">
+                                <input type="text" :placeholder="_('Please enter the date.')" :id="item.id" />
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                        <div
+                          class="add-box add-action display-flex justify-content-space-between align-items-center"
+                          v-on:click="addDate()"
+                        >
+                          <div class="trigger-icon display-flex justify-content-flex-start align-items-center">
+                            <i class="material-icons">add_circle</i>
+                            <div class="trigger-text margin-left">{{_("Add Date")}}</div>
+                          </div>
+                        </div>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="confirmAddDate()">{{_("Complete")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $onMounted = ctx.$onMounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, sub_name, device_type } = $f7route.query;
+    const searchButtonGroup = (e) => {
+      vueApp.$searchButtonGroup($(e.target).val());
+    };
+    const saveButtonGroup = () => {
+      vueApp.$saveButtonGroup();
+    };
+    let timer1 = {};
+    let timer2 = {};
+    let this_day = dayjs().date().toString(16).pad('00');
+    let this_month = (dayjs().month() + 1).toString(16).pad('00');
+    let this_years = dayjs()
+      .year()
+      .toString(16)
+      .pad('0000')
+      .match(/.{1,2}/g)
+      .reverse()
+      .join('');
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          buttonGroupList: [],
+          deviceType: device_type,
+          searchStatus: false,
+          searchButtonGroupList: [],
+          scheduleList: [
+            {
+              name: 'Monday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+            {
+              name: 'Tuesday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+            {
+              name: 'Wednesday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+            {
+              name: 'Thursday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+            {
+              name: 'Friday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+            {
+              name: 'Saturday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+            {
+              name: 'Sunday',
+              ischeck: false,
+              whole_day: 0,
+              from_time: '',
+              to_time: '',
+              time_slot: [],
+            },
+          ],
+          scheduleName: '',
+          dateList: [],
+          dateMap: {},
+          isWholeDay: false,
+        },
+        watch: {},
+        mounted() {
+          Vue.prototype.$searchButtonGroup = this.searchButtonGroup;
+          Vue.prototype.$saveButtonGroup = this.saveButtonGroup;
+          this.init();
+        },
+        methods: {
+          async addDate() {
+            let id = new Date().getTime();
+            this.dateList.push({
+              title: 'Date',
+              date: '',
+              id: `date-${id}`,
+            });
+            setTimeout(() => {
+              app.calendar.create({
+                inputEl: `#date-${id}`,
+                dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric' },
+              });
+            }, 500);
+          },
+          deleteDate(item) {
+            this.dateList = this.dateList.filter((i) => i.id !== item.id);
+          },
+          async confirmAddDate() {
+            let time_slot = [];
+            this.dateList.forEach((item) => {
+              item.date = this.formatDateTime($(`#${item.id}`).val());
+              time_slot.push({
+                owner: users[users.current].user_id,
+                date: item.date,
+                doctype: 'IoT Schedule Time Slot',
+                parent: this.scheduleName,
+                parentfield: 'time_slot',
+                parenttype: 'IoT Schedule',
+              });
+            });
+            console.log(time_slot);
+            let res = await http2.request({
+              url: encodeURI('/api/method/appv6.getOrUpdateSchedule'),
+              responseType: 'json',
+              method: 'POST',
+              debug: true,
+              data: {
+                owner: users[users.current].user_id,
+                types: 'update',
+                time_slot: time_slot,
+                schedule_name: this.scheduleName,
+              },
+            });
+            console.log(res);
+            if (res.status == 200) {
+              $('.popup-close').click();
+              this.scheduleList.push({
+                name: this.scheduleName,
+                ischeck: false,
+                whole_day: 0,
+                from_time: '',
+                to_time: '',
+                time_slot: time_slot,
+              });
+              this.dateList = [];
+              this.scheduleName = '';
+            }
+          },
+          async init() {
+            try {
+              let obj = await this.getDeviceButtonGroupForDeviceType();
+              console.log('obj', obj);
+              if (obj.length > 0) {
+                let list = obj;
+                list.forEach((item) => {
+                  item.time_slot = item.time_slot || [];
+                  item.from_time = '';
+                  item.to_time = '';
+                  item.whole_day = 0;
+                });
+                this.scheduleList = this.scheduleList.concat(list);
+              }
+            } catch (err) {
+              console.log(err);
+            }
+          },
+          confirmAddTime() {
+            console.log('this.dateMap', this.dateMap);
+            let start_time = $(`#device-timer-time-picker-from`).val();
+            let end_time = $(`#device-timer-time-picker-to`).val();
+            console.log('start_time', start_time);
+            console.log('end_time', end_time);
+            console.log('this.dateMap', this.dateMap);
+            this.scheduleList.forEach((item) => {
+              if (item.name == this.dateMap.name) {
+                item.from_time = start_time;
+                item.to_time = end_time;
+                item.whole_day = this.isWholeDay ? 1 : 0;
+                item.ischeck = true;
+              }
+            });
+            $('.popup-close').click();
+          },
+          initTime() {
+            let form_date = new Date();
+            form_date.setMinutes(form_date.getMinutes() + 2);
+            timer1 = app.picker.create({
+              inputEl: '#device-timer-time-picker-from',
+              value: [form_date.getHours().toString().pad('00'), form_date.getMinutes().toString().pad('00')],
+              formatValue: function (values, displayValues) {
+                return values[0] + ':' + values[1];
+              },
+              cols: [
+                // Hours
+                {
+                  values: (function () {
+                    var arr = [];
+                    for (var i = 0; i <= 23; i++) {
+                      arr.push(i.toString().pad('00'));
+                    }
+                    return arr;
+                  })(),
+                },
+                // Divider
+                {
+                  divider: true,
+                  content: ':',
+                },
+                // Minutes
+                {
+                  values: (function () {
+                    var arr = [];
+                    for (var i = 0; i <= 59; i++) {
+                      arr.push(i.toString().pad('00'));
+                    }
+                    return arr;
+                  })(),
+                },
+              ],
+            });
+            let form_date_one = new Date();
+            form_date_one.setMinutes(form_date_one.getMinutes() + 10);
+            timer2 = app.picker.create({
+              inputEl: '#device-timer-time-picker-to',
+              value: [form_date_one.getHours().toString().pad('00'), form_date_one.getMinutes().toString().pad('00')],
+              formatValue: function (values, displayValues) {
+                return values[0] + ':' + values[1];
+              },
+              cols: [
+                // Hours
+                {
+                  values: (function () {
+                    var arr = [];
+                    for (var i = 0; i <= 23; i++) {
+                      arr.push(i.toString().pad('00'));
+                    }
+                    return arr;
+                  })(),
+                },
+                // Divider
+                {
+                  divider: true,
+                  content: ':',
+                },
+                // Minutes
+                {
+                  values: (function () {
+                    var arr = [];
+                    for (var i = 0; i <= 59; i++) {
+                      arr.push(i.toString().pad('00'));
+                    }
+                    return arr;
+                  })(),
+                },
+              ],
+              on: {
+                closed: function () {
+                  let start_time = $(`#device-timer-time-picker-from`).val();
+                  let end_time = $(`#device-timer-time-picker-to`).val();
+                  if (start_time >= end_time) {
+                    $(`.day-tip`).removeClass('device-hidden');
+                  } else {
+                    $(`.day-tip`).addClass('device-hidden');
+                  }
+                  console.log('start_time', start_time);
+                },
+              },
+            });
+          },
+          addSchedule() {},
+          formatDateTime(inputStr) {
+            const date = dayjs(inputStr, 'YYYY/M/D', true);
+            if (!date.isValid()) {
+              throw new Error('Invalid date format');
+            }
+            return date.format('YYYY-MM-DD');
+          },
+          saveButtonGroup() {
+            let list = this.scheduleList.filter((item) => item.ischeck);
+            emitter.emit('saveSchedule', list);
+            mainView.router.back();
+          },
+          clickButtonGroup(item) {
+            // item.ischeck = !item.ischeck;
+            this.dateMap = item;
+            setTimeout(() => {
+              this.initTime();
+            }, 500);
+          },
+          searchButtonGroup(e) {
+            console.log(e);
+            if (!e) {
+              this.searchStatus = false;
+              return;
+            }
+            this.searchButtonGroupList = this.buttonGroupList.filter(
+              (item) => item.name.includes(e) || item.button_group_list.some((sub) => sub.device_command.includes(e))
+            );
+            this.searchStatus = true;
+          },
+          getDeviceButtonGroupForDeviceType() {
+            return new Promise(async (resolve, reject) => {
+              try {
+                const res = await http2.request({
+                  url: encodeURI('/api/method/appv6.getOrUpdateSchedule'),
+                  responseType: 'json',
+                  method: 'POST',
+                  debug: true,
+                  data: {
+                    owner: users[users.current].user_id,
+                    types: 'list',
+                  },
+                });
+                resolve(res.data.data);
+              } catch (err) {
+                reject(err);
+              }
+            });
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+    $onMounted(() => {});
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .autocomplete-dropdown-in {
+    z-index: 10000 !important;
+  }
+  .do-not-find-flat {
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
+    color: #007bff;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+  .device-item {
+    background-color: #fff;
+  }
+  .button-command {
+    font-size: 12px;
+    line-height: 12px;
+  }
+  .list .item-inner:after {
+    content: none;
+  }
+  .not-found {
+    padding: 20px;
+    text-align: center;
+    font-size: 22px;
+    margin-top: 100px;
+  }
+</style>

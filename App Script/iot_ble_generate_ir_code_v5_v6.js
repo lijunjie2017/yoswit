@@ -12,7 +12,6 @@ window.iot_ble_generate_ir_code = function(code, button_signal, data){
 		d_data[k] *= 1;
 	}
 	l(TAG, "button_signal3="+button_signal);
-	
 	if( button_signal=="ARC_ON_OFF"||
 		button_signal=="ARC_MODE"||
 		button_signal=="ARC_REDUCE_TEMP"||
@@ -34,7 +33,7 @@ window.iot_ble_generate_ir_code = function(code, button_signal, data){
 		ircode += "3001"+d_data[0].toString(16).pad("00");
 		ircode += d_data[1].toString(16).pad("00");
 		
-		var airdata = "25,1,2,1,1,1";
+		var airdata = "25,1,2,1,1,4";
 		if(isset(data)) airdata = data;
 		
 		console.log(airdata);
@@ -79,6 +78,13 @@ window.iot_ble_generate_ir_code = function(code, button_signal, data){
 				ircode = "";
 			}
 		}else{
+		    //if click the arc_auto_wind
+		    // debugger
+		    if(arc_auto_wind == 1){
+		        if(arc_on_off == 1){
+		            action_no = 5;
+		        } 
+		    }
 			l(TAG, "checkSum2="+checkSum);
 			//7B0
 			checkSum += arc_temp;
@@ -103,10 +109,23 @@ window.iot_ble_generate_ir_code = function(code, button_signal, data){
 			//7B6
 			checkSum += arc_mode;
 			ircode += (arc_mode).toString(16).pad("00");
-			for(var i=9; i<d_data.length; i++){
-				checkSum += d_data[i];
-				ircode += d_data[i].toString(16).pad("00");
+			//7B7
+			ircode += '00';
+			//7B8
+			if(arc_mode == 5){
+				checkSum += 1;
+				ircode += '01';
+			}else{
+				ircode += '00';
 			}
+			//7B9
+			ircode += '00';
+			//7B10
+			ircode += '00';
+			// for(var i=9; i<d_data.length; i++){
+			// 	checkSum += d_data[i];
+			// 	ircode += d_data[i].toString(16).pad("00");
+			// }
 			checkSum = checkSum.toString(16).pad("00");
 			checkSum = checkSum.substring(checkSum.length-2);
 			

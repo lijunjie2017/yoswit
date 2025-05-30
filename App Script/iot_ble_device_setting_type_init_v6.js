@@ -58,10 +58,11 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     'Manual Dim Steps': {},
     'Delay Lastfor': {},
     'Device Mapping': {},
-    'Led Mode' : {},
-    'Backlight Brightness' : {},
-    'Manned Backlight Brightness' : {},
-    'Manned Backlight Time' : {},
+    'Linked Virtual Id': {},
+    'Backlight Brightness': {},
+    'Manned Backlight Brightness': {},
+    'Manned Backlight Time': {},
+    'radar_distance_limit': {},
   };
   let commandList = [];
 
@@ -136,8 +137,8 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     //4.update the config
     //this value is object
     //command_data = `02${ower_mac}81080${this_gang}fe${new_mac}ff0${targer_gang}00`;
-    if(!value.pairing_guid){
-        return
+    if (!value.pairing_guid) {
+      return;
     }
     let firmware = window.peripheral[guid].prop.firmware;
     let ower_mac = core_utils_get_mac_address_from_guid(guid, true);
@@ -230,14 +231,31 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     return data;
   };
 
-  const get_led_mode = (value) => {
+  const get_led_mode = (value, type) => {
     const commandMap = {
       'Reverse': '810A02',
       'Always On': '810A00',
       'Always Off': '810A01',
       'Sync': '810A03',
+      'Radar Reverse': '810A82',
+      'Radar Always On': '810A80',
+      'Radar Sync': '810A83',
+      'Reverse And Disable Turn Off': '810A42',
+      'Sync And Disable Turn Off': '810A43',
+      'Radar Reverse And Disable Turn Off': '810Ac2',
+      'Radar Sync And Disable Turn Off': '810Ac3',
     };
-    let data = commandMap[value];
+    //if the value have button group
+    let data = '';
+    let list = type.split('_');
+    if (list.length > 1) {
+      let button_group = list[1];
+      let gang = button_group.replace('ONOFF GANG', '');
+      let pre_command = commandMap[value];
+      data = `${pre_command}${parseInt(gang).toString(16).pad('00')}`;
+    } else {
+      data = commandMap[value];
+    }
     return data;
   };
 
@@ -285,6 +303,22 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     // run for off
     data += toLittleEndianHexString(0, 2);
 
+    return data;
+  };
+
+  //get io command
+  const get_io_command = (type, value) => {
+    let gang = type.replace('active_io_', '');
+    let data = '';
+    if (value == 'input') {
+      data = `972001${parseInt(gang).toString(16).pad('00')}01`;
+    }
+    if (value == 'inactive') {
+      data = `972001${parseInt(gang).toString(16).pad('00')}00`;
+    }
+    if (value == 'output') {
+      data = `972001${parseInt(gang).toString(16).pad('00')}02`;
+    }
     return data;
   };
 
@@ -707,16 +741,157 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     return command_list;
   };
 
-  //get Led Mode
-
   //get Backlight Brightness
-
+  const get_backlight_brightness_command = (value) => {
+    const command = {
+      '0%': '00',
+      '10%': '19',
+      '20%': '33',
+      '30%': '4c',
+      '40%': '66',
+      '50%': '7f',
+      '60%': '99',
+      '70%': 'b2',
+      '80%': 'cc',
+      '90%': 'e5',
+      '100%': 'ff',
+    };
+    let data = `8131${command[value]}00`;
+    return data;
+  };
   //get Manned Backlight Brightness
-
+  const get_manned_backlight_brightness_command = (value) => {
+    const command = {
+      '0%': '00',
+      '10%': '19',
+      '20%': '33',
+      '30%': '4c',
+      '40%': '66',
+      '50%': '7f',
+      '60%': '99',
+      '70%': 'b2',
+      '80%': 'cc',
+      '90%': 'e5',
+      '100%': 'ff',
+    };
+    let data = `8132${command[value]}00`;
+    return data;
+  };
   //get Manned Backlight Time
+  const get_manned_backlight_time_command = (value) => {
+    const command = {
+      '1s': '01',
+      '2s': '02',
+      '3s': '03',
+      '4s': '04',
+      '5s': '05',
+      '6s': '06',
+      '7s': '07',
+      '8s': '08',
+      '9s': '09',
+      '10s': '0a',
+      '11s': '0b',
+      '12s': '0c',
+      '13s': '0d',
+      '14s': '0e',
+      '15s': '0f',
+      '16s': '10',
+      '17s': '11',
+      '18s': '12',
+      '19s': '13',
+      '20s': '14',
+    };
+    let data = `953500000200${command[value]}`;
+    return data;
+  };
 
+  //radar_distance_limit
+  const get_radar_distance_limit_command = (value) => {
+    let data = `9534000003${iot_utils_to_upper_endian_hex(parseInt(value) * 10000, 3)}`;
+    return data;
+  };
   //rcu mode_list
+  const get_rcu_mode_list_command = (value) => {
+    let slotlist = [];
+    let modeList = value.split(',');
+    for (let i = 1; i <= 5; i++) {
+      let indexItem = ['2', '4', '5'].indexOf(modeList[i - 1]);
+      slotlist.push({
+        name: i,
+        mode: modeList[i - 1],
+        activeMode: indexItem != -1 ? 2 : 1,
+        commandList: [],
+      });
+    }
+    for (let i in slotlist) {
+      let this_mode = slotlist[i].mode;
+      let slotIndex = parseInt(slotlist[i].name).toString(16).pad('00');
+      // list.push(this_mode);
+      //dimming should set the minimum trim to 13,0-10v should set the minimum trim to 0
+      let command = '';
+      if (this_mode == 1) {
+        command = `13049711${slotIndex}0106971f${slotIndex}810500`;
+      } else if (this_mode == 2) {
+        command = `13049711${slotIndex}0207971f${slotIndex}8907010107971f${slotIndex}89050d0d07971f${slotIndex}89068a8a`;
+        // commandList.push(`9711${slotIndex}02`);
+        // commandList.push(`971f${slotIndex}89070101`);
+        // commandList.push(`971f${slotIndex}89050d0d`);
+        // commandList.push(`971f${slotIndex}89068a8a`);
+      } else if (this_mode == 3) {
+        command = `13049711${slotIndex}0106971f${slotIndex}810501`;
+        // commandList.push(`9711${slotIndex}01`);
+        // commandList.push(`971f${slotIndex}810501`);
+      } else if (this_mode == 4) {
+        command = `13049711${slotIndex}0207971f${slotIndex}8907020207971f${slotIndex}8905000007971f${slotIndex}8906ffff`;
+        // commandList.push(`9711${slotIndex}02`);
+        // commandList.push(`971f${slotIndex}89070202`);
+        // commandList.push(`971f${slotIndex}89050000`);
+        // commandList.push(`971f${slotIndex}8906ffff`);
+      } else if (this_mode == 5) {
+        command = `13049711${slotIndex}0207971f${slotIndex}8907030307971f${slotIndex}8905000007971f${slotIndex}8906ffff`;
+        // commandList.push(`9711${slotIndex}02`);
+        // commandList.push(`971f${slotIndex}89070303`);
+        // commandList.push(`971f${slotIndex}89050000`);
+        // commandList.push(`971f${slotIndex}8906ffff`);
+      }
+      slotlist[i].command = command;
+    }
+    return slotlist;
+  };
 
+  const get_init_slot_command = (type,value) => {
+    let valueList = [0,13,19,25,31,37,43,49,55,61];
+    //5|0|5|0|
+    //[gang1,gang1,gang2,gang2]
+    //[Per Brightness,Minimum Trim,Per Brightness,Minimum Trim]
+    let rangeList = value.split('|');
+    let soltGang = type.replace('init_slot_','');
+    let slot = parseInt(soltGang).toString(16).pad('00');
+    console.log('rangeList',rangeList);
+    let command = `1306971f${slot}8909${parseInt(rangeList[0]*255/100).toString(16).pad("00")}06971f${slot}8909${parseInt(rangeList[2]*255/100).toString(16).pad("00")}06971f${slot}8905${parseInt(valueList[rangeList[1]]).toString(16).pad("00")}06971f${slot}8905${parseInt(valueList[rangeList[3]]).toString(16).pad("00")}`;
+    return command;
+  }
+
+  const dealWithMode = (item) => {
+    let modeStr = '/';
+    if (item.activeMode == 1) {
+      if (item.mode == 1) {
+        modeStr = 'On Off Switch';
+      } else if (item.mode == 3) {
+        modeStr = 'Curtain Switch';
+      }
+    }
+    if (item.activeMode == 2) {
+      if (item.mode == 2) {
+        modeStr = 'Triac Dimming';
+      } else if (item.mode == 4) {
+        modeStr = '0-10v Dimming';
+      } else if (item.mode == 5) {
+        modeStr = '1-10v Dimming';
+      }
+    }
+    return modeStr;
+  };
   //rcu init_slot_03
 
   //rcu door_bell
@@ -730,8 +905,24 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
   //rcu active_io
 
   //rcu Minimum Brightness_RCU DIMMING9
-
-  
+  const get_minimum_brightness_command = (type,value) => {
+    //get the slot index
+    let typeList = type.split('Minimum Brightness_');
+    let button_group = typeList[1];
+    let gang = '';
+    if(button_group.includes('RCU DIMMING')){
+      gang = button_group.replace('RCU DIMMING','').replace('GANG','');
+    }else{
+      gang = button_group.replace('DIMMING','').replace('GANG','');
+    }
+    let slot = Math.ceil(parseInt(gang) / 2);
+    // let this_gang = gang - (2 * (slot - 1));
+    let data = `8911${parseInt(value * 255 / 100).toString(16).pad('00')}${parseInt(value * 255 / 100).toString(16).pad('00')}`;
+    if(button_group.includes('RCU DIMMING')){
+      data = `971f${parseInt(slot).toString(16).pad('00')}${data}`;
+    }
+    return data;
+  };
 
   switch (type) {
     case 'Set Time':
@@ -766,13 +957,6 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     case 'PVI Enable':
       commandList.push({
         command: get_pvi_enable(value),
-        title: type,
-        value: value,
-      });
-      break;
-    case 'LED Mode':
-      commandList.push({
-        command: get_led_mode(value),
         title: type,
         value: value,
       });
@@ -868,6 +1052,45 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
         value: value,
       });
       break;
+    case 'Backlight Brightness':
+      commandList.push({
+        command: get_backlight_brightness_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'Manned Backlight Brightness':
+      commandList.push({
+        command: get_manned_backlight_brightness_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'Manned Backlight Time':
+      commandList.push({
+        command: get_manned_backlight_time_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'radar_distance_limit':
+      commandList.push({
+        command: get_radar_distance_limit_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'mode_list':
+      let slotlist = get_rcu_mode_list_command(value);
+      slotlist.forEach((item, index) => {
+        let list = item.commandList;
+        commandList.push({
+          command: item.command,
+          title: type,
+          value: `Slot ${index + 1} / ${dealWithMode(item)}`,
+        });
+      });
+      break;
     case 'Virtual Device Pairing':
       let list = get_virtual_device_pairing_command(value);
       list.forEach((item) => {
@@ -888,14 +1111,14 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       });
       break;
     case 'Device Pairing':
-      if(type.includes('Virtual Device Pairing')) break;
+      if (type.includes('Virtual Device Pairing')) break;
       let obj = get_device_mapping_command(value);
       commandList.push({
         command: obj.data,
         title: type,
         value: `${value.this_button_group} - ${value.target_button_group}`,
-        targetPairingCommand : obj.targetPairingCommand,
-        targetGuid : obj.targetGuid,
+        targetPairingCommand: obj.targetPairingCommand,
+        targetGuid: obj.targetGuid,
       });
       break;
     default:
@@ -904,6 +1127,34 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
           command: get_delay_lastfor(value),
           title: `Delay Lastfor`,
           value: '3 item',
+        });
+      }
+      if (type.includes('LED Mode') || type.includes('Led Mode')) {
+        commandList.push({
+          command: get_led_mode(value, type),
+          title: type,
+          value: value,
+        });
+      }
+      if(type.includes('Minimum Brightness')){
+        commandList.push({
+          command: get_minimum_brightness_command(type,value),
+          title: type,
+          value: value,
+        });
+      }
+      if (type.includes('init_slot_')) {
+        commandList.push({
+          command: get_init_slot_command(type,value),
+          title: type,
+          value: value,
+        });
+      }
+      if (type.includes('active_io_')) {
+        commandList.push({
+          command: get_io_command(type,value),
+          title: type,
+          value: value,
         });
       }
       if (thermostat_type_list.indexOf(type) != -1 && !thermostat_write_status) {

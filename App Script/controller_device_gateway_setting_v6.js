@@ -351,7 +351,7 @@ window.device_gateway_setting_component = {
       let list = this.profileData.profile_device;
       list.forEach(item=>{
         this.profileDevice.forEach(kitem=>{
-          if(kitem.name == item.name && kitem.checked){
+          if(kitem.name == item.name && kitem.checked && kitem.device_model != 'YO105'){
             item.gateway = kitem.gateway;
             item.default_connect = kitem.default_connect;
           }
@@ -504,6 +504,8 @@ window.device_gateway_setting_component = {
                 }
             }
         })
+        //handle if have gateway,should set the default connect
+        list = list.filter(item=>item.model != 'YO105');
         try{
           await this.postMoredataToErp();
           await ha_profile_ready();

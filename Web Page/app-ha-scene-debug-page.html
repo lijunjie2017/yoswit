@@ -9,8 +9,11 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Scene Command List') }}</div>
+        <div class="title">{{ _('Scene Upload') }}</div>
         <div class="right">
+          <a link icon-only @click="${()=>getDataFromMqtt()}" style="margin-right: 10px;">
+            <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">cloud_upload</i>
+          </a>
           <a link icon-only @click="${()=>downloadTxtFile()}">
             <i class="icon material-icons setting-list-icon p-1" style="font-size: 30px">download</i>
           </a>
@@ -71,6 +74,106 @@
             </ul>
           </div>
         </div>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <div class="block-title command-item-inner" style="padding: 0px 15px">{{_('Toggle Setting List')}}</div>
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in toggle_settings" :key="index">
+                <div class="item-content">
+                  <div class="item-media">{{item.scene_id}}</div>
+                  <div class="item-inner">
+                    <div
+                      class="command-item-inner"
+                      style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word; word-break: break-all"
+                    >
+                      {{item.command}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="code-block" style="padding: 10px 15px; font-size: 18px" v-if="toggle_settings.length == 0">
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No Toggle Setting')}}</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <div class="block-title command-item-inner" style="padding: 0px 15px">{{_('Toggle On List')}}</div>
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in toggle_on" :key="index">
+                <div class="item-content">
+                  <div class="item-media">{{item.scene_id}}</div>
+                  <div class="item-inner">
+                    <div
+                      class="command-item-inner"
+                      style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word; word-break: break-all"
+                    >
+                      {{item.command}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="code-block" style="padding: 10px 15px; font-size: 18px" v-if="toggle_on.length == 0">
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No Toggle On Setting')}}</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <div class="block-title command-item-inner" style="padding: 0px 15px">{{_('Toggle Off List')}}</div>
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in toggle_off" :key="index">
+                <div class="item-content">
+                  <div class="item-media">{{item.scene_id}}</div>
+                  <div class="item-inner">
+                    <div
+                      class="command-item-inner"
+                      style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word; word-break: break-all"
+                    >
+                      {{item.command}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="code-block" style="padding: 10px 15px; font-size: 18px" v-if="toggle_off.length == 0">
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No Toggle On Setting')}}</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="main-box">
+          <div class="list list-strong-ios list-dividers-ios inset-ios">
+            <div class="block-title command-item-inner" style="padding: 0px 15px">{{_('Raw Setting List')}}</div>
+            <ul>
+              <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in raw_settings" :key="index">
+                <div class="item-content">
+                  <div class="item-media">{{item.scene_id}}</div>
+                  <div class="item-inner">
+                    <div
+                      class="command-item-inner"
+                      style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word; word-break: break-all"
+                    >
+                      {{item.command}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="code-block" style="padding: 10px 15px; font-size: 18px" v-if="raw_settings.length == 0">
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No Raw Setting')}}</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       {% endraw %}
@@ -87,6 +190,9 @@
 
     let vueApp = null;
     const { guid } = $f7route.query;
+    const getDataFromMqtt = () => {
+      vueApp.$getDataFromMqtt();
+    };
     const downloadTxtFile = () => {
       const mackey = core_utils_get_mac_address_from_guid(guid, true);
       const pageContent = document.documentElement.outerHTML;
@@ -149,13 +255,144 @@
           command: '',
           triggers: [],
           actions: [],
+          toggle_settings: [],
+          toggle_on: [],
+          toggle_off: [],
+          raw_settings: [],
         },
         computed: {},
         watch: {},
         mounted() {
+          Vue.prototype.$getDataFromMqtt = this.getDataFromMqtt;
+          this.listenerFunction();
           this.download();
         },
         methods: {
+          async listenerFunction() {
+            this.localActionSceneList = [];
+            this.localTrigerSceneList = [];
+            let gateway = '';
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            let profile_device_map = profile_device.find((item) => item.device == guid);
+            if (profile_device_map) {
+              gateway = profile_device_map.gateway;
+            } else {
+              return;
+            }
+            let settings_topic = `settings/${md5(md5(gateway))}`;
+            if (this.listenForSetting) {
+              emitter.off(settings_topic, this.listenForSetting);
+            }
+            this.listenForSetting = (payload) => {
+              console.log('payload', payload);
+              let message = JSON.parse(payload.message);
+              let rs = message.setting;
+              if ((rs.startsWith('8f20') || rs.startsWith('8f22')) && rs.length > 8) {
+                let thisSceneId = rs.slice(6, 8);
+                if (thisSceneId == '00') {
+                  return;
+                }
+                const foundIndex = this.localTrigerSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
+                if (foundIndex === -1) {
+                  this.triggers.push({
+                    scene_id: rs.slice(6, 8),
+                    command: rs,
+                  });
+                }
+              } else if ((rs.startsWith('8f10') || rs.startsWith('8f12')) && rs.length > 8) {
+                //this means command is action
+                if (rs.slice(6, 8) == '00') {
+                  return;
+                }
+                const foundIndex = this.localActionSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
+                if (foundIndex === -1) {
+                  this.actions.push({
+                    scene_id: rs.slice(6, 8),
+                    command: rs,
+                  });
+                }
+              } else if (rs.startsWith('8f1000ff') || rs.startsWith('8f1200ff')) {
+                app.dialog.close();
+                // ble.stopNotification(peripheral[guid].prop.id, 'ff80', 'ff82');
+                //compareLocalAndErpData();
+              } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '02') {
+                this.toggle_settings.push({
+                  scene_id: rs.substring(6, 8),
+                  command: rs,
+                });
+              } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '01') {
+                this.toggle_on.push({
+                  scene_id: rs.substring(6, 8),
+                  command: rs,
+                });
+              } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '00') {
+                this.toggle_off.push({
+                  scene_id: rs.substring(6, 8),
+                  command: rs,
+                });
+              } else if (rs.startsWith('972303ff02')) {
+              } else if (rs.startsWith('8f13') && rs.length > 8) {
+                this.raw_settings.push({
+                  scene_id: rs.substring(6, 8),
+                  command: rs,
+                });
+              }
+            };
+            core_mqtt_subscribe(settings_topic, 1, false);
+            emitter.on(settings_topic, this.listenForSetting);
+          },
+          async getDataFromMqtt() {
+            this.triggers = [];
+            this.actions = [];
+            this.toggle_settings = [];
+            this.toggle_on = [];
+            this.toggle_off = [];
+            this.raw_settings = [];
+            //get the gateway
+            let gateway = '';
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            let profile_device_map = profile_device.find((item) => item.device == guid);
+            if (profile_device_map) {
+              gateway = profile_device_map.gateway;
+            } else {
+              return;
+            }
+            let gateway_topic = `cmd/${md5(md5(gateway))}`;
+            let settings_topic = `settings/${gateway}`;
+            let read_action_command = '8F1200FF';
+            let read_trriger_command = `8F220000FF`;
+            let read_scene_toggle_setting_command = `972303ff02`;
+            let read_scene_toggle_on_command = `972303ff01`;
+            let read_scene_toggle_off_command = `972303ff00`;
+            let read_raw_setting_command = `8f1500ff`;
+            //list of command
+
+            core_mqtt_publish(
+              gateway_topic,
+              {
+                'command': 'Control',
+                'function': 'bleHelper.perform',
+                'params': [
+                  {
+                    action: 'write',
+                    guid: guid,
+                    mac_address: core_utils_get_mac_address_from_guid(guid),
+                    service_id: 'ff80',
+                    char_id: 'ff81',
+                    value: '13048F1200FF058F220000FF05972303ff0205972303ff0105972303ff00048f1500ff'.toLocaleLowerCase(),
+                  },
+                ],
+                'callback': '',
+                'raw': '',
+              },
+              0,
+              false,
+              false,
+              false
+            )
+              .then(() => {})
+              .catch((reject) => {});
+          },
           async download() {
             app.dialog.preloader();
             setTimeout(() => {
@@ -199,8 +436,33 @@
                     }
                   } else if (rs.startsWith('8f1000ff') || rs.startsWith('8f1200ff')) {
                     app.dialog.close();
-                    ble.stopNotification(peripheral[guid].prop.id, 'ff80', 'ff82');
+                    // ble.stopNotification(peripheral[guid].prop.id, 'ff80', 'ff82');
                     //compareLocalAndErpData();
+                  } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '02') {
+                    this.toggle_settings.push({
+                      scene_id: rs.substring(6, 8),
+                      command: rs,
+                    });
+                  } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '01') {
+                    this.toggle_on.push({
+                      scene_id: rs.substring(6, 8),
+                      command: rs,
+                    });
+                  } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '00') {
+                    this.toggle_off.push({
+                      scene_id: rs.substring(6, 8),
+                      command: rs,
+                    });
+                  } else if (rs.startsWith('972303ff02')) {
+                  } else if (rs.startsWith('8f13') && rs.length > 8) {
+                    this.raw_settings.push({
+                      scene_id: rs.substring(6, 8),
+                      command: rs,
+                    });
+                  } else if (rs.startsWith('8f1300ff')) {
+                    setTimeout(() => {
+                      ble.stopNotification(peripheral[guid].prop.id, 'ff80', 'ff82');
+                    }, 1000 * 30);
                   }
                 },
                 (err) => {
@@ -210,6 +472,10 @@
               );
               let read_action_command = '8F1200FF';
               let read_trriger_command = `8F220000FF`;
+              let read_scene_toggle_setting_command = `972303ff02`;
+              let read_scene_toggle_on_command = `972303ff01`;
+              let read_scene_toggle_off_command = `972303ff00`;
+              let read_raw_setting_command = `8f1500ff`;
               await peripheral[guid].write([
                 {
                   service: 'ff80',
@@ -220,6 +486,26 @@
                   service: 'ff80',
                   characteristic: 'ff81',
                   data: read_action_command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_scene_toggle_setting_command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_scene_toggle_on_command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_scene_toggle_off_command,
+                },
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: read_raw_setting_command,
                 },
               ]);
             } catch (error) {

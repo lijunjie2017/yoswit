@@ -168,7 +168,7 @@
                       v-if="log_item.command_type == 'rcu_scene_trigger' && log_item.scene_title"
                     >
                       {{log_item.scene_title?log_item.scene_title:parseInt(item.scene_id,16) }}
-                      <i class="material-icons text-color-theme" style="font-size: 20px;position: absolute;top:35px;">play_arrow</i>
+                      {{(_('Play'))}}
                     </span>
                     <!-- scene status log end  -->
                     <!-- thermosta status log  -->
@@ -208,7 +208,11 @@
           </div>
           <h3 class="text-align-center mt-3">{{_('No Records Found')}}</h3>
         </div>
+        <div class="no-more-data" v-if="more_data">
+          <h3>{{_('Thats it, no more data available.')}}</h3>
+        </div>
       </div>
+      
       ${hasMoreItems && $h`
       <div class="preloader infinite-scroll-preloader"></div>
       `} {% endraw %}
@@ -258,7 +262,7 @@
           page_length: 20,
           guid: guid,
           button_gang: 0,
-          more_data: true,
+          more_data: false,
         },
         mounted() {
           Vue.prototype.$refreshFun = this.refreshFun;
@@ -552,12 +556,13 @@
                 } else if (!list.length) {
                   allowInfinite = false;
                   hasMoreItems = false;
-                  if (!refresh_data) {
-                    let toast = $f7.toast.create({
-                      text: 'No more data',
-                      closeTimeout: 2000,
-                    });
-                    toast.open();
+                  if (!refresh_data && this.log_list.length) {
+                    // let toast = $f7.toast.create({
+                    //   text: 'No more data',
+                    //   closeTimeout: 2000,
+                    // });
+                    // toast.open();
+                    this.more_data = true;
                   }
                   $update();
                 }
@@ -799,5 +804,11 @@
   .empty-box + .list ul::before,
   .empty-box + .list ul::after {
     content: none;
+  }
+  .no-more-data{
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+    padding: 20px 0;
   }
 </style>

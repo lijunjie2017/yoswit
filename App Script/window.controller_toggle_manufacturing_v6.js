@@ -17,6 +17,9 @@ window.manufacturing_periperal_outer_template = `
 `;
 
 window.manufacturing_periperals = {};
+window.sta_mac_address = "";
+window.lan_mac_address = "";
+window.ap_mac_address = "";
 window.manufacturing_scan_timer = null;
 window.manufacturing_new_guid = "";
 window.controller_toggle_manufacturing = function(params){
@@ -146,7 +149,7 @@ window.manufacturing_start_produce = (params) => {
             <div class="sheet-modal" style="height:auto">
             	<div class="sheet-modal-inner">
             		<div class="swipe-handler"></div>
-            		<div class="page-content">
+            		<div class="page-content" style="height:600px;">
             			<div class="list list-strong list-outline list-dividers-ios">
             				<ul class="manufacturing-steps-list">
             					<li class="manufacturing-steps manufacturing-step1">
@@ -290,22 +293,38 @@ window.manufacturing_start_produce = (params) => {
 	// write new name
     cmd.push({action:"write",data:('8100{{machexs[0]}}{{machexs[1]}}{{machexs[2]}}{{machexs[3]}}{{machexs[4]}}{{machexs[5]}}12' + model + batch).toLowerCase(), pre:"manufacturing_update_step"});  // device name 
     manufacturing_new_guid = '{{machexs[0]}}{{machexs[1]}}{{machexs[2]}}{{machexs[3]}}{{machexs[4]}}{{machexs[5]}}12' + model + batch;
-    
+    //write ble name 
+    if(isset(ble_model[model.toLowerCase()])){
+        let model_hex = Array.from([...new TextEncoder().encode(ble_model[model.toLowerCase()].name)])
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+        debugger
+        let command = `93570000${parseInt(model_hex.length/2).toString(16).padStart(2, '0')}${model_hex}`;
+        cmd.push({action:"write",data:command.toLowerCase()});
+    }
     
     /* default config of model and batch */
-    debugger
-    if(isset(ble_model[model.toUpperCase()]) && isset(ble_model[model.toUpperCase()]['default']) && ble_model[model.toUpperCase()]['default'].length){
-        for(let k in ble_model[model.toUpperCase()]['default']){
-            cmd.push({action:"write",data:ble_model[model.toUpperCase()]['default'][k].toLowerCase()});
-            
+    //debugger
+    if(isset(ble_model[model.toLowerCase()]) && isset(ble_model[model.toLowerCase()]['default']) && ble_model[model.toLowerCase()]['default'].length){
+        for(let k in ble_model[model.toLowerCase()]['default']){
             console.log(k);
-            console.log(ble_model[model.toUpperCase()]['default'][k]);
-            if(ble_model[model.toUpperCase()]['default'][k].startsWith('82')){
-                manufacturing_password = ble_model[model.toUpperCase()]['default'][k].substring(14).convertToAscii();
+            console.log(ble_model[model.toLowerCase()]['default'][k]);
+            if(ble_model[model.toLowerCase()]['default'][k].startsWith('9358')){
+                cmd.push({action:"write",data:ble_model[model.toLowerCase()]['default'][k].toLowerCase()});
+                cmd.push({action:"write",data:("810e").toLowerCase()}); 
+                cmd.push({action:"connect"});
+            }else{
+                cmd.push({action:"write",data:ble_model[model.toLowerCase()]['default'][k].toLowerCase()});
+            
+                
+                if(ble_model[model.toLowerCase()]['default'][k].startsWith('82')){
+                    manufacturing_password = ble_model[model.toLowerCase()]['default'][k].substring(14).convertToAscii();
+                }
+                if(ble_model[model.toLowerCase()]['default'][k].startsWith('88038354')){
+                    manufacturing_default_password = ble_model[model.toLowerCase()]['default'][k].substring(8).convertToAscii();
+                }
             }
-            if(ble_model[model.toUpperCase()]['default'][k].startsWith('88038354')){
-                manufacturing_default_password = ble_model[model.toUpperCase()]['default'][k].substring(8).convertToAscii();
-            }
+            
         }
     }
     let hexBatch = batch.toUpperCase();
@@ -321,8 +340,28 @@ window.manufacturing_start_produce = (params) => {
             }
         }
     }
-    
-    
+    /* default config of device firmware */
+    // let device_firmware_list = cloneDeep(erp.doctype.device_firmware);
+    // let device_model_map = cloneDeep(erp.doctype.device_model);
+    // let this_model_firmware = device_model_map[model.toUpperCase()].latest_firmware;
+    // debugger
+    // if(this_model_firmware){
+    //     let device_firmware = device_firmware_list[this_model_firmware];
+    //     if(isset(device_firmware)){
+    //         let default_config = device_firmware.default_config;
+    //         for(let k in default_config){
+    //             if(default_config[k].description.startsWith('9358')){
+    //                 cmd.push({action:"write",data:(default_config[k].description).toLowerCase()});
+    //                 cmd.push({action:"write",data:("810e").toLowerCase()}); 
+    //                 cmd.push({action:"connect"});
+
+    //             }else{
+    //                 cmd.push({action:"write",data:(default_config[k].description).toLowerCase()});
+    //             }
+                
+    //         }
+    //     }
+    // }
 	// read manufacturer 2a29
 	cmd.push({action:"read",serv:'180a',char:'2a29'});
 	// write resume led
@@ -338,6 +377,10 @@ window.manufacturing_start_produce = (params) => {
 // 	cmd.push({action:"write",data:('800000').toLowerCase()}); 
 // 	cmd.push({action:"write",data:('890000').toLowerCase()}); 
 // 	cmd.push({action:"delay",delay:2, post:"manufacturing_update_step"}); 
+
+    //get the mac address
+    cmd.push({action:"notify",serv:'ff80',char:'ff82'});
+    cmd.push({action:"write",data:'932d'});
 	// write restart
 	cmd.push({action:"write",data:("810e").toLowerCase(), pre:"manufacturing_update_step"}); 
 	// end command, no need to write
@@ -379,7 +422,7 @@ window.manufacturing_start_produce_timer = (second) => {
 
 window.manufacturing_process_periperal = (id, cmd) => {
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    debugger
+    //debugger
     (function loop(i, repeat) {
         if (i >= cmd.length) return;
         if (!manufacturing_processing){
@@ -426,7 +469,8 @@ window.manufacturing_process_periperal = (id, cmd) => {
                             window[cmd[i].post](id, 'done', null);
                         }
                         loop(i+1);
-                    }, function(){
+                    }, function(error){
+                        debugger
                         console.log("Manufacturing: Restart "+cmd[i].data+" Failed (Successfully).");
                         if(isset(cmd[i].post) && isset(window[cmd[i].post])){
                             window[cmd[i].post](id, 'done', null);
@@ -469,7 +513,7 @@ window.manufacturing_process_periperal = (id, cmd) => {
                         rs = parseFloat(rs.substring(2).convertToAscii());
                         manufacturing_periperals[id].firmware = rs;
                     }else{
-                        debugger
+                        //debugger
                         rs = null;
                     }
                     if(isset(cmd[i].post) && isset(window[cmd[i].post])){
@@ -486,6 +530,25 @@ window.manufacturing_process_periperal = (id, cmd) => {
                     }
                     loop(i+1);
                 }, cmd[i].delay*1000);
+            }else if(cmd[i].action=="notify"){
+                console.log("Manufacturing: Notify Start");
+                ble.startNotification(id, cmd[i].serv, cmd[i].char, function(rs){
+                    console.log("Manufacturing: Notify "+cmd[i].serv+" Successfully");
+                    //get the sta_mac_address,lan_mac_address,ap_mac_address
+                    if(rs.startsWith("932d000018")){
+                        window.sta_mac_address = rs.substring(10,22);
+                        window.ap_mac_address = rs.substring(22,34);
+                        //window.ble_mac_address = rs.substring(34,46);
+                        window.lan_mac_address = rs.substring(46,58);
+                        console.log("sta_mac_address = "+window.sta_mac_address);
+                        console.log("ap_mac_address = "+window.ap_mac_address);
+                        console.log("lan_mac_address = "+window.lan_mac_address);
+                    }
+                },(error)=>{
+                    console.log("Manufacturing: Notify "+cmd[i].data+" Failed");
+                    loop(i+1);
+                });
+                loop(i+1);
             }else{
                 if(isset(cmd[i].post) && isset(window[cmd[i].post])){
                     debugger
@@ -514,7 +577,7 @@ window.manufacturing_update_step = (id, flag, info) => {
             manufacturing_periperals[id].guid = manufacturing_new_guid;
             manufacturing_periperals[id].connected = false;
             manufacturing_periperals[id].connecting = false;
-            debugger
+            //debugger
             let template = ha_control_template_render(manufacturing_new_guid, erp.doctype.device_model[$("select[name='manufacturing-model']").val().toUpperCase()].model_code,'',id);
             //alert(template);
             $('.manufacturing-steps-list').append(template);
@@ -540,13 +603,13 @@ window.manufacturing_update_step = (id, flag, info) => {
 
 window.manufacturing_upload_to_my_mobmob = (id, args) => {
     manufacturing_update_step(id, 'start', null);
-    debugger
+    //debugger
     
     if(!isset(manufacturing_periperals[id])) return;
     
     let p = manufacturing_periperals[id];
     
-    debugger
+    //debugger
     let parameters = [];
     parameters.push('mac_address='+p.mac_address);
     parameters.push('uuid='+id);
@@ -563,7 +626,14 @@ window.manufacturing_upload_to_my_mobmob = (id, args) => {
 		method: "GET"
 	});
 };
-
+window.formatMAC = (input, separator = ':') => {
+    const cleaned = input.toLowerCase().replace(/[^0-9a-f]/g, '');
+    if (cleaned.length !== 12) throw new Error('Invalid input');
+    return Array.from({length: 6})
+        .map((_, i) => cleaned.substr(10 - i*2, 2))
+        .join(separator);
+    
+}
 window.manufacturing_upload_to_erp = (id, args) => {
     manufacturing_update_step(id, 'start', null);
 
@@ -581,11 +651,14 @@ window.manufacturing_upload_to_erp = (id, args) => {
 	console.log("Manufacturing: manufacturing_default_password = "+manufacturing_default_password);
 	let deviceData = {
 	    guid:manufacturing_new_guid,
-	    mac_address:p.mac_address,
+	    mac_address:p.mac_address.toLowerCase(),
 	    password:manufacturing_password,
 	    device_model:modelText,
 	    batch:batchText,
 	    firmware:p.firmware,
+        wifi_mac_address:formatMAC(window.sta_mac_address),
+        lan_mac_address:formatMAC(window.lan_mac_address),
+        ap_mac_address:formatMAC(window.ap_mac_address),
 	    manufacture_date:p.lastDiscoverDate,
 	    settings:[{
 	        setting_type:'default_password',

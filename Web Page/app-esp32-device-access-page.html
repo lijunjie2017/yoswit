@@ -1,0 +1,1494 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Add Device Access') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <!-- 选择设备类型后，显示设备列表 -->
+        <div>
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in stepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                  v-on:click="toTab(item.relatedIndex)"
+                >
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+                    <ul>
+                      <li>
+                        <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                          <select name="mac-windows" v-model="accessType">
+                            <option value="1" selected>Dynamic QR Code</option>
+                            <option value="2">QR Code</option>
+                            <option value="3">Key Card</option>
+                            <option value="4">Secure Key Card</option>
+                            <option value="5">Octopus Card</option>
+                            <option value="6">Auto Open</option>
+                            <option value="7">Door Blocking Schedule</option>
+                          </select>
+                          <div class="item-content" style="height: 70px">
+                            <div class="item-inner">
+                              <div class="item-title">{{_('Access Type')}}</div>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 1 || accessType == 1">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Guest Email")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="guestEmail"
+                              v-model="guestEmail"
+                              :placeholder="_('Please enter the guest email.')"
+                              v-on:blur="checkGuestEmail"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 3 || accessType == 4">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Key Card ID")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="keyCardId"
+                              v-model="keyCardId"
+                              readonly="readonly"
+                              :placeholder="_('Please enter the key card id.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 4" style="display: none">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Key Card Secret")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="keyCardSecret"
+                              v-model="keyCardSecret"
+                              :placeholder="_('Please enter the key card secret.')"
+                              readonly="readonly"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 5">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Octopus Card ID")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="octopusCardId"
+                              v-model="octopusCardId"
+                              :placeholder="_('Please enter the octopus card id.')"
+                              readonly="readonly"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="item-content item-input">
+                          <div class="item-inner">
+                            <div class="item-input-wrap">
+                              <input type="text" :placeholder="_('Valid From')" readonly="readonly" id="demo-calendar-date-time" />
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="item-content item-input">
+                          <div class="item-inner">
+                            <div class="item-input-wrap">
+                              <input type="text" :placeholder="_('Valid To')" readonly="readonly" id="demo-calendar-date-time-to" />
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Access Group")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="number"
+                              name="accessGroup"
+                              v-model="accessGroup"
+                              :placeholder="_('Please enter the access group.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                          <select name="mac-windows" v-model="postType">
+                            <option value="1">WIFI</option>
+                            <option value="2" selected>BLE</option>
+                          </select>
+                          <div class="item-content" style="height: 70px">
+                            <div class="item-inner">
+                              <div class="item-title">{{_('Connection Mode')}}</div>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="item-content item-input" v-if="postType == 1 && !wifiConnected">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">
+                            {{_("Ssid")}}
+                            <span class="text-color-red" style="font-size: 12px"> ({{_('2.4 GHz Wi-Fi Only')}})</span>
+                          </div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="ssid"
+                              v-model="ssid"
+                              :placeholder="_('Please enter the wifi ssid.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="postType == 1 && !wifiConnected">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Password")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="password"
+                              v-model="password"
+                              :placeholder="_('Please enter the wifi password.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="accessType == 3 || accessType == 4 || accessType == 5">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="testKey()">{{_("Test")}}</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("Next")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-5" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="action-list list media-list no-margin">
+                      <ul>
+                        <li class="device" v-for="(item,index) in scheduleList" :key="index">
+                          <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                            <div class="item-inner">
+                              <div class="item-title-row" style="margin-top: 10px">
+                                <div class="item-title ellipsis" lang="en" style="width: 235px">
+                                  {{item.name}}<span
+                                    class="text-color-gray"
+                                    v-if="item.whole_day == 1"
+                                    style="margin-left: 10px; font-size: 12px"
+                                    >{{_('(Whole Day)')}}</span
+                                  >
+                                </div>
+                              </div>
+                              <div class="item-subtitle ellipsis" style="width: 235px">
+                                <span>{{item.from_time}} - {{item.to_time}}</span>
+                              </div>
+                            </div>
+                            <div class="margin-right" style="" v-on:click="deleteSchedule(item.name)">
+                              <i class="material-icons text-color-gray">delete</i>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      class="add-box add-action display-flex justify-content-space-between align-items-center"
+                      v-on:click="addSchedule()"
+                    >
+                      <div class="trigger-icon display-flex justify-content-flex-start align-items-center">
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Add Schedule")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="position-relative display-flex flex-direction-column justify-content-center align-items-center"
+                    style="margin-top: 10px"
+                    v-if="accessType == 1 || accessType == 2"
+                  >
+                    <img :src="qr_code_base64" style="object-fit: contain; width: 150px; height: 150px" />
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="syncToDevice()">{{_("Sync To Device")}}</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="completeDeviceAccess()">{{_("Compelte")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, sub_name, button_group ,button_group_command} = $f7route.query;
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          createFlatStatus: false,
+          flatLabel: 'Flat',
+          deviceName: '', // device name
+          deviceImage: '',
+          flatValue: '',
+          deviceNameTip: 'Please enter the device name', // device name tip
+          index: 1, // control the step-content
+          activeStatus: false, //if choose the template, show the step-content
+          deviceType: 1, //1: door, 2: lift, 3: mailbox, 4: locker
+          stepList: [
+            {
+              id: 1,
+              name: '1',
+              isActive: true,
+              relatedIndex: 1,
+            },
+            {
+              id: 2,
+              name: '2',
+              isActive: false,
+              relatedIndex: 2,
+            },
+          ],
+          flatList: ['1-32H', '1-31H'],
+          buttonGroupList: [],
+          isVia: false, //is 485 command
+          isIo: true, //is gpio command
+          isCom1: true,
+          isCom2: false,
+          accessType: 1, //default Dynamic QR Code
+          guestEmail: '',
+          keyCardId: '',
+          keyCardSecret: '',
+          octopusCardId: '',
+          calendarDateTimeFrom: null,
+          calendarDateTimeTo: null,
+          postType: 2,
+          ssid: '',
+          password: '',
+          iot_attempt: 0,
+          postBleDataList: [],
+          postBleDataListIndex: 0,
+          postBleDataListChunkIndex: 0,
+          uuid: '',
+          qr_code_base64: '',
+          scheduleList: [],
+          accessGroup: 0,
+          totalVailFrom: '',
+          totalVailTo: '',
+          qrcode_random_16: '',
+          deviceAccessMap: {},
+          wifiConnected: false,
+        },
+        watch: {
+          postType: function(newVal, oldVal) {
+            console.log('postType', newVal, oldVal);
+            if(newVal == 1){
+              let mobmob = window.peripheral[guid].prop.is_mobmob;
+              if(mobmob){
+                this.wifiConnected = true;
+              }else{
+                this.wifiConnected = false;
+              }
+            }
+          }
+        },
+        components: {},
+        async mounted() {
+          this.init();
+          this.qrcode_random_16 = this.generateRandom16();
+          this.generateQRCode(`{{${this.qrcode_random_16}}}`);
+          emitter.on('saveSchedule', (data) => {
+            console.log('saveSchedule', data);
+            let list = data;
+            list.forEach((item) => {
+              item.schedule = item.name;
+              item.doctype = 'Device Blocking Schedule';
+              item.parentfield = 'blocking_schedule';
+              item.parenttype = 'Device Access';
+            });
+            this.scheduleList = this.scheduleList.concat(data);
+          });
+          // let settings = await this.upDateDeviceSettings();
+          // console.log('settings', settings);
+        },
+        methods: {
+          init() {
+            setTimeout(() => {
+              app.calendar.create({
+                inputEl: '#demo-calendar-date-time',
+                timePicker: true,
+                dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' },
+              });
+              app.calendar.create({
+                inputEl: '#demo-calendar-date-time-to',
+                timePicker: true,
+                dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' },
+              });
+            }, 500);
+          },
+          generateRandom16() {
+            const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+            return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+          },
+          deleteSchedule(name) {
+            this.scheduleList = this.scheduleList.filter((item) => item.name != name);
+          },
+          async testKey() {
+            //confirm the
+            if (window.peripheral[guid].prop.connected) {
+              await window.peripheral[guid].disconnect();
+            } else {
+              await window.peripheral[guid].connect();
+            }
+            this.$getKeyCardId = (data)=>{
+              console.log('data', data);
+              if(data.rs.length >= 20){
+                this.keyCardId = data.rs.slice(-8);
+                if(this.accessType == 4){
+                  this.keyCardSecret = '832227680083';
+                }
+              }
+            }
+            if(this.$getKeyCardId){
+              emitter.off('key_card_id', this.$getKeyCardId);
+            }
+            emitter.on('key_card_id', this.$getKeyCardId);
+            // await ble.startNotification(this.uuid, 'ff80', 'ff82', (rs) => {
+            //   console.log('rs', rs);
+            //   if (rs.length >= 20) {
+            //     this.keyCardId = rs.slice(-8);
+            //     if (this.accessType == 4) {
+            //       this.keyCardSecret = '832227680083';
+            //     }
+            //   }
+            // },(error)=>{
+            //   console.log('error', error);
+            // });
+            setTimeout(async () => {
+              let command = `9931000001${this.accessType == 3 ? '00' : '01'}`;
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command.toLocaleLowerCase(),
+                },
+              ]);
+            }, 200);
+            app.dialog.alert(
+              _('Align your card (e.g., access card) with the D-card reader. Keep it steady until the device completes recognition.')
+            );
+          },
+          checkGuestEmail() {
+            console.log('checkGuestEmail', this.guestEmail);
+            let md_str = md5(md5(this.guestEmail) + this.guestEmail + 'yoswit');
+            let date_time = DateFormatter.format(new Date(), 'YmdHis');
+            let str = `${md_str}${date_time}`;
+            let checksum = md5(`${md5(str) + str + 'yoswit'}`);
+            let qr_str = `{{${md_str}${checksum}${date_time}}}`;
+            console.log('qr_str', qr_str);
+            this.generateQRCode(qr_str);
+          },
+          generateQRCode(value) {
+            cordova.plugins.qrcodejs.encode(
+              'TEXT_TYPE',
+              value,
+              (base64EncodedQRImage) => {
+                this.qr_code_base64 = base64EncodedQRImage;
+              },
+              (err) => {
+                console.error('qrcode js error: ' + err);
+              },
+              {
+                correctLevel: 0,
+              }
+            );
+          },
+          clickDeviceType(type) {
+            this.deviceType = type;
+            this.activeStatus = true;
+          },
+          activeStep() {
+            this.stepList.forEach((item) => {
+              if (item.id == this.index) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          //sync to device with ble or wifi
+          syncToDevice() {
+            if (this.postType == 1) {
+              //wifi
+              this.syncToDeviceWithWifi();
+            } else {
+              //ble
+              this.syncToDeviceWithBle();
+            }
+          },
+          completeDeviceAccess() {
+            console.log('completeDeviceAccess');
+            emitter.emit('saveDeviceAccess', this.deviceAccessMap);
+            mainView.router.back();
+          },
+          async syncToDeviceWithWifi() {
+            try {
+              let result = await http2.request({
+                url: encodeURI('/api/method/appv6.getDeviceAccessByDevice'),
+                responseType: 'json',
+                debug: true,
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  device: guid,
+                  access_type: this.getAccessTypeTitle(this.accessType),
+                },
+              });
+              console.log('result', result);
+              if (result.status == 200) {
+                let data = result.data.data;
+                let postScheduleList = [];
+                this.scheduleList.forEach((item) => {
+                  postScheduleList.push({
+                    schedule: item.schedule,
+                    from_time: item.from_time,
+                    to_time: item.to_time,
+                    whole_day: item.whole_day,
+                  });
+                });
+                if (data.length == 0) {
+                  //erp have no record
+                  let deviceAccessMap = {
+                    device: guid,
+                    access_type: this.getAccessTypeTitle(this.accessType),
+                    status: 'Pending',
+                    device_button_group: button_group,
+                    one_time_access: '',
+                    guest_email: this.guestEmail,
+                    valid_from: this.totalVailFrom,
+                    valid_to: this.totalVailTo,
+                    blocking_schedule: postScheduleList,
+                    access_level: this.accessGroup,
+                    qr_code: this.qrcode_random_16,
+                    key_card_id: this.keyCardId,
+                    key_card_secret: this.keyCardSecret,
+                    octopus_card_id: this.octopusCardId,
+                    guest_email: this.guestEmail,
+                    blocking_schedule: postScheduleList,
+                    access_level: this.accessGroup,
+                  };
+                  try {
+                    let respone = await http2.request({
+                      url: encodeURI('/api/resource/Device Access'),
+                      responseType: 'json',
+                      method: 'POST',
+                      serializer: 'json',
+                      debug: true,
+                      data: deviceAccessMap,
+                    });
+                    console.log('respone', respone);
+                    let settings = await this.upDateDeviceSettings();
+                    await window.peripheral[guid].write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: '9900',
+                      },{
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: '9901',
+                      }
+                    ]);
+                  } catch (error) {
+                    app.dialog.alert(error);
+                  }
+                } else {
+                  let deviceAccessMap = data[0];
+                  let accessType = this.getAccessTypeTitle(this.accessType);
+                  deviceAccessMap.access_type = accessType;
+                  deviceAccessMap.access_level = this.accessGroup;
+                  deviceAccessMap.status = 'Pending';
+                  deviceAccessMap.device_button_group = button_group;
+                  deviceAccessMap.blocking_schedule = postScheduleList;
+                  //send the ble data to the device
+                  if (this.accessType == 1) {
+                    //ble
+                    deviceAccessMap.guest_email = this.guestEmail;
+                    deviceAccessMap.valid_from = this.totalVailFrom;
+                    deviceAccessMap.valid_to = this.totalVailTo;
+                  } else if (this.accessType == 3) {
+                    deviceAccessMap.key_card_id = this.keyCardId;
+                  } else if (this.accessType == 4) {
+                    deviceAccessMap.key_card_id = this.keyCardId;
+                    deviceAccessMap.key_card_secret = this.keyCardSecret;
+                  } else if (this.accessType == 5) {
+                    deviceAccessMap.octopus_card_id = this.octopusCardId;
+                  } else if (this.accessType == 6) {
+                    deviceAccessMap.valid_from = this.totalVailFrom;
+                    deviceAccessMap.valid_to = this.totalVailTo;
+                  }
+                  console.log('deviceAccessMap', deviceAccessMap);
+                  try {
+                    let respone = await http2.request({
+                      url: encodeURI('/api/resource/Device Access/' + deviceAccessMap.name),
+                      responseType: 'json',
+                      method: 'PUT',
+                      serializer: 'json',
+                      debug: true,
+                      data: deviceAccessMap,
+                    });
+                    console.log('respone', respone);
+                    //tindy the data
+                    let json = { 'result': [] };
+                    json.result.push(respone.data.data);
+                    this.deviceAccessMap = respone.data.data;
+                    let settings = await this.upDateDeviceSettings();
+                    console.log('settings', settings);
+                    await window.peripheral[guid].write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: '9900',
+                      },{
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: '9901',
+                      }
+                    ]);
+                  } catch (error) {
+                    app.dialog.alert(error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('error', error);
+            }
+          },
+          async syncWifi() {
+            //connect to the mqtt server
+            if (!this.ssid || !this.password) {
+              app.dialog.alert(_('Please enter the wifi ssid and password.'));
+              return;
+            }
+            const checkIfOnline = () => {
+              let mac = core_utils_get_mac_address_from_guid(guid, false);
+              let topic_self = `${mac.toLowerCase()}-${users[users.current].usr.toLowerCase()}`;
+              let will_topic = `will/${md5(md5(topic_self))}`;
+              debugger;
+              core_mqtt_subscribe(will_topic, 0, false);
+              window.$subscribeTimer = setTimeout(() => {
+                core_mqtt_subscribe(will_topic, 0, false);
+              }, 10 * 1000);
+              if (window.$wifiTopicFun) {
+                emitter.off(will_topic, window.$wifiTopicFun);
+              }
+              window.$wifiTopicFun = async (res) => {
+                console.log('component res', res);
+                let message = res.message;
+                if (message.includes('Online')) {
+                  clearTimeout(window.$subscribeTimer);
+                  clearTimeout(window.$this_timer);
+                  app.dialog.close();
+                  this.wifiConnected = true;
+                  app.dialog.alert(_('Wi-Fi connected.'));
+                  this.toTab(2);
+                  //check the state of the connect status
+                }
+              };
+              emitter.on(will_topic, window.$wifiTopicFun);
+            };
+            //connect to the wifi
+            const saveSsid = () => {
+              const data = '932000' + this.ssid.length.toString(16).pad('0000') + this.ssid.convertToHex();
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            };
+            const saveSsidPassword = () => {
+              const data = '932100' + this.password.length.toString(16).pad('0000') + this.password.convertToHex();
+
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            };
+            const saveEmail = () => {
+              let email = users[users.current].usr.toLowerCase();
+              const data = '932200' + email.length.toString(16).pad('0000') + email.convertToHex();
+
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            };
+            const savePort = () => {
+              let port = erp.settings[erp.appId].mqtt_port;
+              const data = '9301000002' + (port * 1).toString(16).pad('0000');
+
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            };
+            const saveServerUrl = () => {
+              let server_url = 'mqtt://' + erp.settings[erp.appId].mqtt_server;
+              const data = '930000' + server_url.length.toString(16).pad('0000') + server_url.convertToHex();
+
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            };
+            const restartDevice = () => {
+              return window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '810E',
+                },
+              ]);
+            };
+            try {
+              app.dialog.preloader(_('Bluetooth connection in progress.'));
+              await window.peripheral[guid].connect();
+              await saveSsid();
+              await saveSsidPassword();
+              await saveEmail();
+              await savePort();
+              await saveServerUrl();
+              await restartDevice();
+              app.dialog.close();
+              app.dialog.preloader(_('Restarting...'));
+              await this.sleep(10 * 1000);
+              app.dialog.close();
+              app.dialog.preloader(_('Checking connection...'));
+              checkIfOnline();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+          },
+          async syncToDeviceWithBle() {
+            //send the ble data to the device
+            try {
+              let result = await http2.request({
+                url: encodeURI('/api/method/appv6.getDeviceAccessByDevice'),
+                responseType: 'json',
+                debug: true,
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  device: guid,
+                  access_type: this.getAccessTypeTitle(this.accessType),
+                },
+              });
+              console.log('result', result);
+              if (result.status == 200) {
+                let data = result.data.data;
+                let postScheduleList = [];
+                this.scheduleList.forEach((item) => {
+                  postScheduleList.push({
+                    schedule: item.schedule,
+                    from_time: item.from_time,
+                    to_time: item.to_time,
+                    whole_day: item.whole_day,
+                  });
+                });
+                if (data.length == 0) {
+                  //erp have no record
+                  let deviceAccessMap = {
+                    device: guid,
+                    access_type: this.getAccessTypeTitle(this.accessType),
+                    status: 'Registered',
+                    device_button_group: button_group,
+                    one_time_access: '',
+                    guest_email: this.guestEmail,
+                    valid_from: this.totalVailFrom,
+                    valid_to: this.totalVailTo,
+                    blocking_schedule: postScheduleList,
+                    access_level: this.accessGroup,
+                    qr_code: this.qrcode_random_16,
+                    key_card_id: this.keyCardId,
+                    key_card_secret: this.keyCardSecret,
+                    octopus_card_id: this.octopusCardId,
+                    guest_email: this.guestEmail,
+                    blocking_schedule: postScheduleList,
+                    access_level: this.accessGroup,
+                  };
+                  try {
+                    let respone = await http2.request({
+                      url: encodeURI('/api/resource/Device Access'),
+                      responseType: 'json',
+                      method: 'POST',
+                      serializer: 'json',
+                      debug: true,
+                      data: deviceAccessMap,
+                    });
+                    console.log('respone', respone);
+                    let json = { 'result': [] };
+                    json.result.push(respone.data.data);
+                    this.deviceAccessMap = respone.data.data;
+                    await this.postBleData(json, 1);
+                    await this.sleep(1000);
+                    let settings = await this.upDateDeviceSettings();
+                    await this.postBleData(settings, 0);
+                  } catch (error) {
+                    app.dialog.alert(error);
+                  }
+                } else {
+                  let deviceAccessMap = data[0];
+                  let accessType = this.getAccessTypeTitle(this.accessType);
+                  deviceAccessMap.access_type = accessType;
+                  deviceAccessMap.access_level = this.accessGroup;
+                  deviceAccessMap.status = 'Registered';
+                  deviceAccessMap.device_button_group = button_group;
+                  deviceAccessMap.blocking_schedule = postScheduleList;
+                  //send the ble data to the device
+                  if (this.accessType == 1) {
+                    //ble
+                    deviceAccessMap.guest_email = this.guestEmail;
+                    deviceAccessMap.valid_from = this.totalVailFrom;
+                    deviceAccessMap.valid_to = this.totalVailTo;
+                  } else if (this.accessType == 3) {
+                    deviceAccessMap.key_card_id = this.keyCardId;
+                  } else if (this.accessType == 4) {
+                    deviceAccessMap.key_card_id = this.keyCardId;
+                    deviceAccessMap.key_card_secret = this.keyCardSecret;
+                  } else if (this.accessType == 5) {
+                    deviceAccessMap.octopus_card_id = this.octopusCardId;
+                  } else if (this.accessType == 6) {
+                    deviceAccessMap.valid_from = this.totalVailFrom;
+                    deviceAccessMap.valid_to = this.totalVailTo;
+                  }
+                  console.log('deviceAccessMap', deviceAccessMap);
+                  try {
+                    let respone = await http2.request({
+                      url: encodeURI('/api/resource/Device Access/' + deviceAccessMap.name),
+                      responseType: 'json',
+                      method: 'PUT',
+                      serializer: 'json',
+                      debug: true,
+                      data: deviceAccessMap,
+                    });
+                    console.log('respone', respone);
+                    //tindy the data
+                    let json = { 'result': [] };
+                    json.result.push(respone.data.data);
+                    this.deviceAccessMap = respone.data.data;
+                    await this.postBleData(json, 1);
+                    //update the device settings 
+                    await this.sleep(1000);
+                    let settings = await this.upDateDeviceSettings();
+                    await this.postBleData(settings, 0);
+                  } catch (error) {
+                    app.dialog.alert(error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('error', error);
+            }
+          },
+          upDateDeviceSettings(){
+            return new Promise(async(resolve, reject) => {
+              try{
+                let res = await http2.request({
+                  url: encodeURI('/api/resource/Device/'+guid),
+                  responseType: 'json',
+                  method: 'GET',
+                  debug: true,
+                });
+                console.log('res', res);
+                //tindy the data 
+                let settingMap = res.data.data;
+                let settings = settingMap.settings;
+                let haveButtonGroup = false;
+                settings.forEach((item)=>{
+                  if(item.setting_type == button_group){
+                    haveButtonGroup = true;
+                  }
+                })
+                if(!haveButtonGroup){
+                  settings.push({
+                    parent : guid,
+                    parentfield : 'settings',
+                    parenttype : 'Device',
+                    doctype : 'Device Settings',
+                    setting_type : button_group,
+                    setting : button_group_command,
+                  });
+                  let postRes = await http2.request({
+                    url: encodeURI('/api/resource/Device/'+guid),
+                    responseType: 'json',
+                    method: 'PUT',
+                    serializer: 'json',
+                    debug: true,
+                    data: {
+                      settings:settings
+                    },
+                  });
+                }
+                resolve({
+                  "data":settingMap
+                });
+              } catch (error) {
+                //this means the device is not registered
+                console.log('error', error);
+                if(error.status == 404){
+                  let settings = [];
+                  settings.push({
+                    parent : guid,
+                    parentfield : 'settings',
+                    parenttype : 'Device',
+                    doctype : 'Device Settings',
+                    setting_type : 'default_password',
+                    setting : '000000',
+                  });
+                  settings.push({
+                    parent : guid,
+                    parentfield : 'settings',
+                    parenttype : 'Device',
+                    doctype : 'Device Settings',
+                    setting_type : button_group,
+                    setting : button_group_command,
+                  });
+                  //post the device
+                  try{
+                    let res = await http2.request({
+                      url: encodeURI('/api/resource/Device'),
+                      responseType: 'json',
+                      method: 'POST',
+                      serializer: 'json',
+                      debug: true,
+                      data: {
+                        guid: '12345',
+                        password: '000000',
+                        device_model: 'YO381',
+                        device_mode : 'Device Access',
+                        firmware : '13.126',
+                        batch: 'YO0012',
+                        settings:settings
+                      },
+                    });
+                    console.log('res', res);
+                    resolve(res);
+                  }catch(errors){
+                    reject(errors);
+                  }
+                }
+              }
+            })
+          },
+          getAccessTypeTitle(type) {
+            if (type == 1) {
+              return 'Dynamic QR Code';
+            } else if (type == 2) {
+              return 'QR Code';
+            } else if (type == 3) {
+              return 'Key Card';
+            } else if (type == 4) {
+              return 'Secure Key Card';
+            } else if (type == 5) {
+              return 'Octopus Card';
+            } else if (type == 6) {
+              return 'Auto Open';
+            } else if (type == 7) {
+              return 'Door Blocking Schedule';
+            } else {
+              return 'Unknown';
+            }
+          },
+          toTab(index) {
+            let postStatus = true;
+            console.log('index', this.accessType);
+            if (index == 2) {
+              //save the time
+              try {
+                this.totalVailFrom = this.formatDateTime($('#demo-calendar-date-time').val());
+                this.totalVailTo = this.formatDateTime($('#demo-calendar-date-time-to').val());
+              } catch (error) {
+                postStatus = false;
+                app.dialog.alert(_('Please select the time.'));
+                return;
+              }
+              if (this.postType == 1 && !this.wifiConnected) {
+                this.syncWifi();
+                return;
+              }
+              if (this.accessType == 1) {
+                if (!this.guestEmail) {
+                  postStatus = false;
+                  app.dialog.alert(_('Please enter the guest email.'));
+                  return;
+                }
+              }
+              if (this.accessType == 3 || this.accessType == 4) {
+                if (!this.keyCardId) {
+                  postStatus = false;
+                  app.dialog.alert(_('Please get the key card id.'));
+                  return;
+                }
+              }
+              if (this.accessType == 5) {
+                if (!this.octopusCardId) {
+                  postStatus = false;
+                  app.dialog.alert(_('Please get the octopus card id.'));
+                  return;
+                }
+              }
+            }
+            if (postStatus) {
+              this.index = index;
+              this.activeStep();
+            }
+          },
+          onInputFlat(value) {
+            this.flatValue = value;
+          },
+          changeVia() {
+            this.isVia = !this.isVia;
+            this.isIo = false;
+          },
+          changeIo() {
+            this.isIo = !this.isIo;
+            this.isVia = false;
+          },
+          changeCom(com) {
+            if (com == 1) {
+              this.isCom1 = !this.isCom1;
+              this.isCom2 = false;
+            } else if (com == 2) {
+              this.isCom2 = !this.isCom2;
+              this.isCom1 = false;
+            }
+          },
+          formatDateTime(inputStr) {
+            const date = dayjs(inputStr, 'YYYY/M/D HH:mm', true);
+            if (!date.isValid()) {
+              throw new Error('Invalid date format');
+            }
+            return date.format('YYYY-MM-DD HH:mm:ss');
+          },
+          base64ToArrayBuffer(base64) {
+            const binaryStr = atob(base64);
+            return Uint8Array.from(binaryStr, (c) => c.charCodeAt(0)).buffer;
+          },
+          async startPostBleData(mainIndex, subChunksIndex) {
+            let subChunkList = this.postBleDataList[mainIndex].subChunks;
+            for (let i in subChunkList) {
+              if (i == subChunksIndex) {
+                let hexString = arrayBufferToHex(subChunksIndex[i].item);
+                let commandLength = (hexString.length / 2 + 4).toString(16);
+                commandLength = commandLength.padStart(4, '0');
+                let command = `933400${commandLength}${iot_utils_to_little_endian_hex(list[j].offsetItem, 4)}${hexString}`;
+                console.log('command', command);
+                try {
+                  await ble.writeWithoutResponse(
+                    this.uuid,
+                    'ff80',
+                    'ff85',
+                    command.convertToBytes(),
+                    function (response) {
+                      console.log('response', response);
+                    },
+                    function (error) {
+                      console.log('error', error);
+                    }
+                  );
+                } catch (error) {}
+              }
+            }
+          },
+          checkSendBleIndex() {
+            let mianIndex = this.postBleDataListIndex;
+            //check current chunk index
+            let subChunkList = this.postBleDataList[mianIndex].subChunks;
+            let checkMainIsReady = true;
+            let chunkIndex = 0;
+            for (let i in subChunkList) {
+              if (subChunkList[i].status) {
+                checkMainIsReady = false;
+                chunkIndex = subChunkList[i].index;
+                break;
+              }
+            }
+            if (checkMainIsReady) {
+              this.postBleDataListIndex++;
+              this.postBleDataListChunkIndex = 0;
+            }
+          },
+          changeChunkIndex() {
+            this.postBleDataList.forEach((item) => {
+              if (item.index == this.postBleDataListIndex) {
+                item.subChunks.forEach((subItem) => {
+                  if (subItem.index == this.postBleDataListChunkIndex) {
+                    subItem.status = true;
+                  }
+                });
+              }
+            });
+          },
+          async postBleData(json, postHead) {
+            app.dialog.preloader(_('Connecting...'));
+            let uploadTimer = setTimeout(() => {
+              app.dialog.close();
+              app.dialog.alert(_('Upload Data Failed'));
+            }, 10000 * 60*5);
+            return new Promise(async (resolve, reject) => {
+              this.iot_attempt = 0;
+              await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
+              const jsonData = json;
+              const encoder = new TextEncoder();
+              const uint8Array = encoder.encode(JSON.stringify(jsonData));
+              const fileString = arrayBufferToHex(uint8Array);
+              let fileData = `990${postHead}000000${fileString}`;
+
+              const bytestoString = bytesToString(fileData.convertToBytes());
+              console.log('bytestoString', bytestoString);
+              const md5str = SparkMD5.hashBinary(bytestoString);
+              let sizeHex = iot_utils_to_little_endian_hex(fileData.length / 2, 4);
+              let nameHex = convertToFixedSizeHex(`device_access`, 31);
+              let readyData = `93330000340${'3'}${sizeHex}${md5str}${nameHex}`;
+              let allData = `93330000340${'3'}${sizeHex}${fileData}${nameHex}`;
+              try {
+                this.uuid = 'B5A17B2E-233C-F2C8-3C4A-95EDA537E4D5';
+                if (Capacitor.getPlatform() === 'android') {
+                  this.uuid = '24:EC:4A:09:49:CE';
+                }
+                let that = this;
+                try {
+                  ble.connect(this.uuid, (peripheralData) => {
+                    console.log('peripheralData', peripheralData);
+                    if (Capacitor.getPlatform() === 'android') {
+                      ble.requestMtu(
+                        this.uuid,
+                        512,
+                        () => {
+                          console.log('>>>> device request mtu success');
+                          app.dialog.close();
+                          this.this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
+                          setTimeout(() => {
+                            ble.startNotification(
+                              this.uuid,
+                              'ff80',
+                              'ff85',
+                              (rs) => {
+                                console.log('notification', rs);
+                                // debugger
+                                if (rs && that.iot_attempt == 0) {
+                                  that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                                  that.iot_attempt++;
+                                }
+                                if (rs && that.iot_attempt > 0) {
+                                  let status = parseInt(rs.substring(10, 12), 16);
+                                  console.log('status', status);
+                                  // this.changeChunkIndex();
+                                  // this.startPostBleData(0,0);
+                                  // this.checkSendBleIndex();
+                                  // this.postBleDataListChunkIndex++;
+                                  if (status > 0) {
+                                    app.preloader.hide();
+                                    this.this_dialog.setProgress(status);
+                                    this.this_dialog.setText(`${_('Upload Data')}: ${status}%`);
+                                  }
+                                  if (status == 100) {
+                                    app.preloader.hide();
+                                    this.this_dialog.close();
+                                    clearTimeout(uploadTimer);
+                                    app.dialog.alert(_('Upload Data Success'));
+                                    resolve(true);
+                                    window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
+                                  }
+                                  //if status > 100?reject error
+                                  if (status > 100) {
+                                    //disconnect the device
+                                    app.preloader.hide();
+                                    app.dialog.close();
+                                    ble.disconnect(this.uuid);
+                                    clearTimeout(uploadTimer);
+                                    console.log('disconnect');
+                                    reject(_('Upload Data Failed'));
+                                    // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
+                                  }
+                                }
+                              },
+                              function (error) {
+                                console.log(error);
+                              }
+                            );
+                            ble.writeWithoutResponse(
+                              this.uuid,
+                              'ff80',
+                              'ff85',
+                              readyData.convertToBytes(),
+                              function (response) {
+                                console.log(response);
+                              },
+                              function (error) {
+                                console.log(error);
+                              }
+                            );
+                          }, 1000);
+                        },
+                        (err) => {
+                          console.log('>>>> device request mtu fail: ' + err);
+                          app.dialog.alert('>>>> device request mtu fail: ' + err);
+                        }
+                      );
+                    } else {
+                      app.dialog.close();
+                      this.this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
+                      let that = this;
+                      setTimeout(() => {
+                        ble.startNotification(
+                          this.uuid,
+                          'ff80',
+                          'ff85',
+                          (rs) => {
+                            console.log(rs);
+                            if (rs && that.iot_attempt == 0) {
+                              that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                              that.iot_attempt++;
+                            }
+                            if (rs && that.iot_attempt > 0) {
+                              let status = parseInt(rs.substring(10, 12), 16);
+                              console.log('status', status);
+                              // this.checkSendBleIndex();
+                              if (status > 0) {
+                                app.preloader.hide();
+                                this.this_dialog.setProgress(status);
+                                this.this_dialog.setText(`${_('Upload Progress')}: ${status}%`);
+                              }
+                              if (status == 100) {
+                                app.preloader.hide();
+                                this.this_dialog.close();
+                                window.uploadStatus[parseInt(that.iot_attempt) - 1] = true;
+                                clearTimeout(uploadTimer);
+                                app.dialog.alert(_('Upload Data Success'));
+                                resolve(true);
+                              }
+                              //if status > 100?reject error
+                              if (status > 100) {
+                                //disconnect the device
+                                app.preloader.hide();
+                                app.dialog.close();
+                                clearTimeout(uploadTimer);
+                                ble.disconnect(this.uuid);
+                                reject(_('Upload Data Failed'));
+                              }
+                            }
+                          },
+                          function (error) {
+                            console.log(error);
+                          }
+                        );
+                        ble.writeWithoutResponse(
+                          this.uuid,
+                          'ff80',
+                          'ff85',
+                          readyData.convertToBytes(),
+                          function (response) {
+                            console.log(response);
+                          },
+                          function (error) {
+                            console.log(error);
+                          }
+                        );
+                      }, 1000);
+                    }
+                  });
+                } catch (error) {}
+              } catch (err) {
+                console.log('err', err);
+              }
+            });
+          },
+          async iotProcessDataForEsp(uuid, data) {
+            console.log('uuid', uuid);
+            console.log('data', data);
+            let mainChunkSizeInBytes = 4096;
+            //let negotiatedMTU = 502;
+            let negotiatedMTU = 180;
+            console.log('data.byteLength', data.byteLength);
+            let newArray = [];
+            for (let i = 0; i < data.byteLength; i += mainChunkSizeInBytes) {
+              let subChunk = data.slice(i, Math.min(i + mainChunkSizeInBytes, data.byteLength));
+              const fileString = arrayBufferToHex(subChunk);
+              console.log('fileString2', fileString);
+              console.log('subChunk', subChunk);
+              const bytestoString = bytesToString(subChunk);
+              console.log('bytestoString2', bytestoString);
+              // const crc16 = core_util_calculate_crc16_modbus_for_doa(fileString);
+              const md5str = SparkMD5.hashBinary(bytestoString);
+              console.log('md5str2', md5str);
+              const new_data = hexToBuffer(fileString + md5str);
+              newArray.push(new_data);
+              window.uploadStatus.push(false);
+            }
+            //debugger
+            console.log('newArray', newArray);
+            let this_index = 0;
+            let subChunks = [];
+            for (let j in newArray) {
+              let obj = {
+                index: j,
+                subChunks: [],
+                sendStatus: false,
+              };
+              const subChunkSizeInBytes = negotiatedMTU;
+              let offsetItem = 0;
+              for (let i = 0; i < newArray[j].byteLength; i += subChunkSizeInBytes) {
+                const subChunk = newArray[j].slice(i, Math.min(i + subChunkSizeInBytes, newArray[j].byteLength));
+                subChunks.push(subChunk);
+                obj.subChunks.push({
+                  item: subChunk,
+                  index: this_index,
+                  status: false,
+                  offsetItem: offsetItem,
+                });
+                offsetItem += 502;
+              }
+              if (this_index > j) {
+                subChunks.push(false);
+              }
+              this.postBleDataList.push(obj);
+              this_index++;
+            }
+            console.log('postBleDataList', this.postBleDataList);
+            console.log('subChunks', subChunks);
+            let offset = 0;
+            let postIndex = 0;
+            let postBleDataList = cloneDeep(this.postBleDataList);
+            // this.startPostBleData(0,0);
+            for (let i in postBleDataList) {
+              let list = postBleDataList[i].subChunks;
+              let offsetItem = 0;
+              console.log('startSend', postIndex);
+              for (let j in list) {
+                let hexString = arrayBufferToHex(list[j].item);
+                let commandLength = (hexString.length / 2 + 4).toString(16);
+                commandLength = commandLength.padStart(4, '0');
+                let command = `933400${commandLength}${iot_utils_to_little_endian_hex(offsetItem, 4)}${hexString}`;
+                console.log('startChunksIndex', j);
+                // console.log('postBleDataListChunkIndex', this.postBleDataListChunkIndex);
+                console.log('command', command);
+                await ble.writeWithoutResponse(
+                  this.uuid,
+                  'ff80',
+                  'ff85',
+                  command.convertToBytes(),
+                  function (response) {
+                    console.log('response', response);
+                  },
+                  function (error) {
+                    console.log('error', error);
+                  }
+                );
+                await this.sleep(500);
+                if (postIndex == this.postBleDataList.length - 1 && j == list.length - 1) {
+                  console.log('9335');
+                  setTimeout(() => {
+                    ble.writeWithoutResponse(
+                      this.uuid,
+                      'ff80',
+                      'ff85',
+                      '9335'.convertToBytes(),
+                      function (response) {
+                        //resolve(response);
+                      },
+                      function (error) {
+                        //reject(error);
+                      }
+                    );
+                  }, 500);
+                }
+                offsetItem += negotiatedMTU;
+              }
+              postIndex++;
+            }
+          },
+          addSchedule() {
+            mainView.router.navigate(`/mobile-app/esp-choose-schedule`);
+          },
+          addButtonGroup() {
+            mainView.router.navigate(`/mobile-app/esp-device-button-group-list?device_type=${this.deviceType}`);
+          },
+          removeDuplicates(arr) {
+            const seen = new Set();
+            return arr.filter((item) => {
+              const str = JSON.stringify(item);
+              return seen.has(str) ? false : seen.add(str);
+            });
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .autocomplete-dropdown-in {
+    z-index: 10000 !important;
+  }
+  .do-not-find-flat {
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
+    color: #007bff;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+</style>

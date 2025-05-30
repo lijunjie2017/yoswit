@@ -1,0 +1,772 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('IAQ') }}</div>
+        <div class="right" @click="${()=>refresh()}">
+          <a href="#" class="link icon-only manufacturing-btn-refresh" func="manufacturing_clean_discovery_list">
+            <i class="icon material-icons">replay</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content" style="height: 100%" @ptr:refresh="${refreshFun}">
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="room-box">
+          <div class="media-list no-margin list" v-if="roomList.length > 0 && deviceList.length > 0">
+            <ul>
+              <div v-for="item in roomList" :key="item.name">
+                <li class="room">
+                  <div class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title">
+                          <i class="room-collapse material-icons" id="collapse-0">expand_more</i>
+                          {{ tran(item.title) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <div v-for="zitem in deviceList" :key="zitem.name" v-if="zitem.profile_room===item.name">
+                  <li class="device home-scanned-peripheral swipeout swipeout-delete-manual">
+                    <div class="item-content swipeout-content">
+                      <a class="item-link item-content no-chevron no-ripple no-active-state">
+                        <div
+                          class="device-thumb item-media"
+                          style="
+                            background-position: center;
+                            background-size: contain;
+                            position: relative;
+                            background-image: url('https://dev.mob-mob.com/files/YO161-H.svg');
+                          "
+                        ></div>
+                        <div class="item-inner">
+                          <div class="item-title-row">
+                            <div class="item-title ellipsis" lang="en" style="width: 180px" :title="tran(zitem.iaq_area_name)">
+                              {{ tran(zitem.title) }}
+                            </div>
+                          </div>
+                          <div class="item-subtitle">{{ 'IAQ Sensor' }}-{{ zitem.mac_address }}</div>
+                          <div class="signal-panel item-text height-21" style="width: 120%" :mobmob="zitem.is_mobmob">
+                            <div>
+                              <div class="mobmob"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                      <div class="control-panel-right">
+                        <a class="right iaq-button-score-a" button-signal="ARC_ON_OFF">
+                          <div
+                            class="button iaq-button-score button-raised button-big circle display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                            :style="{'background-color':zitem.score_color,'line-height':'18px','padding-top':'10px','color':'#fff'}"
+                          >
+                            <span class="score text-color-white" style="height: 29px; font-size: 23px">{{zitem.score}}</span>
+                            <div
+                              class="score-desc text-color-white"
+                              style="font-size: 12px; transform: scale(0.7); height: 29px; line-height: 29px"
+                            >
+                              {{zitem.score_desc}}
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                    </div>
+                  </li>
+                  <li
+                    class="device iaq-subdevice home-scanned-peripheral home-scanned-peripheral-smart"
+                    style="height: auto; padding-top: 5px"
+                    v-if="zitem.is_mobmob == 1"
+                  >
+                    <div
+                      class="display-flex justify-content-start align-content-center align-items-center"
+                      style="flex-wrap: wrap; height: auto; width: 100%"
+                    >
+                      <!-- Temperature -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center">
+                          <div
+                            class="Temperature display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.temperature_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/Temperature_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.temperature != '' ? zitem.temperature : '0'}}</span>
+                              <span class="unit">℃</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- PM1.0 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="PM1 display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="PM1 box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.pm_1_0_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/PM1.0_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.pm_1_0 != '' ? zitem.pm_1_0 : '0'}}</span>
+                              <span class="unit">μg/m3</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- PM2.5 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="PM2_5 display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.pm_2_5_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/PM2.5_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.pm_2_5 != '' ? zitem.pm_2_5 : '0'}}</span>
+                              <span class="unit">μg/m3</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- PM4 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="PM4 display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.pm_4_0_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/PM4.0_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.pm_4_0 != '' ? zitem.pm_4_0 : '0'}}</span>
+                              <span class="unit">μg/m3</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- PM10 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="PM10 display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.pm_10_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/PM10_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.pm_10 != '' ? zitem.pm_10 : '0'}}</span>
+                              <span class="unit">μg/m3</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Humidity -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="Humidity display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.humidity_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/Humidity_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.humidity != '' ? zitem.humidity : '0'}}</span>
+                              <span class="unit">%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- CO2 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="CO2 display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.co_2_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/CO2_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.co_2 != '' ? zitem.co_2 : '0'}}</span>
+                              <span class="unit">ppm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- TVOCs -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="VOC display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.voc_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/VOC_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.voc != '' ? zitem.voc : '0'}}</span>
+                              <span class="unit">ppd</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Light -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="LUX display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.light_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/Light_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.light != '' ? zitem.light : '0'}}</span>
+                              <span class="unit">lux</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- NOX_1 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="NOX display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.nox_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/NOX_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.nox != '' ? zitem.nox : '0'}}</span>
+                              <span class="unit">ppb</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- CO_1 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div class="CO display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.co_color}"
+                            >
+                              <img class="" src="${'https://my.yoswit.com/'}/files/app/CO_1.svg" alt="" :style="{'width':'25px','height':'25px'}" />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.co != '' ? zitem.co : '0'}}</span>
+                              <span class="unit">ppm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- O3_1 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div class="O3 display-flex flex-direction-column justify-content-center align-content-center align-items-center">
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px'}"
+                            >
+                              <img class="" src="${'https://my.yoswit.com/'}/files/app/O3_1.svg" alt="" :style="{'width':'25px','height':'25px'}" />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.o_3 != '' ? zitem.o_3 : '0'}}</span>
+                              <span class="unit">ppb</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- HCHO_1 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="HCHO display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.hcho_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/HCHO_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.hcho != '' ? zitem.hcho : '0'}}</span>
+                              <span class="unit">ppm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- NOISE_1 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="NOISE display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.noise_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/NOISE_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.noise != '' ? zitem.noise : '0'}}</span>
+                              <span class="unit">dB</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- PRESSURE_1 -->
+                      <div class="main-btn" style="width: 20%">
+                        <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
+                          <div
+                            class="PRESSURE display-flex flex-direction-column justify-content-center align-content-center align-items-center"
+                          >
+                            <div
+                              class="box-btn-img display-flex justify-content-center align-content-center align-items-center"
+                              :style="{'width':'30px','height':'30px','border-radius':'50%','padding':'5px','background-color':zitem.pressure_color}"
+                            >
+                              <img
+                                class=""
+                                src="${'https://my.yoswit.com/'}/files/app/PRESSURE_1.svg"
+                                alt=""
+                                :style="{'width':'25px','height':'25px'}"
+                              />
+                            </div>
+                            <div class="title-btn display-flex justify-content-center align-items-center">
+                              <span class="iaq-title-big">{{zitem.pressure != ''?zitem.pressure:'0'}}</span>
+                              <span class="unit">kpa</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </div>
+              </div>
+            </ul>
+          </div>
+          <div v-if="roomList.length == 0 && deviceList.length == 0">
+            <no-record-found tip="No device found"></no-record-found>  
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, profile_name } = $f7route.query;
+    const refresh = ()=>{
+      vueApp.$init();
+    }
+    const refreshFun = (e, done) => {
+      console.log('refreshFun');
+      vueApp.$init();
+      done();
+    };
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          deviceList: [],
+          roomList: [],
+        },
+        watch: {},
+        components: {},
+        mounted() {
+          Vue.prototype.$init = this.init;
+          this.init();
+        },
+        methods: {
+          init() {
+            //get the profile data
+            this.getProfileData();
+          },
+          async getProfileData() {
+            //get the profile data
+            try {
+              const res = await http2.request({
+                url: encodeURI('/api/method/appv6.getProfileNoPermission'),
+                responseType: 'json',
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  name: profile_name,
+                },
+              });
+              console.log(res);
+              this.onGatewayWillChanged = (data) => {
+                let message = data.message;
+                let topic = data.topic;
+                let topicList = topic.split('/');
+                let topicHash = topicList[1];
+                let mobmob = 1;
+                if (message.includes('Offline')) {
+                  mobmob = 0;
+                }
+                this.deviceList.forEach((item) => {
+                  if (item.topic === topicHash) {
+                    item.is_mobmob = mobmob;
+                  }
+                });
+              };
+              this.onGatewayDeviceChanged = (data) => {
+                try {
+                  let message = JSON.parse(data.message);
+                  console.log(message);
+                  let topic = data.topic;
+                  let topicList = topic.split('/');
+                  let topicHash = topicList[1];
+                  this.deviceList.forEach((item) => {
+                    if (item.topic === topicHash) {
+                      if (isset(message.Info)) {
+                        let sensor_data = message.Info.sensor_data;
+                        let rsList = window.iot_ble_iaq_change_list(sensor_data);
+                        console.log(rsList);
+                        rsList.forEach((kitem) => {
+                          let type = kitem.type;
+                          let index = kitem.index;
+                          let value = '';
+                          if(kitem.type != 'CO2'){
+                            value = core_utils_ieee_float_convert(kitem.hex);
+                          }else{
+                            const hexString = kitem.hex;
+                            const bytes = hexString.match(/.{1,2}/g);
+                            bytes.reverse();
+                            const bigEndianHex = bytes.join('');
+                            const result = parseInt(bigEndianHex, 16);
+                            value = result;
+                          }
+                          if(type == 'Temperature'){
+                            item.temperature = parseInt(value);
+                            let iaqData = window.iaq_evaluate_rule(type,item.temperature);
+                            item.temperature_color = iaqData.bgcolor;
+                          }
+                          if(type == 'PRESSURE'){
+                            value = parseInt(value/1000);
+                            item.pressure = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.pressure_color = iaqData.bgcolor;
+                          }
+                          if(type == 'LUX'){
+                            value = parseInt(value*2.5);
+                            item.light = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.light_color = iaqData.bgcolor;
+                          }
+                          if(type == 'PM1'){
+                            value = parseInt(value);
+                            item.pm_1_0 = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.pm_1_0_color = iaqData.bgcolor;
+                          }
+                          if(type == 'NOX'){
+                            value = parseInt(value);
+                            item.nox = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.nox_color = iaqData.bgcolor;
+                          }
+                          if(type == 'PM2_5'){
+                            value = parseInt(value);
+                            item.pm_2_5 = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.pm_2_5_color = iaqData.bgcolor;
+                          }
+                          if(type == 'PM4'){
+                            value = parseInt(value);
+                            item.pm_4_0 = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.pm_4_0_color = iaqData.bgcolor;
+                          }
+                          if(type == 'PM10'){
+                            value = parseInt(value);
+                            item.pm_10 = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.pm_10_color = iaqData.bgcolor;
+                          }
+                          if(type == 'Humidity'){
+                            value = parseInt(value);
+                            item.humidity = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.humidity_color = iaqData.bgcolor;
+                          }
+                          if(type == 'CO2'){
+                            value = parseInt(value);
+                            item.co_2 = value;
+                            debugger
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.co_2_color = iaqData.bgcolor;
+                          }
+                          if(type == 'VOC'){
+                            value = parseInt(value);
+                            item.voc = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.voc_color = iaqData.bgcolor;
+                          }
+                          if(type == 'NOISE'){
+                            value = parseInt(value);
+                            item.noise = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.noise_color = iaqData.bgcolor;
+                          }
+                          if(type == 'CO'){
+                            value = parseInt(value);
+                            item.co = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.co_color = iaqData.bgcolor;
+                          }
+                          if(type == 'O3'){
+                            value = parseInt(value);
+                            item.o_3 = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.o_3_color = iaqData.bgcolor;
+                          }
+                          if(type == 'HCHO'){
+                            value = parseInt(value);
+                            item.hcho = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.hcho_color = iaqData.bgcolor;
+                          }
+                          if(type == 'NOISE'){
+                            value = parseInt(value);
+                            item.noise = value;
+                            let iaqData = window.iaq_evaluate_rule(type,value);
+                            item.noise_color = iaqData.bgcolor;
+                          }
+                          console.log("type",type);
+                          console.log("value",value);
+                          
+                        });
+                        // let sensor = message.Sensor;
+                        item.score = parseInt(sensor_data.substring(10,12),16);
+                        let score_data = window.iaq_evaluate_rule('score',item.score); 
+                        console.log("score_data",score_data);           
+                        item.score_desc = score_data.levelname;
+                        item.score_color = score_data.bgcolor;
+                      }
+                    }
+                  });
+                } catch (e) {
+                  console.log(e);
+                }
+              };
+              let profileData = res.data.data;
+              let profileDevice = profileData.profile_device;
+              let subDeviceList = profileData.profile_subdevice;
+              //get the topic
+              let topicList = [];
+              profileDevice.forEach((device) => {
+                device.topic = md5(md5(device.gateway));
+                if (topicList.indexOf(device.topic) === -1) {
+                  topicList.push(device.topic);
+                }
+              });
+              topicList.forEach((topic) => {
+                let will_topic = `will/${topic}`;
+                let status_topic = `status/${topic}`;
+                core_mqtt_subscribe(will_topic, 1, false);
+                emitter.off(will_topic);
+                emitter.on(will_topic, this.onGatewayWillChanged);
+                core_mqtt_subscribe(status_topic, 1, false);
+                emitter.off(status_topic);
+                emitter.on(status_topic, this.onGatewayDeviceChanged);
+              });
+              console.log(topicList);
+              subDeviceList.forEach((item) => {
+                item.mac_address = profileDevice.find((device) => device.name === item.profile_device).device_name;
+                item.topic = profileDevice.find((device) => device.name === item.profile_device).topic;
+                item.is_mobmob = 1;
+                if (item.device_button_group == 'IAQ') {
+                  item.score = 98;
+                  item.score_desc = 'good';
+                  item.score_color = 'green';
+                  item.temperature = 25;
+                  item.temperature_color = 'green';
+                  item.pm_1_0 = '';
+                  item.pm_1_0_color = 'green';
+                  item.pm_2_5 = '';
+                  item.pm_2_5_color = 'green';
+                  item.pm_4_0 = '';
+                  item.pm_4_0_color = 'green';
+                  item.pm_10 = '';
+                  item.pm_10_color = 'green';
+                  item.humidity = '';
+                  item.humidity_color = 'green';
+                  item.co_2 = '';
+                  item.co_2_color = 'green';
+                  item.voc = '';
+                  item.voc_color = 'green';
+                  item.light = '';
+                  item.light_color = 'green';
+                  item.nox = '';
+                  item.nox_color = 'green';
+                  item.co = '';
+                  item.co_color = 'green';
+                  item.o_3 = '';
+                  item.o_3_color = 'green';
+                  item.hcho = '';
+                  item.hcho_color = 'green';
+                  item.noise = '';
+                  item.noise_color = 'green';
+                  item.pressure = '';
+                  item.pressure_color = 'green';
+                }
+              });
+              this.deviceList = subDeviceList;
+              //get the room list
+              let profileRoom = profileData.profile_room;
+              //if the room is not exist the device,hide the room
+              this.roomList = profileRoom.filter((item) => subDeviceList.some((device) => device.profile_room === item.name));
+            } catch (error) {
+              console.log(error);
+              app.dialog.alert(error);
+            }
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .iaq-title-big {
+    font-size: 12px;
+  }
+  .unit {
+    font-size: 11px;
+  }
+  .main-btn .box-btn-img {
+    background-color: #3bb33b;
+  }
+  .iaq-title-big {
+    font-size: 12px;
+  }
+  .title-btn {
+    width: 100%;
+    margin-left: 5px;
+    padding: 5px 0px;
+  }
+</style>

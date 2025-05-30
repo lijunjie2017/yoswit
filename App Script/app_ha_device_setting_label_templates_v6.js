@@ -1151,6 +1151,35 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Restore";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">restart_alt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                        func="iot_device_restore"
+                        profile-device-name="{{ profile_device_name }}"
+                        profile-subdevice-name="{{ profile_subdevice_name }}"
+                        ref="{{ device }}" 
+                        href="#"
+                        class="button button-fill button-44 color-theme button-raised"
+                    >
+                        <i class="material-icons">navigate_next</i>
+                    </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Wifi";
     setting_label_template[setting_label] = `
         <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
@@ -2452,6 +2481,37 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Delete Itinerary";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="per_press_brightness" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">cable</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _('Delete Itinerary') }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" func="ble_delete_itinerary" ref="{{ device }}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Per Press Brightness";
     setting_label_template[setting_label] = `
         <div class="auto-init card margin-bottom-half mx-0 my-3" 
@@ -2564,6 +2624,37 @@ window.initSettingTemplate = ()=>{
         </div>
     `;
     setting_label = "Battery Alert";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <input name="setup_battery_threshold" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">earbuds_battery</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/mobile-app/sensor-data-settings-list?guid={{device}}" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Alarm Settings";
     setting_label_template[setting_label] = `
         <div class="auto-init card margin-bottom-half mx-0 my-3" 
         ref="{{ device }}" 

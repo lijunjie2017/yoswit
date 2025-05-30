@@ -198,19 +198,20 @@
       $on = ctx.$on;
 
     let vueApp = null;
-    let { subdevice,timer_id,action } = $f7route.query;
+    let { subdevice, timer_id, action } = $f7route.query;
 
     const batch_save = () => {
       vueApp.$batchSave();
     };
+    console.log('subdevice', subdevice);
     //let { guid, subdevice_name } = $f7route.query;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
           title: '',
-          timerId: timer_id?timer_id:null,
-          ref: isset(action)?action:1,
+          timerId: timer_id ? timer_id : null,
+          ref: isset(action) ? action : 1,
           subdevice_name: '',
           guid: '',
           device_button_group: '',
@@ -225,6 +226,7 @@
           speedVaule: 1,
           temperature: 26,
           timercommand: '',
+          action: 1,
         },
         watch: {},
         mounted() {
@@ -306,11 +308,19 @@
                 this.guid = item.device;
                 this.mac_address = core_utils_get_mac_address_from_guid(this.guid);
                 this.device_button_group = item.device_button_group;
+                if (item.device_button_group.startsWith('Thermostat')) {
+                  this.buttonBoxType = 3;
+                } else if (item.device_button_group.startsWith('DIMMING') || item.device_button_group.startsWith('RCU DIMMING')) {
+                  this.buttonBoxType = 1;
+                  this.initRangeBar(this.guid, this.device_button_group, 100);
+                } else {
+                  this.buttonBoxType = 0;
+                }
                 this.mode = item.device_mode;
                 this.title = _(item.title);
               }
             });
-            this.firmware = window.peripheral[this.guid].prop.firmware;
+            this.firmware = window.peripheral[this.guid].prop.firmwareNo;
             //get the device model image
             for (let i in models) {
               if (models[i].model_code === this.model) {
@@ -456,27 +466,43 @@
               });
             }, 200);
           },
-          findMissingNumber(arr) {
-            if (arr.length === 0) {
-              return 1;
+          rangeChangeFunDimming(element){
+            console.log(element);
+            let value = element.value;
+            if(value == 0){
+              this.ref = 0;
+            }else{
+              this.ref = value;
             }
-            arr.sort((a, b) => a - b);
-            for (let i = 0; i < arr.length - 1; i++) {
-              if (arr[i + 1] - arr[i] > 1) {
-                return arr[i] + 1;
-              }
-            }
-            return arr[arr.length - 1] + 1;
           },
-          async saveInErp(dateStr, timeStr, binaryRepeat, status) {
+          findMissingNumber(arr, startFromZero = false) {
+            // 处理空数组情况
+            if (arr.length === 0) return startFromZero ? 0 : 1;
+
+            // 转换并排序
+            const nums = arr.map(Number).sort((a, b) => a - b);
+
+            // 确定基准起始值
+            const baseNumber = startFromZero ? 0 : 1;
+
+            // 检查起始基准
+            if (nums[0] !== baseNumber) return baseNumber;
+
+            // 遍历查找缺口
+            for (let i = 0; i < nums.length - 1; i++) {
+              const gap = nums[i + 1] - nums[i];
+              if (gap > 1) return nums[i] + 1;
+            }
+
+            // 完全连续时返回后续值
+            return nums[nums.length - 1] + 1;
+          },
+          async saveInErp(timer_id, dateStr, timeStr, binaryRepeat, status) {
             //save data in erp
             return new Promise(async (reslove, reject) => {
               let devices = cloneDeep(erp.info.device);
               let deviceMap = devices[this.guid];
               let device_timers = deviceMap.device_timer;
-              let idList = device_timers.map((e) => {
-                return e.timer_id;
-              });
               const repeat_keys = [
                 'repeat_monday',
                 'repeat_tuesday',
@@ -490,10 +516,10 @@
               for (let i = 0; i < repeat_keys.length; i++) {
                 repeat[repeat_keys[i]] = parseInt(binaryRepeat[i]);
               }
-              if (!this.timerId && this.timerId!=0) {
+              if (!this.timerId && this.timerId != 0) {
                 device_timers.push({
                   device_button_group: this.device_button_group,
-                  timer_id: this.findMissingNumber(idList),
+                  timer_id: timer_id,
                   date: dateStr,
                   time: timeStr,
                   action: this.ref,
@@ -501,21 +527,21 @@
                   ...repeat,
                   disabled: status === 0 ? 1 : 0,
                 });
-              }else{
+              } else {
                 let objMap = {
                   device_button_group: this.device_button_group,
                   date: dateStr,
                   time: timeStr,
-                  action: '',
+                  action: this.ref,
                   repeat_daily: binaryRepeat === '1111111' ? 1 : 0,
                   ...repeat,
                   disabled: status === 0 ? 1 : 0,
-                }
-                device_timers.forEach(item=>{
-                  if(item.timer_id == this.timerId){
-                    item = Object.assign(item,objMap);
+                };
+                device_timers.forEach((item) => {
+                  if (item.timer_id == this.timerId) {
+                    item = Object.assign(item, objMap);
                   }
-                })
+                });
               }
               let url = encodeURI('/api/resource/Device/' + this.guid);
               try {
@@ -536,13 +562,6 @@
           },
           async save() {
             //save the timer
-            let devices = cloneDeep(erp.info.device);
-            let deviceMap = devices[this.guid];
-            let device_timers = deviceMap.device_timer;
-            let idList = device_timers.map((e) => {
-              return e.timer_id;
-            });
-            let timer_id = this.timerId || this.timerId == 0 ?this.timerId:this.findMissingNumber(idList);
             const repeat_keys = [
               'repeat_monday',
               'repeat_tuesday',
@@ -578,80 +597,259 @@
             const hexYear = date.getFullYear().toString(16).pad('0000');
             const yearHigh = hexYear.substring(0, 2);
             const yearLow = hexYear.substring(2);
-            let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
-            if (repeat_int == '00') {
-              repeat_int = '80';
-            }
-            this.timercommand = `000300${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}`;
-            console.log(this.timercommand);
-            // let type = '03';
-            // let opcode = '00';
+            if (this.firmware > 10.0) {
+              let devices = cloneDeep(erp.info.device);
+              let deviceMap = devices[this.guid];
+              let device_timers = deviceMap.device_timer;
+              let idList = device_timers.map((e) => {
+                return e.timer_id;
+              });
+              let timer_id = this.timerId || this.timerId == 0 ? this.timerId : this.findMissingNumber(idList);
 
-            console.log(timer_id);
-            
-            let $command = `${this.timercommand}`;
-            let $length = ($command.length / 2).toString(16).pad('00');
-            let command = `8F2000${parseInt(timer_id).toString(16).pad('00')}${parseInt(timer_id).toString(16).pad('00')}${$length}${$command}`;
-            let actioncommand_pre = `8F1000${parseInt(timer_id).toString().pad('00')}`;
-            let action_command = '';
-            if (this.ref == 0) {
-              let $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000100`;
-              action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
-            } else {
-              //mode fan and temp
-              let on_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000101`;
-              let mode_command = `069404000001${parseInt(this.modeStr).toString(16).pad('00')}`;
-              let speed_command = `069405000001${parseInt(this.speedVaule).toString(16).pad('00')}`;
-              let temp_command = `069406000001${parseInt(this.temperature).toString(16).pad('00')}`;
-              action_command = `${on_command}${mode_command}${speed_command}${temp_command}`;
-              action_command = `${actioncommand_pre}${(action_command.length / 2).toString(16).pad('00')}${action_command}`;
-            }
-            console.log('action_command', action_command);
-            console.log('command', command);
-            //tindy the colok
-            app.dialog.preloader();
+              let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
+              if (repeat_int == '00') {
+                repeat_int = '80';
+              }
+              this.timercommand = `000300${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}`;
+              console.log(this.timercommand);
+              // let type = '03';
+              // let opcode = '00';
 
-            try {
-              await iot_ble_sync_clock(this.guid, repeat);
-              await window.peripheral[this.guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: command,
-                },
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: action_command,
-                },
-              ]);
-              await this.saveInErp(dateStr, timeStr, repeat, 1);
-              while (true) {
-                try {
-                  const dialog = app.dialog.close();
-                  if (!dialog) {
+              console.log(timer_id);
+
+              let $command = `${this.timercommand}`;
+              let $length = ($command.length / 2).toString(16).pad('00');
+              let command = `8F2000${parseInt(timer_id).toString(16).pad('00')}${parseInt(timer_id).toString(16).pad('00')}${$length}${$command}`;
+              let actioncommand_pre = `8F1000${parseInt(timer_id).toString().pad('00')}`;
+              let action_command = '';
+              if (this.ref == 0) {
+                let $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000100`;
+                action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
+              } else {
+                //mode fan and temp
+                let on_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000101`;
+                let mode_command = `069404000001${parseInt(this.modeStr).toString(16).pad('00')}`;
+                let speed_command = `069405000001${parseInt(this.speedVaule).toString(16).pad('00')}`;
+                let temp_command = `069406000001${parseInt(this.temperature).toString(16).pad('00')}`;
+                action_command = `${on_command}${mode_command}${speed_command}${temp_command}`;
+                action_command = `${actioncommand_pre}${(action_command.length / 2).toString(16).pad('00')}${action_command}`;
+              }
+              console.log('action_command', action_command);
+              console.log('command', command);
+              //tindy the colok
+              app.dialog.preloader();
+
+              try {
+                await iot_ble_sync_clock(this.guid, repeat);
+                await window.peripheral[this.guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: action_command,
+                  },
+                ]);
+                await this.saveInErp(timer_id, dateStr, timeStr, repeat, 1);
+                while (true) {
+                  try {
+                    const dialog = app.dialog.close();
+                    if (!dialog) {
+                      break;
+                    }
+                  } catch (e) {
                     break;
                   }
-                } catch (e) {
-                  break;
                 }
-              }
-              mainView.router.back();
-              setTimeout(()=>{
-                app.ptr.refresh('.frappe-list-ptr-content');
-              },1000)
-            } catch (error) {
-              while (true) {
-                try {
-                  const dialog = app.dialog.close();
-                  if (!dialog) {
+                mainView.router.back();
+                setTimeout(() => {
+                  app.ptr.refresh('.frappe-list-ptr-content');
+                }, 1000);
+              } catch (error) {
+                while (true) {
+                  try {
+                    const dialog = app.dialog.close();
+                    if (!dialog) {
+                      break;
+                    }
+                  } catch (e) {
                     break;
                   }
-                } catch (e) {
-                  break;
+                }
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            } else if (this.firmware < 10.0) {
+              let set_timers = cloneDeep(isset(erp.setTimer)  && isset(erp.setTimer[this.guid]) ? erp.setTimer[this.guid] : []);
+              let idList = set_timers.map((e) => {
+                return e.timer_id;
+              });
+              let port = iot_ble_get_device_port(this.device_button_group);
+              if (this.firmware > 6.0 && this.firmware < 8.0) {
+                //this version should ingnore the first timer
+                let timer_id = this.timerId ? this.timerId : this.findMissingNumber(idList);
+                console.log('timer_id', timer_id);
+                if (timer_id == 8) {
+                  app.dialog.alert('Sorry, the timer function only support 7 timers.');
+                  return;
+                }
+                let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
+                let delay = '00';
+                let status = parseInt(this.ref).toString(16).pad('00');
+                let disabled = '01'; // 01 is use, 00 is not use
+                let command_data = `840101${parseInt(timer_id).toString(16).pad('00')}${parseInt(port).toString(16).pad('00')}00${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}${delay}${disabled}${status}000000`;
+                console.log('command_data', command_data);
+                let fix_command = `84010100000000000000000000000101000000`;
+                try {
+                  await iot_ble_sync_clock(this.guid, repeat);
+                  await window.peripheral[this.guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: fix_command,
+                    },
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: command_data,
+                    },
+                  ]);
+                  await this.saveInErp(timer_id, dateStr, timeStr, repeat, 1);
+                  await ha_profile_ready();
+                  app.dialog.close();
+                  mainView.router.back();
+                } catch (error) {
+                  while (true) {
+                    try {
+                      const dialog = app.dialog.close();
+                      if (!dialog) {
+                        break;
+                      }
+                    } catch (e) {
+                      break;
+                    }
+                  }
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              } else if (this.firmware > 8.0) {
+                let timer_id = this.timerId ? this.timerId : this.findMissingNumber(idList, true);
+
+                console.log('timer_id', timer_id);
+                if (timer_id == 8) {
+                  app.dialog.alert('Sorry, the timer function only support 8 timers.');
+                  return;
+                }
+                let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
+                let delay = '00';
+                let status = parseInt(this.ref).toString(16).pad('00');
+                let disabled = '01'; // 01 is use, 00 is not use
+                let command_data = `840101${parseInt(timer_id).toString(16).pad('00')}${parseInt(port).toString(16).pad('00')}00${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}${delay}${disabled}${status}000000`;
+                console.log('command_data', command_data);
+                try {
+                  await iot_ble_sync_clock(this.guid, repeat);
+                  await window.peripheral[this.guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: command_data,
+                    },
+                  ]);
+                  await this.saveInErp(timer_id, dateStr, timeStr, repeat, 1);
+                  await ha_profile_ready();
+                  app.dialog.close();
+                  mainView.router.back();
+                } catch (error) {
+                  while (true) {
+                    try {
+                      const dialog = app.dialog.close();
+                      if (!dialog) {
+                        break;
+                      }
+                    } catch (e) {
+                      break;
+                    }
+                  }
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              } else if (this.firmware < 6.0) {
+                let bleList = [];
+                let service = 'fe00';
+                let characteristic = 'fe03';
+                let timer_id = this.timerId ? this.timerId : this.findMissingNumber(idList, true);
+                let delay = '00';
+                let status = parseInt(this.ref).toString(16).pad('00');
+                let disabled = '01';
+                let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
+                let command_data = `${parseInt(timer_id).toString(16).pad('00')}${parseInt(port).toString(16).pad('00')}00${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}${status}${disabled}`;
+                if (this.firmware < 3.8) {
+                  //check if repeat
+                  if (timer_id == 4) {
+                    app.dialog.alert('Sorry, the timer function only support 4 timers.');
+                    return;
+                  }
+                  bleList.push({
+                    service: service,
+                    characteristic: "fe02",
+                    data: `${parseInt(timer_id).toString(16).pad('00')}`,
+                  });
+                  let dataList = command_data.match(/.{1,2}/g);
+                  let repeat_status = repeat == '000000' ? false : true;
+                  if (repeat_status) {
+                    dataList[5] = 'ff';
+                    dataList[6] = 'ff';
+                    dataList[7] = 'ff';
+                    dataList[8] = 'ff';
+                  }
+                  command_data =
+                    dataList[0] + dataList[2] + dataList[3] + dataList[4] + dataList[5] + dataList[6] + dataList[7] + dataList[8];
+                  let this_action = this.action == 1 ? '02000000' : '01000000';
+                  command_data += this_action;
+                  bleList.push({
+                    service: service,
+                    characteristic: characteristic,
+                    data: command_data,
+                  });
+                  bleList.push({
+                    service: `fe00`,
+                    characteristic: `fe04`,
+                    data: `${port.toString(16).pad('00')}`,
+                  });
+                  bleList.push({
+                    service: `fe00`,
+                    characteristic: `fe05`,
+                    data: `${port.toString(16).pad('00')}ffffffff`,
+                  });
+                  bleList.push({
+                    service: `fe00`,
+                    characteristic: `fe06`,
+                    data: `ff07`,
+                  });
+                } else {
+                  bleList.push({
+                    service: service,
+                    characteristic: 'fe02',
+                    data: `${parseInt(timer_id).toString(16).pad('00')}`,
+                  });
+                  bleList.push({
+                    service: service,
+                    characteristic: characteristic,
+                    data: command_data,
+                  });
+                }
+                try {
+                  await iot_ble_sync_clock(this.guid, repeat);
+                  await window.peripheral[this.guid].write(bleList);
+                  await this.saveInErp(timer_id, dateStr, timeStr, repeat, 1);
+                  await ha_profile_ready();
+                  app.dialog.close();
+                  mainView.router.back();
+                } catch (error) {
+                  app.dialog.close();
+                  app.dialog.alert(_(erp.get_log_description(error)));
                 }
               }
-              app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
         },

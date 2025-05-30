@@ -53,11 +53,36 @@
             </div>
             <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <div class="card">
+                
                 <div
                   class="medium-50 large-50 device-setting-list"
                   :style="{'padding': '15px', 'height': settingsList.length > 3 ? '360px':'auto', 'overflow-y': settingsList.length > 3 ? 'auto':'hidden'}"
                 >
-                  <div class="card margin-bottom-half mx-0 my-3" v-for="setting, index in settingsList" :key="setting.index">
+                  <!-- only choose the one setting -->
+                  <div class="card margin-bottom-half mx-0 my-3" v-if="sceneTemplate == 'IAQ Scene'">
+                    <input type="hidden" id="chooseSetting"/>
+                    <div class="card-content card-content-padding">
+                      <div class="row">
+                        <div class="col-auto">
+                          <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">settings</i>
+                          </div>
+                        </div>
+                        <div class="col align-self-center no-padding-left">
+                          <h5 class="no-margin-bottom">
+                            {{_('Choose setting')}}
+                          </h5>
+                          <p class="setting-value text-muted size-12" style="margin-bottom: 0px"></p>
+                        </div>
+                        <div class="col-auto">
+                          <a class="button button-fill button-44 color-theme button-raised device" v-on:click="showPicker('all')">
+                            <i class="material-icons">navigate_next</i>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card margin-bottom-half mx-0 my-3" :class="{'device-hidden': !setting.show_status}" v-for="setting, index in settingsList" :key="setting.index">
                     <input type="hidden" :id="setting.id" />
                     <div class="card-content card-content-padding">
                       <div class="row">
@@ -604,6 +629,7 @@
               id: 'battery_alert_threshold',
               setting_value: [1, 2, 3, 4, 5, 6],
               save_value: [],
+              show_status: true,
             },
           ],
           OpenDoorSettingList: [
@@ -614,6 +640,7 @@
               id: 'door_open_close_threshold',
               setting_value: ['Door Open', 'Door Close'],
               save_value: [],
+              show_status: true,
             },
           ],
           pickerMapList: [],
@@ -648,7 +675,11 @@
               this.init();
               this.index = 2;
             } else if (index == 2) {
-              this.saveCondition();
+              if(this.sceneTemplate == 'IAQ Scene'){
+                this.saveIaqCondition();
+              }else{
+                this.saveCondition();
+              }
             } else if (index == 0) {
               this.index = 1;
             }
@@ -661,7 +692,11 @@
               if (deviceMap.device_model == 'YO380DC') {
                 this.settingsList = this.BatterySettingList;
               } else if (deviceMap.device_model.includes('YO161')) {
+                this.IAQSettingList.forEach((item) => {
+                  item.show_status = false;;
+                })
                 this.settingsList = this.IAQSettingList;
+                this.sceneTemplate = 'IAQ Scene';
               } else if (deviceMap.device_model == 'YO202DS') {
                 this.settingsList = this.OpenDoorSettingList;
               }
@@ -838,8 +873,41 @@
           },
           showPicker(id) {
             console.log(id);
-            this.pickerValueMap = id;
-            this.pickerMapList[id].open();
+            if(id == 'all'){
+              if(this.choosePicker){
+                this.choosePicker.open();
+              }else{
+                this.choosePicker = app.picker.create({
+                  inputEl: document.getElementById('chooseSetting'),
+                  rotateEffect: true,
+                  cols: [
+                    {
+                      textAlign: 'center',
+                      values: this.IAQSettingList.map((value) => value.id),
+                      displayValues: this.IAQSettingList.map((value) => value.title),
+                    },
+                  ],
+                  on:{
+                    change: (picker, value, index) => {
+                      console.log(value, index);
+                      // let target = this.settingsList.find((item) => item.id == value);
+                      this.settingsList.forEach((item) => {
+                        item.show_status = false;
+                        $(`#${item.id}`).parent().addClass('device-hidden');
+                        if(item.id == value){
+                          item.show_status = true;
+                          $(`#${item.id}`).parent().removeClass('device-hidden');
+                        }
+                      })
+                    },
+                  }
+                });
+                this.choosePicker.open();
+              }
+            }else{
+              this.pickerValueMap = id;
+              this.pickerMapList[id].open();
+            }
           },
           showHelp(id) {
             console.log(id);
@@ -879,6 +947,65 @@
               },
               () => {}
             );
+          },
+          async saveIaqCondition(){
+            try{
+              await this.postIaqBleData();
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+            //update the database
+            let saveData = [];
+            this.settingsList.forEach((setting) => {
+              if (setting.save_value.length > 0 && setting.show_status == true) {
+                saveData.push({
+                  id: setting.id,
+                  value: setting.save_value,
+                });
+              }
+            });
+            let url = `/api/resource/Device/${guid}`;
+            let device_scene = [];
+            this.userList.forEach((user) => {
+              if (user.name != this.name) {
+                device_scene.push(user);
+              }
+            });
+            let config_map = {
+              title: this.sceneName,
+              config_list: saveData,
+              map_user: this.mapUserList,
+              user_scene_id: this.userSceneId,
+              user_scene_gateway_id: this.userSceneGatewayId,
+              user_scene_name: this.userSceneName,
+            };
+            device_scene.push({
+              scene_title: this.userId,
+              scene_config: JSON.stringify(config_map),
+            });
+            try {
+              let res = await http2.request(url, {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  device_scene: device_scene,
+                },
+              });
+              console.log(res);
+              app.dialog.close();
+              this.getErpData();
+              app.dialog.confirm(_('Save Successfully'), () => {
+                mainView.router.back();
+              });
+            } catch (error) {
+              app.dialog.close();
+              console.log(error);
+              app.dialog.alert(error);
+            }
           },
           async saveCondition() {
             app.dialog.preloader();
@@ -943,6 +1070,84 @@
               console.log(error);
               app.dialog.alert(error);
             }
+          },
+          getTriggerType(type){
+            let obj = {
+              "temperature": 5,
+              "humidity": 6,
+              "pm1_0": 7,
+              "pm2_5": 8,
+              "pm4" : 9,
+              "pm10": 10,
+              "voc": 11,
+              "nox": 12,
+              "lux": 13,
+              "co2": 14,
+              "pressure" : 15,
+              "noise" : 16,
+              "hcho" : 17,
+              "o3" : 18,
+              "co" : 19,
+              "score" : 24,
+            }
+            return obj[type];
+          },
+          postIaqBleData(){
+            return new Promise(async (resolve, reject) => {
+              //get the gateway
+              let profile_device = cloneDeep(erp.info.profile.profile_device);
+              let gateway_str = profile_device.find((item) => item.device == guid).gateway;
+              if(gateway_str){
+                //get the device scene id
+                let sceneIdMap = await get_battery_threshold_scene_id(this.sceneTemplate == 'Door Close' ? 'Door Open' : this.sceneTemplate, guid);
+                let sceneId = sceneIdMap.id;
+                let sceneName = sceneIdMap.scene_name;
+                if (sceneId == -Infinity) {
+                  sceneId = '1';
+                  this.userSceneId = sceneId;
+                }else {
+                  if (!this.userSceneId) {
+                    this.userSceneId = parseInt(sceneId) + 1;
+                  }
+                }
+                let bleList = [];
+                let settingMap = this.settingsList.find((item) => item.show_status == true);
+                let typeIndex = this.getTriggerType(settingMap.id);
+                let opcode = '00';
+                let selected = this.settingsList.find((item) => item.id == settingMap.id).save_value;
+                console.log(selected);
+                const limitValue = selected[0];
+                const upperValue = selected[1];
+                console.log("limitValue",core_utils_float_ieee_convert(parseFloat(limitValue))); 
+                console.log("upperValue",core_utils_float_ieee_convert(parseFloat(upperValue)));
+                console.log(core_utils_float_ieee_convert(parseFloat(upperValue))?core_utils_float_ieee_convert(parseFloat(upperValue)):'00000000');
+                let limitCommand = `${opcode}${parseInt(typeIndex).toString(16).pad('00')}${core_utils_get_mac_address_from_guid(guid, true)}02${core_utils_float_ieee_convert(parseFloat(limitValue))?core_utils_float_ieee_convert(parseFloat(limitValue)):'00000000'}`;
+                let upperCommand = `${opcode}${parseInt(typeIndex).toString(16).pad('00')}${core_utils_get_mac_address_from_guid(guid, true)}01${core_utils_float_ieee_convert(parseFloat(upperValue))?core_utils_float_ieee_convert(parseFloat(upperValue)):'00000000'}`;
+                //debugger
+                let trigger = `8F2000${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt(limitCommand.length / 2).toString(16).pad('00')}${limitCommand}${parseInt(upperCommand.length / 2).toString(16).pad('00')}${upperCommand}`;
+                console.log(trigger);
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: trigger,
+                });
+                let $command = `02${core_utils_get_mac_address_from_guid(guid, true)}18${core_utils_get_mac_address_from_guid(guid, true)}${guid}8700${parseInt(limitValue)*100}8701${parseInt(upperValue)*100}8699${parseInt(this.userSceneId).toString(16).pad('00')}`;
+                let action = `8F1000${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt($command.length / 2).toString(16).pad('00')}${$command}`;
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: action,
+                });
+                try {
+                  await window.peripheral[guid].write(bleList);
+                  resolve(1);
+                } catch (err) {
+                  reject(_(erp.get_log_description(err)));
+                }
+              }else{
+                reject(_('This setting requires a connection through the Gateway, and please ensure that the Gateway is online.'));
+              }
+            })
           },
           postBleData() {
             /**

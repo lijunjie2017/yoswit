@@ -2,20 +2,20 @@ window.iotChunks = [];
 window.iot_uploadData = null;
 window.uploadStatus = [];
 window.iot_attempt = 0;
-window.iot_update_file = () => {
+window.iot_update_file = async () => {
   const TAG = 'iot_update_file';
   window.iot_attempt = 0;
-  core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
+  await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
   setTimeout(() => {
     app.preloader.show();
     let uuid = '94:B5:55:97:53:0E';
     //let uuid = 'C434EB73-0997-209C-932B-D05FC4CAA554';
     //get the file link
     //let url = 'https://dev.mob-mob.com/files/test.mp3';
-    let url = `https://ota.mob-mob.com/wifi/YO105-v11.116E.bin`;
+    let url = `https://ota.mob-mob.com/wifi/v12.116E.bin`;
     //let url = `https://dev.mob-mob.com/files/test.txt`;
     let filesize = 0;
-    let filename = 'YO105-v11.116E.bin';
+    let filename = 'v12.116E.bin';
     http
       .request(encodeURI(url), {
         method: 'GET',
@@ -54,13 +54,12 @@ window.iot_update_file = () => {
       })
       .then(async (filedata) => {
         console.log(filedata);
-        let fileType = 1; //1:ota,2:mp3
+        let fileType = 1; //1:ota,2:mp3 3:chunk
         let sizeHex = iot_utils_to_little_endian_hex(filesize, 4);
         let nameHex = convertToFixedSizeHex(filename, 31);
         console.log(nameHex);
         let data = `93330000340${fileType}${sizeHex}${filedata}${nameHex}`;
         console.log(data);
-        //iotProcessData(uuid,window.iot_uploadData);
         //return
         //connect to the device
         try {
@@ -82,7 +81,6 @@ window.iot_update_file = () => {
                         function (rs) {
                           console.log(rs);
                           if (rs && window.iot_attempt == 0) {
-                            //iotProcessData(uuid,);
                             iotProcessData(uuid, window.iot_uploadData);
                             window.iot_attempt++;
                           }
@@ -141,7 +139,6 @@ window.iot_update_file = () => {
                     function (rs) {
                       console.log(rs);
                       if (rs && window.iot_attempt == 0) {
-                        //iotProcessData(uuid,);
                         iotProcessData(uuid, window.iot_uploadData);
                         window.iot_attempt++;
                       }
@@ -203,14 +200,13 @@ window.iot_update_file = () => {
   }, 500);
 };
 
-
 window.iotProcessData = async (uuid, data) => {
   let mainChunkSizeInBytes = 4096;
-  console.log("data.byteLength",data.byteLength);
+  console.log('data.byteLength', data.byteLength);
   let newArray = [];
   for (let i = 0; i < data.byteLength; i += mainChunkSizeInBytes) {
-    let subChunk = data.slice(i, Math.min(i + mainChunkSizeInBytes,data.byteLength));
-    const fileString = arrayBufferToHex(subChunk);
+    let subChunk = data.slice(i, Math.min(i + mainChunkSizeInBytes, data.byteLength));
+    const fileString = arrayBufferToHex(subChunk); 
     const bytestoString = bytesToString(subChunk);
     //console.log('bytestoString', bytestoString);
     const crc16 = core_util_calculate_crc16_modbus_for_doa(fileString);
@@ -226,7 +222,7 @@ window.iotProcessData = async (uuid, data) => {
   for (let j in newArray) {
     const subChunkSizeInBytes = 504;
     for (let i = 0; i < newArray[j].byteLength; i += subChunkSizeInBytes) {
-      const subChunk = newArray[j].slice(i, Math.min(i + subChunkSizeInBytes,newArray[j].byteLength));
+      const subChunk = newArray[j].slice(i, Math.min(i + subChunkSizeInBytes, newArray[j].byteLength));
       subChunks.push(subChunk);
     }
     if (this_index > j) {
@@ -318,7 +314,9 @@ window.writeNextSlice = (deviceId, sliceCount) => {
 };
 
 window.bytesToString = function (buffer) {
-  return String.fromCharCode.apply(null, new Uint8Array(buffer));
+  return Array.from(new Uint8Array(buffer), byte => 
+    String.fromCharCode(byte)
+  ).join('');
 };
 
 window.convertToFixedSizeHex = (inputString, sizeInBytes) => {
@@ -361,4 +359,64 @@ window.hexToBuffer = (hexString) => {
 
 window.iot_delay = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+window.iot_update_file_json = async () => {
+  const TAG = 'iot_update_json';
+  window.iot_attempt = 0;
+  try {
+    const jsonData = {
+      'name': 'n3j9lvba94',
+      'owner': 'grace.zhao@yoswit.com',
+      'creation': '2025-05-15 11:43:20.356538',
+      'modified': '2025-05-16 05:04:49.950126',
+      'modified_by': 'Administrator',
+      'docstatus': 0,
+      'idx': 0,
+      'device': 'C0:84:7D:0E:D2:B3',
+      'device_button_group': 'INNO_PRESS_LIFT_10F',
+      'status': 'Expired',
+      'access_type': 'Octopus Card',
+      'guest_email': 'uhb@qq.com',
+      'pin_remark': 'Octopus Card',
+      'octopus_card_id': '12345678',
+      'octopus_check_digit': '9',
+      'access_level': '0',
+      'one_time_access': 0,
+      'access_control_setting': 0,
+      'disabled': 0,
+      'valid_from': '2025-05-15 11:42:07',
+      'valid_to': '2025-05-15 23:59:00',
+      'repeat_1': 0,
+      'repeat_2': 0,
+      'repeat_3': 0,
+      'repeat_4': 0,
+      'repeat_5': 0,
+      'repeat_6': 0,
+      'repeat_7': 0,
+      'reference': 'n268d5lj31',
+      'next_publish': '2025-05-16 05:04:13.862885',
+      'door': '026ec8ce1e',
+      'next_publish_mins': 1024,
+      'door_name': 'Innocell Lift 2 Cam 3 10F',
+      'last_publish': '2025-05-15 20:32:13.862984',
+      'doctype': 'Device Access',
+      'blocking_schedule': [],
+      '__last_sync_on': '2025-05-16T07:20:07.057Z',
+    };
+    // 2. 数据转换与校验
+
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+window.base64ToArrayBuffer = (base64String) => {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
 };

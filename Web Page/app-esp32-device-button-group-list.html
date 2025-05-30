@@ -1,0 +1,281 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Button Group') }}</div>
+        <div class="subnavbar">
+          <form data-search-container=".virtual-list" data-search-item="li" data-search-in=".item-title"
+            class="searchbar searchbar-init">
+            <div class="searchbar-inner">
+              <div class="searchbar-input-wrap">
+                <input type="search" placeholder="Search" @input="${(e)=>searchButtonGroup(e)}"/>
+                <i class="searchbar-icon"></i>
+                <span class="input-clear-button"></span>
+              </div>
+              <span class="searchbar-disable-button">Cancel</span>
+            </div>
+          </form>
+        </div>
+        <div class="right">
+          <a href="#" class="link icon-only" @click="${()=>saveButtonGroup()}">
+            <i class="icon material-icons">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="list list-strong list-dividers-ios simple-list virtual-list searchbar-found" style="margin-top: 0px;" v-if="!searchStatus">
+          <ul>
+            <li class="device-item" style="padding:0px;height: 70px;" v-for="item in buttonGroupList" :key="item.id">
+              <div class="item-content" style="width: 100%;">
+                <div class="item-inner">
+                  <div class="item-title display-flex flex-direction-column justify-content-center">
+                    <div class="item-title-item ellipsis" lang="en" style="line-height: 20px;">{{ item.name }}</div>
+                    <div style="line-height: 20px;">
+                      <span class="button-command text-color-gray" v-for="sub in item.button_group_list" :key="sub.device_command">{{ sub.device_command }}/</span>
+                    </div>
+                  </div>
+                  <div class="item-after">
+                    <div class="button button-raised button-big circle" style="margin-top: 0px;" v-on:click="clickButtonGroup(item)">
+                      <div>
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important;" v-if="item.ischeck">check</i>
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important;" v-else>block</i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="list list-strong list-dividers-ios simple-list virtual-list searchbar-found" style="margin-top: 0px;" v-if="searchStatus && searchButtonGroupList.length > 0">
+          <ul>
+            <li class="device-item" style="padding:0px;height: 70px;" v-for="item in searchButtonGroupList" :key="item.id">
+              <div class="item-content" style="width: 100%;">
+                <div class="item-inner">
+                  <div class="item-title display-flex flex-direction-column justify-content-center">
+                    <div class="item-title-item ellipsis" lang="en" style="line-height: 20px;">{{ item.name }}</div>
+                    <div style="line-height: 20px;">
+                      <span class="button-command text-color-gray" v-for="sub in item.button_group_list" :key="sub.device_command">{{ sub.device_command }}/</span>
+                    </div>
+                  </div>
+                  <div class="item-after">
+                    <div class="button button-raised button-big circle" style="margin-top: 0px;" v-on:click="clickButtonGroup(item)">
+                      <div>
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important;" v-if="item.ischeck">check</i>
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important;" v-else>block</i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="not-found" v-if="searchStatus && searchButtonGroupList.length == 0">
+          <div class="searchbar-not-found-inner">
+            <div class="searchbar-not-found-title">{{ _('No results found') }}</div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, sub_name, device_type } = $f7route.query;
+    const searchButtonGroup = (e) => {
+      vueApp.$searchButtonGroup($(e.target).val());
+    }
+    const saveButtonGroup = () => {
+      vueApp.$saveButtonGroup();
+    }
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          buttonGroupList: [],
+          deviceType: device_type,
+          searchStatus: false,
+          searchButtonGroupList: [],
+        },
+        watch: {},
+        mounted() {
+          Vue.prototype.$searchButtonGroup = this.searchButtonGroup;
+          Vue.prototype.$saveButtonGroup = this.saveButtonGroup;
+          this.init();
+        },
+        methods: {
+          async init() {
+            try{
+              let obj = await this.getDeviceButtonGroupForDeviceType();
+              console.log("obj",obj);
+              if(obj.success){
+                let list = obj.data;
+                list.forEach((item)=>{
+                  item.ischeck = false;
+                })
+                this.buttonGroupList = list;
+                this.searchButtonGroupList = list; //this is the search list
+              }
+            }catch(err){
+              console.log(err);
+            }
+          },
+          saveButtonGroup(){
+            let list = this.buttonGroupList.filter(item => item.ischeck);
+            debugger
+            emitter.emit('saveButtonGroup',list);
+            mainView.router.back();
+          },
+          clickButtonGroup(item){
+            item.ischeck = !item.ischeck;
+          },
+          searchButtonGroup(e){
+            console.log(e);
+            if(!e){
+              this.searchStatus = false;
+              return;
+            }
+            this.searchButtonGroupList = this.buttonGroupList.filter(item => item.name.includes(e) || item.button_group_list.some(sub => sub.device_command.includes(e)));
+            this.searchStatus = true;
+          },
+          getDeviceButtonGroupForDeviceType() {
+            return new Promise(async (resolve, reject) => {
+              try{
+                const res = await http2.request({
+                url: encodeURI('/api/method/appv6.getDeviceButtonGroupByDeviceType'),
+                responseType: 'json',
+                  method: 'POST',
+                  serializer: 'json',
+                  debug:true,
+                  data: {
+                    device_type: this.deviceType == 1?'Door':this.deviceType == 2?'Lift':this.deviceType == 3?'Mailbox':this.deviceType == 4?'Locker':'',
+                  },
+                });
+                console.log(res.data.data);
+                resolve(res.data.data);
+              }catch(err){
+                reject(err);
+              }
+              
+            });
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {
+      
+    });
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .autocomplete-dropdown-in {
+    z-index: 10000 !important;
+  }
+  .do-not-find-flat {
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
+    color: #007bff;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+  .device-item{
+    background-color: #fff;
+    
+  }
+  .button-command{
+      font-size: 12px;
+      line-height: 12px;
+  }
+  .list .item-inner:after{
+    content: none;
+  }
+  .not-found{
+    padding: 20px;
+    text-align: center;
+    font-size: 22px;
+    margin-top: 100px;
+  }
+</style>

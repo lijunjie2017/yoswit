@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Scene List') }}</div>
+        <div class="title">{{ _('Timer') }}</div>
         <div class="right scene-list-right device-hidden">
           <a class="link icon-only" @click="${()=>downloadBle()}">
             <i class="icon material-icons md-only">download</i>
@@ -30,69 +30,38 @@
       <div id="vue-app" v-cloak>
         <div class="list ha-guide-list">
           <ul>
-            <li class="swipeout scene swipeout-delete-manual" v-for="(item,index) in sceneList" :key="item.name">
-              <div class="card swipeout-content no-shadow no-border bg-color-gray margin-bottom overflow-hidden text-color-white h-110">
-                <div class="overlay"></div>
-                <div
-                  class="coverimg width-100 position-absolute lazy lazy-fade-in"
-                  :style="{'height': '100%','background-size': 'cover','background-image': 'url('+frappe_get_url(item.image)+')'}"
-                ></div>
-                <div class="card-content card-content-padding">
-                  <div
-                    class="template-info"
-                    style="
-                      text-shadow:
-                        1px 1px 2px grey,
-                        0 0 2px black,
-                        0 0 2px grey;
-                    "
-                  >
-                    {{_(item.scene_template)}}
-                  </div>
-                  <div class="item-content">
-                    <div class="item-inner">
-                      <div
-                        class="h5 d-block text-color-white margin-bottom-half"
-                        style="
-                          text-shadow:
-                            1px 1px 2px grey,
-                            0 0 2px black,
-                            0 0 2px grey;
-                        "
-                      >
-                        {{_(item.title)}}
-                      </div>
+            <li class="swipeout" v-for="(item, index) in erpTimerList" :key="index" v-if="button_group == item.device_button_group">
+              <div class="swipeout-content">
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span>{{ item.time.substring(0,5) }}, Action: {{ item.action >= 1?'ON':'OFF' }}</span>
+                      <div class="item-footer">{{ dealWithDate(item) }}</div>
                     </div>
-                    <div class="item-after">
-                      <a
-                        class="button button-small button-round button-fill icon-button"
-                        v-on:click="toDetail(item)"
-                        style="width: 40px; height: 40px; border-radius: 50%"
-                      >
-                        <i class="f7-icons" style="font-size: 18px">doc_text_search</i>
-                      </a>
-                      <a
-                        class="button button-small button-round button-fill icon-button"
-                        style="background-color: red; margin-left: 10px; width: 40px; height: 40px; border-radius: 50%"
-                        v-on:click="onDeleted(item)"
-                      >
-                        <i class="icon material-icons" style="font-size: 20px">delete</i>
-                      </a>
+                    <div class="item-after" v-on:click="toggleTimer(item)">
+                      <i class="material-icons text-color-gray" style="font-size: 65px" v-if="dealWithDisabled(item)">toggle_off</i>
+                      <i class="material-icons text-color-theme" style="font-size: 65px" v-else>toggle_on</i>
                     </div>
                   </div>
                 </div>
               </div>
+              <div class="swipeout-actions-right">
+                <a class="bg-color-orange" v-on:click="onEdit(item)"><i class="icon material-icons">settings</i></a>
+                <a class="link swipeout-close" style="background-color: rgb(255, 0, 0)" v-on:click="onDeleted(item)">
+                  <i class="icon material-icons">delete</i>
+                </a>
+              </div>
             </li>
           </ul>
         </div>
-        <div class="device-null" v-if="sceneList.length == 0">
+        <div class="device-null" v-if="erpTimerList.filter(item => item.device_button_group == button_group).length == 0">
           <div class="block" style="text-align: center">
             <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
-            <p>${_('You do not have any scene, create one')}</p>
+            <p>${_('You do not have any timers, create one.')}</p>
           </div>
           <div class="block block-strong">
             <p class="row">
-              <a class="col button button-large" v-on:click="toScene()">{{ _('Create Scene') }}</a>
+              <a class="col button button-large" v-on:click="toScene()">{{ _('Create Tmier') }}</a>
             </p>
           </div>
         </div>
@@ -113,7 +82,6 @@
       $f7route = ctx.$f7route,
       $onUnmounted = ctx.$onUnmounted,
       $on = ctx.$on;
-
     let vueApp = null;
     let { guid, subdevice_name } = $f7route.query;
     const refresh = async (e, done) => {
@@ -121,440 +89,501 @@
       vueApp.$init();
       done();
     };
-    const downloadBle = async () => {
-      vueApp.$download();
-    };
-    const delAllScene = async () => {
-      let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-      let guid = '';
-      profile_subdevices.forEach((item) => {
-        if (item.name == subdevice_name) {
-          guid = item.device;
-        }
-      });
-      let triggerCommand = `8f210000ff`;
-      let actionCommand = `8f1100ff`;
-      app.dialog.confirm(
-        `${_('Confirm Deletion?')}`,
-        () => {
-          app.dialog.preloader();
-          if (window.peripheral[guid].prop.connected) {
-            window.peripheral[guid].disconnect().then(() => {
-              window.peripheral[guid]
-                .write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: triggerCommand,
-                  },
-                ])
-                .then(() => {
-                  return window.peripheral[guid].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: actionCommand,
-                    },
-                  ]);
-                })
-                .then(() => {
-                  app.dialog.close();
-                  app.dialog.alert('BLE Clear Successfully');
-                })
-                .catch((error) => {
-                  app.dialog.close();
-                  app.dialog.alert(erp.get_log_description(error));
-                  return;
-                });
-            });
-          } else {
-            window.peripheral[guid]
-              .write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: triggerCommand,
-                },
-              ])
-              .then(() => {
-                return window.peripheral[guid].write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: actionCommand,
-                  },
-                ]);
-              })
-              .then(() => {
-                app.dialog.close();
-                app.dialog.alert('BLE Clear Successfully');
-              })
-              .catch((error) => {
-                app.dialog.close();
-                app.dialog.alert(erp.get_log_description(error));
-                return;
-              });
-          }
-        },
-        () => {}
-      );
-    };
+    const repeat_keys = [
+      'repeat_monday',
+      'repeat_tuesday',
+      'repeat_wednesday',
+      'repeat_thursday',
+      'repeat_friday',
+      'repeat_saturday',
+      'repeat_sunday',
+    ].reverse();
+    const delAllScene = async () => {};
+    $on('pageAfterIn', () => {
+      vueApp.$init();
+    });
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
           sceneList: [],
+          button_group: '',
           localTrigerSceneList: [],
           localActionSceneList: [],
           sheetMap: {},
+          timerList: [],
+          erpTimerList: [],
         },
         computed: {},
         mounted() {
           Vue.prototype.$init = this.init;
-          Vue.prototype.$download = this.download;
-          this.scan();
+          this.initButtonGroup();
           this.init();
-          emitter.on('refresh', (data) => {
-            this.init();
-          });
         },
         methods: {
+          async onEdit(item) {
+            mainView.router.navigate(
+              `/mobile-app/timer-form-page?subdevice=${subdevice_name}&timer_id=${item.timer_id}&action=${item.action}`
+            );
+          },
           async onDeleted(item) {
-            //if mutiway scene
-            if (item.scene_template == 'Multiway Switch') {
-              //should be delete the ble setting and del the profile setting
-              //get the first device name
-              let firstTitle = '';
-              let firstRoomName = '';
-              let secondTitle = '';
-              let secondRoomName = '';
-              let thisGuid = '';
-              let secondGuid = '';
-              let subName = item.profile_subdevice;
-              let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-              let condition = JSON.parse(item.condition);
-              let this_gang = '';
-              let second_gang = '';
-              subdevices.forEach((item) => {
-                if (subName == item.name) {
-                  firstTitle = tran(item.title);
-                  firstRoomName = tran(item.room_name);
-                  this_gang = item.device_button_group.replace('ONOFF GANG', '');
-                  thisGuid = item.device;
-                }
-              });
-              let secondSubName = condition[thisGuid]['mapping'];
-              subdevices.forEach((item) => {
-                if (secondSubName == item.name) {
-                  secondTitle = tran(item.title);
-                  secondRoomName = tran(item.room_name);
-                  second_gang = item.device_button_group.replace('ONOFF GANG', '');
-                  secondGuid = item.device;
-                }
-              });
-              app.dialog.confirm(
-                `${_('Are you ready to delete the ')}${firstRoomName + '/' + tran(firstTitle) + '?'}`,
-                async () => {
-                  app.dialog.preloader();
-                  let command = `02${core_utils_get_mac_address_from_guid(thisGuid, true)}81080${this_gang}00`;
-                  try {
-                    await window.peripheral[thisGuid].write([
-                      {
-                        service: 'ff80',
-                        characteristic: 'ff81',
-                        data: command,
-                      },
-                    ]);
-                    //dele the subdevice the config
-                    app.dialog.close();
-                    app.dialog.confirm(
-                      `${_('Are you ready to delete the ' + secondRoomName + '/' + tran(secondTitle) + '?')}`,
-                      async () => {
-                        app.dialog.preloader();
-                        try {
-                          let thisCommand = `02${core_utils_get_mac_address_from_guid(secondGuid, true)}81080${second_gang}00`;
-                          await window.peripheral[thisGuid].write([
-                            {
-                              service: 'ff80',
-                              characteristic: 'ff81',
-                              data: thisCommand,
-                            },
-                          ]);
-                          //dele the scene
-                          let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
-                            method: 'DELETE',
-                            serializer: 'json',
-                            responseType: 'json',
-                            data: {},
-                          });
-                          let clone_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-                          clone_subdevices.forEach((zitem) => {
-                            if (zitem.name == subName) {
-                              zitem.config = '';
-                            }
-                            if (zitem.name == secondSubName) {
-                              zitem.config = '';
-                            }
-                          });
-                          let put_status = await http.request(encodeURI(`/api/resource/Profile/${erp.info.profile.name}`), {
-                            method: 'PUT',
-                            serializer: 'json',
-                            responseType: 'json',
-                            data: {
-                              profile_subdevice: clone_subdevices,
-                            },
-                          });
-                          app.dialog.close();
-                          await ha_profile_ready();
-                          this.init();
-                          window.globalUpdate = true;
-                          app.dialog.alert(_('Deletion successful'));
-                        } catch (errors) {
-                          app.dialog.close();
-                          app.dialog.alert(_(erp.get_log_description(errors)));
-                        }
-                      },
-                      () => {}
-                    );
-                  } catch (error) {
-                    app.dialog.close();
-                    app.dialog.alert(_(erp.get_log_description(error)));
-                  }
-                },
-                () => {}
-              );
-              return;
-            } else if (item.scene_template == 'Normal Scene') {
-              app.dialog.confirm(
-                `${_('Confirm Deletion?')}`,
-                async () => {
-                  //get the sceneId
-                  app.dialog.preloader();
-                  setTimeout(() => {
-                    app.dialog.close();
-                  }, 15 * 1000);
-                  let scenes = cloneDeep(erp.info.scene);
-                  let list = [];
-                  for (let i in scenes) {
-                    if (item.name == scenes[i].name) {
-                      list = scenes[i].scene_device_location;
-                    }
-                  }
-                  try {
-                    let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
-                      method: 'DELETE',
-                      serializer: 'json',
-                      responseType: 'json',
-                      data: {},
+            console.log('item', item);
+            const timer_id = item.timer_id;
+            app.dialog.confirm(_('Are you sure you want to delete this timer?'), async () => {
+              app.dialog.preloader();
+              try {
+                await iot_ble_check_enable();
+                let mode_code = window.peripheral[guid] ? window.peripheral[guid].prop.hexModel : '';
+                if (mode_code == '021B') {
+                  let delActionCommand = `8F1100${parseInt(timer_id).toString(16).pad('00')}`;
+                  let delTriggerCommand = `8F210000${parseInt(timer_id).toString(16).pad('00')}`;
+                  await window.peripheral[guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: delActionCommand,
+                    },
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: delTriggerCommand,
+                    },
+                  ]);
+                } else {
+                  let firmware = window.peripheral[guid].prop.firmwareNo;
+                  if (firmware < 6) {
+                    let bleList = [];
+                    let service = 'fe00';
+                    let characteristic = 'fe02';
+                    bleList.push({
+                      service: service,
+                      characteristic: characteristic,
+                      data: `${parseInt(timer_id).toString(16).pad('00')}`,
                     });
-                    app.dialog.close();
-                    await ha_profile_ready();
-                    window.globalUpdate = true;
-                    this.init();
-                    app.dialog.alert(_('Deletion successful'));
-                  } catch (error) {
-                    app.dialog.close();
-                    console.log(error);
-                    app.dialog.alert(_('Permission Error'));
+                    bleList.push({
+                      service: service,
+                      characteristic: 'fe03',
+                      data: `${parseInt(timer_id).toString(16).pad('00')}0000000000000000000000`,
+                    });
+                    if (firmware < 3.8) {
+                      bleList.push({
+                        service: service,
+                        characteristic: 'fe04',
+                        data: `00`,
+                      });
+                      bleList.push({
+                        service: service,
+                        characteristic: 'fe05',
+                        data: `0000000000`,
+                      });
+                      bleList.push({
+                        service: service,
+                        characteristic: 'fe06',
+                        data: `ff07`,
+                      });
+                    }
+                    await window.peripheral[guid].write(bleList);
+                  } else {
+                    let bleList = [];
+                    bleList.push({
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: '84' + '01' + '00' + parseInt(timer_id).toString(16).pad('00'),
+                    });
+                    await window.peripheral[guid].write(bleList);
                   }
-                },
-                () => {}
+                  await http2.request(`/api/method/appv6.putDeviceTimer?guid=${guid}&timer_id=${timer_id}`, {
+                    method: 'GET',
+                    responseType: 'json',
+                    debug: true,
+                  });
+                }
+                app.dialog.close();
+                await ha_profile_ready();
+                await this.init();
+              } catch (error) {
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            });
+          },
+          dealWithDisabled(item) {
+            //check disable status or the date is out of date, or is repeat
+            let disabled = false;
+            const { repeat_friday, repeat_saturday, repeat_sunday, repeat_monday, repeat_tuesday, repeat_wednesday, repeat_thursday } =
+              item;
+            const binaryRepeat =
+              repeat_sunday + repeat_saturday + repeat_friday + repeat_thursday + repeat_wednesday + repeat_tuesday + repeat_monday;
+            if (item.repeat_daily == 0 && binaryRepeat == '00000000') {
+              if (this.isCurrentTimeLater(item.date, item.time)) {
+                disabled = true;
+              }
+              if (item.disabled == 1) {
+                disabled = true;
+              }
+            }
+            return disabled;
+          },
+          isCurrentTimeLater(dateStr, timeStr) {
+            const targetDateTime = `${dateStr}T${timeStr}`;
+            const targetTime = dayjs(targetDateTime);
+            const currentTime = dayjs();
+            return currentTime.isAfter(targetTime);
+          },
+          dealWithDate(item) {
+            let str = ``;
+            let repeat_days = [];
+            let repeat_values = [_('Mon'), _('Tue'), _('Wed'), _('Thu'), _('Fri'), _('Sat'), _('Sun')];
+            let repeat_keys = [
+              'repeat_monday',
+              'repeat_tuesday',
+              'repeat_wednesday',
+              'repeat_thursday',
+              'repeat_friday',
+              'repeat_saturday',
+              'repeat_sunday',
+            ];
+            repeat_keys.forEach((kitem, index) => {
+              if (item[kitem] == 1) {
+                repeat_days.push(repeat_values[index]);
+              }
+            });
+            if (repeat_days.length > 0) {
+              str = `${_('Repeat')}: ${repeat_days.join(', ')}`;
+            } else {
+              str = `${_('Next')}: ${item.date}`;
+            }
+            return str;
+          },
+          async toggleTimer(item) {
+            console.log('item', item);
+            const status = this.dealWithDisabled(item);
+            //true is disable, false is enable
+            console.log('status', status);
+            console.log('guid', guid);
+            console.log('subdevice_name', subdevice_name);
+            const timer_id = item.timer_id;
+            const action = item.action;
+            const button_group = item.device_button_group;
+            const time = item.time;
+            const repeat_daily = item.repeat_daily;
+            const repeat_monday = item.repeat_monday;
+            const repeat_tuesday = item.repeat_tuesday;
+            const repeat_wednesday = item.repeat_wednesday;
+            const repeat_thursday = item.repeat_thursday;
+            const repeat_friday = item.repeat_friday;
+            const repeat_saturday = item.repeat_saturday;
+            const repeat_sunday = item.repeat_sunday;
+
+            if (status) {
+              //close the timer
+              item.disabled = 0;
+            } else {
+              //open the timer
+              item.disabled = 1;
+            }
+            let binaryRepeat = '';
+            //check if is repeat_daily, close this timer, if not repeat_daily, update the timer
+            if (repeat_daily == 1) {
+              binaryRepeat = '1111111';
+            } else {
+              binaryRepeat = `${repeat_sunday}${repeat_saturday}${repeat_friday}${repeat_thursday}${repeat_wednesday}${repeat_tuesday}${repeat_monday}`;
+            }
+            //update the timer
+            if (binaryRepeat == '0000000' && status) {
+              item.date = dayjs(item.date).add(1, 'day').format('YYYY-MM-DD');
+            }
+            try {
+              debugger;
+              await iot_ble_set_timer(
+                guid,
+                timer_id,
+                button_group,
+                item.date,
+                time,
+                binaryRepeat,
+                item.disabled == 0 ? 1 : 0,
+                parseInt(action)
               );
-              return
+              await ha_profile_ready();
+              app.dialog.close();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
-          async download() {
-            app.dialog.preloader();
-            setTimeout(() => {
-              app.dialog.close();
-            }, 15 * 1000);
-            //load the scene ble data
-            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-            let guid = '';
-            profile_subdevices.forEach((item) => {
-              if (item.name == subdevice_name) {
-                guid = item.device;
-              }
+          async download() {},
+          async loadBleScene() {},
+          initButtonGroup() {
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            subMap = subdevices.find((item) => {
+              return item.name == subdevice_name;
             });
-            try {
-              // if(peripheral[guid].prop.connected){
-              //   await peripheral[guid].disconnect();
-              //   await this.sleep(3000);
-              // }
-              await peripheral[guid].connect();
-              let device_id = peripheral[guid].prop.id;
-              this.localTrigerSceneList = [];
-              this.localActionSceneList = [];
-              await ble.startNotification(
-                device_id,
-                'ff80',
-                'ff82',
-                (rs) => {
-                  console.log('rs', rs);
-                  if (rs.startsWith('8f20') && rs.length > 8) {
-                    let thisSceneId = rs.slice(6, 8);
-                    if (thisSceneId == '00') {
-                      return;
-                    }
-                    const foundIndex = this.localTrigerSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
-                    if (foundIndex === -1) {
-                      this.localTrigerSceneList.push({
-                        scene_id: rs.slice(6, 8),
-                        command: rs,
-                      });
-                    }
-                  } else if (rs.startsWith('8f10') && rs.length > 8) {
-                    //this means command is action
-                    if (rs.slice(6, 8) == '00') {
-                      return;
-                    }
-                    const foundIndex = this.localActionSceneList.findIndex((item) => item.scene_id == rs.slice(6, 8));
-                    if (foundIndex === -1) {
-                      this.localActionSceneList.push({
-                        scene_id: rs.slice(6, 8),
-                        command: rs,
-                      });
-                    }
-                  } else if (rs.startsWith('8f1000ff')) {
-                    app.dialog.close();
-                    debugger;
-                    this.loadBleScene();
-                    ble.stopNotification(peripheral[guid].prop.id, 'ff80', 'ff82');
-                    //compareLocalAndErpData();
-                  }
-                },
-                (err) => {
-                  //app.dialog.close();
-                  //app.dialog.alert(err);
-                }
-              );
-              let read_action_command = '8F1200FF';
-              let read_trriger_command = `8F220000FF`;
-              await peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: read_trriger_command,
-                },
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: read_action_command,
-                },
-              ]);
-            } catch (error) {
-              app.dialog.close();
-              const toast = app.toast.create({
-                position: 'bottom',
-                closeTimeout: 3000,
-                text: erp.get_log_description(error),
-              });
-
-              toast.open();
-              //app.dialog.alert(error);
-            }
-          },
-          async loadBleScene() {
-            if (this.sheetMap) {
-              this.sheetMap = null;
-            }
-            try {
-              this.sheetMap = app.sheet.create({
-                content: `
-              <div class="sheet-modal my-sheet-swipe-to-step" style="height:auto; --f7-sheet-bg-color: #fff;">
-                <div class="toolbar" style="background-color: #fff;">
-                  <div class="toolbar-inner">
-                    <div class="left">
-                      <div class="block-title block-title-medium py-2">${_('BLE SCENE')}</div>  
-                    </div>
-                    <div class="title"></div>
-                    <div class="right"></div>
-                  </div>
-                </div>
-                <div class="block-title">Trigger List</div>
-                <div class="list ha-guide-list list-outline-ios list-strong-ios list-dividers-ios">
-                  <ul>
-                    ${this.localTrigerSceneList
-                      .map(
-                        (kitem) => `
-                    <li v-for="(kitem,kindex) in localTrigerSceneList" :key="kitem.scene_id" style="background: #fff;">
-                      <div class="item-content">
-                        <div class="item-media">${kitem.scene_id}</div>
-                        <div class="item-inner">
-                          <div style="word-wrap:break-word;word-break:break-all;">${kitem.command}</div>
-                        </div>
-                      </div>
-                    </li>
-                    `
-                      )
-                      .join('')}
-                  </ul>
-                </div>
-                <div class="block-title">Action List</div>
-                <div class="list ha-guide-list list-outline-ios list-strong-ios list-dividers-ios">
-                  <ul>
-                    ${this.localActionSceneList
-                      .map(
-                        (kitem) => `
-                    <li style="background: #fff;">
-                      <div class="item-content">
-                        <div class="item-media">${kitem.scene_id}</div>
-                        <div class="item-inner">
-                          <div style="word-wrap:break-word;word-break:break-all;">${kitem.command}</div>
-                        </div>
-                      </div>
-                    </li>
-                    `
-                      )
-                      .join('')}
-                  </ul>
-                </div>
-              </div>
-              `,
-                on: {
-                  open: (sheet) => {},
-                },
-                swipeToClose: true,
-                backdrop: true,
-              });
-              this.sheetMap.open();
-            } catch (error) {
-              this.loadBleScene();
-              console.log(error);
+            if (subMap) {
+              this.button_group = subMap.device_button_group;
             }
           },
           async init() {
-            this.sceneList = [];
-            console.log(subdevice_name);
-            if (isset(subdevice_name) && subdevice_name) {
-              $('.scene-list-right').removeClass('device-hidden');
-            } else {
-              console.log($('.scene-list-right'));
-              $('.scene-list-right').addClass('device-hidden');
-            }
-            let scenes = cloneDeep(erp.info.scene);
-            for (let i in scenes) {
-              if (!isset(scenes[i].image) || !scenes[i].image) {
-                scenes[i].image = `https://dev.mob-mob.com/files/scene.jpg`;
+            /*
+            1.load ble timer
+            2.load erp save timer
+            3.compare the timer,
+            (a). if have erp timer and have ble timer
+            if ble timer data is differ to the erp timer, update the erp timer
+            (b). if have erp timer and no have ble timer
+            display this timer is error, can not be excute
+            (c). if have ble tiemr and no have erp timer
+            should updte the erp timer, notice the permision, if the device is not along to the user, will be warning
+            */
+            try {
+              await this.loadErpTimer();
+              await this.loadBleData();
+              await this.compareTimer();
+              //save the timer value in the erp map
+              if (!isset(erp.setTimer)) {
+                erp.setTimer = {};
               }
-              if (isset(subdevice_name) && subdevice_name) {
-                if (subdevice_name == scenes[i].profile_subdevice) {
-                  this.sceneList.push(scenes[i]);
-                }
-                //if normal scene
-                if (scenes[i].scene_template == 'Normal Scene') {
-                  this.sceneList.push(scenes[i]);
-                }
-              } else {
-                this.sceneList.push(scenes[i]);
-              }
+              erp.setTimer[guid] = this.erpTimerList;
+            } catch (error) {
+              console.log('error', error);
+
+              app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
+          async loadBleData() {
+            this.timerList = [];
+            return new Promise(async (resolve, reject) => {
+              app.dialog.preloader();
+              setTimeout(() => {
+                app.dialog.close();
+              }, 15 * 1000);
+              try {
+                await peripheral[guid].connect();
+                let device_id = peripheral[guid].prop.id;
+                let service = 'ff80';
+                let characteristic = 'ff82';
+                //get the firmware version
+                let firmware = window.peripheral[guid].prop.firmwareNo;
+                if (!firmware) {
+                  return;
+                }
+                const BLE_TIMER_LOAD = '8402';
+                const BLE_TIMER_ALL = 'FF';
+                if (firmware && firmware > 6) {
+                  await ble.startNotification(device_id, service, characteristic, (rs) => {
+                    console.log('rs', rs);
+                    if (rs == '8402ff') {
+                      app.dialog.close();
+                      ble.stopNotification(device_id, service, characteristic);
+                      resolve(1);
+                    } else {
+                      this.timerList.push(this.tindyTimerData(rs));
+                    }
+                  });
+                  let read_timer_command = '8F1200FF';
+                  await peripheral[guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: BLE_TIMER_LOAD + BLE_TIMER_ALL,
+                    },
+                  ]);
+                }
+                app.dialog.close();
+              } catch (error) {
+                app.dialog.close();
+                reject(error);
+              }
+            });
+          },
+          tindyTimerData(rs) {
+            const timer_ret = rs;
+            const id_byte = timer_ret.substring(4, 4 + 2);
+            const port_byte = timer_ret.substring(6, 6 + 2);
+            const sec_byte = timer_ret.substring(8, 8 + 2);
+            const min_byte = timer_ret.substring(10, +10 + 2);
+            const hour_byte = timer_ret.substring(12, 12 + 2);
+            const day_byte = timer_ret.substring(14, 14 + 2);
+            const mon_byte = timer_ret.substring(16, 16 + 2);
+            const year_l_byte = timer_ret.substring(18, 18 + 2);
+            const year_h_byte = timer_ret.substring(20, 20 + 2);
+            const repeat_byte = timer_ret.substring(22, 22 + 2);
+            // const delay_flag_byte = timer_ret.substring(24, 24 + 2);
+            const status_byte = timer_ret.substring(26, 26 + 2);
+            const action_byte = timer_ret.substring(28, 28 + 2);
+            const id = parseInt(id_byte, 16);
+            const device_port = parseInt(port_byte, 16);
+            const seconds = parseInt(sec_byte, 16).toString().pad('00');
+            const minutes = parseInt(min_byte, 16).toString().pad('00');
+            const hour = parseInt(hour_byte, 16).toString().pad('00');
+            const day = parseInt(day_byte, 16).toString().pad('00');
+            const month = parseInt(mon_byte, 16).toString().pad('00');
+            // parse low year and high year
+            const low = parseInt(year_l_byte, 16);
+            const high = parseInt(year_h_byte, 16);
+            const shifted = (high << 8) | low;
+            const year = shifted.toString();
+
+            // parse repeat
+            const binaryRepeat = parseInt(repeat_byte, 16).toString(2).pad('00000000');
+            const repeat = {};
+            for (let i = 1; i < binaryRepeat.length; i++) {
+              repeat[repeat_keys[i - 1]] = parseInt(binaryRepeat[i]);
+            }
+
+            // const delay_flag = parseInt(delay_flag_byte, 16);
+            const status = parseInt(status_byte, 16);
+            const action = parseInt(action_byte, 16);
+            let obj = {
+              hex: timer_ret,
+              timer_id: id,
+              time: hour + ':' + minutes + ':' + seconds,
+              date: year + '-' + month + '-' + day,
+              disabled: status === 0 ? 1 : 0,
+              action: action.toString(),
+              repeat_daily: binaryRepeat === '01111111' ? 1 : 0,
+              port: device_port,
+              ...repeat,
+            };
+            return obj;
+          },
+          loadErpTimer() {
+            return new Promise(async (resolve, reject) => {
+              let devices = cloneDeep(erp.info.device);
+              try {
+                if (isset(devices) && devices[guid]) {
+                  let device_timers = devices[guid].device_timer || [];
+                  this.erpTimerList = device_timers;
+                  console.log('device_timers', device_timers);
+                  resolve(1);
+                } else {
+                  reject('Device is not found.');
+                }
+              } catch (error) {
+                reject(error);
+              }
+            });
+          },
+          async compareTimer() {
+            /*
+            比较timer的逻辑思路
+            已ble timer未基准;
+            1. 如果erp timer中不含有ble timer的id，则更新erp timer;
+            2. 如果是erp timer中发现多余的timer id，则删除;
+            3. 如果是timer id和port都一致的情况，则检索其他的key是否相同，如果不同，以ble timer的数据为主;
+            4. 最后把erp timer的数据更新到erp中;
+            */
+            return new Promise(async (resolve, reject) => {
+              let erp_timer_list = this.erpTimerList;
+              let ble_timer_list = this.timerList;
+              let erp_timer_list_new = [];
+              let update_erp_timer_list = [];
+              let needUpdateStatus = false;
+              if (ble_timer_list.length == 0) {
+                resolve(1);
+                return;
+              }
+              for (let i = 0; i < ble_timer_list.length; i++) {
+                let peripheral_timer = ble_timer_list[i];
+                const index = erp_timer_list.findIndex((e) => e.timer_id === peripheral_timer.timer_id);
+                const needUpdateUITimers = [];
+                if (index === -1) {
+                  //如果erp timer中不含有ble timer的id，则更新erp timer;
+                  needUpdateStatus = true;
+                  const create_timer_data = Object.assign({}, peripheral_timer);
+                  delete create_timer_data.hex;
+                  delete create_timer_data.port;
+                  create_timer_data.device_button_group = this.getButtonGroupByPort(peripheral_timer.port);
+                  update_erp_timer_list.push({
+                    ...create_timer_data,
+                    parenttype: 'Device',
+                    parentfield: 'device_timer',
+                    parent: guid,
+                  });
+                  // update_erp_timer_list.push({
+                  //   parenttype: "Device",
+                  //   parentfield: "device_timer",
+                  //   parent: guid,
+
+                  // });
+                } else {
+                  //如果是timer id和port都一致的情况，则检索其他的key是否相同，如果不同，以ble timer的数据为主;
+                  let erp_timer = erp_timer_list[index];
+                  const p_timer_binaryv = repeat_keys.map((k) => peripheral_timer[k]).join('');
+                  const e_tmer_binaryv = repeat_keys.map((k) => erp_timer[k]).join('');
+
+                  if (erp_timer.repeat_daily === 1 && p_timer_binaryv !== '1111111') {
+                    needUpdateStatus = true;
+                  } else if (p_timer_binaryv !== e_tmer_binaryv) {
+                    needUpdateStatus = true;
+                  } else if (erp_timer.action !== peripheral_timer.action) {
+                    needUpdateStatus = true;
+                  } else if (erp_timer.disabled !== peripheral_timer.disabled) {
+                    needUpdateStatus = true;
+                  } else if (erp_timer.date !== peripheral_timer.date) {
+                    needUpdateStatus = true;
+                  } else if (erp_timer.time.pad('00000000') !== peripheral_timer.time) {
+                    needUpdateStatus = true;
+                  }
+                  if (needUpdateStatus) {
+                    erp_timer = Object.assign({}, peripheral_timer);
+                    delete erp_timer.hex;
+                    delete erp_timer.port;
+                  }
+                }
+              }
+              console.log('update_erp_timer_list', update_erp_timer_list);
+              //update to erp
+              console.log('needUpdateStatus', needUpdateStatus);
+              if (needUpdateStatus) {
+                let postList = update_erp_timer_list.concat(erp_timer_list);
+                postList = postList.sort((a, b) => {
+                  return a.timer_id - b.timer_id;
+                });
+                this.erpTimerList = postList;
+                console.log('postList', postList);
+                let url = `api/method/appv6.addDeviceTimer`;
+                try {
+                  await http2.request(encodeURI(url), {
+                    method: 'POST',
+                    serializer: 'json',
+                    responseType: 'json',
+                    debug: true,
+                    data: {
+                      device_timer: postList,
+                      guid: guid,
+                    },
+                  });
+                  resolve(1);
+                } catch (error) {
+                  reject(error);
+                }
+              } else {
+                resolve(1);
+              }
+            });
+          },
+          getButtonGroupByPort(port) {
+            let target_button_group = '';
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let subdeviceMap = subdevices.find((item) => item.name === subdevice_name);
+            if (subdeviceMap) {
+              //find the device mode
+              let device_mode = subdeviceMap.device_mode;
+              if (subdeviceMap.device_button_group.startsWith('ONOFF GANG')) {
+                let pre_button_group = `ONOFF GANG`;
+                target_button_group = pre_button_group + port;
+              } else if (subdeviceMap.device_button_group.startsWith('DIMMING')) {
+                target_button_group = 'DIMMING';
+              }
+            }
+            return target_button_group;
+          },
           toScene() {
-            mainView.router.navigate(`/mobile-app/scene-guid-operate-page?sub_name=${subdevice_name}`);
+            mainView.router.navigate(`/mobile-app/timer-form-page?subdevice=${subdevice_name}`);
           },
           toDetail(item) {
             mainView.router.navigate(`/mobile-app/scene-guid-operate-page?name=${item.name}&sub_name=${subdevice_name}`);

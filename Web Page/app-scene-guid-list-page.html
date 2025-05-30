@@ -11,6 +11,9 @@
         </div>
         <div class="title">{{ _('Scene List') }}</div>
         <div class="right scene-list-right device-hidden">
+          <a class="link icon-only" @click="${()=>checkScene()}">
+            <i class="icon material-icons md-only">construction</i>
+          </a>
           <a class="link icon-only" @click="${()=>downloadBle()}">
             <i class="icon material-icons md-only">download</i>
           </a>
@@ -39,7 +42,7 @@
                 ></div>
                 <div class="card-content card-content-padding">
                   <div
-                    class="template-info"
+                    :class="item.isCorrect ? 'template-info' : 'display-flex justify-content-space-between align-items-center'"
                     style="
                       text-shadow:
                         1px 1px 2px grey,
@@ -47,7 +50,8 @@
                         0 0 2px grey;
                     "
                   >
-                    {{_(item.scene_template)}}
+                    <span v-if="!item.isCorrect" class="material-icons" style="color: red;font-size: 30px;margin-left: 15px;">priority_high</span> 
+                    <span v-on:click="showSceneAction(item)">{{_(item.scene_template)}}</span>
                   </div>
                   <div class="item-content">
                     <div class="item-inner">
@@ -64,7 +68,7 @@
                         <div v-if="item.virtualId" class="text-color-white" style="font-size: 12px">{{_('V-ID: ')}}{{item.virtualId}}</div>
                       </div>
                     </div>
-                    <div class="item-after">
+                    <div class="item-after" style="width: 150px;flex-wrap: wrap;justify-content: center;">
                       <a
                         class="button button-small button-round button-fill icon-button"
                         v-on:click="executeScene(item)"
@@ -85,6 +89,13 @@
                         style="width: 40px; height: 40px; border-radius: 50%; margin-left: 10px"
                       >
                         <i class="icon material-icons" style="font-size: 18px">input</i>
+                      </a>
+                      <a
+                        class="button button-small button-round button-fill icon-button"
+                        v-on:click="checkSingleScene(item)"
+                        style="width: 40px; height: 40px; border-radius: 50%; margin-left: 10px"
+                      >
+                        <i class="icon material-icons" style="font-size: 18px">construction</i>
                       </a>
                       <a
                         class="button button-small button-round button-fill icon-button"
@@ -135,6 +146,9 @@
       await ha_profile_ready();
       vueApp.$init();
       done();
+    };
+    const checkScene = async () => {
+      vueApp.$checkScene();
     };
     const downloadBle = async () => {
       vueApp.$download();
@@ -220,6 +234,10 @@
         () => {}
       );
     };
+    window.retryGenerateDeviceModel = ()=>{
+      console.log('retryGenerateDeviceModel');
+      vueApp.$retryGenerateDeviceModel();
+    }
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
@@ -228,11 +246,17 @@
           localTrigerSceneList: [],
           localActionSceneList: [],
           sheetMap: {},
+          sceneMapList:[],
+          deviceDetailList:[],
+          isSingleCheck: false,
+          singleSceneMap:null,
         },
         computed: {},
         mounted() {
           Vue.prototype.$init = this.init;
           Vue.prototype.$download = this.download;
+          Vue.prototype.$checkScene = this.checkScene;
+          Vue.prototype.$retryGenerateDeviceModel = this.retryGenerateDeviceModel;
           this.scan();
           this.init();
           emitter.on('refresh', (data) => {
@@ -240,6 +264,914 @@
           });
         },
         methods: {
+          showSceneAction(item){
+            console.log('item', item);
+            try{
+              let action = JSON.parse(item.action);
+              let actionList = action.actionList;
+              //show the action list
+              let html = '';
+              for(let i in actionList){
+                html += `<li class="manufacturing-steps manufacturing-step1">
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${tran(actionList[i].title)} - ${actionList[i].mac_address?actionList[i].mac_address:'RCU'}</span>
+                      <p>
+                        <span class="room-title text-color-gray">${actionList[i].virtualId?_('virtualId'):_('Button Group')}</span>
+                        <span class="room-title text-color-gray">/</span>
+                        <span class="room-title text-color-gray">${actionList[i].virtualId?actionList[i].virtualId:actionList[i].device_button_group}</span>
+                      </p>
+                    </div>
+                    <div class="item-after">
+                      <span>${actionList[i].ref}</span>
+                    </div>
+                  </div>
+                </div>
+              </li>`;
+              }
+              this.sceneSheet = app.sheet.create({
+              content: `
+                <div class="sheet-modal" style="height:auto">
+                  <div class="sheet-modal-inner">
+                    <div class="swipe-handler"></div>
+                    <div class="page-content" style="height:600px;">
+                      <div class="list list-strong list-outline list-dividers-ios">
+                        <ul class="manufacturing-steps-list">
+                        ${html}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `,
+              on: {
+                closed: () => {
+                  console.log('closed');
+                },
+              },
+              swipeToClose: true,
+              push: true,
+              backdrop: true,
+            });
+            this.sceneSheet.open();
+            }catch(error){
+              console.log('error', error);
+            }
+          },
+          async checkSingleScene(item){
+            console.log('item', item);
+            this.isSingleCheck = true;
+            this.singleSceneMap = item;
+            let deviceList = [];
+            let list = item.scene_device_location;
+            for(let i in list){
+              if(deviceList.indexOf(list[i].device) == -1){
+                deviceList.push(list[i].device);
+              }
+            }
+            console.log('deviceList', deviceList);
+            let deviceDetailList = [];
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            deviceList.forEach((item) => {
+              let titleList = [];
+              let roomNameList = [];
+              let obj = {
+                titleList : [],
+                roomNameList : [],
+                device : item,
+                device_model : '',
+                device_name : '',
+                connectStatus : 0, //0: not connect, 1: connected 2: connecting
+                errorLog : '',
+              }
+              profile_subdevices.forEach((subdevice) => {
+                if(subdevice.device == item){
+
+                  if(titleList.indexOf(subdevice.title) == -1){
+                    titleList.push(subdevice.title);
+                  }
+                  if(roomNameList.indexOf(subdevice.room_name) == -1){
+                    roomNameList.push(subdevice.room_name);
+                  }
+                }
+              });
+              profile_device.forEach((device) => {
+                if(device.device == item){
+                  obj.device_name = device.device_name;
+                  obj.device_model = device.device_model;
+                }
+              });
+              obj.titleList = titleList;
+              obj.roomNameList = roomNameList;
+              deviceDetailList.push(obj);
+            });
+            this.deviceDetailList = deviceDetailList;
+            this.generateDeviceModel();
+          },
+          async checkScene(){
+            /*
+            1. select all the device in this scene
+            2. try to connect the device and get the notification
+            3. group the data and save in the erp
+            4. design the data object
+          [
+            {
+              guid : '',
+              sceneId : '',
+              actionCommand : [],
+              triggerCommand : [],
+              toggleSettingCommand : [],
+              toggleOnCommand:[],
+              toggleOffCommand : [],
+              rawSettingCommand:[],
+              virtualIdCommand : [],
+            }
+          ]
+            */
+            this.isSingleCheck = false;
+            let sceneMap = cloneDeep(erp.info.scene);
+            let deviceList = [];
+            for(let i in sceneMap){
+              let list = sceneMap[i].scene_device_location;
+              for(let j in list){
+                if(deviceList.indexOf(list[j].device) == -1){
+                  deviceList.push(list[j].device);
+                }
+              }
+            }
+            console.log('deviceList', deviceList);
+            //load the device detail list
+            let deviceDetailList = [];
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
+            deviceList.forEach((item) => {
+              let titleList = [];
+              let roomNameList = [];
+              let obj = {
+                titleList : [],
+                roomNameList : [],
+                device : item,
+                device_model : '',
+                device_name : '',
+                connectStatus : 0, //0: not connect, 1: connected 2: connecting
+                errorLog : '',
+              }
+              profile_subdevices.forEach((subdevice) => {
+                if(subdevice.device == item){
+
+                  if(titleList.indexOf(subdevice.title) == -1){
+                    titleList.push(subdevice.title);
+                  }
+                  if(roomNameList.indexOf(subdevice.room_name) == -1){
+                    roomNameList.push(subdevice.room_name);
+                  }
+                }
+              });
+              profile_device.forEach((device) => {
+                if(device.device == item){
+                  obj.device_name = device.device_name;
+                  obj.device_model = device.device_model;
+                }
+              });
+              obj.titleList = titleList;
+              obj.roomNameList = roomNameList;
+              deviceDetailList.push(obj);
+            });
+            console.log('deviceDetailList', deviceDetailList);
+            this.deviceDetailList = deviceDetailList;
+            this.generateDeviceModel();
+          },
+          retryGenerateDeviceModel(){
+            console.log('retryGenerateDeviceModel');
+            this.getDeviceNotification(this.deviceDetailList);
+            // this.deviceSheet.close();
+            // this.generateDeviceModel(this.deviceDetailList);
+          },
+          generateSingleDeviceModel(list){
+            let html = '';
+            for(let i in list){
+              if(!list[i].device_name){
+                continue;
+              }
+              html += `<li class="manufacturing-steps manufacturing-step1" deviceName="${list[i].device_name}">
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${list[i].device_model}</span>
+                      <span class="device-title">-</span>
+                      <span class="device-title">${list[i].device_name}</span>
+                      <p>
+                        <span class="room-title text-color-gray">${tran(list[i].roomNameList[0])}</span>
+                        <span class="room-title text-color-gray">/</span>
+                        <span class="room-title text-color-gray">${tran(list[i].titleList[0])}</span>
+                      </p>
+                      <p class="error-log text-color-red">${list[i].errorLog}</p>
+                    </div>
+                    <div class="item-after">
+                      <i class="icon material-icons">watch_later</i>
+                    </div>
+                  </div>
+                </div>
+              </li>`;
+            }
+            this.deviceSheet = app.sheet.create({
+              content: `
+                <div class="sheet-modal" style="height:auto">
+                  <div class="sheet-modal-inner">
+                    <div class="swipe-handler"></div>
+                    <div class="page-content" style="height:600px;">
+                      <div class="list list-strong list-outline list-dividers-ios">
+                        <ul class="manufacturing-steps-list">
+                        ${html}
+                        </ul>
+                      </div>
+                      <div class="block block-strong">
+                        <p class="row">
+                          <div class="col">
+                            <div class="button button-raised button-fill button-save" func="retryGenerateDeviceModel">${ _('Retry') }</div>
+                          </div>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `,
+              on: {
+                closed: () => {
+                  console.log('closed');
+                },
+              },
+              swipeToClose: true,
+              push: true,
+              backdrop: true,
+            });
+            this.deviceSheet.open();
+            this.getDeviceNotification(list);
+          },
+          generateDeviceModel(){
+            //generate the device model
+            let html = '';
+            let list = this.deviceDetailList;
+            for(let i in list){
+              if(!list[i].device_name){
+                continue;
+              }
+              html += `<li class="manufacturing-steps manufacturing-step1" deviceName="${list[i].device_name}">
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${list[i].device_model}</span>
+                      <span class="device-title">-</span>
+                      <span class="device-title">${list[i].device_name}</span>
+                      <p>
+                        <span class="room-title text-color-gray">${tran(list[i].roomNameList[0])}</span>
+                        <span class="room-title text-color-gray">/</span>
+                        <span class="room-title text-color-gray">${tran(list[i].titleList[0])}</span>
+                      </p>
+                      <p class="error-log text-color-red">${list[i].errorLog}</p>
+                    </div>
+                    <div class="item-after">
+                      <i class="icon material-icons">watch_later</i>
+                    </div>
+                  </div>
+                </div>
+              </li>`;
+            }
+            this.deviceSheet = app.sheet.create({
+              content: `
+                <div class="sheet-modal" style="height:auto">
+                  <div class="sheet-modal-inner">
+                    <div class="swipe-handler"></div>
+                    <div class="page-content" style="height:600px;">
+                      <div class="list list-strong list-outline list-dividers-ios">
+                        <ul class="manufacturing-steps-list">
+                        ${html}
+                        </ul>
+                      </div>
+                      <div class="block block-strong">
+                        <p class="row">
+                          <div class="col">
+                            <div class="button button-raised button-fill button-save" func="retryGenerateDeviceModel">${ _('Retry') }</div>
+                          </div>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `,
+              on: {
+                closed: () => {
+                  console.log('closed');
+                },
+              },
+              swipeToClose: true,
+              push: true,
+              backdrop: true,
+            });
+            this.deviceSheet.open();
+            this.getDeviceNotification(list);
+          },
+          async getDeviceNotification(list){
+            const getSceneData = (device_id,guid)=>{
+              return new Promise(async(resolve, reject)=>{
+                let sceneMap = {
+                  guid : guid,
+                  actionCommandList : [],
+                  triggerCommandList : [],
+                  toggleSettingCommandList : [],
+                  toggleOnCommandList : [],
+                  toggleOffCommandList : [],
+                  rawSettingCommandList : [],
+                };
+                //defind the timeout
+                let timeout = 1000*35;
+                let timeoutId = null;
+                timeoutId = setTimeout(()=>{
+                  reject('timeout');
+                },timeout);
+                let commandList = [];
+                //get the notification
+                await ble.startNotification(device_id, 'ff80', 'ff82', (rs) => {
+                  commandList.push(rs);
+                  console.log('rs', rs);
+                  if ((rs.startsWith('8f20') || rs.startsWith('8f22')) && rs.length > 8){
+                    //trigger command
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    sceneMap.triggerCommandList.push({
+                      sceneId : thisSceneId,
+                      command : rs,
+                    });
+                  }else if((rs.startsWith('8f10') || rs.startsWith('8f12')) && rs.length > 8){
+                    //action command
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    sceneMap.actionCommandList.push({
+                      sceneId : thisSceneId,
+                      command : rs,
+                    });
+                  }else if(rs.startsWith('972303') && rs.length > 10 && rs.substring(8,10) == '02'){
+                    //toggle setting command
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    sceneMap.toggleSettingCommandList.push({
+                      sceneId : thisSceneId,
+                      command : rs,
+                    });
+                  }else if(rs.startsWith('972303') && rs.length > 10 && rs.substring(8,10) == '01'){
+                    //toggle on command
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    sceneMap.toggleOnCommandList.push({
+                      sceneId : thisSceneId,
+                      command : rs,
+                    });
+                  }else if(rs.startsWith('972303') && rs.length > 10 && rs.substring(8,10) == '00'){
+                    //toggle off command
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    sceneMap.toggleOffCommandList.push({
+                      sceneId : thisSceneId,
+                      command : rs,
+                    });
+                  }else if(rs.startsWith('8f13') && rs.length > 8){
+                    //raw setting command
+                    let thisSceneId = rs.slice(6, 8);
+                    if (thisSceneId == '00') {
+                      return;
+                    }
+                    sceneMap.rawSettingCommandList.push({
+                      sceneId : thisSceneId,
+                      command : rs,
+                    });
+                  }else if(commandList.indexOf('8f1300ff') != -1 && 
+                          commandList.indexOf('8f200000ff') != -1 &&
+                          commandList.indexOf('972303ff02') != -1 &&
+                          commandList.indexOf('8f1000ff') != -1){
+                    //8f1000ff,972303ff02,8f1300ff,8f200000ff
+                    ble.stopNotification(device_id, 'ff80', 'ff82');
+                    clearTimeout(timeoutId);
+                    resolve(sceneMap);
+                  }
+                  
+                },(error)=>{
+                  reject(error);
+                });
+                let read_action_command = '8F1200FF';
+                let read_trriger_command = `8F220000FF`;
+                let read_scene_toggle_on_command = `972303ff01`;
+                let read_scene_toggle_off_command = `972303ff00`;
+                let read_scene_toggle_setting_command = `972303ff02`;
+                let read_raw_setting_command = `8f1500ff`;
+                await peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: read_trriger_command,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: read_action_command,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: read_scene_toggle_setting_command,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: read_scene_toggle_on_command,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: read_scene_toggle_off_command,
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: read_raw_setting_command,
+                  }
+                ]);
+              });
+            }
+            this.sceneMapList = []; 
+            for(let i in list){
+              
+              let guid = list[i].device;
+              this.updateStep(list[i].device_name,2);
+              let device_id = '';
+              try{
+                device_id = window.peripheral[guid].prop.id;
+              }catch(error){
+                device_id = '';
+                list[i].errorLog = erp.get_log_description(error);
+                this.updateStep(list[i].device_name,0);
+              }
+              console.log('device_id', device_id);
+              if(!device_id){
+                list[i].errorLog = erp.get_log_description(6300);
+                this.updateDeviceErrorLog(list[i].device_name,erp.get_log_description(6300));
+                this.updateStep(list[i].device_name,0);
+                continue;
+              }
+              if(this.deviceDetailList[i].connectStatus == 1){
+                this.updateStep(list[i].device_name,1);
+                continue;
+              }
+              try{
+                await window.peripheral[guid].connect();
+                let objMap = await getSceneData(device_id,guid);
+                debugger
+                console.log('objMap', objMap);
+                this.sceneMapList.push(objMap);
+                if(window.peripheral[guid].prop.connected){
+                  await window.peripheral[guid].disconnect();
+                }
+                this.updateStep(list[i].device_name,1);
+                this.deviceDetailList[i].connectStatus = 1;
+                let status = this.checkDeviceConnectStatus();
+                if(status){
+                  //all device connect success
+                  this.checkSceneData(); 
+                }
+              }catch(error){
+                console.log('error', error);
+                list[i].errorLog = erp.get_log_description(error);
+                this.updateDeviceErrorLog(list[i].device_name,erp.get_log_description(error));
+                this.updateStep(list[i].device_name,0);
+              }
+            }
+          },
+          updateStep(name,type){
+            //type 0:error 1:success,2:loading
+            if(type == 0){
+              $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('i').removeClass('rotate-animation');
+              $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('i').html('error');
+            }else if(type == 1){
+              $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('i').removeClass('rotate-animation');
+              $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('i').html('check');
+            }else if(type == 2){
+              //rotate-animation
+              $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('i').addClass('rotate-animation');
+              $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('i').html('sync');
+            }
+          },
+          updateDeviceErrorLog(name,error){
+            $(`.manufacturing-steps-list li[deviceName="${name}"]`).find('p.error-log').text(error);
+          },
+          checkDeviceConnectStatus(){
+            let allCheck = false;
+            let count = 0;
+            let targetCount = this.deviceDetailList.filter((item)=>{
+              return item.device_name
+            }).length;
+            for(let i in this.deviceDetailList){
+              if(this.deviceDetailList[i].connectStatus == 1){
+                count++;
+              }
+            }
+            if(count == targetCount){
+              allCheck = true;
+            }
+            return allCheck;
+          },
+          checkSceneData(){
+            console.log("all device connect success");
+            if(this.deviceSheet){
+              this.deviceSheet.close();
+            }
+            app.dialog.preloader(_('Checking Scene Data'));
+            setTimeout(()=>{
+              app.dialog.close();
+            },1000*50);
+            console.log("this.sceneMapList",this.sceneMapList);
+            /*
+            check the scene data
+            1. select the ui of the trigger command and the action command
+            2. select the ui of the toggle setting command
+            3. select the ui of the toggle on command
+            4. select the ui of the toggle off command
+            5. select the ui of the raw setting command
+            6. check the command with the ble scene data
+            */
+            console.log("check scene data",this.sceneList);
+            let list = [];
+            if(this.isSingleCheck){
+              list.push(this.singleSceneMap);
+            }else{
+              list = this.sceneList;
+            }
+            let logList = [];
+            list.forEach((item)=>{
+              try{
+                let list = [];
+                let scene_device_location = item.scene_device_location || [];
+                let actionMap = JSON.parse(item.action);
+                let triggerMap = JSON.parse(item.trigger);
+                let scene_virtual_button = item.scene_virtual_button || [];
+                let sceneTemplate = item.scene_template;
+                let sceneName = item.title;
+                let checkStatus = true;
+                let logMap = {
+                  name : item.name,
+                  isCorrect : true,
+                }
+                //if the ui command can not find in the ble scene, means the ui command is not correct
+                let commandList = [];
+                triggerMap.forEach(titem=>{
+                  let guid = titem.guid;
+                  let triggerCommand = titem['triggercommand'];
+                  if(triggerCommand){
+                    commandList.push({
+                      guid : guid,
+                      command : triggerCommand.toLocaleLowerCase(),
+                    });
+                  }
+                  let actionCommand = titem['actionCommand'];
+                  if(actionCommand){
+                    commandList.push({
+                      guid : guid,
+                      command : actionCommand.toLocaleLowerCase(),
+                    });
+                  }
+                  let settingCommandList = isset(titem['settingCommandList']) ? titem['settingCommandList'] : [];
+                  if(settingCommandList.length > 0){
+                    settingCommandList.forEach(sitem=>{
+                      if(sitem.startsWith('972003')){
+                        commandList.push({
+                          guid : guid,
+                          command : sitem.slice(0, 3) + '3' + sitem.slice(4),
+                        });
+                      }
+                    });
+                  }
+                })
+                //action command
+                if(sceneTemplate == 'RCU Scene New Toggle'){
+                  let guid = scene_device_location[0].device;
+                  let sceneId = scene_device_location[0].storage_id;
+                  let vId = scene_virtual_button[0].virtual_button_id;
+                  let command = this.getActionCommandByNewToggle(sceneId,vId,guid,actionMap['actionList'],sceneName);
+                  console.log("actionCommand",command);
+                  if(command.length > 0){
+                    command.forEach((item)=>{
+                      commandList.push({
+                        guid : guid,
+                        command : item.toLocaleLowerCase(), 
+                      }); 
+                    });
+                  }
+                }else if(sceneTemplate == 'RCU Scene Toggle'){
+                  let guid = scene_device_location[0].device;
+                  let triggerCommand = actionMap[guid].trigger;
+                  let actionCommand = actionMap[guid].actionCommand;
+                  if(triggerCommand){
+                    commandList.push({
+                      guid : guid,
+                      command : triggerCommand.toLocaleLowerCase(),
+                    });
+                  }
+                  if(actionCommand){
+                    commandList.push({
+                      guid : guid,
+                      command : actionCommand.toLocaleLowerCase(),
+                    });
+                  }
+                }else if(sceneTemplate == 'RCU Curtain'){
+                  let guid = scene_device_location[0].device;
+                  let actionCommand = actionMap[guid].actionCommand;
+                  if(actionCommand){
+                    commandList.push({
+                      guid : guid,
+                      command : actionCommand.toLocaleLowerCase(),
+                    });
+                  }
+                }else if(sceneTemplate == 'RCU Radar' || sceneTemplate == 'Welcome Scene'){
+                  let guid = scene_device_location[0].device;
+                  let actionCommand = actionMap[guid];
+                  let key = `second_action_${guid}`;
+                  if(actionCommand){
+                    commandList.push({
+                      guid : guid,
+                      command : actionCommand.toLocaleLowerCase(),
+                    });
+                  }
+                  if(actionMap[key]){
+                    commandList.push({
+                      guid : guid,
+                      command : actionMap[key].toLocaleLowerCase(),
+                    });
+                  }
+                }else{
+                  let guid = scene_device_location[0].device;
+                  if(actionMap[guid]){
+                    commandList.push({
+                      guid : guid,
+                      command : actionMap[guid].toLocaleLowerCase(),
+                    });
+                  }
+                }
+                //check the command
+                commandList.forEach((item)=>{
+                  let command = item.command;
+                  let guid = item.guid;
+                  let thisCheckStatus = this.checkSceneDataIsCorrect(guid,command);
+                  if(!thisCheckStatus){
+                    checkStatus = false;
+                  }
+                });
+                if(!checkStatus){
+                  item.isCorrect = false;
+                }else{
+                  item.isCorrect = true;
+                }
+                debugger
+                logMap.isCorrect = checkStatus;
+                logList.push(logMap);
+                app.dialog.close();
+              }catch(error){
+                debugger
+                console.log('error',error);
+                app.dialog.close();
+              }
+              
+            });
+            this.pushTheProfileSubdevice(logList);
+          },
+          checkSceneDataIsCorrect(guid,command){
+            let sceneMap = this.sceneMapList.find((item)=>{
+              return item.guid == guid;
+            });
+            console.log("sceneMap",sceneMap);
+            //concat all the command
+            //console.log("sceneMap",sceneMap);
+            let commandList = [];
+            for(let i in sceneMap){
+              if(i == 'actionCommandList' || i == 'triggerCommandList' || i == 'toggleSettingCommandList' || i == 'toggleOnCommandList' || i == 'toggleOffCommandList' || i == 'rawSettingCommandList'){
+                let list = sceneMap[i];
+                for(let j in list){
+                  commandList.push(list[j].command);
+                }
+              }
+            }
+            console.log("commandList",commandList);
+            let commandIndex = commandList.findIndex((item)=>{
+              return item == command;
+            });
+            console.log("command",command);
+            console.log("commandIndex",commandIndex);
+            return commandIndex != -1;
+          },
+          getActionCommandByNewToggle(sceneId,vId,guid,actionList,sceneName){
+            let commandList = [];
+            let actualActionList = this.strucActionList(actionList);
+            for(let guid in actualActionList){
+              let list = actualActionList[guid].list;
+              let toggle_setting_item = ``;
+              let toggle_default_on_item = '';
+              let toggle_default_off_item = '';
+              let pannel_setting_item = ``;
+              let settingVirtualList = [];
+              let firstSceneFlag = '';
+              for(let i in list){
+                let device_button_group = list[i].device_button_group;
+                if(device_button_group.startsWith('RCU ONOFF GANG')){
+                  let solt = list[i].config;
+                  let gang = device_button_group.replace('RCU ONOFF GANG','')*1;
+                  let target_gang = gang%4;
+                  if(target_gang == 0){
+                    target_gang = 4;
+                  }
+                  let on_command = this.getRcuOnOffCommand(solt, target_gang, 1);
+                  let off_command = this.getRcuOnOffCommand(solt, target_gang, 0);
+                  toggle_setting_item += `04971f${parseInt(solt).toString(16).pad('00')}${parseInt(target_gang).toString(16).pad('00')}`;
+                  
+                  toggle_default_on_item += `${on_command}`;
+                  toggle_default_off_item += `${off_command}`;
+                }else if(device_button_group.startsWith('RCU DIMMING')){
+                  let solt = list[i].config;
+                  let gang = device_button_group.replace('RCU DIMMING','')*1;
+                  let target_gang = gang%2;
+                  if(target_gang == 0){
+                    target_gang = 2;
+                  }
+                  toggle_setting_item += `04971f${parseInt(solt).toString(16).pad('00')}${parseInt(target_gang).toString(16).pad('00')}`;
+                  toggle_default_on_item += `06971f${parseInt(solt).toString(16).pad('00')}892${target_gang == 1?0:1}ff`;
+                  toggle_default_off_item += `06971f${parseInt(solt).toString(16).pad('00')}892${target_gang == 1?0:1}00`;
+                }else if(device_button_group.startsWith('RCU OUTPUT')){
+                  let target_gang = device_button_group.replace('RCU OUTPUT','')*1;
+                  toggle_setting_item += `04972101${parseInt(target_gang).toString(16).pad('00')}${parseInt(target_gang).toString(16).pad('00')}`;
+                  toggle_default_on_item += `05972101${parseInt(target_gang).toString(16).pad('00')}01`;
+                  toggle_default_off_item += `05972101${parseInt(target_gang).toString(16).pad('00')}00`;
+                }else if(device_button_group.startsWith('ONOFF GANG1') && isset(list[i].virtualId)){
+                  settingVirtualList.push({
+                    virtualId: list[i].virtualId,
+                    ref: list[i].ref
+                  });
+                  if(list[i].ref == 1){
+                    toggle_setting_item += `04972103${parseInt(list[i].virtualId).toString(16).pad('00')}`;
+                    //toggle_default_on_item += `05972103${parseInt(list[i].virtualId).toString(16).pad('00')}01`;
+                  }
+                  //toggle_default_off_item += `05972103${parseInt(list[i].virtualId).toString(16).pad('00')}00`;
+                  
+                  pannel_setting_item += `04972103${parseInt(list[i].virtualId).toString(16).pad('00')}`;
+                }
+              }
+              let command = `972303${parseInt(vId).toString(16).pad('00')}02${toggle_setting_item}`;
+              let pannelCommand = ''; 
+              if(pannel_setting_item){
+                pannelCommand = `972003${parseInt(vId).toString(16).pad('00')}02${pannel_setting_item}`;
+              }
+              if(settingVirtualList.length){
+                //first is on and thore is off
+                let firstOne = settingVirtualList[0].virtualId;
+                toggle_default_on_item += `05972103${parseInt(firstOne).toString(16).pad('00')}01`;
+                defaultOnCommand = `972303${parseInt(vId).toString(16).pad('00')}0105972103${parseInt(firstOne).toString(16).pad('00')}01`;
+                let defaultoffCommandItem = '';
+                let defaultOnCommandItem = '';
+                //if master , all on 
+                debugger
+                if(sceneName.toLowerCase().includes('master')){
+                  toggle_default_on_item = '';
+                  defaultOnCommand = '';
+                }
+                settingVirtualList.forEach((item, index) => {
+                  toggle_default_off_item += `05972103${parseInt(item.virtualId).toString(16).pad('00')}00`;
+                  if(item.ref == 1){
+                    toggle_default_on_item += `05972103${parseInt(item.virtualId).toString(16).pad('00')}01`;
+                  }
+                  defaultoffCommandItem += `05972103${parseInt(item.virtualId).toString(16).pad('00')}00`;
+                });
+                defaultOffCommand = `972303${parseInt(vId).toString(16).pad('00')}00${defaultoffCommandItem}`;
+                if(sceneName.toLowerCase().includes('master')){
+                  defaultOnCommand = `972303${parseInt(vId).toString(16).pad('00')}01${toggle_default_on_item}`;
+                }
+              }
+              if(toggle_default_on_item){
+                commandList.push(`972303${parseInt(vId).toString(16).pad('00')}01${toggle_default_on_item}`)
+                
+              }
+              if(toggle_default_off_item){
+                commandList.push(`972303${parseInt(vId).toString(16).pad('00')}00${toggle_default_off_item}`)
+              }
+              commandList.push(command);
+              let actionCommandItem = `0e02${core_utils_get_mac_address_from_guid(guid, true)}1305972103${parseInt(vId).toString(16).pad('00')}02`;
+              commandList.push(`8F1000${parseInt(sceneId).toString(16).pad('00')}${actionCommandItem}`);
+            }
+            return commandList;
+          },
+          getRcuOnOffCommand(solt,gang,ref){
+            let command = ``;
+            let onoff_data = `1100`;
+            if (gang == 1) {
+              if (ref == 1) {
+                onoff_data = '1100';
+              } else {
+                onoff_data = '1000';
+              }
+            } else if (gang == 2) {
+              if (ref == 1) {
+                onoff_data = '2200';
+              } else {
+                onoff_data = '2000';
+              }
+            } else if (gang == 3) {
+              if (ref == 1) {
+                onoff_data = '4400';
+              } else {
+                onoff_data = '4000';
+              }
+            } else if (gang == 4) {
+              if (ref == 1) {
+                onoff_data = '8800';
+              } else {
+                onoff_data = '8000';
+              }
+            }
+            command = `07971f${parseInt(solt).toString(16).pad('00')}8000${onoff_data}`;
+            return command;
+          },
+          strucActionList(list){
+            let targetList = [];
+            if (list.length == 0) {
+              return targetList;
+            }
+            //filter the differ mac device
+            let macMap = {};
+            list.forEach((item) => {
+              if (!isset(macMap[item.device])) {
+                macMap[item.device] = {};
+                macMap[item.device]['device_mode'] = item.device_mode;
+              }
+            });
+            for (let i in macMap) {
+              macMap[i]['list'] = [];
+              list.forEach((kitem) => {
+                if (kitem.device === i) {
+                  macMap[i]['list'].push(kitem);
+                }
+              });
+            }
+            return macMap;
+          },
+          async pushTheProfileSubdevice(list){
+            let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+            profile_subdevice.forEach((item)=>{
+              if(item.name == subdevice_name){
+                if(this.isSingleCheck){
+                  let thisList = isset(item.function)?JSON.parse(item.function):[];
+                  list.forEach((zitem)=>{
+                    if(thisList.findIndex((kitem)=>{
+                      return kitem.name == zitem.name;
+                    }) == -1){
+                      thisList.push(zitem);
+                    }else{
+                      thisList[thisList.findIndex((kitem)=>{
+                        return kitem.name == zitem.name;
+                      })].isCorrect = zitem.isCorrect;
+                    }
+                  });
+                  item.function = JSON.stringify(thisList);
+                }else{
+                  item.function = JSON.stringify(list);
+                }
+              }
+            });
+            try{
+              let put_status = await http.request(encodeURI(`/api/resource/Profile/${erp.info.profile.name}`), {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                data: {
+                  profile_subdevice: profile_subdevice,
+                },
+              });
+              console.log("put_status",put_status);
+              if(put_status.data.status == 200){ 
+                debugger
+                erp.info.profile.profile_subdevice = put_status.data.data.profile_subdevice;
+                this.init();
+              }
+            }catch(error){ 
+              console.log(error);
+            }
+            
+          },
           async onDeleted(item) {
             //if mutiway scene
             if (item.scene_template == 'Multiway Switch') {
@@ -429,23 +1361,26 @@
                       let delToggleCommand = `972203${parseInt(virtualId).toString(16).pad('00')}02`;
                       let delToggleOnCommand = `972203${parseInt(virtualId).toString(16).pad('00')}01`;
                       let delToggleOffCommand = `972203${parseInt(virtualId).toString(16).pad('00')}00`;
-                      await window.peripheral[list[i].device].write([
-                        {
-                          service: 'ff80',
-                          characteristic: 'ff81',
-                          data: delToggleCommand,
-                        },
-                        {
-                          service: 'ff80',
-                          characteristic: 'ff81',
-                          data: delToggleOnCommand,
-                        },
-                        {
-                          service: 'ff80',
-                          characteristic: 'ff81',
-                          data: delToggleOffCommand,
-                        }
-                      ])
+                      for(let j in list){
+                        let this_guid = list[j].device;
+                        await window.peripheral[this_guid].write([
+                          {
+                            service: 'ff80',
+                            characteristic: 'ff81',
+                            data: delToggleCommand,
+                          },
+                          {
+                            service: 'ff80',
+                            characteristic: 'ff81',
+                            data: delToggleOnCommand,
+                          },
+                          {
+                            service: 'ff80',
+                            characteristic: 'ff81',
+                            data: delToggleOffCommand,
+                          }
+                        ])
+                      }
                     }
                   }
                   let device_status = await http.request(encodeURI(`/api/resource/Scene/${item.name}`), {
@@ -574,7 +1509,7 @@
                 <div class="toolbar" style="background-color: #fff;">
                   <div class="toolbar-inner">
                     <div class="left">
-                      <div class="block-title block-title-medium py-2">${_('BLE SCENE')}</div>  
+                      <div class="block-title block-title-medium py-2">${_('BLE SCENE')}</div>
                     </div>
                     <div class="title"></div>
                     <div class="right"></div>
@@ -634,6 +1569,7 @@
           },
           async init() {
             this.sceneList = [];
+            let sceneLogList = [];
             console.log(subdevice_name);
             if (isset(subdevice_name) && subdevice_name) {
               $('.scene-list-right').removeClass('device-hidden');
@@ -641,6 +1577,17 @@
               console.log($('.scene-list-right'));
               $('.scene-list-right').addClass('device-hidden');
             }
+            //get the check status
+            let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+            profile_subdevice.forEach(item=>{
+              if(item.name == subdevice_name && item.function){
+                try{
+                  sceneLogList = JSON.parse(item.function);
+                }catch(error){
+                  sceneLogList = [];
+                }
+              }
+            })
             let scenes = cloneDeep(erp.info.scene);
             for (let i in scenes) {
               if (!isset(scenes[i].image) || !scenes[i].image) {
@@ -651,13 +1598,21 @@
                   if (scenes[i].scene_virtual_button.length > 0) {
                     scenes[i].virtualId = scenes[i].scene_virtual_button[0].virtual_button_id;
                   }
+                  scenes[i].isCorrect = true;
+                  let logMap = sceneLogList.find(item=>item.name == scenes[i].name);
+                  if(sceneLogList.length && logMap){
+                    debugger
+                    scenes[i].isCorrect = logMap.isCorrect;
+                  }
                   this.sceneList.push(scenes[i]);
                 }
                 //if normal scene
                 if (scenes[i].scene_template == 'Scene Banner' || scenes[i].scene_template == 'Room Scene Button') {
+                  scenes[i].isCorrect = true;
                   this.sceneList.push(scenes[i]);
                 }
               } else {
+                scenes[i].isCorrect = true;
                 this.sceneList.push(scenes[i]);
               }
             }
@@ -758,7 +1713,7 @@
             */
             let roomList = erp.info.profile.profile_room;
             // 动态生成选项
-            const selectHtml = roomList.map(t => 
+            const selectHtml = roomList.map(t =>
               `<option value="${t.name}">${tran(t.title)}</option>`
             ).join('');
             //创建动态Button Group
@@ -801,9 +1756,9 @@
                         <div class="item-inner">
                           <div class="item-title item-label">${_("Device Name")}</div>
                           <div class="item-input-wrap">
-                            <input 
-                              id="subdeviceName" 
-                              type="text" 
+                            <input
+                              id="subdeviceName"
+                              type="text"
                               placeholder="${_("Input your device name.")}"
                             />
                           </div>
@@ -947,4 +1902,27 @@
   .fab-right-bottom {
     position: fixed;
   }
+  .device-title {
+    font-size: 16px;
+    color: #000;
+    font-weight: bold;
+  }
+  .room-title {
+    font-size: 13px;
+  }
+  @keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rotate-animation {
+  animation: rotate 2s linear infinite;
+  display: inline-block; /* 确保transform生效 */
+}
+.rotate-animation.paused {
+  animation: none;
+}
 </style>

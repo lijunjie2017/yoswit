@@ -206,16 +206,18 @@
           },
           startProduce() {
             console.log('startProduce');
-            let testButton = ha_control_template_render('6163346431363439326266361202051d','YO202DS','On Off IR');
+            let id = '3C:84:27:EE:57:8E';
+            let testButton = ha_control_template_render('3363383432376565353738651203721d','YO121-AC-R2W','Curtain Motor Ac',id);
+            console.log('testButton', testButton);
             app.sheet
               .create({
                 content: `
             <div class="sheet-modal" style="height:auto">
             	<div class="sheet-modal-inner">
             		<div class="swipe-handler"></div>
-            		<div class="page-content">
+            		<div class="page-content" style="height:600px;">
             			<div class="list list-strong list-outline list-dividers-ios">
-            				<ul>
+            				<ul class="manufacturing-steps-list">
             					<li class="manufacturing-steps manufacturing-step1">
             						<div class="item-content">
             							<div class="item-inner">
@@ -306,7 +308,7 @@
             							</div>
             						</div>
             					</li>
-                    ${testButton}
+                    
             				</ul>
             			</div>
             			<div class="block manufacturing-remaining-time" style="text-align:center;">
@@ -330,6 +332,9 @@
                 backdrop: true,
               })
               .open();
+            setTimeout(() => {
+              $('.manufacturing-steps-list').append(testButton);
+            }, 300);
           },
         },
         computed: {},
@@ -379,4 +384,8 @@
     .device-none {
 			display: none !important;
 		}
+    .bg-color-theme {
+      background-color: var(--f7-theme-color)!important;
+      color: #fff!important;
+    }
 </style>

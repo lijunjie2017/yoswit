@@ -10,6 +10,11 @@
           </a>
         </div>
         <div class="title">{{ _('Hotel Control - Guest Mode') }}</div>
+        <div class="right" style="display: none">
+          <a href="/mobile-app/scene-guid-list-test-for-mira" class="button button-fill text-color-theme bg-color-white button-44">
+            <i class="material-icons">menu</i>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -20,7 +25,9 @@
           <div class="guest-box">
             <div id="guest-0-div" class="list media-list no-margin">
               <ul>
-                <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
+                <div class="guest-mode-item display-flex" 
+                :style="{'flex-wrap': 'wrap','margin-bottom':roomList.length <2?'6px':'0'}"
+                >
                   <!-- this show the bar of 4 item -->
                   <div class="show-item" v-for="item in topDeviceList" :key="item.index" :style="{width:item.width,height:item.height}">
                     <li class="swipeout display-flex">
@@ -49,7 +56,10 @@
             </div>
             <div class="anthor-box">
               <!-- this is the room bar -->
-              <div class="room-bar toolbar tabbar tabbar-scrollable toolbar-home-room">
+              <div class="room-bar toolbar tabbar tabbar-scrollable toolbar-home-room"
+               v-if="roomList.length > 1"
+               :style="{'margin':'6px 0'}"
+               >
                 <div class="toolbar-inner" style="padding-right: 40px">
                   <a
                     ref="0"
@@ -58,39 +68,71 @@
                     :key="room.name"
                     :class="{'tab-link-active': room.isActive}"
                     :id="'room-bar-title-'+room.name"
-                    v-on:click="showRoom(room.name,1)"
+                    v-on:click="showRoom(room,1)"
                   >
                     {{room.title}}
                   </a>
                 </div>
               </div>
-              <!-- this is the anthor device list -->
+            </div>
+            <div id="guest-1-div" class="list media-list no-margin">
+              <ul>
+                <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
+                  <!-- this show the bar of 4 item -->
+                  <div
+                    class="show-item"
+                    v-for="item in tvAndThermostatList"
+                    :key="item.index"
+                    :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
+                    v-if="item.roomHidden"
+                  >
+                    <li class="swipeout display-flex">
+                      <div class="iconbtn swipeout-content" style="width: 100%">
+                        <dnd-button
+                          :type="item.buttonType"
+                          :title="item.title"
+                          :guid="item.device"
+                          :button-group="item.device_button_group"
+                          :name="item.name"
+                          :status="item.device_status"
+                          :device-attachment-status="item.device_attachment_status"
+                          v-on:change-air-temp="changeAirTempParent"
+                          v-on:change-air-mode="changeAirModeParent"
+                          v-on:onoff-click-item="onoffClickParent"
+                          v-on:change-virtual-id="changeVirtualIdParent"
+                          v-on:tv-control="tvControlParent"
+                          v-if="item.roomHidden"
+                        ></dnd-button>
+                      </div>
+                    </li>
+                  </div>
+                </div>
+              </ul>
+            </div>
+            <!-- this show the music device list -->
+            <div class="anthor-box">
               <div id="guest-1-div" class="list media-list no-margin">
                 <ul>
                   <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
-                    <!-- this show the bar of 4 item -->
-                    <div
-                      class="show-item"
-                      v-for="item in tvAndThermostatList"
-                      :key="item.index"
-                      :style="{width:item.width,height:item.height}"
-                      v-if="item.roomHidden"
+                    <div class="show-item" v-for="item in musicDeviceList" :key="item.index" 
+                    :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
+                    v-if="item.roomHidden"
                     >
                       <li class="swipeout display-flex">
                         <div class="iconbtn swipeout-content" style="width: 100%">
                           <dnd-button
                             :type="item.buttonType"
                             :guid="item.device"
+                            :config="item.config"
+                            :password="item.password"
                             :button-group="item.device_button_group"
                             :name="item.name"
                             :status="item.device_status"
+                            :self-icon="item.selfIcon"
                             :device-attachment-status="item.device_attachment_status"
-                            v-on:change-air-temp="changeAirTempParent"
-                            v-on:change-air-mode="changeAirModeParent"
-                            v-on:onoff-click-item="onoffClickParent"
-                            v-on:change-virtual-id="changeVirtualIdParent"
-                            v-on:tv-control="tvControlParent"
-                            v-if="item.roomHidden"
+                            :show-title="item.show_title"
+                            v-on:get-password="getPasswordParent"
+                            v-on:to-ble-setting="toBleSettingParent"
                           ></dnd-button>
                         </div>
                       </li>
@@ -99,6 +141,58 @@
                 </ul>
               </div>
             </div>
+            <!-- this show the music device list end -->
+            <div class="anthor-box">
+              
+              <div class="anthor-box">
+                <div id="guest-1-div" class="list media-list no-margin">
+                  <ul>
+                    <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
+                      <!-- this show the bar of 4 item -->
+                      <div
+                        class="show-item display-flex justify-content-flex-start"
+                        :style="{'flex-wrap': 'wrap','width': group.width,'padding': '5px 10px','margin-bottom': '6px'}"
+                        v-for="group in groupByList"
+                        :key="group.group"
+                      >
+                        <h3 class="tv-title" style="width: 100%; text-align: left; padding-left: 10px;max-height: 25px;">
+                          <span class="pure-title-main">{{group.title}}</span>
+                          
+                        </h3>
+                        <div
+                          v-for="item in anthorDeviceList"
+                          v-if="item.group_index == group.group"
+                          :key="item.index"
+                          :style="{width:group.width == '100%' ? '25%' : '49%',height:item.height?item.height:'90px','border-radius':'15px'}"
+                        >
+                          <li class="swipeout display-flex" style="border-radius: 15px">
+                            <div class="iconbtn swipeout-content" style="width: 100%">
+                              <dnd-button
+                                :type="item.buttonType"
+                                :guid="item.device"
+                                :button-group="item.device_button_group"
+                                :name="item.name"
+                                :status="item.device_status"
+                                :self-icon="item.selfIcon"
+                                :self-icon-off="item.selfIconOff"
+                                :device-attachment-status="item.device_attachment_status"
+                                :show-title="item.show_title"
+                                v-on:change-air-temp="changeAirTempParent"
+                                v-on:change-air-mode="changeAirModeParent"
+                                v-on:onoff-click-item="onoffClickParent"
+                                v-on:change-virtual-id="changeVirtualIdParent"
+                                v-on:change-scene-id="changeSceneIdParent"
+                              ></dnd-button>
+                            </div>
+                          </li>
+                        </div>
+                      </div>
+                    </div>
+                  </ul>
+                </div>
+              </div>
+              <!-- this is the anthor device list -->
+            </div>
             <div class="anthor-box">
               <div id="guest-1-div" class="list media-list no-margin">
                 <ul>
@@ -106,9 +200,9 @@
                     <!-- this show the bar of 4 item -->
                     <div
                       class="show-item"
-                      v-for="item in anthorDeviceList"
+                      v-for="item in rangeBarDeviceList"
                       :key="item.index"
-                      :style="{width:item.width,height:item.height}"
+                      :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
                     >
                       <li class="swipeout display-flex">
                         <div class="iconbtn swipeout-content" style="width: 100%">
@@ -118,13 +212,11 @@
                             :button-group="item.device_button_group"
                             :name="item.name"
                             :status="item.device_status"
+                            :self-icon="item.selfIcon"
+                            :self-icon-off="item.selfIconOff"
                             :device-attachment-status="item.device_attachment_status"
                             :show-title="item.show_title"
-                            v-on:change-air-temp="changeAirTempParent"
-                            v-on:change-air-mode="changeAirModeParent"
-                            v-on:onoff-click-item="onoffClickParent"
-                            v-on:change-virtual-id="changeVirtualIdParent"
-                            v-on:change-scene-id="changeSceneIdParent"
+                            v-on:click-curtain="clickCurtainParent"
                           ></dnd-button>
                         </div>
                       </li>
@@ -160,27 +252,26 @@
       template: `
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" style="width: 100%;height: 80px;padding: 0 20px;" v-if="type == 'dnd'">
       <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeDnd(name,status,1)">
-        <img :src="fileUrl+'new_dnd_'+(status?'on':'off')+'.png'" alt="thermostat" style="width: 20px;height: 20px;" />
+        <img :src="fileUrl+'new_dnd_'+(status != 0?'on':'off')+'.png'" alt="thermostat" style="width: 22px;height: 22px;" />
       </button>
       <button :class="['button button-raised button-big circle display-flex', cleanStatus != 0 ? 'btn-bg' : '']" @click="changeDnd(name,cleanStatus,2)">
-        <img :src="fileUrl+'new_clean_'+(cleanStatus?'on':'off')+'.png'" alt="thermostat" style="width: 20px;height: 20px;" />
+        <img :src="fileUrl+'new_clean_'+(cleanStatus != 0 ?'on':'off')+'.png'" alt="thermostat" style="width: 25px;height: 25px;" />
       </button>
     </div>
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" 
-    :style="{width: '100%',height: '80px',padding: '0 20px','background-color': enable ? 'rgba(0,0,0,0)' : 'red'}" 
+    :style="{width: '100%',height: '80px',padding: '0 20px','background-color': enable ? 'rgba(0,0,0,0)' : 'grey'}" 
     v-else-if="type == 'radar'">
-      <button class="button button-raised button-big circle radar-container" @click="changeSceneEnable(name)">
-        <div :class="['radar-container',radarStatus == 1 ? 'detected' : 'not-detected']" id="radar">
-          <div class="radar-circle">
-              <div class="radar-scan"></div>
-          </div>
-          <div class="ping"></div>
-          <div class="center-dot"></div>
-          <div class="target-blips">
-            <div class="blip blip-1"></div>
-            <div class="blip blip-2"></div>
-            <div class="blip blip-3"></div>
-          </div>
+      <button class="button button-raised button-big circle radar-btn display-flex flex-direction-column" style="padding:5px 0px;" @click="changeSceneEnable(name)">
+        <div class="toggle-icons">
+            <i class="material-icons text-color-theme" v-if="enable">toggle_on</i>
+            <i class="material-icons" v-else>toggle_off</i>
+        </div>
+        
+        <div class="divider"></div> 
+        
+        <div class="status-icon">
+            <i class="material-icons text-color-theme" v-if="radarStatus == 0">directions_walk</i>
+            <i class="material-icons" v-else>block</i>
         </div>
       </button>
     </div>
@@ -188,13 +279,16 @@
     :class="['buttonStatus display-flex justify-content-space-between align-content-center align-items-center', status != 0 ? 'on_flag' : 'off_flag']" 
     style="width: 100%;height: 80px;padding: 0 20px;" 
     v-else-if="type == 'onoff'">
-      <button :class="['button button-raised button-big circle','onoff-item']" @click="onoffClick(name,status)">
+      <button v-if="!selfIcon" :class="['button button-raised button-big circle','onoff-item']" @click="onoffClick(name,status)">
         
+      </button>
+      <button v-else :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="onoffClick(name,status)">
+        <img :src="fileUrl+(status != 0?selfIconOff:selfIcon)+'.png'" :style="{'width':'30px','height':'30px'}" />
       </button>
     </div>
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" style="width: 100%;height: 80px;padding: 0 20px;" v-else-if="type == 'master'">
       <button :class="['button button-raised button-big circle', status != 0 ? 'btn-bg' : '']" @click="changeVirtualId(name,status,1)">
-        <i class="material-icons">
+        <i class="material-icons" style="font-size: 30px;color: #000;">
           power_settings_new 
         </i>
       </button>
@@ -202,7 +296,7 @@
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center"
      style="width: 100%;height: 90px;padding: 0 20px;position: relative;" v-else-if="type == 'toggle'">
       <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeVirtualId(name,status,2)">
-        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" style="width: 20px;height: 20px;" />
+        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" :style="{'width': buttonGroup.startsWith('SCENE VIRTUAL SLEEP')?'25px':'30px','height': buttonGroup.startsWith('SCENE VIRTUAL SLEEP')?'25px':'30px'}" />
       </button>
       <div style="position: absolute;top: 0;right: 10px;color: #8e8d93;background-color: var(--f7-block-strong-bg-color);font-size: 20px;font-weight: 600;" 
       v-if="showTitle"
@@ -212,8 +306,8 @@
     </div>
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center"
      style="width: 100%;height: 90px;padding: 0 20px;position: relative;" v-else-if="type == 'click'">
-      <button :class="['button button-raised button-big circle display-flex']" @click="changeSceneId(name)">
-        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup]['on_icon']+'.png'" style="width: 20px;height: 20px;" />
+      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeSceneId(name)">
+        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" :style="{'width': '30px','height': '30px'}" />
       </button>
       <div style="position: absolute;top: 0;right: 10px;color: #8e8d93;background-color: var(--f7-block-strong-bg-color);font-size: 20px;font-weight: 600;" 
       v-if="showTitle"
@@ -221,7 +315,19 @@
       {{showTitle}}
       </div>
     </div>
-    <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose' || type == 'dimming'">
+    <!-- opclose -->
+    <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose'">
+      <div class="display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="height:100%;">
+        <button :class="['button button-raised button-big circle display-flex']" style="margin-bottom:10px;" @click="clickCurtain(name,1)">
+          <img :src="fileUrl+selfIcon+'.png'" :style="{'width': '30px','height': '30px'}" />
+        </button>
+        <button :class="['button button-raised button-big circle display-flex']" @click="clickCurtain(name,0)">
+          <img :src="fileUrl+selfIconOff+'.png'" :style="{'width': '30px','height': '30px'}" />
+        </button>
+      </div>
+    </div>
+    <!-- opclose end -->
+    <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'dimming'">
       <div style="height:100%;">
         <div :class="['range-slider','rangeslider','range-slider-init']" 
           :guid="guid"
@@ -231,65 +337,98 @@
           data-step="1"
         ></div>
         <img v-if="type == 'opclose'" 
-        :src="fileUrl+'products/YO121-BLE-LE.svg'" class="rangeIcon" alt="thermostat" />
-        <i v-if="type == 'dimming'" class="material-icons">
-          brightness_low
+        :src="fileUrl+selfIcon+'.png'" class="rangeIcon" alt="thermostat" 
+        style="width: 30px;height: 30px;margin-left: -15px;"
+        />
+        <img v-if="type == 'dimming' && selfIcon" 
+        :src="fileUrl+selfIcon+'.png'" class="rangeIcon" alt="thermostat" 
+        style="width: 30px;height: 30px;margin-left: -15px;"
+        />
+        <span v-if="type == 'dimming' && selfIcon" 
+        style="font-size: 18px;margin-left: 15px;position: absolute;bottom: 35px;left: 50%;z-index: 99;color:#8e8d93">{{showTitle}}</span>
+        <i v-if="type == 'dimming' && !selfIcon" class="material-icons">
+        brightness_low
         </i>
       </div>
     </div>
-    <div class="buttonStatus" style="width: 100%;height: 280px;padding: 0 20px;" v-else-if="type == 'tv'">
+    <div class="buttonStatus music-player-card" style="width: 100%;height: 100px;padding: 0 20px;" v-else-if="type == 'music'">
+      <div class="music-icon">
+            <i class="f7-icons" style="font-size: 30px;">music_note_2</i>
+        </div>
+        
+        <div class="password-section">
+            <div class="password-header">
+                <div class="password-time" style="display: none;" id="passwordTime">04:59</div>
+            </div>
+            <div class="password-card display-flex justify-content-center align-items-center" id="passwordDisplay">
+              <i class="material-icons text-color-blue" style="font-size: 20px;">bluetooth</i>
+              {{password?password:'Not Set'}}
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn btn-get" id="getPasswordBtn" @click="getPassword(name)">
+                <i class="f7-icons" style="font-size: 30px;">arrow_clockwise</i>
+            </button>
+            <button class="btn btn-get" id="connectBtn" @click="toBleSetting(name)">
+                <i class="material-icons" style="font-size: 30px;">{{config?config:'phone_iphone'}}</i>
+            </button>
+        </div>
+    </div>
+    <div class="buttonStatus" style="width: 100%;height: 320px;padding: 0 20px;" v-else-if="type == 'tv'">
+      <h3 class="tv-title ellipsis">{{title}}</h3>
       <div class="display-flex justify-content-space-between align-content-center align-items-center" style="margin-top: 10px;">
         <button class="button button-raised button-big circle display-flex" @click="tvControl(name,16)">
-          <i class="material-icons">
+          <i class="material-icons" style="font-size: 30px;color: #000;">
             add 
           </i>
         </button>
         <button class="button button-raised button-big circle display-flex" @click="tvControl(name,17)">
-          <i class="material-icons">
+          <i class="material-icons" style="font-size: 30px;color: #000;">
             remove 
           </i>
         </button>
         <button class="button button-raised button-big circle display-flex" @click="tvControl(name,20)">
-          <i class="material-icons">
+          <i class="material-icons" style="font-size: 30px;color: #000;">
             power_settings_new 
           </i>
         </button>
       </div>
       <div class="display-flex justify-content-center align-content-center align-items-center" style="width: 100%;margin-top: 10px;">
         <button class="button button-raised button-big circle TVcontrol">
-          <div class="tvbtn tvup" @click="tvControl(name,11)"><i class="material-icons">keyboard_arrow_up</i> </div>
-          <div class="tvbtn tvdown" @click="tvControl(name,15)"><i class="material-icons">keyboard_arrow_down</i> </div>
-          <div class="tvbtn tvleft" @click="tvControl(name,12)"><i class="material-icons">chevron_left</i> </div>
-          <div class="tvbtn tvright" @click="tvControl(name,14)"><i class="material-icons">chevron_right</i></div>
-          <div class="tvbtn tvok button button-raised button-big circle" @click="tvControl(name,13)"><span>ok</span></div>
+          <div class="tvbtn tvup" style="color: #000;" @click="tvControl(name,11)"><i class="material-icons">keyboard_arrow_up</i> </div>
+          <div class="tvbtn tvdown" style="color: #000;" @click="tvControl(name,15)"><i class="material-icons">keyboard_arrow_down</i> </div>
+          <div class="tvbtn tvleft" style="color: #000;" @click="tvControl(name,12)"><i class="material-icons">chevron_left</i> </div>
+          <div class="tvbtn tvright" style="color: #000;" @click="tvControl(name,14)"><i class="material-icons">chevron_right</i></div>
+          <div class="tvbtn tvok button button-raised button-big circle" @click="tvControl(name,13)"><span style="color: #000;">ok</span></div>
         </button>
        </div>
       <div class="display-flex justify-content-space-between align-content-center align-items-center" style="margin-top: 10px;">
         <button class="button button-raised button-big circle display-flex" @click="tvControl(name,19)">
-          <i class="material-icons">
+          <i class="material-icons" style="font-size: 30px;color: #000;">
             home 
           </i>
         </button>
         <button class="button button-raised button-big circle display-flex" @click="tvControl(name,18)">
-          <i class="material-icons">
+          <i class="material-icons" style="font-size: 30px;color: #000;">
             undo 
           </i>
         </button>
         <button class="button button-raised button-big circle" @click="tvControl(name,23)">
-          <i class="material-icons">
+          <i class="material-icons" style="font-size: 30px;color: #000;">
             logout 
           </i>
         </button>
       </div>
     </div>
-    <div class="buttonStatus" style="width: 100%;height: 280px;padding: 0 20px;" v-else-if="type == 'thermostat'">
+    <div class="buttonStatus" style="width: 100%;height: 320px;padding: 0 20px;" v-else-if="type == 'thermostat'">
+      <h3 class="tv-title ellipsis">{{title}}</h3>
       <div :class="['thermostat-box', 'display-flex', 'justify-content-space-between', 'align-content-center', 'align-items-center', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'off_flag' : 'on_flag']" 
       style="margin-top: 10px;">
         <button :class="['button button-raised button-big circle display-flex', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" @click="changeAirMode(deviceAttachmentStatus,1,name)">
-          <img :src="getAirMode(deviceAttachmentStatus)['mode'].img" alt="thermostat" style="width: 25px;height: 25px;" />
+          <img :src="getAirMode(deviceAttachmentStatus)['mode'].img" alt="thermostat" style="width: 30px;height: 30px;" />
         </button>
         <button :class="['button button-raised button-big circle display-flex', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" @click="changeAirMode(deviceAttachmentStatus,2,name)">
-          <img :src="getAirMode(deviceAttachmentStatus)['speed'].img" alt="thermostat" style="width: 25px;height: 25px;" />
+          <img :src="getAirMode(deviceAttachmentStatus)['speed'].img" alt="thermostat" style="width: 30px;height: 30px;" />
         </button>
         <button class="button button-raised button-big circle onoff-item" @click="changeAirMode(deviceAttachmentStatus,3,name)">
           
@@ -304,7 +443,7 @@
             <div class="mode control hidden">
                 <div>&deg;C</div>
                 <div>
-                    <img :style="{'width':'25px','height':'25px','visibility':getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'hidden' : 'visible'}" :src="getAirMode(deviceAttachmentStatus)['mode'].img">
+                    <img :style="{'width':'30px','height':'30px','visibility':getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'hidden' : 'visible'}" :src="getAirMode(deviceAttachmentStatus)['mode'].img">
                 </div>
             </div>
         </div>
@@ -319,13 +458,21 @@
       </div>
       <div class="thermostat-box display-flex justify-content-space-between align-content-center align-items-center" style="margin-top: 25px;">
         <div class="col">
-          <div :class="['button button-raised button-big stop', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" style="width:60px;font-size:25px;line-height:60px;" @click="changeAirTemp(deviceAttachmentStatus,1,name)">-</div>
+          <div :class="['button button-raised button-big stop', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" style="width:60px;font-size:25px;line-height:60px;color: #000;" @click="changeAirTemp(deviceAttachmentStatus,1,name)">
+            <i class="material-icons" style="font-size: 30px;color: #000;">
+              remove 
+            </i>
+            </div>
         </div>
         <div class="col" style="text-align:center;">
           <span>{{getAirMode(deviceAttachmentStatus)['set_temperature'].value}}</span>℃
         </div>
         <div class="col">
-          <div :class="['button button-raised button-big stop', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" style="width:60px;font-size:25px;line-height:60px;" @click="changeAirTemp(deviceAttachmentStatus,2,name)">+</div>
+          <div :class="['button button-raised button-big stop', getAirMode(deviceAttachmentStatus)['power'].value == 0 ? 'disabled' : '']" style="width:60px;font-size:25px;line-height:60px;" @click="changeAirTemp(deviceAttachmentStatus,2,name)">
+            <i class="material-icons" style="font-size: 30px;color: #000;">
+              add 
+            </i>  
+          </div>
         </div>
       </div>
     </div>
@@ -371,6 +518,26 @@
           type: String,
           default: '',
         },
+        title: {
+          type: String,
+          default: '',
+        },
+        selfIcon: {
+          type: String,
+          default: '',
+        },
+        selfIconOff: {
+          type: String,
+          default: '',
+        },
+        password: {
+          type: String,
+          default: '',
+        },
+        config: {
+          type: String,
+          default: '',
+        },
       },
       data() {
         return {
@@ -390,6 +557,15 @@
             radar.classList.remove('not-detected');
             radar.classList.add('detected');
           }
+        },
+        getPassword(name) {
+          this.$emit('get-password', name);
+        },
+        toBleSetting(name) {
+          this.$emit('to-ble-setting', name);
+        },
+        clickCurtain(name, status) {
+          this.$emit('click-curtain', { name: name, status: status });
         },
         //tv control
         tvControl(name, type) {
@@ -655,7 +831,7 @@
           };
           this.$emit('change-air-temp', obj);
         },
-        changeSceneId(name){
+        changeSceneId(name) {
           this.$emit('change-scene-id', name);
         },
         changeVirtualId(name, status, type) {
@@ -707,6 +883,7 @@
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
+          profileSubdeviceList: [],
           deviceList: [],
           topDeviceList: [],
           anthorDeviceList: [],
@@ -716,6 +893,11 @@
           deviceControlLimit: {},
           roomList: [],
           showHome: true,
+          groupByList: [],
+          rangeBarDeviceList: [],
+          musicDeviceList: [],
+          controlUpdateMap: true,
+          clickStates: new Map(),
         },
         computed: {},
         watch: {},
@@ -738,10 +920,10 @@
             await this.initSubdevice();
             await this.initData();
           },
-          showRoom(name, status) {
-            console.log('name', name);
+          showRoom(item, status) {
+            console.log('name', item.name);
             console.log('status', status);
-            if (name == '0') {
+            if (status == '0') {
               this.roomList.forEach((room) => {
                 room.isActive = false;
               });
@@ -754,30 +936,92 @@
               this.roomList.forEach((room) => {
                 room.isActive = false;
               });
-              this.roomList.find((room) => room.name == name).isActive = true;
+              this.roomList.find((room) => room.name == item.name).isActive = true;
               //find the device and hidden
-              this.tvAndThermostatList.forEach((item) => {
-                if (item.profile_room == name) {
-                  item.roomHidden = true;
+              this.tvAndThermostatList.forEach((tvItem) => {
+                if (tvItem.profile_room == item.name) {
+                  tvItem.roomHidden = true;
                 } else {
-                  item.roomHidden = false;
+                  tvItem.roomHidden = false;
+                }
+              });
+              this.musicDeviceList.forEach((musicItem) => {
+                musicItem.roomHidden = false;
+                //if the room is the living room,will find the entrance bathroom speaker,if in bedroom,will find the bedroom speaker
+                let room_title = item.title;
+                if(room_title.toLowerCase().includes('living') && musicItem.room_name.toLowerCase().includes('entrance')){
+                  musicItem.roomHidden = true;
+                }
+                if(room_title.toLowerCase().includes('bedroom') && musicItem.room_name.toLowerCase().includes('bathroom') && !musicItem.room_name.toLowerCase().includes('entrance')){
+                  musicItem.roomHidden = true;
                 }
               });
             }
           },
+          findLatestStatus(status) {
+            const parseTime = (timeStr) => {
+              let adjusted = timeStr.replace(' ', 'T');
+              const millisMatch = adjusted.match(/\.(\d+)$/);
+              if (millisMatch) {
+                const millis = millisMatch[1].substring(0, 3);
+                adjusted = adjusted.replace(/\.\d+$/, `.${millis}Z`);
+              } else {
+                adjusted += 'Z';
+              }
+              return new Date(adjusted).getTime();
+            };
+
+            const entries = Object.entries(status).map(([key, value]) => ({
+              key,
+              time: parseTime(value[1]),
+            }));
+
+            const maxTime = Math.max(...entries.map((e) => e.time));
+            const allSame = entries.every((e) => e.time === maxTime);
+
+            if (allSame) return status.control;
+
+            const candidates = entries.filter((e) => e.time === maxTime);
+            const controlCandidate = candidates.find((e) => e.key === 'control');
+
+            return controlCandidate ? status.control : status[candidates[0].key];
+          },
+          getStatusFromPeripheral(v_id, guid) {
+            let gang = this.getVirtualIdForPeripheral(v_id);
+            //compare the last time
+            let status = this.findLatestStatus(window.peripheral[guid].prop.status);
+            let thisStatus = cloneDeep(status[0][gang]);
+            return thisStatus;
+          },
+          updateListVirtualIdStatus(guid) {
+            this.topDeviceList.forEach((item) => {
+              if (item.device == guid && item.config && !item.config.includes('scene_id')) {
+                let gang = this.getVirtualIdForPeripheral(item.config);
+                let status = this.findLatestStatus(window.peripheral[guid].prop.status);
+
+                let thisStatus = status[0][gang];
+                item.device_status = thisStatus;
+                if (isset(item.clean_status)) {
+                  let clean_gang = this.getVirtualIdForPeripheral(item.clean_virtual_id);
+                  let clean_status = this.findLatestStatus(window.peripheral[guid].prop.status);
+                  item.clean_status = clean_status[0][clean_gang];
+                }
+              }
+            });
+            this.anthorDeviceList.forEach((item) => {
+              if (item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')) {
+                let gang = this.getVirtualIdForPeripheral(item.config);
+                let status = this.findLatestStatus(window.peripheral[guid].prop.status);
+                console.log('status', status);
+                console.log('gang', gang);
+                let thisStatus = status[0][gang];
+                item.device_status = thisStatus;
+              }
+            });
+          },
           async initData() {
             try {
-              //load the erp data
-              let url = `/api/resource/Profile/${erp.info.profile.name}`;
-              let method = 'GET';
-              let response = await http.request(url, {
-                method: method,
-                serializer: 'json',
-                responseType: 'json',
-                debug: true,
-              });
-              console.log('response', response);
-              let list = response.data.data.profile_subdevice || [];
+              let list = erp.info.profile.profile_subdevice;
               let devices = cloneDeep(erp.info.profile.profile_device);
               let mapList = list.filter((item) => {
                 return item.guest_mode == 1;
@@ -810,12 +1054,20 @@
               //group the clean and dnd
               tempList.forEach((item, index) => {
                 item.device_status = isset(item.status) ? item.status : 0;
+                //this should get the status from the peripheral
                 if (index == 0) {
+                  if (item.config) {
+                    item.device_status = this.getStatusFromPeripheral(item.config, item.device);
+                  }
                   tempList.forEach((kitem, kindex) => {
                     if (kindex == 1) {
                       item.clean_virtual_id = kitem.config;
                       item.clean_name = kitem.name;
-                      item.clean_status = isset(kitem.status) ? kitem.status : 0;
+                      if (kitem.config) {
+                        item.clean_status = this.getStatusFromPeripheral(kitem.config, kitem.device);
+                      } else {
+                        item.clean_status = isset(kitem.status) ? kitem.status : 0;
+                      }
                       // let mapObj = this.getSubdeviceProp(kitem.name);
                       // item.clean_status = isset(mapObj) ? mapObj.device_status : 0;
                     }
@@ -827,6 +1079,9 @@
                   item.width = '24%';
                 } else {
                   item.buttonType = 'master';
+                  if (item.config) {
+                    item.device_status = this.getStatusFromPeripheral(item.config, item.device);
+                  }
                   item.width = '24%';
                 }
                 if (index != 1) {
@@ -886,33 +1141,66 @@
                       isActive: false,
                     });
                   }
-                } else if (item.device_button_group == 'OPENCLOSE WIFI UART') {
+                } else if (item.device_button_group.startsWith('OPENCLOSE')) {
                   item.buttonType = 'opclose';
                   item.width = '24%';
+                  //check if the name have the word 'reading'and the r
+                  if (isset(item.function) && item.function.includes('&&')) {
+                    let list = item.function.split('&&');
+                    item.selfIcon = list[0];
+                    item.show_title = list[1];
+                    if (list.length > 2) {
+                      item.selfIconOff = list[2];
+                    }
+                  }
                 } else if (item.device_button_group.startsWith('RCU DIMMING')) {
                   item.buttonType = 'dimming';
                   item.width = '24%';
-                }else if(item.device_button_group.startsWith('SCENE VIRTUAL R READING LIGHT')){
+                  //check if the name have the word 'reading'and the r
+                  if (isset(item.function) && item.function.includes('&&')) {
+                    let list = item.function.split('&&');
+                    item.selfIcon = list[0];
+                    item.show_title = list[1];
+                  }
+                } else if (item.device_button_group.startsWith('SCENE VIRTUAL R READING LIGHT')) {
                   item.buttonType = 'toggle';
                   item.width = '24%';
                   item.device_status = isset(item.status) ? item.status : 0;
                   item.show_title = 'R';
-                }else if(item.device_button_group.startsWith('SCENE VIRTUAL L READING LIGHT')){
+                } else if (item.device_button_group.startsWith('SCENE VIRTUAL L READING LIGHT')) {
                   // debugger
                   item.buttonType = 'toggle';
                   item.width = '24%';
                   item.device_status = isset(item.status) ? item.status : 0;
                   item.show_title = 'L';
-                }else if(
-                  item.device_button_group.startsWith('SCENE VIRTUAL BRIGHTEN') || 
-                  item.device_button_group.startsWith('SCENE VIRTUAL 25') || 
-                  item.device_button_group.startsWith('SCENE VIRTUAL 50') || 
-                  item.device_button_group.startsWith('SCENE VIRTUAL 100') || 
+                } else if (item.device_button_group.startsWith('SCENE VIRTUAL SLEEP LEFT')) {
+                  // debugger
+                  item.buttonType = 'toggle';
+                  item.width = '24%';
+                  item.device_status = isset(item.status) ? item.status : 0;
+                  item.show_title = 'L';
+                } else if (item.device_button_group.startsWith('SCENE VIRTUAL SLEEP RIGHT')) {
+                  // debugger
+                  item.buttonType = 'toggle';
+                  item.width = '24%';
+                  item.device_status = isset(item.status) ? item.status : 0;
+                  item.show_title = 'R';
+                } else if (
+                  item.device_button_group.startsWith('SCENE VIRTUAL 25') ||
+                  item.device_button_group.startsWith('SCENE VIRTUAL 50') ||
+                  item.device_button_group.startsWith('SCENE VIRTUAL 100')
+              ) {
+                  item.buttonType = 'click';
+                  item.width = '24%';
+                  item.fixed = 12;
+                  item.device_status = isset(item.status) ? item.status : 0;
+                } else if (
+                  item.device_button_group.startsWith('SCENE VIRTUAL BRIGHTEN') ||
                   item.device_button_group.startsWith('SCENE VIRTUAL DIM') ||
                   item.device_button_group.startsWith('SCENE VIRTUAL DINING') ||
                   item.device_button_group.startsWith('SCENE VIRTUAL REST') ||
                   item.device_button_group.startsWith('SCENE VIRTUAL MOVIE')
-                ){
+                ) {
                   item.buttonType = 'click';
                   item.width = '24%';
                   item.device_status = 1;
@@ -930,12 +1218,114 @@
                 } else {
                   item.buttonType = 'onoff';
                   item.width = '24%';
+                  //check if the name have the word 'reading'and the r
+                  if (isset(item.function) && item.function.includes('&&')) {
+                    let list = item.function.split('&&');
+                    item.selfIcon = list[0];
+                    item.show_title = list[1];
+                    if (list.length > 2) {
+                      item.selfIconOff = list[2];
+                    }
+                  }
                 }
               });
 
-              this.anthorDeviceList = anthorList.filter(
-                (item) => item.device_button_group != 'Thermostat' && item.device_button_group != 'Hdmicec'
+              thisAnthorDeviceList = anthorList.filter(
+                (item) =>
+                  item.device_button_group != 'Thermostat' &&
+                  item.device_button_group != 'Hdmicec' &&
+                  item.device_button_group != 'OPENCLOSE WIFI UART' &&
+                  item.device_button_group != 'OPENCLOSE UART' &&
+                  !item.device_button_group.startsWith('RCU DIMMING') &&
+                  !item.device_mode.startsWith('Music Player')
               );
+              //tindy the anthorDeviceList this.anthorDeviceList
+              this.rangeBarDeviceList = anthorList.filter(
+                (item) => item.device_button_group.startsWith('RCU DIMMING') || item.device_button_group.startsWith('OPENCLOSE')
+              );
+
+              let musicDeviceList = anthorList.filter((item) => item.device_mode.startsWith('Music Player'));
+              musicDeviceList.forEach((item) => {
+                item.buttonType = 'music';
+                item.width = '100%';
+                //get the pas
+                let guid = item.device;
+                let settings = isset(erp.info.device[guid]) ? erp.info.device[guid].settings : [];
+                let password = settings.find((item) => item.setting_type == 'ConnectKey');
+                item.password = isset(password) ? password.setting : '';
+              });
+              // only show the same room
+              if(this.roomList.length > 1){
+                musicDeviceList.forEach((item) => {
+                  if(item.room_name.toLowerCase().includes('entrance') && this.roomList[0].title.toLowerCase().includes('living')){
+                    item.roomHidden = true;
+                  }else{
+                    item.roomHidden = false;
+                  }
+                });
+              }
+              this.musicDeviceList = musicDeviceList;
+              thisAnthorDeviceList.forEach((item, index) => {
+                //show the status
+                item.device_status = isset(item.status) ? item.status : 0;
+                if (item.device_button_group.includes('SCENE VIRTUAL') && item.config && !item.config.includes('scene_id')) {
+                  console.log('item.config', item.config);
+                  item.device_status = this.getStatusFromPeripheral(item.config, item.device);
+                  console.log('item.device_status', item.device_status);
+                } else if (item.device_button_group.startsWith('RCU ONOFF GANG')) {
+                  item.device_status = window.peripheral[item.device].getGangStatus(item.device_button_group) || 0;
+                }
+                item.group_index = 0;
+                //check if set group
+                if(item.function && item.function.includes('^')){
+                  let index_list = item.function.split('^');
+                  item.group_index = index_list[1];
+                  //check if same
+                  let checkIfExist = false;
+                  this.groupByList.forEach((group)=>{
+                    if(group.group == item.group_index && item.group_index != 0){
+                      checkIfExist = true;
+                    }
+                  })
+                  if(!checkIfExist){
+                    if(!isset(item.group_index)){
+                      debugger
+                    }
+                    this.groupByList.push({
+                      group: item.group_index,
+                      title: tran(item.room_name),
+                      width: item.sort_order == 25 ? '100%' : '100%'
+                    });
+                  }
+                }
+                this.anthorDeviceList.push(item);
+                //find the group index;
+                return
+                let indexMap = index % 4;
+                let group = parseInt(index / 4);
+                if (index == 0) {
+                  this_title = tran(item.room_name);
+                  this.groupByList.push({
+                    group: 1,
+                    title: this_title,
+                  });
+                  item.group = 1;
+                  this.anthorDeviceList.push(item);
+                } else if (indexMap == 0) {
+                  this_title = tran(item.room_name);
+                  this.groupByList.push({
+                    group: group + 1,
+                    title: this_title,
+                  });
+                  item.group = group + 1;
+                  this.anthorDeviceList.push(item);
+                } else {
+                  item.group = group + 1;
+                  this.anthorDeviceList.push(item);
+                }
+              });
+              console.log('this.groupByList', this.groupByList);
+              console.log('this.anthorDeviceList', this.anthorDeviceList);
               let tvAndThermostatList = anthorList.filter(
                 (item) => item.device_button_group == 'Thermostat' || item.device_button_group == 'Hdmicec'
               );
@@ -953,8 +1343,7 @@
               console.log('list', this.topDeviceList);
               console.log('anthorList', this.anthorDeviceList);
               await this.initRange();
-              //console.log('rangeList', this.rangeList);
-              //debugger
+              console.log('rangeList', this.rangeList);
               this.initGateway();
               //this page top is dnd clean radar master button
             } catch (error) {
@@ -1085,14 +1474,16 @@
             return new Promise((resolve, reject) => {
               setTimeout(() => {
                 let completed = 0; // 完成计数器
-                const total = this.anthorDeviceList.filter((item) => item.buttonType === 'dimming' || item.buttonType === 'opclose').length; // 需要处理的总数
+                const total = this.rangeBarDeviceList.filter(
+                  (item) => item.buttonType === 'dimming' || item.buttonType === 'opclose'
+                ).length; // 需要处理的总数
 
                 if (total === 0) {
                   resolve(); // 无任务直接完成
                   return;
                 }
 
-                this.anthorDeviceList.forEach((item) => {
+                this.rangeBarDeviceList.forEach((item) => {
                   if (item.buttonType === 'dimming' || item.buttonType === 'opclose') {
                     const key = `range_box_${item.device}_${item.device_button_group}`;
 
@@ -1188,7 +1579,7 @@
             }, 10);
           },
           onPeripheralChanged(p) {
-            console.log('onPeripheralChanged', p);
+            //console.log('onPeripheralChanged', p);
             //update the subdevice
             if (p.guid == '3963396536653065363533321203611d') {
               // console.log('p', p);
@@ -1206,9 +1597,25 @@
           },
           //this is init the subdevice func
           async initSubdevice() {
+            //load the erp data
+            let subdevices = [];
+            try {
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
+              let method = 'GET';
+              let response = await http.request(url, {
+                method: method,
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+              });
+              console.log('response', response);
+              subdevices = cloneDeep(response.data.data.profile_subdevice || []);
+              erp.info.profile.profile_subdevice = response.data.data.profile_subdevice;
+            } catch (error) {
+              subdevices = erp.info.profile.profile_subdevice;
+            }
             let device_models = cloneDeep(erp.doctype.device_model);
             let profile_device = cloneDeep(erp.info.profile.profile_device);
-            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
             let device_button_groups = erp.info.device_button_group || {};
             let device_button_commands = erp.info.device_command || {};
             let devices = cloneDeep(erp.info.device);
@@ -1338,7 +1745,9 @@
             s['device_attachment_status'] = `0,0,0,26,26,0`;
             s['bluetooth_count'] = p.bluetooth_count;
             if (render_status) {
-              s['device_status'] = device_status;
+              if (!s.device_button_group.includes('SCENE VIRTUAL')) {
+                s['device_status'] = device_status;
+              }
             }
             s['device_virtual_status'] = isset(s['device_virtual_status']) ? s['device_virtual_status'] : 0;
             //battery_ref
@@ -1392,6 +1801,9 @@
               if (device_status > 100) {
                 device_status = 0;
               }
+              setTimeout(() => {
+                this.deviceControlLimit[s.device] = true;
+              }, 1000);
             } else if (s.device_button_group.startsWith('4in1 Sensor')) {
               if (device_status > 0) {
                 //have people;
@@ -1634,43 +2046,58 @@
                     //update the virtual status
                     //"97000101000201000302bfbf040200000502000011030400000000120401801305080010000000000000"
                     //"97000101000201000302ffff0402000005020000110304000000001204018013051002006000000000000000000000000000"
+                    //"970001010002010003020000040200000502000011030400000000120401801305100000000000000000000000000000000014060800000000000000001507200000000000000000000000000000000000000000000000000000000000000000"
+                    if (!this.controlUpdateMap) {
+                      return;
+                    }
                     let virtualDataList = manufacturing_data.split('130510');
                     let rcuStatus = virtualDataList[1];
-                    let statusByteList = this.splitBytesAndConvertToBinaryArray(rcuStatus);
+                    let statusByteList = this.splitBytesAndConvertToBinaryArray(rcuStatus.substring(0,32));
                     console.log('statusByteList', statusByteList);
                     //update the virtual id
-                    this.topDeviceList.forEach((item) => {
-                      if (item.device == guid) {
-                        //item.device_status = statusByteList[item.config - 1];
-                        if (item.config) {
-                          if (item.config.length < 4) {
-                            let this_index = parseInt(item.config, 16);
-                            item.device_status = statusByteList[this_index - 1];
-                            //check if have the clen
-                            if (isset(item.clean_status)) {
-                              let this_clean_index = parseInt(item.clean_virtual_id, 16);
-                              item.clean_status = statusByteList[this_clean_index - 1];
-                            }
-                          }
-                        }
-                      }
+                    statusByteList.forEach((item, index) => {
+                      let this_index = index + 1;
+                      let gang = this.getVirtualIdForPeripheral(parseInt(this_index).toString(16).pad('00'));
+                      window.peripheral[guid].prop.status.mobmob[0][gang] = item;
                     });
-                    //check the anthor device
-                    this.anthorDeviceList.forEach((item) => {
-                      if (item.device == guid) {
-                        if (item.config) {
-                          if (item.config.length < 4) {
-                            let this_index = parseInt(item.config, 16);
-                            item.device_status = statusByteList[this_index - 1];
-                            //check if have the clen
-                            // if (isset(item.clean_status)) {
-                            //   let this_clean_index = parseInt(item.clean_virtual_id, 16);
-                            //   item.clean_status = statusByteList[this_clean_index - 1];
-                            // }
-                          }
-                        }
-                      }
-                    });
+                    const originalDate = this.parseDateSafe(deviceInfo.date);
+                    const modifiedDate = new Date(originalDate.getTime() + 30000);
+                    let date_str = this.formatDateWithMillis(modifiedDate);
+                    window.peripheral[guid].prop.status.mobmob[1] = date_str;
+                    window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
+                    this.updateListVirtualIdStatus(guid);
+                    // this.topDeviceList.forEach((item) => {
+                    //   if (item.device == guid) {
+                    //     //item.device_status = statusByteList[item.config - 1];
+                    //     if (item.config) {
+                    //       if (item.config.length < 4) {
+                    //         let this_index = parseInt(item.config, 16);
+                    //         item.device_status = statusByteList[this_index - 1];
+                    //         //check if have the clen
+                    //         if (isset(item.clean_status)) {
+                    //           let this_clean_index = parseInt(item.clean_virtual_id, 16);
+                    //           item.clean_status = statusByteList[this_clean_index - 1];
+                    //         }
+                    //       }
+                    //     }
+                    //   }
+                    // });
+                    // //check the anthor device
+                    // this.anthorDeviceList.forEach((item) => {
+                    //   if (item.device == guid) {
+                    //     if (item.config) {
+                    //       if (item.config.length < 4) {
+                    //         let this_index = parseInt(item.config, 16);
+                    //         item.device_status = statusByteList[this_index - 1];
+                    //         //check if have the clen
+                    //         // if (isset(item.clean_status)) {
+                    //         //   let this_clean_index = parseInt(item.clean_virtual_id, 16);
+                    //         //   item.clean_status = statusByteList[this_clean_index - 1];
+                    //         // }
+                    //       }
+                    //     }
+                    //   }
+                    // });
                     // $(`.home-scanned-peripheral[guid="${guid}"][button_group="SCENE MUTIWAY ONOFF GANG1"]`).each(function (item) {
                     //   let config = $(this).attr('config') * 1;
                     //   $(this)
@@ -1690,7 +2117,12 @@
                         let this_status = item > 0 ? 1 : 0;
                         window.peripheral[guid].prop.status.mobmob[0][50 + index] = this_status;
                       });
-                      window.peripheral[guid].prop.status.mobmob[1] = deviceInfo.date;
+                      //if rcu mqtt
+                      const originalDate = this.parseDateSafe(deviceInfo.date);
+                      const modifiedDate = new Date(originalDate.getTime() + 30000);
+                      let date_str = this.formatDateWithMillis(modifiedDate);
+                      window.peripheral[guid].prop.status.mobmob[1] = date_str;
+                      window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
                       window.peripheral[guid].onPropChanged();
                     }
                     let rcuDataList = this.tindyRcuData(manufacturing_data);
@@ -1748,7 +2180,7 @@
                         deviceItem.status['mobmob'][0][flourIndex] = this_ref[0];
                       }
                     });
-                    deviceItem.status['mobmob'][1] = deviceInfo.date;
+                    deviceItem.status['mobmob'][1] = date_str;
                     //if this gateway status date > contorl status date,overflow
                     if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]) {
                       deviceItem.status['control'][0] = deviceItem.status['mobmob'][0];
@@ -1762,7 +2194,25 @@
 
                       //change ui
                       rcuDataList.forEach((item) => {
+                        //change the RCU device status
                         this.anthorDeviceList.forEach((kitem) => {
+                          let button_group = kitem.device_button_group;
+                          let slot_index = kitem.config;
+                          if (
+                            button_group.startsWith('RCU ONOFF GANG') &&
+                            item.device == guid &&
+                            item.type == '01' &&
+                            item.index == slot_index
+                          ) {
+                            let this_gang = parseInt(button_group.replace('RCU ONOFF GANG', ''));
+                            let this_ref = ``;
+                            let class_gang = bleHelper.getGangId(kitem.device_button_group);
+                            this_ref = parseInt(item.data, 16).toString(2).pad('00');
+                            window.peripheral[kitem.device].prop.status.mobmob[0][class_gang] = parseInt(this_ref);
+                            item.device_status = parseInt(this_ref);
+                          }
+                        });
+                        this.rangeBarDeviceList.forEach((kitem) => {
                           let button_group = kitem.device_button_group;
                           let slot_index = kitem.config;
                           if (
@@ -1829,6 +2279,26 @@
                 }
               }
             }
+          },
+          parseDateSafe(dateStr) {
+            let parts = dateStr.split(/[- :]/);
+            return new Date(
+              parseInt(parts[0]),
+              parseInt(parts[1]) - 1, // 月份从0开始
+              parseInt(parts[2]),
+              parseInt(parts[3]),
+              parseInt(parts[4]),
+              parseInt(parts[5])
+            );
+          },
+          formatDateWithMillis(date) {
+            const pad2 = (n) => n.toString().padStart(2, '0');
+            const pad3 = (n) => n.toString().padStart(3, '0');
+            return (
+              `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ` +
+              `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}.` +
+              pad3(date.getMilliseconds())
+            );
           },
           splitBytesAndConvertToBinaryArray(character) {
             let bytes = character.match(/.{1,2}/g);
@@ -1979,6 +2449,183 @@
                 });
             });
           },
+          compareTimeToMusicPlayer(timeRange) {
+            if (timeRange.length == 0 || timeRange.length == 1) {
+              return false;
+            }
+            const startTimeStr = timeRange[0];
+            const endTimeStr = timeRange[1];
+            const currentTime = dayjs();
+            const startTime = dayjs(startTimeStr);
+            const endTime = dayjs(endTimeStr);
+            if (
+              (currentTime.isAfter(startTime) && currentTime.isBefore(endTime)) ||
+              currentTime.isSame(startTime) ||
+              currentTime.isSame(endTime)
+            ) {
+              return true;
+            } else {
+              return false;
+            }
+          },
+          getRandomNumbers() {
+            let numbers = new Set();
+            while (numbers.size < 4) {
+              const randomNum = Math.floor(Math.random() * 10);
+              numbers.add(randomNum);
+            }
+            return Array.from(numbers);
+          },
+          calculateFutureTime() {
+            const futureDate = dayjs().add(days, 'day');
+            const futureTimeArray = [
+              futureDate.year(),
+              futureDate.month() + 1,
+              futureDate.date(),
+              futureDate.hour(),
+              futureDate.minute(),
+              futureDate.second(),
+            ];
+            return futureTimeArray;
+          },
+          getPasswordParent(name) {
+            let subdevice = this.musicDeviceList.find((item) => item.name == name);
+            if (subdevice) {
+              //get the password
+              let guid = subdevice.device;
+              console.log('guid', guid);
+              let deviceObj = cloneDeep(erp.info.device);
+              let settings = [];
+              let deviceTime = [];
+              let erp_keys = '';
+              if (deviceObj[guid] && deviceObj[guid].settings) {
+                settings = deviceObj[guid].settings;
+              }
+              settings.forEach((item) => {
+                if (item.setting_type == 'TimeStream') {
+                  let time = JSON.parse(item.setting);
+                  deviceTime = time;
+                }
+                if (item.setting_type == 'ConnectKey') {
+                  erp_keys = item.setting;
+                }
+              });
+              let status = this.compareTimeToMusicPlayer(deviceTime);
+              if (!status) {
+                app.dialog.prompt(
+                  'Please enter the length of stay in days',
+                  async (days) => {
+                    app.dialog.preloader();
+                    const regex = /^\d+(\.\d+)?$/;
+                    if (!regex.test(days)) {
+                      app.dialog.alert('Please enter the correct value');
+                      return false;
+                    } else {
+                      //get the timeList
+                      const currentDate = dayjs();
+                      const futureDate = currentDate.add(days, 'day');
+                      let list = [currentDate.format('YYYY-MM-DD HH:mm:ss'), futureDate.format('YYYY-MM-DD HH:mm:ss')];
+                      let this_password = this.getRandomNumbers().join('');
+                      try {
+                        //await window.peripheral[props.kitem.device].doConnect();
+                        //get the years and months and the days and the hours and the seconds
+                        let this_time_list = calculateFutureTime(days);
+                        let this_year = this_time_list[0];
+                        let this_month = this_time_list[1];
+                        let this_day = this_time_list[2];
+                        let this_hour = this_time_list[3];
+                        let this_minute = this_time_list[4];
+                        let this_second = this_time_list[5];
+                        let data = `9800000008${this_password.convertToHex()}${this_second.toString(16).pad('00')}${this_minute.toString(16).pad('00')}${this_hour.toString(16).pad('00')}${this_day.toString(16).pad('00')}${this_month.toString(16).pad('00')}${iot_utils_to_little_endian_hex(this_year, 2)}`;
+                        await window.peripheral[guid].doMusicPlayer([
+                          {
+                            service: 'ff80',
+                            characteristic: 'ff81',
+                            command: data,
+                          },
+                        ]);
+                        // await window.peripheral[props.kitem.device].write([{
+                        // 	service: 'ff80',
+                        // 	characteristic: 'ff81',
+                        // 	data: data,
+                        // }]);
+                        await iot_device_setting_sync_server(guid, 'TimeStream', JSON.stringify(list));
+                        await iot_device_setting_sync_server(guid, 'ConnectKey', this_password);
+                        item.password = this_password;
+                        //app.dialog.alert(`${tran('Connection Key: ')}${this_password}`, runtime.appInfo.name, () => {});
+                      } catch (error) {
+                        app.dialog.close();
+                        app.dialog.alert(`${_('Get the music player password failed')}`);
+                      }
+                    }
+                  },
+                  () => {
+                    while (true) {
+                      try {
+                        const dialog = app.dialog.close();
+                        if (!dialog) {
+                          break;
+                        }
+                      } catch (e) {
+                        break;
+                      }
+                    }
+                  }
+                );
+              } else {
+                app.dialog.alert(`${_('The password is still valid, please do not request another one.')}`);
+                return false;
+              }
+            } else {
+              app.dialog.alert(`${_('You do not have permission to use this device.')}`);
+              return false;
+            }
+          },
+          async toBleSettingParent(name) {
+            let subdevice = this.musicDeviceList.find((item) => item.name == name);
+            if (subdevice) {
+              //get the password
+              let guid = subdevice.device;
+              console.log('guid', guid);
+              let command = `9809000001`;
+              try {
+                if (subdevice.config == 'phone_iphone') {
+                  subdevice.config = 'tv';
+                  command = `980900000101`;
+                } else {
+                  subdevice.config = 'phone_iphone';
+                  command = `980900000100`;
+                }
+                await window.peripheral[guid].doMusicPlayer([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    command: command,
+                  },
+                ]);
+                let this_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+                this_subdevices.forEach((item) => {
+                  if (item.name == name) {
+                    item.config = subdevice.config;
+                  }
+                });
+                try {
+                  http2.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+                    serializer: 'json',
+                    responseType: 'json',
+                    method: 'PUT',
+                    data: {
+                      profile_subdevice: this_subdevices,
+                    },
+                  });
+                } catch (error) {
+                  console.log(error);
+                }
+              } catch (error) {
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            }
+          },
           tvControlParent(obj) {
             console.log('obj', obj);
             let { name, command, command_type } = obj;
@@ -1987,7 +2634,7 @@
             if (subdevice) {
               guid = subdevice.device;
             }
-            debugger
+            debugger;
             window.peripheral[guid]
               .doHdmiCec([
                 {
@@ -2236,29 +2883,169 @@
                 }
               });
           },
+          async operateCurtain(guid, name, device_button_group, status) {
+            //1 open 0 close 2 pause
+            let otherModelStatus = false;
+            if (device_button_group.startsWith('OPENCLOSE WIFI')) {
+              otherModelStatus = true;
+            }
+            let reverse =
+              device_button_group.startsWith('OPENCLOSE UART REVERSE') || device_button_group.startsWith('OPENCLOSE WIFI UART REVERSE')
+                ? true
+                : false;
+            let data = '';
+            if (reverse) {
+              if (status == 1) {
+                data = `55AA06010200ff`;
+                if (otherModelStatus) {
+                  data = `55fefe030400`;
+                }
+              } else if (status == 0) {
+                data = `55AA06010264ff`;
+                if (otherModelStatus) {
+                  data = `55fefe030464`;
+                }
+              } else {
+                if (otherModelStatus) {
+                  data = `55fefe0303`;
+                } else {
+                  data = `55AA050101036DDC`;
+                }
+              }
+            } else {
+              if (status == 1) {
+                data = `55AA06010264ff`;
+                if (otherModelStatus) {
+                  data = `55fefe030464`;
+                }
+              } else if (status == 0) {
+                data = `55AA06010200ff`;
+                if (otherModelStatus) {
+                  data = `55fefe030400`;
+                }
+              } else {
+                if (otherModelStatus) {
+                  data = `55fefe0303`;
+                } else {
+                  data = `55AA050101036DDC`;
+                }
+              }
+            }
+            if (otherModelStatus) {
+              data += erp.script.core_util_calculate_crc16_for_motor(data);
+            } else {
+              data += core_util_calculate_crc16_modbus_for_doa(data);
+            }
+            let command = `8602${data.toLowerCase()}`;
+            console.log('command', command);
+            try {
+              await peripheral[guid].curtainmotor([
+                {
+                  gang: bleHelper.getGangId(device_button_group),
+                  command: command,
+                  value: status == 1 ? 100 : 0,
+                  type: status == 2 ? true : false,
+                },
+              ]);
+              let control_source = await bleHelper.getControlSource(guid);
+              if (status == 2) {
+                let device_type_map = {
+                  command_type: 'PAUSE',
+                  device_type: 'YO121-AC-R2W',
+                  command: command,
+                };
+                window.upload_device_control_log(guid, status == 1 ? 100 : 0, control_source, name, device_type_map);
+              } else {
+                window.upload_device_control_log(guid, status == 1 ? 100 : 0, control_source, name);
+              }
+            } catch (error) {
+              if (error == 7200) {
+                erp.script.iot_entry_class_password_verify(guid, name).then(() => {});
+              } else {
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            }
+          },
+          initState(stateKey) {
+            if (!this.clickStates.has(stateKey)) {
+              this.clickStates.set(stateKey, {
+                clickCount: 0,
+                timeoutId: null,
+              });
+            }
+            return this.clickStates.get(stateKey);
+          },
+          clearOtherStates(deviceName, currentAction) {
+            const prefix = `${deviceName}_`;
+            this.clickStates.forEach((state, key) => {
+              if (key.startsWith(prefix) && !key.endsWith(currentAction)) {
+                console.log(`清除旧状态: ${key}`);
+                this.resetState(key);
+              }
+            });
+          },
+          resetState(stateKey) {
+            const state = this.clickStates.get(stateKey);
+            if (state) {
+              clearTimeout(state.timeoutId);
+              state.clickCount = 0;
+              state.timeoutId = null;
+            }
+          },
+          async clickCurtainParent(obj) {
+            let name = obj.name;
+            const subdevice = this.rangeBarDeviceList.find((item) => item.name === name);
+            if (!subdevice) return;
+            this.clearOtherStates(name, obj.status);
+            let guid = subdevice.device;
+            const stateKey = `${name}_${obj.status}`;
+            // 初始化设备状态（响应式）
+            const state = this.initState(stateKey);
+            // 清除旧定时器
+            if (state.timeoutId) clearTimeout(state.timeoutId);
+            // 更新点击计数
+            state.clickCount++;
+            if (state.clickCount === 1) {
+              console.log(`${name}: 第一次点击`);
+              this.operateCurtain(guid, subdevice.name, subdevice.device_button_group, obj.status);
+              state.timeoutId = setTimeout(() => {
+                console.log(`${name}: 自动重置`);
+                this.resetState(stateKey);
+              }, 15000);
+            } else if (state.clickCount >= 2) {
+              console.log(`${name}: 触发双击`);
+              // this.handleDoubleClickAction(state.device);
+              this.operateCurtain(guid, subdevice.name, subdevice.device_button_group, 2);
+              this.resetState(stateKey);
+            }
+          },
+          handleDoubleClickAction(deviceId) {
+            console.log('执行双击操作，设备ID:', deviceId);
+          },
           async changeSceneIdParent(name) {
             console.log(name);
             let subdevice = this.anthorDeviceList.find((item) => item.name == name);
             let guid = '';
             let sceneId = '';
-            if(subdevice){
+            if (subdevice) {
               let config = subdevice.config;
               //find the scene id
-              let scenes = cloneDeep(erp.info.scene)
-              for(let i in scenes){
+              let scenes = cloneDeep(erp.info.scene);
+              for (let i in scenes) {
                 let scene_virtual_button = scenes[i].scene_virtual_button;
-                  let scene_device_location = scenes[i].scene_device_location;
-                  for(let j in scene_virtual_button){
-                    if(parseInt(scene_virtual_button[j].virtual_button_id)  == parseInt(config,16) ){
-                      let device_location_map = scene_device_location.find((item) => item.device == subdevice.device);
-                      sceneId = device_location_map.storage_id;
-                      break;
-                    }
+                let scene_device_location = scenes[i].scene_device_location;
+                for (let j in scene_virtual_button) {
+                  if (parseInt(scene_virtual_button[j].virtual_button_id) == parseInt(config, 16)) {
+                    let device_location_map = scene_device_location.find((item) => item.device == subdevice.device);
+                    sceneId = device_location_map.storage_id;
+                    guid = subdevice.device;
+                    break;
                   }
+                }
               }
               console.log(sceneId);
-              if(sceneId){
-                let command = `8f0200${parseInt(sceneId).toString(16).pad("00")}`;
+              if (sceneId) {
+                let command = `8f0200${parseInt(sceneId).toString(16).pad('00')}`;
                 await window.peripheral[guid].rcuDoScene([
                   {
                     gang: 1,
@@ -2283,7 +3070,9 @@
               v_id = subdevice.config;
               subdevice.device_status = status;
             }
-
+            //save the local status
+            let gang = this.getVirtualIdForPeripheral(v_id);
+            window.peripheral[guid].prop.status.control[0][gang] = status ? 1 : 0;
             try {
               let command = `972103${v_id}${status ? '01' : '00'}`;
               await window.peripheral[guid].rcuDoScene([
@@ -2300,6 +3089,12 @@
             await this.updateProfileSubdevice(name, {
               status: `${status ? '1' : '0'}`,
             });
+          },
+          getVirtualIdForPeripheral(v_id) {
+            if (v_id) {
+              let gang = parseInt(v_id, 16);
+              return gang + 86;
+            }
           },
           async changeDndParent(obj) {
             console.log('obj', obj);
@@ -2320,16 +3115,29 @@
                   //dnd
                   item.device_status = status;
                   item.clean_status = 0;
+                  let clean_gang = this.getVirtualIdForPeripheral(item.clean_virtual_id);
+                  let gang = this.getVirtualIdForPeripheral(v_id);
+                  debugger;
+                  window.peripheral[guid].prop.status.control[0][gang] = status ? 1 : 0;
+                  window.peripheral[guid].prop.status.control[0][clean_gang] = 0;
                 } else {
                   //clean
                   item.clean_status = status;
                   item.device_status = 0;
+                  let clean_gang = this.getVirtualIdForPeripheral(item.clean_virtual_id);
+                  let gang = this.getVirtualIdForPeripheral(item.config);
+                  debugger;
+                  window.peripheral[guid].prop.status.control[0][gang] = 0;
+                  window.peripheral[guid].prop.status.control[0][clean_gang] = status ? 1 : 0;
                 }
               }
             });
+            //save the status in the peripheral
+
             //send the command to the rcu
             let command = `972103${v_id}${status ? '01' : '00'}`;
             console.log('command', command);
+            this.controlUpdateMap = false;
             try {
               await window.peripheral[guid].rcuDoScene([
                 {
@@ -2361,8 +3169,10 @@
                   },
                 ]);
               }
+              this.controlUpdateMap = true;
             } catch (err) {
               console.log('err', err);
+              this.controlUpdateMap = true;
             }
           },
           //this is the child change the scene enable
@@ -2414,8 +3224,11 @@
 </script>
 
 <style>
+  .guest-box {
+    margin-top: 6px;
+  }
   .guest-mode-item {
-    padding: 4px;
+    padding: 0px 10px;
   }
   .btn-bg {
     background: var(--f7-theme-color) !important;
@@ -2424,10 +3237,10 @@
   .show-item {
     width: 49%;
     background: var(--f7-block-strong-bg-color);
-    border-radius: 15px;
+    border-radius: 28px;
     overflow: hidden;
     /* min-height: 70px; */
-    margin-bottom: 6px;
+    /* margin-bottom: 6px; */
     margin-right: 1%;
   }
 
@@ -2484,7 +3297,7 @@
 
   .page-content .buttonStatus .range-slider ~ i {
     position: absolute;
-    bottom: 14px;
+    bottom: 7px;
     right: 50%;
     margin-right: -18px;
     color: #8e8d93;
@@ -2504,7 +3317,13 @@
     left: 0;
     background-color: #fff;
   }
-
+  .tv-title {
+    font-size: 16px;
+    position: relative;
+    color: #8a8a8a;
+    text-align: center;
+    margin-top: 10px;
+  }
   /* .page-content .buttonStatus .range-slider .range-bar .range-bar-active {
       background: rgba(0, 0, 0, 0.8);
     } */
@@ -2556,6 +3375,7 @@
     left: 50%;
     margin-left: -20px;
     z-index: 101;
+    pointer-events: none;
   }
 
   .page-content .buttonStatus img.iconImgBtn {
@@ -2895,10 +3715,280 @@
     background-color: var(--f7-button-fill-bg-color, var(--f7-theme-color));
     color: #fff;
   }
-  .list ul:after{
-    content:none;
+  .list ul:after {
+    content: none;
   }
-  .list ul:before{
-    content:none;
+  .list ul:before {
+    content: none;
+  }
+  .radar-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    position: relative;
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.1),
+      0 6px 16px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transform-style: preserve-3d;
+    perspective: 800px;
+    transform: perspective(800px);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0 12px;
+    overflow: hidden;
+  }
+  .radar-btn:hover {
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.12),
+      0 8px 24px rgba(0, 0, 0, 0.06);
+    transform: perspective(800px) translateY(-2px);
+  }
+
+  .radar-btn:active {
+    transform: perspective(800px) translateY(1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 开关图标区域 */
+  .toggle-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    margin-top: -4px;
+  }
+  .toggle-icons i {
+    font-size: 30px;
+  }
+  /* 分隔线 */
+  .divider {
+    width: 30px;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 1px 0;
+    margin-top: -5px;
+  }
+
+  /* 状态图标区域 */
+  .status-icon {
+    width: 35px;
+    height: 25px;
+    border-radius: 50%;
+    background: #e8f0fe;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    transition: background-color 0.3s ease;
+    margin-bottom: -2px;
+  }
+  .status-icon i {
+    font-size: 25px;
+  }
+  .no-person .status-icon {
+    background: #fdeaea;
+  }
+
+  .disabled .status-icon {
+    background: #f5f5f5;
+  }
+
+  /* 图标样式 */
+  .material-icons-round {
+    transition:
+      color 0.3s ease,
+      opacity 0.2s ease;
+  }
+
+  .material-icons-round.detection-icon {
+    font-size: 18px;
+    color: #1967d2;
+  }
+
+  .no-person .detection-icon {
+    color: #d93025;
+  }
+
+  .disabled .material-icons-round {
+    color: #9aa0a6;
+  }
+
+  /* 图标切换 */
+  .icon-walk,
+  .icon-block,
+  .icon-on,
+  .icon-off {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .person-detected .icon-walk {
+    opacity: 1;
+  }
+
+  .no-person .icon-block {
+    opacity: 1;
+  }
+
+  .disabled .icon-off {
+    opacity: 1;
+  }
+
+  .enabled .icon-on {
+    opacity: 1;
+  }
+  .md .range-knob-active-state .range-knob-label {
+    transform: translateY(150%) scale(1) !important;
+  }
+  /* .range-knob-label {
+    transform: translateY(150%) scale(1) !important;
+  } */
+  .music-player-card {
+    width: 100%;
+    height: auto;
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .music-icon {
+    width: 60px;
+    height: 60px;
+    background-color: #007aff;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 20px;
+    color: white;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .password-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+  }
+
+  .password-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .password-label {
+    font-size: 15px;
+    color: #999;
+    font-weight: 500;
+  }
+
+  .password-time {
+    font-size: 13px;
+    color: #aeaeb2;
+  }
+
+  .password-card {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: #000;
+    font-family: 'SF Mono', Menlo, monospace;
+    background-color: #f5f5f7;
+    border-radius: 12px;
+    padding: 14px 5px;
+    margin: 6px 0;
+    text-align: center;
+  }
+
+  .password-hint {
+    font-size: 13px;
+    color: #aeaeb2;
+    display: flex;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .password-hint i {
+    margin-right: 6px;
+    font-size: 12px;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-left: 16px;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .btn i {
+    font-size: 30px;
+  }
+
+  .btn-get {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+
+  .btn-get:hover {
+    background-color: #d1d1d6;
+  }
+
+  .btn-connect {
+    background-color: #007aff;
+    color: white;
+  }
+
+  .btn-connect:hover {
+    background-color: #0066cc;
+  }
+
+  .status-message {
+    font-size: 14px;
+    color: #8e8e93;
+    margin-top: 12px;
+    text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+    background-color: #f5f5f7;
+  }
+
+  .expired {
+    color: #ff3b30 !important;
+  }
+  .pure-title-main {
+    position: relative;
+    letter-spacing: -0.3px;
   }
 </style>

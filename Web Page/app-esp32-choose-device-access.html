@@ -1,0 +1,252 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Choose Device Access') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only" @click="${()=>saveButtonGroup()}">
+            <i class="icon material-icons">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="list list-strong list-dividers-ios simple-list virtual-list searchbar-found" style="margin-top: 0px">
+          <ul>
+            <li class="device-item" style="padding: 0px; min-height: 70px" v-for="item in deviceAccessList" :key="item.name">
+              <div class="item-content" style="width: 100%">
+                <div class="item-inner">
+                  <div class="item-title display-flex flex-direction-column justify-content-center">
+                    <div class="item-title-item ellipsis" lang="en" style="line-height: 20px">
+                      {{ item.access_type }}
+                      <span v-if="item.to_time">{{item.to_time}}</span>
+                      <span v-if="item.from_time">{{item.from_time}}</span>
+                    </div>
+                    <div
+                      style="line-height: 20px; width: 280px; flex-wrap: wrap"
+                      class="display-flex flex-direction-row justify-content-flex-start"
+                    >
+                      <span
+                        class="button-command text-color-gray"
+                        v-for="sub in item.blocking_schedule"
+                        :key="sub.name"
+                        style="margin-right: 10px; margin-top: 5px"
+                        >{{ sub.schedule }}({{sub.from_time}} - {{sub.to_time}}){{sub.whole_day?_('(Whole Day)'):''}}</span
+                      >
+                    </div>
+                  </div>
+                  <div class="item-after">
+                    <div
+                      class="button button-raised button-big circle popup-open"
+                      data-popup=".demo-popup-timer"
+                      style="margin-top: 0px"
+                      v-on:click="clickDeviceAccess(item)"
+                    >
+                      <div>
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important" v-if="item.ischeck"
+                          >check</i
+                        >
+                        <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important" v-else>block</i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="device-null" v-if="deviceAccessList.length == 0">
+          <div class="block" style="text-align: center">
+            <span class="material-icons" style="font-size: 100px; color: #ddd">meeting_room</span>
+            <p></p>
+          </div>
+          <div class="block block-strong">
+            <p class="row">
+              <a class="col button button-large">{{ _('No Device Access') }}</a>
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $onMounted = ctx.$onMounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, device_button_group } = $f7route.query;
+    const searchButtonGroup = (e) => {
+      vueApp.$searchButtonGroup($(e.target).val());
+    };
+    const saveButtonGroup = () => {
+      vueApp.$saveButtonGroup();
+    };
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          deviceAccessList : []
+        },
+        watch: {},
+        mounted() {
+          Vue.prototype.$searchButtonGroup = this.searchButtonGroup;
+          Vue.prototype.$saveButtonGroup = this.saveButtonGroup;
+          this.init();
+        },
+        methods: {
+          async init() {
+            try {
+              let obj = await this.getDeviceAccessForButtonGroup();
+              console.log('obj', obj);
+              if (obj.length > 0) {
+                let list = obj;
+                list.forEach(item => {
+                  item.ischeck = false;
+                });
+                this.deviceAccessList = this.deviceAccessList.concat(list);
+              }
+            } catch (err) {
+              console.log(err);
+            }
+          },
+          clickDeviceAccess(item){
+            item.ischeck = !item.ischeck;
+          },
+          saveButtonGroup() {
+            let list = this.deviceAccessList.filter((item) => item.ischeck);
+            emitter.emit('saveDeviceAccess', list);
+            mainView.router.back();
+          },
+          getDeviceAccessForButtonGroup() {
+            return new Promise(async (resolve, reject) => {
+              try {
+                const res = await http2.request({
+                  url: encodeURI('/api/method/appv6.getDeviceAccessByDevice'),
+                  responseType: 'json',
+                  method: 'POST',
+                  debug: true,
+                  data: {
+                    device_button_group: device_button_group,
+                    device : guid,
+                  },
+                });
+                resolve(res.data.data);
+              } catch (err) {
+                reject(err);
+              }
+            });
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+    $onMounted(() => {});
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .autocomplete-dropdown-in {
+    z-index: 10000 !important;
+  }
+  .do-not-find-flat {
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
+    color: #007bff;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+  .device-item {
+    background-color: #fff;
+  }
+  .button-command {
+    font-size: 12px;
+    line-height: 12px;
+  }
+  .list .item-inner:after {
+    content: none;
+  }
+  .not-found {
+    padding: 20px;
+    text-align: center;
+    font-size: 22px;
+    margin-top: 100px;
+  }
+</style>

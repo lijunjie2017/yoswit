@@ -1,4 +1,8 @@
 erp.peripheral_timer_settimeout = [];
+erp.init_gangs = [];
+for(let i = 0; i < 152; i++){
+	erp.init_gangs.push(0);
+}
 if(!isset(window.peripheral)){
     window.peripheral = {};
 }
@@ -12,30 +16,30 @@ window.Peripheral = (function() {
 		this.max_try = 3;
         this.prop = {
             password:'000000',
-            gangs:[0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+            gangs:erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48 ,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86,scene virtual id(64) 87-151
             status:{
                 bluetooth:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
                 ],
                 control:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
                 ],
                 mobmob:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
                 ],
                 mesh:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
                 ],
                 mqtt:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
                 ],
                 last:[
-                    [0,0,0,0,0,0,0,0, 0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0, 0, 0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0 ,0 ,0], //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
+									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
                 ]
             },
@@ -589,14 +593,17 @@ window.Peripheral = (function() {
 		console.log("data",data);
 		if(char=="2adc"){
 		    if(data=="0308"){
+                console.log("identify disconnect 4");
 		        self.disconnect().then(()=>{
 		            iot_set_mesh_on_provisioning_success(self.prop.guid);
 		        }, ()=>{
 		            iot_set_mesh_on_provisioning_success(self.prop.guid);
 		        });
 		    }else if(data.startsWith("030101")){
-		        iot_set_mesh_on_identify_success(self.prop.id);
+		        iot_set_mesh_on_identify_success(self.prop.id, self.prop.guid);
 		    }else if(data=="030903"){
+		        
+                console.log("identify disconnect 3");
 		        self.disconnect().then(()=>{
 		            iot_set_mesh_on_identify_fail(self.prop.id);
 		        }, ()=>{
@@ -682,11 +689,21 @@ window.Peripheral = (function() {
     					if(	self.prop.status.bluetooth[1] > self.prop.status.control[1]){
     								//self.onPropChanged();
     					}
-            }else if(data.startsWith("9502000009") || data.startsWith("95FF000001")){
+            }else if(data.toLowerCase().startsWith("9502000009") || data.toLowerCase().startsWith("95ff")){
     					const byteStrings = data.match(/.{1,2}/g);
               const targetStatus = parseInt(byteStrings[5], 16);
     					self.prop.status.mobmob[0][49] = targetStatus>0?1:0;
+    					if(targetStatus > 0){
+    					    console.log($('.manual-radar-sensor'))
+    					   $('.manual-radar-sensor').find('.material-icons').text('directions_walk')
+    					}else{
+    					    $('.manual-radar-sensor').find('.material-icons').text('block')
+    					}
     					self.onPropChanged();
+    				}else if(data.startsWith('9931')){
+    				    emitter.emit('key_card_id',{
+    				        rs : data
+    				    })
     				}else if(data.startsWith("9380")){
     					let rsList = window.iot_ble_iaq_change_list(data);
     					for(let i in rsList){
@@ -727,8 +744,12 @@ window.Peripheral = (function() {
     					let score_data = window.iaq_evaluate_rule('score',score);
     					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score .box-btn-img").css({'background-color':score_data.bgcolor})
     					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score").text(parseInt(score,16));
+    				}else if(data.startsWith("9329")){
+    				    emitter.emit('iot/wifi/info',{"rs" : data})
+    				}else if(data.startsWith("8f20") || data.startsWith("8f22") || data.startsWith("8f10") || data.startsWith("8f12") || data.startsWith("972303") || data.startsWith("8f13") ){
+    				    emitter.emit('iot/scene/from/ble',{"rs" : data})
     				}else if(data.startsWith("87")){
-    					console.log("87 data is",data);
+    				// 	console.log("87 data is",data);
     					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
     					let temp_v = parseInt(data.substr(16,2)+data.substr(14,2)+data.substr(12,2)+data.substr(10,2), 16);
     					let temp_i = parseInt(data.substr(24,2)+data.substr(22,2)+data.substr(20,2)+data.substr(18,2), 16);
@@ -815,7 +836,29 @@ window.Peripheral = (function() {
     					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"'] ").append(text);
     					$("li.home-scanned-peripheral-smart.swipeout-delete-manual[guid='"+self.prop.guid+"']").css({'height':140+'px'});
     				}else if(data.startsWith("9700")){
-    					
+    					//97000101010201000302ff000402000005020000110304000000001204018013051000000000000000000000000000000000
+							//means rcu
+							let inputDataList = data.split("110304");
+							let inputStatus = inputDataList[1].substring(0,8);
+							let inputStatusByteList = splitBytesAndConvertToBinaryArray(inputStatus);
+							console.log("inputStatusByteList",inputStatusByteList);
+							let status = 0;
+							for(let i=0;i<inputStatusByteList.length;i++){
+								status += inputStatusByteList[i]*Math.pow(2,i);
+								if(inputStatusByteList[i] == 1){
+									$('.rcu-input-manual').text(i+1);
+								}
+							}
+							if(status == 0){
+								$('.rcu-input-manual').text('');
+							}
+							console.log("status",status);
+							if(status == 32){
+								//all input is on
+								$(`.all-input-on`).text("done_all");
+							}else{
+								$(`.all-input-on`).text("do_not_disturb_on");
+							}
     				}
 		}
     };
@@ -1016,10 +1059,12 @@ window.Peripheral = (function() {
     	});
     };
     Peripheral.prototype.disconnect = function() {
+        console.log("Peripheral disconnect")
         const self = this;
         self.queue = [];
     	self.isExecuting = false;
         
+        self.clearCharacteristics();
     	return new Promise((resolve, reject) => {
 				ble.disconnect(self.prop.id, (rs)=>{
 					self.onConnectionChanged('disconnected');
@@ -3894,13 +3939,18 @@ return new Promise((resolve, reject) => {
         const self = this;
         
         let found2adc = false;
+        let found2ade = false;
 	    if(isset(self.prop.characteristics)){
 		    for(let c of self.prop.characteristics){
 		        console.log("Find c.characteristic = "+c.characteristic);
                 if(c.characteristic.toLowerCase() == "2adc"){
                     found2adc = true;
+                }else if(c.characteristic.toLowerCase() == "2ade"){
+                    found2ade = true;
                 }
 		    }
+	    }else{
+	        found2adc = true;
 	    }
         
         if(found2adc){
@@ -3922,7 +3972,11 @@ return new Promise((resolve, reject) => {
         	});
         }else{
         	return new Promise((resolve, reject) => {
-        		reject("No 2adc");
+        		if(found2ade){
+        		    reject("Found 2ade");
+        		}else{
+        		    reject("No 2adc");
+        		}
         	});
         }
     };
@@ -4578,7 +4632,9 @@ return new Promise((resolve, reject) => {
 									resolve(rs);
 							}, (err)=>{
 									console.log('class_err',err)
-							ble.refreshDeviceCache(self.prop.id, 0, null, null);
+							ble.refreshDeviceCache(self.prop.id, 0, (rp)=>{
+							    console.log("refreshDeviceCache.p = "+JSON.stringify(rp))
+							}, null);
 											self.onConnectionChanged('disconnected');
 											emitter.emit("disconnected",{
 												id : self.prop.id
@@ -4587,6 +4643,20 @@ return new Promise((resolve, reject) => {
 								});
 						}
 					})
+    		});
+    	};
+    	const refreshDeviceCache = () => {
+    		return new Promise((resolve, reject) => {
+    		    if(self.prop.settingMesh){
+    				ble.refreshDeviceCache(self.prop.id, 2, (rp) => {
+    				    console.log("refreshDeviceCache.p222 = "+JSON.stringify(rp))
+    					resolve();
+    				}, () => {
+    					resolve();
+    				});
+    		    }else{
+    		        resolve();
+    		    }
     		});
     	};
     	const readFirmware = () => {
@@ -4793,12 +4863,16 @@ return new Promise((resolve, reject) => {
         const enableNotify = () => {
     		return new Promise((resolve, reject) => {
     		    const executeEnable = async () => {
+                	console.log("===> executeEnable");
         		    if(self.prop.authed){
+                	    console.log("===> executeEnable self.prop.authed = true");
                 		console.log("no need to find c.characteristic");
         		        resolve(true);
         		    }else{
+                	    console.log("===> executeEnable self.prop.authed = false");
         		        const notifyList = [];
             		    if(isset(self.prop.characteristics)){
+                	        console.log("===> executeEnable isset(self.prop.characteristics) = true");
                 		    for(let c of self.prop.characteristics){
                 		        console.log("Find c.characteristic = "+c.characteristic);
                                 if(c.characteristic.toLowerCase() == "fff3"
@@ -4816,9 +4890,13 @@ return new Promise((resolve, reject) => {
                                     })
                                 }
                 		    }
+            		    }else{
+                	        console.log("===> executeEnable isset(self.prop.characteristics) = false");
             		    }
             		    
             		    if(notifyList.length>0){
+                	        console.log("===> executeEnable notifyList.length>0");
+            		        console.log(JSON.stringify(notifyList));
                 		    for(let i in notifyList){
                 		        await new Promise(resolve => setTimeout(resolve, 1000));
                 		        console.log("startNotification = "+notifyList[i].characteristic);
@@ -4827,6 +4905,8 @@ return new Promise((resolve, reject) => {
                                 });
                 		    }
                 		    await new Promise(resolve => setTimeout(resolve, 1000));
+            		    }else{
+                	        console.log("===> executeEnable notifyList.length<=0");
             		    }
             		    resolve(true);
         		    }
@@ -4884,6 +4964,9 @@ return new Promise((resolve, reject) => {
 						console.log("class.periperal: connect");
 						return connect();
 					}).then((rs)=>{
+						console.log("class.periperal: refreshDeviceCache");
+						return refreshDeviceCache();
+					}).then((rs)=>{
 						console.log("class.periperal: readFirmware");
 						return readFirmware();
 					}).then((firmware) => {
@@ -4935,6 +5018,10 @@ return new Promise((resolve, reject) => {
             	retryConnect();
     	    }
     	});
+    };
+    Peripheral.prototype.clearCharacteristics = function(){
+        const self = this;
+        self.prop.characteristics = null;
     };
     Peripheral.prototype.doWrite = function(service, characteristic, data) {
         const self = this;

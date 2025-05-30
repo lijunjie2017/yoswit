@@ -1,0 +1,2076 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('YO381-Configuration') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only manufacturing-btn-refresh" func="manufacturing_clean_discovery_list">
+            <i class="icon material-icons">replay</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div
+          class="list medium-inset no-chevron virtual-list searchbar-found search-list device-type-list"
+          style="margin-top: 0px; margin-bottom: 0px"
+          v-if="!activeStatus"
+        >
+          <ul>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(1)">
+                <svg
+                  t="1745203230443"
+                  class="icon"
+                  viewBox="0 0 1024 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="5668"
+                  width="50"
+                  height="50"
+                  style="margin-bottom: 10px"
+                >
+                  <path
+                    d="M166.215111 967.111111A24.049778 24.049778 0 0 1 142.222222 942.933333V95.288889A24.049778 24.049778 0 0 1 166.215111 71.111111H661.333333a24.049778 24.049778 0 0 1 24.007111 24.177778v315.278222h-90.609777c-44.615111 0-72.433778 35.470222-72.433778 80.440889v170.140444c0 44.984889 27.804444 88.746667 72.433778 88.746667h90.567111V942.933333A24.049778 24.049778 0 0 1 661.333333 967.111111H166.215111z m74.979556-448a48.696889 48.696889 0 1 0 48.682666-49.066667 48.910222 48.910222 0 0 0-48.682666 49.066667z m176.355555-103.950222a24.007111 24.007111 0 0 0 48 0 42.865778 42.865778 0 0 1 42.666667-42.965333 24.177778 24.177778 0 0 0 0-48.355556 91.107556 91.107556 0 0 0-90.609778 91.306667l-0.056889 0.014222z m-29.553778-121.244445a165.148444 165.148444 0 0 0-48 116.849778 24.007111 24.007111 0 0 0 48 0 116.451556 116.451556 0 0 1 33.92-82.659555 114.773333 114.773333 0 0 1 81.92-34.133334 24.177778 24.177778 0 1 0 0-48.355555 162.133333 162.133333 0 0 0-115.783111 48.298666h-0.056889zM596.167111 695.324444a33.137778 33.137778 0 0 1-32.967111-33.28v-101.319111h366.421333v101.319111a33.208889 33.208889 0 0 1-33.009777 33.28H596.167111zM289.080889 519.111111c0-0.426667 0.355556-0.796444 0.796444-0.796444a0.711111 0.711111 0 0 1 0.696889 0.796444c0 0.398222-0.369778 0.611556-0.739555 0.611556s-0.753778-0.213333-0.753778-0.611556z m274.062222-0.099555v-24.490667a30.065778 30.065778 0 0 1 33.024-29.283556h300.330667a29.994667 29.994667 0 0 1 33.009778 29.283556v24.490667h-366.364445z"
+                    fill="#8a8a8a"
+                    p-id="5669"
+                  ></path>
+                </svg>
+                <span>{{_('Door')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(2)">
+                <svg
+                  t="1745203562583"
+                  class="icon"
+                  viewBox="0 0 1024 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="8982"
+                  width="50"
+                  height="50"
+                  style="margin-bottom: 10px"
+                >
+                  <path
+                    d="M0 389.08h90.04V1024H20c-11.046 0-20-8.954-20-20V389.08zM274.36 178.96H82.08V20c0-11.046 8.954-20 20-20h172.28v178.96z m0 150.02H0v-70.02c0-11.046 8.954-20 20-20h254.36v90.02z m-124.3 60V1024H482V388.98H150.06z m254.76 350.16c0 16.58-13.44 30-30 30-16.58 0-30-13.42-30-30v-74.22c0-16.56 13.42-30 30-30 16.56 0 30 13.44 30 30v74.22zM334.36 0v328.98h355.28V0H334.36z m274.34 222.58c0 16.56-13.44 30-30 30-16.56 0-30-13.44-30-30V192.5h-73.4v30.08c0 16.56-13.44 30-30 30-16.56 0-30-13.44-30-30V106.4c0-16.56 13.44-30 30-30 16.56 0 30 13.44 30 30v26.1h73.4V106.4c0-16.56 13.44-30 30-30 16.56 0 30 13.44 30 30v116.18zM542 388.98V1024h331.94V388.98H542z m136.44 350.16c0 16.58-13.44 30-30 30-16.58 0-30-13.42-30-30v-74.22c0-16.56 13.42-30 30-30 16.56 0 30 13.44 30 30v74.22zM941.92 178.96h-192.28V0h172.28c11.046 0 20 8.954 20 20v158.96z m82.08 80v70.02H749.64v-90.02H1004c11.046 0 20 8.954 20 20z m-90.04 130.12H1024V1004c0 11.046-8.954 20-20 20h-70.04V389.08z"
+                    p-id="8983"
+                    fill="#8a8a8a"
+                  ></path>
+                </svg>
+                <span>{{_('Lift')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(3)">
+                <svg
+                  t="1745203660416"
+                  class="icon"
+                  viewBox="0 0 1024 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="10113"
+                  width="50"
+                  height="50"
+                  style="margin-bottom: 10px"
+                >
+                  <path
+                    d="M948.898535 385.582799c0 0-163.572426 115.177206-376.314715 265.633916-69.306482 41.98523-131.684158-3.560082-131.684158-3.560082L75.101465 385.582799c-6.434549 0-11.650341 5.215792-11.650341 11.650341l0 384.470465c0 45.040822 36.513612 81.554434 81.554434 81.554434l733.988884 0c45.040822 0 81.554434-36.512588 81.554434-81.554434L960.548876 397.23314C960.548876 390.798591 955.332061 385.582799 948.898535 385.582799zM451.683263 585.906244c43.015699 26.847461 56.205093 22.398126 57.57837 21.799492 3.251044 0.915859 17.665335 2.50403 56.994062-22.010293 104.271832-64.992223 353.626993-229.473345 380.450918-300.420187 0 0 43.214221-130.439818-87.228667-124.32454 0 0-176.904059-0.062422-350.569354-0.124843l0 0.072655c-173.473937 0.061398-350.160031 0.124843-350.160031 0.124843-130.314974-6.118348-87.142709 124.364449-87.142709 124.364449C98.403171 356.358197 347.513762 520.892531 451.683263 585.906244z"
+                    p-id="10114"
+                    fill="#8a8a8a"
+                  ></path>
+                </svg>
+                <span>{{_('mailbox')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(4)">
+                <svg
+                  t="1745203801133"
+                  class="icon"
+                  viewBox="0 0 1024 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="12230"
+                  width="50"
+                  height="50"
+                  style="margin-bottom: 10px"
+                >
+                  <path
+                    d="M480 0H128a64 64 0 0 0-64 64v896a64 64 0 0 0 64 64h768a64 64 0 0 0 64-64V64a64 64 0 0 0-64-64H544v480H960v64H544V1024h-64zM242.56 512a32 32 0 0 1 64 0v128a32 32 0 0 1-64 0z m512 256a32 32 0 0 1 64 0v64a32 32 0 0 1-64 0z m0-512a32 32 0 0 1 64 0v64a32 32 0 0 1-64 0zM480 0z"
+                    p-id="12231"
+                    fill="#8a8a8a"
+                  ></path>
+                </svg>
+                <span>{{_('Locker')}}</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <!-- 选择设备类型后，显示设备列表 -->
+        <div v-if="activeStatus">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in stepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                  v-on:click="toTab(item.relatedIndex)"
+                >
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <a
+                    href="#"
+                    func="core_get_photo"
+                    ref="profile_room_form_banner"
+                    ele="profile_room_form_banner"
+                    style="
+                      display: block;
+                      overflow: hidden;
+                      background-color: #eee;
+                      height: 150px;
+                      text-align: center;
+                      background-size: cover;
+                      background-position: center;
+                    "
+                    :style="{ backgroundImage: deviceImage }"
+                    class="profile_room_form_banner mb-2 display-flex align-items-center justify-content-center"
+                  >
+                    <input
+                      type="text"
+                      name="banner"
+                      class="_readable"
+                      readonly="readonly"
+                      placeholder="Banner"
+                      style="display: none"
+                      value=""
+                    />
+                    <span class="material-icons" style="font-size: 70px; color: #ddd">add_a_photo</span>
+                  </a>
+                  <div class="list card-content-padding">
+                    <ul>
+                      <li class="item-content item-input no-padding-left">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Device Name")}}</div>
+                          <div class="item-input-wrap">
+                            <input type="text" name="deviceName" v-model="deviceName" :placeholder="deviceNameTip" required validate />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(0)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("Next")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <div class="list card-content-padding">
+                  <ul>
+                    <li class="item-content item-input no-padding-left">
+                      <div class="item-inner">
+                        <div class="item-title item-label" lang="en" style="font-size: 16px">{{_(flatLabel)}}</div>
+                        <div class="item-input-wrap">
+                          <data-input-component
+                            :options="flatList"
+                            :placeholder="_('Input Your Flat')"
+                            :value="flatValue"
+                            :reqd="1"
+                            :readonly="0"
+                            label="Flat"
+                            v-on:input="onInputFlat"
+                          ></data-input-component>
+                        </div>
+                      </div>
+                    </li>
+                    <h5 class="do-not-find-flat text-color-blue" v-if="!createFlatStatus" v-on:click="createFlat()">
+                      {{_('Do not find your flat? Create a new one.')}}
+                    </h5>
+                  </ul>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Next")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Choose Control Button Group")}}</div>
+                <div class="card-content card-content-padding">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">{{_('VIA 485')}}</div>
+                      <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="changeVia()">
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!isVia">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="isVia">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="action-box card display-flex justify-content-space-between align-items-center"
+                    style="margin-left: 0; margin-right: 0; margin-top: 10px"
+                    v-if="isVia"
+                  >
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center" style="width: 50%">
+                      <div class="trigger-text">{{_('COM1')}}</div>
+                      <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="changeCom(1)">
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!isCom1">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="isCom1">toggle_on</i>
+                      </div>
+                    </div>
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center" style="width: 50%">
+                      <div class="trigger-text">{{_('COM2')}}</div>
+                      <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="changeCom(2)">
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!isCom2">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="isCom2">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">{{_('GPIO')}}</div>
+                      <div class="trigger-right display-flex justify-content-space-between align-items-cente" v-on:click="changeIo()">
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!isIo">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="isIo">toggle_on</i>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="action-list list media-list no-margin">
+                      <ul>
+                        <li class="device" v-for="(item,index) in buttonGroupList" :key="index">
+                          <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                            <div class="item-inner">
+                              <div class="item-title-row" style="margin-top: 10px">
+                                <div class="item-title ellipsis" lang="en" style="width: 235px">{{buttonGroupName}}</div>
+                              </div>
+                              <div class="item-subtitle ellipsis" style="width: 235px">
+                                <span v-for="(sub,index) in item.button_group_list" :key="index">{{sub.device_command}}</span>
+                              </div>
+                            </div>
+                            <div class="control-panel-right" style="" v-on:click="sendButtonGroupCommand(item)">
+                              <div class="button button-raised button-big circle">
+                                <div>
+                                  <i class="material-icons" style="line-height: 70px !important; font-size: 25px !important">send</i>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      class="add-box add-action display-flex justify-content-space-between align-items-center"
+                      v-on:click="addButtonGroup()"
+                    >
+                      <div class="trigger-icon display-flex justify-content-flex-start align-items-center">
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Add Button Group")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="getDeviceButtonGroupForDeviceType()">{{_("Next")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="action-list list media-list no-margin">
+                      <ul>
+                        <li class="device" v-for="(item,index) in deviceAccessList" :key="index">
+                          <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                            <div class="item-inner">
+                              <div class="item-title-row" style="margin-top: 10px">
+                                <div class="item-title ellipsis" lang="en" style="width: 235px">{{item.access_type}}</div>
+                              </div>
+                              <div class="item-subtitle ellipsis" style="width: 235px">
+                                <span v-for="(sub,index) in item.blocking_schedule" :key="index"
+                                  >{{sub.schedule}}({{sub.from_time}} - {{sub.to_time}}){{sub.whole_day?_('(Whole Day)'):''}}</span
+                                >
+                              </div>
+                            </div>
+                            <div class="margin-right" style="" v-on:click="deleteAccess(item.name)">
+                              <i class="material-icons text-color-gray">delete</i>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-icon display-flex justify-content-flex-start align-items-center" v-on:click="addDeviceAccess()">
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Add Access")}}</div>
+                      </div>
+                      <div
+                        class="trigger-icon display-flex justify-content-flex-start align-items-center"
+                        v-on:click="chooseDeviceAccess()"
+                      >
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Choose Access")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="saveDoor()">{{_("Complete")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="list list-strong-ios list-outline-ios list-dividers-ios">
+                    <ul>
+                      <li>
+                        <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                          <select name="mac-windows" v-model="accessType">
+                            <option value="1" selected>Dynamic QR Code</option>
+                            <option value="2">QR Code</option>
+                            <option value="3">Key Card</option>
+                            <option value="4">Secure Key Card</option>
+                            <option value="5">Octopus Card</option>
+                            <option value="6">Auto Open</option>
+                            <option value="7">Door Blocking Schedule</option>
+                          </select>
+                          <div class="item-content" style="height: 70px">
+                            <div class="item-inner">
+                              <div class="item-title">{{_('Access Type')}}</div>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 1 || accessType == 1">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Guest Email")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="guestEmail"
+                              v-model="guestEmail"
+                              :placeholder="_('Please enter the guest email.')"
+                              v-on:blur="checkGuestEmail"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 3 || accessType == 4">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Key Card ID")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="keyCardId"
+                              v-model="keyCardId"
+                              readonly="readonly"
+                              :placeholder="_('Please enter the key card id.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 4" style="display: none">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Key Card Secret")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="keyCardSecret"
+                              v-model="keyCardSecret"
+                              :placeholder="_('Please enter the key card secret.')"
+                              readonly="readonly"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="accessType == 5">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Octopus Card ID")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="octopusCardId"
+                              v-model="octopusCardId"
+                              :placeholder="_('Please enter the octopus card id.')"
+                              readonly="readonly"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li v-if="accessType == 6 || accessType == 1 || accessType == 7">
+                        <div class="item-content item-input">
+                          <div class="item-inner">
+                            <div class="item-input-wrap">
+                              <input type="text" :placeholder="_('Valid From')" readonly="readonly" id="demo-calendar-date-time" />
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li v-if="accessType == 6 || accessType == 1 || accessType == 7">
+                        <div class="item-content item-input">
+                          <div class="item-inner">
+                            <div class="item-input-wrap">
+                              <input type="text" :placeholder="_('Valid To')" readonly="readonly" id="demo-calendar-date-time-to" />
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Access Group")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="number"
+                              name="accessGroup"
+                              v-model="accessGroup"
+                              :placeholder="_('Please enter the access group.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <a class="item-link smart-select smart-select-init" data-open-in="sheet">
+                          <select name="mac-windows" v-model="postType">
+                            <option value="1" selected>WIFI</option>
+                            <option value="2">BLE</option>
+                          </select>
+                          <div class="item-content" style="height: 70px">
+                            <div class="item-inner">
+                              <div class="item-title">{{_('Connection Mode')}}</div>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="item-content item-input" v-if="postType == 1">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">
+                            {{_("Ssid")}}
+                            <span class="text-color-red" style="font-size: 12px"> ({{_('2.4 GHz Wi-Fi Only')}})</span>
+                          </div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="ssid"
+                              v-model="ssid"
+                              :placeholder="_('Please enter the wifi ssid.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input" v-if="postType == 1">
+                        <div class="item-inner no-padding-right">
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Password")}}</div>
+                          <div class="item-input-wrap">
+                            <input
+                              type="text"
+                              name="password"
+                              v-model="password"
+                              :placeholder="_('Please enter the wifi password.')"
+                              required
+                              validate
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="accessType == 3 || accessType == 4 || accessType == 5">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="testKey()">{{_("Test")}}</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("Next")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div> -->
+            <div id="step-5" class="view tab view-main" :class="[index == 5 ? 'tab-active' : '']" v-if="index == 5">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                    <div class="action-list list media-list no-margin">
+                      <ul>
+                        <li class="device" v-for="(item,index) in scheduleList" :key="index">
+                          <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
+                            <div class="item-inner">
+                              <div class="item-title-row" style="margin-top: 10px">
+                                <div class="item-title ellipsis" lang="en" style="width: 235px">
+                                  {{item.name}}<span
+                                    class="text-color-gray"
+                                    v-if="item.whole_day == 1"
+                                    style="margin-left: 10px; font-size: 12px"
+                                    >{{_('(Whole Day)')}}</span
+                                  >
+                                </div>
+                              </div>
+                              <div class="item-subtitle ellipsis" style="width: 235px">
+                                <span>{{item.from_time}} - {{item.to_time}}</span>
+                              </div>
+                            </div>
+                            <div class="margin-right" style="" v-on:click="deleteSchedule(item.name)">
+                              <i class="material-icons text-color-gray">delete</i>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      class="add-box add-action display-flex justify-content-space-between align-items-center"
+                      v-on:click="addSchedule()"
+                    >
+                      <div class="trigger-icon display-flex justify-content-flex-start align-items-center">
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Add Schedule")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="position-relative display-flex flex-direction-column justify-content-center align-items-center"
+                    style="margin-top: 10px"
+                  >
+                    <img :src="qr_code_base64" style="object-fit: contain; width: 150px; height: 150px" />
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="syncToDevice()">{{_("Sync To Device")}}</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(4)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(6)">{{_("Compelte")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  const DataInputComponent = {
+    template: `
+    <div class="position-relative" style="z-index:10000;">
+      <input ref="input" class="autocomplete-input" :type="type" :required="reqd === 1" :placeholder="placeholder || label" :value="value" @input="onInput" :validate="validate" :pattern="pattern" />
+      <span :class="getClass" v-if="readonly === 0" @click.stop="onClear"></span>
+    </div>
+    `,
+    inject: ['field'],
+    props: {
+      value: String,
+      reqd: Number,
+      label: String,
+      readonly: Number,
+      placeholder: String,
+      options: [String, Array, Function],
+    },
+    data() {
+      return {
+        passwordVisible: false,
+      };
+    },
+    watch: {
+      options() {
+        this.init();
+      },
+    },
+    computed: {
+      type() {
+        const opt = this.options || '';
+        if (opt === 'Email') {
+          return 'email';
+        } else if (opt === 'Number' || opt === 'Int' || opt === 'Currency') {
+          return 'number';
+        } else if (opt === 'Tel') {
+          return 'tel';
+        } else if (opt === 'Password') {
+          return this.passwordVisible ? 'text' : 'password';
+        }
+
+        return 'text';
+      },
+      validate() {
+        return this.type !== 'text';
+      },
+      pattern() {
+        if (this.options === 'Currency') {
+          return '^[0-9]*.?[0-9]+$';
+        } else if (this.options === 'Numeric') {
+          return '^[0-9]*$';
+        } else {
+          return false;
+        }
+      },
+      getClass() {
+        const cls = ['input-clear-button'];
+
+        if (this.options === 'Password') {
+          cls.push(this.passwordVisible ? 'password-invisible' : 'password-visible');
+        }
+
+        return cls;
+      },
+    },
+    mounted() {
+      try {
+        this.init();
+      } catch (err) {
+        // ignore
+      }
+    },
+    beforeDestroy() {
+      if (this.$autocomplete) {
+        this.$autocomplete.destroy();
+      }
+    },
+    methods: {
+      onClear() {
+        if (this.options === 'Password') {
+          this.passwordVisible = !this.passwordVisible;
+          return;
+        }
+        this.$emit('input', '');
+      },
+      onInput(e) {
+        if (!this.$autocomplete) {
+          // to number
+          const v = this.type === 'number' || this.options === 'Currency' ? +e.target.value : e.target.value;
+          this.$emit('input', v);
+        } else {
+          this.$emit('input', e.target.value);
+        }
+      },
+      init() {
+        if (!this.options || this.options === 'Password') return;
+        if (this.type !== 'text') return;
+
+        if (this.$autocomplete) return;
+        this.$autocomplete = app.autocomplete.create({
+          inputEl: this.$refs.input,
+          openIn: 'dropdown',
+          preloader: true,
+          valueProperty: 'value',
+          textProperty: 'displayValue',
+          limit: 20,
+          source: (query, render) => {
+            try {
+              if (query.length === 0) {
+                render([]);
+                return;
+              }
+
+              this.$autocomplete.preloaderShow();
+
+              this.request(query)
+                .then((result) => {
+                  render(result);
+
+                  this.$autocomplete.preloaderHide();
+                })
+                .catch(() => {
+                  render([]);
+                  this.$autocomplete.preloaderHide();
+                });
+            } catch (err) {
+              // console.log(err);
+              render([]);
+              this.$autocomplete.preloaderHide();
+            }
+          },
+        });
+      },
+      async request(keyword) {
+        if (!this.options) return [];
+        if (typeof this.options === 'function') {
+          const returnVal = this.options.apply(this, [keyword, this.form, this.doc]);
+
+          if (isPromise(returnVal)) {
+            const ret = await returnVal;
+            return ret;
+          } else if (returnVal) {
+            return returnVal;
+          }
+        } else if (Array.isArray(this.options)) {
+          return this.options
+            .filter((e) => e.toLowerCase().includes(keyword.toLowerCase()))
+            .slice(0, 10)
+            .map((e) => ({ value: e, displayValue: _(e) }));
+        } else {
+          // try to string as doctype
+          const opt = `${this.options}`.trim();
+          // const url =
+          //   encodeURI(`/api/resource/${opt}?limit_start=0&limit_page_length=10&filters=`) +
+          //   encodeURIComponent(`[["name","like","${keyword}%"]]`) +
+          //   encodeURI('&fields=') +
+          //   encodeURIComponent(`["name"]`);
+
+          const res = await http2.request({
+            url: encodeURI('/api/method/appv6.search.search_link'),
+            responseType: 'json',
+            method: 'POST',
+            serializer: 'json',
+            data: {
+              txt: keyword,
+              doctype: opt,
+              ignore_user_permissions: 0,
+              page_length: 10,
+            },
+          });
+
+          const values = res.data.message.map((e) => {
+            return {
+              value: e.name,
+              displayValue: _(e.name),
+            };
+          });
+
+          return values;
+        }
+      },
+      async checkDeviceOnline(gatewayhash) {
+        return new Promise((resolve) => {
+          const will_topic = `will/${gatewayhash}`;
+          let timeoutId = null;
+          let isOnline = false;
+          const cleanup = () => {
+            clearTimeout(timeoutId);
+            emitter.off(will_topic, handleWillMessage);
+          };
+          const handleWillMessage = (payload) => {
+            console.log('handleWillMessage: ', payload);
+            if (payload.message.toLowerCase().includes('online') && !isOnline) {
+              isOnline = true;
+            }
+          };
+          const completeCheck = (result) => {
+            cleanup();
+            resolve(result);
+          };
+          core_mqtt_subscribe(will_topic, 1, false);
+          emitter.on(will_topic, handleWillMessage);
+          timeoutId = setTimeout(() => {
+            completeCheck(isOnline);
+          }, 10000 * 60);
+        });
+      },
+      async bleUpdateFile() {
+        let obj = {};
+      },
+      async validateInput() {
+        // TODO
+      },
+    },
+  };
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, sub_name } = $f7route.query;
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          createFlatStatus: false,
+          flatLabel: 'Flat',
+          deviceName: '', // device name
+          deviceImage: '',
+          flatValue: '',
+          deviceNameTip: 'Please enter the Door name', // device name tip
+          index: 1, // control the step-content
+          activeStatus: false, //if choose the template, show the step-content
+          deviceType: 1, //1: door, 2: lift, 3: mailbox, 4: locker
+          stepList: [
+            {
+              id: 1,
+              name: '1',
+              isActive: true,
+              relatedIndex: 1,
+            },
+            {
+              id: 2,
+              name: '2',
+              isActive: false,
+              relatedIndex: 2,
+            },
+            {
+              id: 3,
+              name: '3',
+              isActive: false,
+              relatedIndex: 3,
+            },
+            {
+              id: 4,
+              name: '4',
+              isActive: false,
+              relatedIndex: 4,
+            },
+          ],
+          flatList: [],
+          buttonGroupList: [],
+          isVia: false, //is 485 command
+          isIo: true, //is gpio command
+          isCom1: true,
+          isCom2: false,
+          accessType: 1, //default Dynamic QR Code
+          guestEmail: '',
+          keyCardId: '',
+          keyCardSecret: '',
+          octopusCardId: '',
+          calendarDateTimeFrom: null,
+          calendarDateTimeTo: null,
+          postType: 2,
+          ssid: '',
+          password: '',
+          iot_attempt: 0,
+          postBleDataList: [],
+          postBleDataListIndex: 0,
+          postBleDataListChunkIndex: 0,
+          uuid: '',
+          qr_code_base64: '',
+          scheduleList: [],
+          accessGroup: 0,
+          totalVailFrom: '',
+          totalVailTo: '',
+          qrcode_random_16: '',
+          deviceAccessList: [],
+          buttonGroupName : '',
+        },
+        watch: {},
+        components: {
+          DataInputComponent,
+        },
+        mounted() {
+          this.init();
+          this.qrcode_random_16 = this.generateRandom16();
+          this.generateQRCode(`{{${this.qrcode_random_16}}}`);
+          emitter.on('saveDeviceAccess', (data) => {
+            console.log('saveDeviceAccess', data);
+            if (Array.isArray(data)) {
+              data.forEach((item) => {
+                this.deviceAccessList.push(item);
+              });
+            } else {
+              this.deviceAccessList.push(data);
+            }
+          });
+          emitter.on('saveButtonGroup', (data) => {
+            console.log('saveButtonGroup', data);
+            this.buttonGroupList = JSON.parse(JSON.stringify(data));
+            this.buttonGroupName = data[0].name;
+          });
+          // emitter.on('saveSchedule', (data) => {
+          //   console.log('saveSchedule', data);
+          //   let list = data;
+          //   list.forEach(item => {
+          //     item.schedule = item.name;
+          //     item.doctype = 'Device Blocking Schedule';
+          //     item.parentfield =  'blocking_schedule';
+          //     item.parenttype = 'Device Access';
+          //   })
+          //   this.scheduleList = this.scheduleList.concat(data);
+          // });
+        },
+        methods: {
+          init() {
+            this.getFlatList();
+          },
+          async getFlatList() {
+            try {
+              let res = await http2.request({
+                url: encodeURI(`/api/resource/Flat?fields=["name"]&limit=10000000&filters={"status":""}`),
+                responseType: 'json',
+                debug: true,
+                method: 'GET',
+              });
+              this.flatList = res.data.data.map((item) => item.name);
+            } catch (error) {
+              app.dialog.alert(error);
+            }
+          },
+          generateRandom16() {
+            const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+            return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+          },
+          deleteAccess(name) {
+            this.deviceAccessList = this.deviceAccessList.filter((item) => item.name != name);
+          },
+          deleteSchedule(name) {
+            this.scheduleList = this.scheduleList.filter((item) => item.name != name);
+          },
+          async testKey() {
+            //confirm the
+            if (window.peripheral[guid].prop.connected) {
+              window.peripheral[guid].disconnect();
+            } else {
+              window.peripheral[guid].connect();
+            }
+            await ble.startNotification(this.uuid, 'ff80', 'ff82', (rs) => {
+              console.log('rs', rs);
+              if (rs.length >= 20) {
+                this.keyCardId = rs.slice(-8);
+                if (this.accessType == 4) {
+                  this.keyCardSecret = '832227680083';
+                }
+              }
+            });
+            setTimeout(async () => {
+              let command = `990C000001${this.accessType == 3 ? '00' : '01'}`;
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command.toLocaleLowerCase(),
+                },
+              ]);
+            }, 200);
+            app.dialog.alert(
+              _('Align your card (e.g., access card) with the D-card reader. Keep it steady until the device completes recognition.')
+            );
+          },
+          checkGuestEmail() {
+            console.log('checkGuestEmail', this.guestEmail);
+            let md_str = md5(md5(this.guestEmail) + this.guestEmail + 'yoswit');
+            let date_time = DateFormatter.format(new Date(), 'YmdHis');
+            let str = `${md_str}${date_time}`;
+            let checksum = md5(`${md5(str) + str + 'yoswit'}`);
+            let qr_str = `{{${md_str}${checksum}${date_time}}}`;
+            console.log('qr_str', qr_str);
+            this.generateQRCode(qr_str);
+          },
+          generateQRCode(value) {
+            cordova.plugins.qrcodejs.encode(
+              'TEXT_TYPE',
+              value,
+              (base64EncodedQRImage) => {
+                this.qr_code_base64 = base64EncodedQRImage;
+              },
+              (err) => {
+                console.error('qrcode js error: ' + err);
+              },
+              {
+                correctLevel: 0,
+              }
+            );
+          },
+          clickDeviceType(type) {
+            this.deviceType = type;
+            this.activeStatus = true;
+            this.toTab(1);
+          },
+          activeStep() {
+            this.stepList.forEach((item) => {
+              if (item.id == this.index) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          //sync to device with ble or wifi
+          syncToDevice() {
+            if (this.postType == 1) {
+              //wifi
+              this.syncToDeviceWithWifi();
+            } else {
+              //ble
+              this.syncToDeviceWithBle();
+            }
+          },
+          async postDoor() {
+            //post the door data to the device
+            try {
+              let res = await http2.request({
+                url: encodeURI('/api/resource/Door'),
+                responseType: 'json',
+                debug: true,
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  device: guid,
+                  access_type: this.getAccessTypeTitle(this.accessType),
+                },
+              });
+            } catch (error) {}
+          },
+          syncToDeviceWithWifi() {
+            //connect to the mqtt server
+          },
+          async syncToDeviceWithBle() {
+            //send the ble data to the device
+            try {
+              let result = await http2.request({
+                url: encodeURI('/api/method/appv6.getDeviceAccessByDevice'),
+                responseType: 'json',
+                debug: true,
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  device: guid,
+                  access_type: this.getAccessTypeTitle(this.accessType),
+                },
+              });
+              console.log('result', result);
+              if (result.status == 200) {
+                let data = result.data.data;
+                let postScheduleList = [];
+                this.scheduleList.forEach((item) => {
+                  postScheduleList.push({
+                    schedule: item.schedule,
+                    from_time: item.from_time,
+                    to_time: item.to_time,
+                    whole_day: item.whole_day,
+                  });
+                });
+                if (data.length == 0) {
+                  //erp have no record
+                  let deviceAccessMap = {
+                    device: guid,
+                    access_type: this.getAccessTypeTitle(this.accessType),
+                    status: 'Registered',
+                    device_button_group: this.buttonGroupList[0].name,
+                    one_time_access: '',
+                    guest_email: this.guestEmail,
+                    valid_from: this.totalVailFrom,
+                    valid_to: this.totalVailTo,
+                    blocking_schedule: postScheduleList,
+                    access_level: this.accessGroup,
+                    qr_code: this.qrcode_random_16,
+                    key_card_id: this.keyCardId,
+                    key_card_secret: this.keyCardSecret,
+                    octopus_card_id: this.octopusCardId,
+                    guest_email: this.guestEmail,
+                    blocking_schedule: postScheduleList,
+                    access_level: this.accessGroup,
+                  };
+                  try {
+                    let respone = await http2.request({
+                      url: encodeURI('/api/resource/Device Access'),
+                      responseType: 'json',
+                      method: 'POST',
+                      serializer: 'json',
+                      debug: true,
+                      data: deviceAccessMap,
+                    });
+                    console.log('respone', respone);
+                  } catch (error) {
+                    app.dialog.alert(error);
+                  }
+                } else {
+                  let deviceAccessMap = data[0];
+                  let accessType = this.getAccessTypeTitle(this.accessType);
+                  deviceAccessMap.access_type = accessType;
+                  deviceAccessMap.access_level = this.accessGroup;
+                  deviceAccessMap.status = 'Registered';
+                  deviceAccessMap.device_button_group = this.buttonGroupList[0].name;
+                  deviceAccessMap.blocking_schedule = postScheduleList;
+                  //send the ble data to the device
+                  if (this.accessType == 1) {
+                    //ble
+                    deviceAccessMap.guest_email = this.guestEmail;
+                    deviceAccessMap.valid_from = this.totalVailFrom;
+                    deviceAccessMap.valid_to = this.totalVailTo;
+                  } else if (this.accessType == 3) {
+                    deviceAccessMap.key_card_id = this.keyCardId;
+                  } else if (this.accessType == 4) {
+                    deviceAccessMap.key_card_id = this.keyCardId;
+                    deviceAccessMap.key_card_secret = this.keyCardSecret;
+                  } else if (this.accessType == 5) {
+                    deviceAccessMap.octopus_card_id = this.octopusCardId;
+                  } else if (this.accessType == 6) {
+                    deviceAccessMap.valid_from = this.totalVailFrom;
+                    deviceAccessMap.valid_to = this.totalVailTo;
+                  }
+                  console.log('deviceAccessMap', deviceAccessMap);
+                  try {
+                    let respone = await http2.request({
+                      url: encodeURI('/api/resource/Device Access/' + deviceAccessMap.name),
+                      responseType: 'json',
+                      method: 'PUT',
+                      serializer: 'json',
+                      debug: true,
+                      data: deviceAccessMap,
+                    });
+                    console.log('respone', respone);
+                    //tindy the data
+                    let json = { 'result': [] };
+                    json.result.push(respone.data.data);
+                    this.postBleData(json, 1);
+                  } catch (error) {
+                    app.dialog.alert(error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('error', error);
+            }
+          },
+          getAccessTypeTitle(type) {
+            if (type == 1) {
+              return 'Dynamic QR Code';
+            } else if (type == 2) {
+              return 'QR Code';
+            } else if (type == 3) {
+              return 'Key Card';
+            } else if (type == 4) {
+              return 'Secure Key Card';
+            } else if (type == 5) {
+              return 'Octopus Card';
+            } else if (type == 6) {
+              return 'Auto Open';
+            } else if (type == 7) {
+              return 'Door Blocking Schedule';
+            } else {
+              return 'Unknown';
+            }
+          },
+          toTab(index) {
+            let postStatus = true;
+            if (index == 0) {
+              this.activeStatus = false;
+            } else if (index == 2) {
+              if (!this.deviceName) {
+                postStatus = false;
+                app.dialog.alert('Please enter the door name.');
+              }
+            } else if (index == 3) {
+              if (!this.flatValue) {
+                postStatus = false;
+                app.dialog.alert('Please enter the flat name.');
+              }
+            }
+            if (postStatus) {
+              this.index = index;
+              this.activeStep();
+            }
+          },
+          onInputFlat(value) {
+            this.flatValue = value;
+          },
+          changeVia() {
+            this.isVia = !this.isVia;
+            this.isIo = false;
+          },
+          changeIo() {
+            this.isIo = !this.isIo;
+            this.isVia = false;
+          },
+          changeCom(com) {
+            if (com == 1) {
+              this.isCom1 = !this.isCom1;
+              this.isCom2 = false;
+            } else if (com == 2) {
+              this.isCom2 = !this.isCom2;
+              this.isCom1 = false;
+            }
+          },
+          formatDateTime(inputStr) {
+            const date = dayjs(inputStr, 'YYYY/M/D HH:mm', true);
+            if (!date.isValid()) {
+              throw new Error('Invalid date format');
+            }
+            return date.format('YYYY-MM-DD HH:mm:ss');
+          },
+          base64ToArrayBuffer(base64) {
+            const binaryStr = atob(base64);
+            return Uint8Array.from(binaryStr, (c) => c.charCodeAt(0)).buffer;
+          },
+          async startPostBleData(mainIndex, subChunksIndex) {
+            let subChunkList = this.postBleDataList[mainIndex].subChunks;
+            for (let i in subChunkList) {
+              if (i == subChunksIndex) {
+                let hexString = arrayBufferToHex(subChunksIndex[i].item);
+                let commandLength = (hexString.length / 2 + 4).toString(16);
+                commandLength = commandLength.padStart(4, '0');
+                let command = `933400${commandLength}${iot_utils_to_little_endian_hex(list[j].offsetItem, 4)}${hexString}`;
+                console.log('command', command);
+                try {
+                  await ble.writeWithoutResponse(
+                    this.uuid,
+                    'ff80',
+                    'ff85',
+                    command.convertToBytes(),
+                    function (response) {
+                      console.log('response', response);
+                    },
+                    function (error) {
+                      console.log('error', error);
+                    }
+                  );
+                } catch (error) {}
+              }
+            }
+          },
+          checkSendBleIndex() {
+            let mianIndex = this.postBleDataListIndex;
+            //check current chunk index
+            let subChunkList = this.postBleDataList[mianIndex].subChunks;
+            let checkMainIsReady = true;
+            let chunkIndex = 0;
+            for (let i in subChunkList) {
+              if (subChunkList[i].status) {
+                checkMainIsReady = false;
+                chunkIndex = subChunkList[i].index;
+                break;
+              }
+            }
+            if (checkMainIsReady) {
+              this.postBleDataListIndex++;
+              this.postBleDataListChunkIndex = 0;
+            }
+          },
+          changeChunkIndex() {
+            this.postBleDataList.forEach((item) => {
+              if (item.index == this.postBleDataListIndex) {
+                item.subChunks.forEach((subItem) => {
+                  if (subItem.index == this.postBleDataListChunkIndex) {
+                    subItem.status = true;
+                  }
+                });
+              }
+            });
+          },
+          async postBleData(json, postHead) {
+            app.dialog.preloader(_('Connecting...'));
+            let uploadTimer = setTimeout(() => {
+              app.dialog.close();
+              app.dialog.alert(_('Upload Data Failed'));
+            }, 10000 * 60);
+            this.iot_attempt = 0;
+            await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
+            // console.log('dataTime', this.formatDateTime($('#demo-calendar-date-time').val()));
+            // console.log('dataTime', this.formatDateTime($('#demo-calendar-date-time-to').val()));
+            const bleManager = createBLEUploadManager();
+            console.log('bleManager', bleManager);
+            // const jsonData = {"key":"value"}
+            const jsonData = json;
+            const encoder = new TextEncoder();
+            const uint8Array = encoder.encode(JSON.stringify(jsonData));
+            console.log('uint8Array', uint8Array);
+            const fileString = arrayBufferToHex(uint8Array);
+            // console.log('md5str', md5str);
+            let fileData = `990${postHead}000000${fileString}`;
+
+            const bytestoString = bytesToString(fileData.convertToBytes());
+            console.log('bytestoString', bytestoString);
+            const md5str = SparkMD5.hashBinary(bytestoString);
+            let sizeHex = iot_utils_to_little_endian_hex(fileData.length / 2, 4);
+            let nameHex = convertToFixedSizeHex(`device_access`, 31);
+            // let readyData = `93330000340${'03'}${sizeHex}${fileData}${nameHex}`;
+            let readyData = `93330000340${'3'}${sizeHex}${md5str}${nameHex}`;
+            let allData = `93330000340${'3'}${sizeHex}${fileData}${nameHex}`;
+            console.log('fileData', fileData);
+            console.log('readyData', readyData);
+            console.log('md5str1', md5str);
+            try {
+              this.uuid = window.peripheral[guid].prop.id
+              let that = this;
+              try {
+                ble.connect(this.uuid, (peripheralData) => {
+                  console.log('peripheralData', peripheralData);
+                  if (Capacitor.getPlatform() === 'android') {
+                    ble.requestMtu(
+                      this.uuid,
+                      512,
+                      () => {
+                        console.log('>>>> device request mtu success');
+                        app.dialog.close();
+                        let this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
+                        setTimeout(() => {
+                          ble.startNotification(
+                            this.uuid,
+                            'ff80',
+                            'ff85',
+                            function (rs) {
+                              console.log('notification', rs);
+                              // debugger
+                              if (rs && that.iot_attempt == 0) {
+                                that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                                that.iot_attempt++;
+                              }
+                              if (rs && that.iot_attempt > 0) {
+                                let status = parseInt(rs.substring(10, 12), 16);
+                                console.log('status', status);
+                                // this.changeChunkIndex();
+                                // this.startPostBleData(0,0);
+                                // this.checkSendBleIndex();
+                                // this.postBleDataListChunkIndex++;
+                                if (status > 0) {
+                                  app.preloader.hide();
+                                  this_dialog.setProgress(status);
+                                  this_dialog.setText(`${_('Upload Data')}: ${status}%`);
+                                }
+                                if (status == 100) {
+                                  app.preloader.hide();
+                                  this_dialog.close();
+                                  // app.dialog.alert('Success', runtime.appInfo.name, () => {});
+                                  window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
+                                }
+                                //if status > 100?reject error
+                                if (status > 100) {
+                                  //disconnect the device
+                                  app.preloader.hide();
+                                  app.dialog.close();
+                                  ble.disconnect(this.uuid);
+                                  console.log('disconnect');
+                                  // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
+                                }
+                              }
+                            },
+                            function (error) {
+                              console.log(error);
+                            }
+                          );
+                          ble.writeWithoutResponse(
+                            this.uuid,
+                            'ff80',
+                            'ff85',
+                            readyData.convertToBytes(),
+                            function (response) {
+                              console.log(response);
+                            },
+                            function (error) {
+                              console.log(error);
+                            }
+                          );
+                        }, 1000);
+                      },
+                      (err) => {
+                        console.log('>>>> device request mtu fail: ' + err);
+                        app.dialog.alert('>>>> device request mtu fail: ' + err);
+                      }
+                    );
+                  } else {
+                    app.dialog.close();
+                    let this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
+                    let that = this;
+                    setTimeout(() => {
+                      ble.startNotification(
+                        this.uuid,
+                        'ff80',
+                        'ff85',
+                        function (rs) {
+                          console.log(rs);
+                          if (rs && that.iot_attempt == 0) {
+                            that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                            that.iot_attempt++;
+                          }
+                          if (rs && that.iot_attempt > 0) {
+                            let status = parseInt(rs.substring(10, 12), 16);
+                            console.log('status', status);
+                            // this.checkSendBleIndex();
+                            if (status > 0) {
+                              app.preloader.hide();
+                              this_dialog.setProgress(status);
+                              this_dialog.setText(`${_('Upload Progress')}: ${status}%`);
+                            }
+                            if (status == 100) {
+                              app.preloader.hide();
+                              this_dialog.close();
+                              // app.dialog.alert('Success', runtime.appInfo.name, () => {});
+                              window.uploadStatus[parseInt(that.iot_attempt) - 1] = true;
+                            }
+                            //if status > 100?reject error
+                            if (status > 100) {
+                              //disconnect the device
+                              app.preloader.hide();
+                              app.dialog.close();
+                              ble.disconnect(this.uuid);
+                              // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
+                            }
+                          }
+                        },
+                        function (error) {
+                          console.log(error);
+                        }
+                      );
+                      ble.writeWithoutResponse(
+                        this.uuid,
+                        'ff80',
+                        'ff85',
+                        readyData.convertToBytes(),
+                        function (response) {
+                          console.log(response);
+                        },
+                        function (error) {
+                          console.log(error);
+                        }
+                      );
+                    }, 1000);
+                  }
+                });
+              } catch (error) {}
+              // await bleManager.connect(jsonData.device, {
+              //   onConnect: () => console.log('Connected!')
+              // });
+
+              // await bleManager.sendJSONData(jsonData, {
+              //   onProgress: (current, total) =>
+              //     console.log(`Progress: ${Math.round((current / total) * 100)}%`)
+              // });
+            } catch (err) {
+              console.log('err', err);
+            }
+          },
+          async iotProcessDataForEsp(uuid, data) {
+            console.log('uuid', uuid);
+            console.log('data', data);
+            let mainChunkSizeInBytes = 4096;
+            //let negotiatedMTU = 502;
+            let negotiatedMTU = 180;
+            console.log('data.byteLength', data.byteLength);
+            let newArray = [];
+            for (let i = 0; i < data.byteLength; i += mainChunkSizeInBytes) {
+              let subChunk = data.slice(i, Math.min(i + mainChunkSizeInBytes, data.byteLength));
+              const fileString = arrayBufferToHex(subChunk);
+              console.log('fileString2', fileString);
+              console.log('subChunk', subChunk);
+              const bytestoString = bytesToString(subChunk);
+              console.log('bytestoString2', bytestoString);
+              // const crc16 = core_util_calculate_crc16_modbus_for_doa(fileString);
+              const md5str = SparkMD5.hashBinary(bytestoString);
+              console.log('md5str2', md5str);
+              const new_data = hexToBuffer(fileString + md5str);
+              newArray.push(new_data);
+              window.uploadStatus.push(false);
+            }
+            //debugger
+            console.log('newArray', newArray);
+            let this_index = 0;
+            let subChunks = [];
+            for (let j in newArray) {
+              let obj = {
+                index: j,
+                subChunks: [],
+                sendStatus: false,
+              };
+              const subChunkSizeInBytes = negotiatedMTU;
+              let offsetItem = 0;
+              for (let i = 0; i < newArray[j].byteLength; i += subChunkSizeInBytes) {
+                const subChunk = newArray[j].slice(i, Math.min(i + subChunkSizeInBytes, newArray[j].byteLength));
+                subChunks.push(subChunk);
+                obj.subChunks.push({
+                  item: subChunk,
+                  index: this_index,
+                  status: false,
+                  offsetItem: offsetItem,
+                });
+                offsetItem += 502;
+              }
+              if (this_index > j) {
+                subChunks.push(false);
+              }
+              this.postBleDataList.push(obj);
+              this_index++;
+            }
+            console.log('postBleDataList', this.postBleDataList);
+            console.log('subChunks', subChunks);
+            let offset = 0;
+            let postIndex = 0;
+            let postBleDataList = cloneDeep(this.postBleDataList);
+            // this.startPostBleData(0,0);
+            for (let i in postBleDataList) {
+              let list = postBleDataList[i].subChunks;
+              let offsetItem = 0;
+              console.log('startSend', postIndex);
+              for (let j in list) {
+                let hexString = arrayBufferToHex(list[j].item);
+                let commandLength = (hexString.length / 2 + 4).toString(16);
+                commandLength = commandLength.padStart(4, '0');
+                let command = `933400${commandLength}${iot_utils_to_little_endian_hex(offsetItem, 4)}${hexString}`;
+                console.log('startChunksIndex', j);
+                // console.log('postBleDataListChunkIndex', this.postBleDataListChunkIndex);
+                console.log('command', command);
+                await ble.writeWithoutResponse(
+                  this.uuid,
+                  'ff80',
+                  'ff85',
+                  command.convertToBytes(),
+                  function (response) {
+                    console.log('response', response);
+                  },
+                  function (error) {
+                    console.log('error', error);
+                  }
+                );
+                await this.sleep(500);
+                if (postIndex == this.postBleDataList.length - 1 && j == list.length - 1) {
+                  console.log('9335');
+                  setTimeout(() => {
+                    ble.writeWithoutResponse(
+                      this.uuid,
+                      'ff80',
+                      'ff85',
+                      '9335'.convertToBytes(),
+                      function (response) {
+                        //resolve(response);
+                      },
+                      function (error) {
+                        //reject(error);
+                      }
+                    );
+                  }, 500);
+                }
+                offsetItem += negotiatedMTU;
+              }
+              postIndex++;
+            }
+          },
+          addSchedule() {
+            mainView.router.navigate(`/mobile-app/esp-choose-schedule`);
+          },
+          addButtonGroup() {
+            mainView.router.navigate(`/mobile-app/esp-device-button-group-list?device_type=${this.deviceType}`);
+          },
+          chooseDeviceAccess() {
+            mainView.router.navigate(
+              `/mobile-app/esp-choose-device-access?device_button_group=${this.buttonGroupList[0].name}&guid=${guid}`
+            );
+          },
+          addDeviceAccess() {
+            let buttonGroupCommand = this.tindyButtonGroupCommand(this.buttonGroupList[0]);
+            console.log(buttonGroupCommand);
+            mainView.router.navigate(
+              `/mobile-app/esp-device-access-page?guid=${guid}&button_group=${this.buttonGroupList[0].name}&button_group_command=${buttonGroupCommand}`
+            );
+          },
+          getDeviceButtonGroupForDeviceType() {
+            return new Promise(async (resolve, reject) => {
+              this.toTab(4);
+              // try {
+              //   const res = await http2.request({
+              //     url: encodeURI('/api/method/appv6.getDeviceButtonGroupByDeviceType'),
+              //     responseType: 'json',
+              //     method: 'POST',
+              //     serializer: 'json',
+              //     debug: true,
+              //     data: {
+              //       device_type:
+              //         this.deviceType == 1
+              //           ? 'Door'
+              //           : this.deviceType == 2
+              //             ? 'Lift'
+              //             : this.deviceType == 3
+              //               ? 'Mailbox'
+              //               : this.deviceType == 4
+              //                 ? 'Locker'
+              //                 : '',
+              //     },
+              //   });
+              //   console.log(res.data);
+              //   resolve(res.data);
+              // } catch (err) {
+              //   reject(err);
+              // }
+            });
+          },
+          removeDuplicates(arr) {
+            const seen = new Set();
+            return arr.filter((item) => {
+              const str = JSON.stringify(item);
+              return seen.has(str) ? false : seen.add(str);
+            });
+          },
+          async createFlat() {
+            const propertyList = await this.getProperty();
+            if (Array.isArray(propertyList.data)) {
+              const flatList = this.removeDuplicates(propertyList.data.map((item) => item.name));
+              console.log(flatList);
+              //create the flat template
+              const selectHtml = flatList.map((t) => `<option value="${t}">${tran(t)}</option>`).join('');
+              const modal = app.dialog.create({
+                title: _('Create Subdevice'),
+                content: `
+              <div class="dialog-form">
+                <!-- 设备类型下拉框 -->
+                <div class="item-content">
+                  <div class="list">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">${_('Property')}</div>
+                          <div class="item-input-wrap">
+                            <select id="propertyType" class="select">
+                            ${selectHtml}
+                            </select>
+                          </div>
+                        </div>
+                      </li>
+                      <!-- 设备名称输入 -->
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">${_('Flat Name')}</div>
+                          <div class="item-input-wrap">
+                            <input 
+                              id="flatName" 
+                              type="text" 
+                              placeholder="${_('Input your Flat name.')}"
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            `,
+                buttons: [
+                  {
+                    text: _('Cancel'),
+                    id: 'cancelSubdevice',
+                    color: 'gray',
+                    onClick: (dialog) => {
+                      dialog.close(); // 直接关闭弹窗
+                    },
+                  },
+                  {
+                    text: _('Submit'),
+                    color: 'blue',
+                    id: 'submitSubdevice',
+                    onClick: (dialog, e) => {
+                      // 获取输入值
+                      const propertyType = dialog.$el.find('#propertyType').val();
+                      const flatName = dialog.$el.find('#flatName').val();
+                      // 简单验证
+                      if (!flatName.trim()) {
+                        app.dialog.alert(_('Flat name cannot be empty.'));
+                        return;
+                      }
+                      //debugger;
+                      let url = `/api/resource/Flat`;
+                      http
+                        .request(encodeURI(url), {
+                          method: 'POST',
+                          serializer: 'json',
+                          responseType: 'json',
+                          data: {
+                            flat_name: flatName,
+                            property: propertyType,
+                          },
+                          debug: true,
+                        })
+                        .then(async (res) => {
+                          // 关闭弹窗
+                          dialog.close();
+                          //await ha_profile_ready();
+                          //window.globalUpdate = true;
+                          //app.dialog.alert(_('Create flat successfully.'));
+                          this.flatValue = flatName;
+                          this.toTab(3);
+                        })
+                        .catch((error) => {
+                          // 关闭弹窗
+                          dialog.close();
+                          app.dialog.alert(_('Create flat failed, Please change the flat name.'));
+                        });
+                    },
+                  },
+                ],
+                // 弹窗打开后回调
+                onOpen: function (dialog) {
+                  // 自动聚焦输入框
+                  dialog.$el.find('#subdeviceName').focus();
+                },
+              });
+
+              // 打开弹窗
+              modal.open();
+            }
+          },
+          getProperty() {
+            return new Promise(async (resolve, reject) => {
+              try {
+                const res = await http2.request({
+                  url: encodeURI('/api/method/appv6.getPropertyList'),
+                  responseType: 'json',
+                  method: 'POST',
+                  serializer: 'json',
+                  data: {},
+                });
+                resolve(res.data);
+              } catch (err) {
+                reject(err);
+              }
+            });
+          },
+          async saveDoor() {
+            //save door data
+            try {
+              let postFlatList = [
+                {
+                  link_doctype: 'Flat',
+                  link_name: this.flatValue,
+                  parent: 'Kids Wonderland',
+                  parenttype: 'Door',
+                },
+              ];
+              let accessList = [];
+              this.deviceAccessList.forEach((item) => {
+                accessList.push({
+                  access_type: item.access_type,
+                  parent: this.doorValue,
+                  parentfield: 'access_type',
+                  parenttype: 'Door',
+                  doctype: 'Device Access Type Select',
+                });
+              });
+              let url = `/api/resource/Door`;
+              let res = await http2.request({
+                url: url,
+                method: 'POST',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  type:
+                    this.deviceType == 1
+                      ? 'MCU'
+                      : this.deviceType == 2
+                        ? 'Lift'
+                        : this.deviceType == 3
+                          ? 'Mailbox'
+                          : this.deviceType == 4
+                            ? 'Locker'
+                            : '',
+                  device: guid,
+                  door: this.deviceName,
+                  device_button_group: this.buttonGroupList[0].name,
+                  gender: 'Not Specified',
+                  links: postFlatList,
+                  access_type: accessList,
+                },
+              });
+              console.log(res);
+              mainView.router.back();
+            } catch (error) {
+              console.log(error);
+              app.dialog.alert(_('Save door failed.'));
+            }
+          },
+          tindyButtonGroupCommand(item) {
+            let commandList = item.button_group_list;
+            let returnCommand = '';
+            commandList.forEach((command) => {
+              let commandJson = JSON.parse(command.command_json);
+              if (commandJson.func.toLowerCase().indexOf('gpio') != -1) {
+                // /setGpio   972101xx+xx
+                let strList = commandJson.value.split(',');
+                let command_str = `972101${parseInt(strList[0]).toString(16).pad('00')}${parseInt(strList[1]).toString(16).pad('00')}`;
+                if (strList.length == 4) {
+                  let delay = 7000;
+                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972101${parseInt(strList[2]).toString(16).pad('00')}${parseInt(strList[3]).toString(16).pad('00')}`;
+                  let command = `13${(command_str.length / 2).toString(16).pad('00')}${command_str}${(delayItem.length / 2).toString(16).pad('00')}${delayItem}`;
+                  returnCommand = command;
+                } else {
+                  returnCommand = command_str;
+                }
+              } else if (commandJson.func.toLowerCase().indexOf('485') != -1 || commandJson.func.toLowerCase().indexOf('mailbox') != -1) {
+                // uart  972102+index+cmd
+                // uart  972102+index+cmd
+                let strList = commandJson.parameter.split(',');
+                let comPost = 1;
+                if (this.isVia) {
+                  if (this.isCom1) {
+                    comPost = 1;
+                  } else {
+                    comPost = 2;
+                  }
+                } else {
+                  return returnCommand;
+                }
+                if (strList.length == 2) {
+                  //8F1F+index+xxxxxxxx（延迟ms）+action
+                  //defalut 5s
+                  let delay = 7000;
+                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972102${parseInt(comPost).toString(16).pad('00')}${strList[1].toLowerCase()}`;
+                  let item_1 = `972102${parseInt(comPost).toString(16).pad('00')}${strList[0].toLowerCase()}`;
+                  let $length = parseInt(delayItem.length / 2)
+                    .toString(16)
+                    .pad('00');
+                  let command = `13${(item_1.length / 2).toString(16).pad('00')}${item_1}${$length}${delayItem}`;
+                  returnCommand = command;
+                } else {
+                  let command = `972102${parseInt(comPost).toString(16).pad('00')}${strList[0].toLowerCase()}`;
+                  returnCommand = command;
+                }
+              }
+            });
+            return returnCommand;
+          },
+          //send the button group command
+          async sendButtonGroupCommand(item) {
+            let gpioCommand = [];
+            let command_485 = [];
+            let commandList = item.button_group_list;
+            console.log(commandList);
+            commandList.forEach((command) => {
+              let commandJson = JSON.parse(command.command_json);
+              console.log(commandJson);
+              if (commandJson.func.toLowerCase().indexOf('gpio') != -1) {
+                // /setGpio   972101xx+xx
+                let strList = commandJson.value.split(',');
+                let command_str = `972101${parseInt(strList[0]).toString(16).pad('00')}${parseInt(strList[1]).toString(16).pad('00')}`;
+                // debugger
+                if (strList.length == 4) {
+                  let delay = 7000;
+                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972101${parseInt(strList[2]).toString(16).pad('00')}${parseInt(strList[3]).toString(16).pad('00')}`;
+                  let command = `13${(command_str.length / 2).toString(16).pad('00')}${command_str}${(delayItem.length / 2).toString(16).pad('00')}${delayItem}`;
+                  gpioCommand.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
+                  });
+                } else {
+                  gpioCommand.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command_str,
+                  });
+                }
+              } else if (commandJson.func.toLowerCase().indexOf('485') != -1 || commandJson.func.toLowerCase().indexOf('mailbox') != -1) {
+                // uart  972102+index+cmd
+                let strList = commandJson.parameter.split(',');
+                let comPost = 1;
+                if (this.isVia) {
+                  if (this.isCom1) {
+                    comPost = 1;
+                  } else {
+                    comPost = 2;
+                  }
+                } else {
+                  app.dialog.alert(_('Please choose the 485 command.'));
+                  return;
+                }
+                console.log(strList);
+                if (strList.length == 2) {
+                  //8F1F+index+xxxxxxxx（延迟ms）+action
+                  //defalut 5s
+                  let delay = 7000;
+                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972102${parseInt(comPost).toString(16).pad('00')}${strList[1].toLowerCase()}`;
+                  let item_1 = `972102${parseInt(comPost).toString(16).pad('00')}${strList[0].toLowerCase()}`;
+                  let $length = parseInt(delayItem.length / 2)
+                    .toString(16)
+                    .pad('00');
+                  let command = `13${(item_1.length / 2).toString(16).pad('00')}${item_1}${$length}${delayItem}`;
+                  command_485.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
+                  });
+                } else {
+                  let command = `972102${parseInt(comPost).toString(16).pad('00')}${strList[0].toLowerCase()}`;
+                  command_485.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
+                  });
+                }
+              }
+            });
+            console.log('gpioCommand', gpioCommand);
+            console.log('command_485', command_485);
+            try {
+              if (gpioCommand.length) {
+                await window.peripheral[guid].write(gpioCommand);
+              }
+              if (command_485.length) {
+                await window.peripheral[guid].write(command_485);
+              }
+            } catch (error) {
+              console.log(error);
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          async iotUploadFile() {
+            let jsonMap = {
+              'name': '3jn76gks1m',
+              'owner': 'david.deng@yoswit.com',
+              'creation': '2025-04-30 08:53:57.500646',
+              'modified': '2025-04-30 08:56:46.638125',
+              'modified_by': 'Administrator',
+              'docstatus': 0,
+              'idx': 0,
+              'device': '24:EC:4A:09:3F:4E',
+              'device_button_group': 'INNO_PRESS_LIFT_10F',
+              'status': 'Expired',
+              'access_type': 'HID Bluetooth Key',
+              'guest_email': 'david.deng@yoswit.com',
+              'pin_remark': 'HID Bluetooth Key',
+              'key_card_id': '32',
+              'octopus_check_digit': 'NA',
+              'access_level': '0',
+              'one_time_access': 0,
+              'access_control_setting': 0,
+              'disabled': 0,
+              'valid_from': '2025-04-29 19:05:35',
+              'valid_to': '2025-04-29 23:59:00',
+              'repeat_1': 0,
+              'repeat_2': 0,
+              'repeat_3': 0,
+              'repeat_4': 0,
+              'repeat_5': 0,
+              'repeat_6': 0,
+              'repeat_7': 0,
+              'reference': 'umv8hhsre0',
+              'next_publish': '2025-04-30 08:53:57.500345',
+              'door': '026ec8ce1e',
+              'next_publish_mins': 0,
+              'door_name': 'Innocell Lift 2 Cam 3 10F',
+              'doctype': 'Device Access',
+              'blocking_schedule': [],
+              '__last_sync_on': '2025-04-30T03:13:53.247Z',
+            };
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .autocomplete-dropdown-in {
+    z-index: 10000 !important;
+  }
+  .do-not-find-flat {
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
+    color: #007bff;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+</style>
