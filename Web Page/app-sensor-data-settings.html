@@ -978,7 +978,7 @@
               config_list: saveData,
               map_user: this.mapUserList,
               user_scene_id: this.userSceneId,
-              user_scene_gateway_id: this.userSceneGatewayId,
+              user_scene_gateway_id: this.userSceneId,
               user_scene_name: this.userSceneName,
             };
             device_scene.push({
@@ -1131,7 +1131,7 @@
                   characteristic: 'ff81',
                   data: trigger,
                 });
-                let $command = `02${core_utils_get_mac_address_from_guid(guid, true)}18${core_utils_get_mac_address_from_guid(guid, true)}${guid}8700${parseInt(limitValue)*100}8701${parseInt(upperValue)*100}8699${parseInt(this.userSceneId).toString(16).pad('00')}`;
+                let $command = `02${core_utils_get_mac_address_from_guid(guid, true)}18${core_utils_get_mac_address_from_guid(guid, true)}${guid}${parseInt(parseInt(typeIndex)+20).toString(16).pad('00')}8599${parseInt(this.userSceneId).toString(16).pad('00')}`;
                 let action = `8F1000${parseInt(this.userSceneId).toString(16).pad('00')}${parseInt($command.length / 2).toString(16).pad('00')}${$command}`;
                 bleList.push({
                   service: 'ff80',
@@ -1140,6 +1140,17 @@
                 });
                 try {
                   await window.peripheral[guid].write(bleList);
+                  let scene_device_location = [
+                    {
+                      device: guid,
+                      storage_id: this.userSceneId,
+                    }
+                  ];
+                  let res = await post_scene_data(this.userSceneName, scene_device_location, this.sceneTemplate == 'Door Close' ? 'Door Open' : this.sceneTemplate,this.sceneName);
+                  console.log('res', res);
+                  if (res.data) {
+                    this.userSceneName = res.data.data.name;
+                  }
                   resolve(1);
                 } catch (err) {
                   reject(_(erp.get_log_description(err)));

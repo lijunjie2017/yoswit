@@ -74,7 +74,7 @@
                           v-on:click="isGroup(item)"
                           :class="{'link':true,'color-orange':true}"
                         >
-                          <i class="icon material-icons">{{item.group_index == 0?'exposure_zero':item.group_index == 1?'looks_one':item.group_index == 2?'looks_two':item.group_index == 3?'looks_3':item.group_index == 4?'looks_4':'exposure_zero'}}</i>
+                          <i class="icon material-icons">{{item.group_index == 0?'exposure_zero':item.group_index == 1?'looks_one':item.group_index == 2?'looks_two':item.group_index == 3?'looks_3':item.group_index == 4?'looks_4':item.group_index == 5?'looks_5':item.group_index == 6?'looks_6':'exposure_zero'}}</i>
                         </a>
                       </div>
                       <div class="swipeout-actions-right">
@@ -100,6 +100,11 @@
               <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                 <div class="col">
                   <div class="button button-fill button-save" v-on:click="saveScene()">{{_("SAVE")}}</div>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="toScene()">{{_("To Scene")}}</div>
                 </div>
               </div>
             </div>
@@ -286,6 +291,10 @@
             }else if(item.group_index == 3){
               item.group_index = 4;
             }else if(item.group_index == 4){
+              item.group_index = 5;
+            }else if(item.group_index == 5){
+              item.group_index = 6;
+            }else if(item.group_index == 6){
               item.group_index = 0;
             }
           },
@@ -310,6 +319,10 @@
           },
           toRoomList(title, type, operateType) {
             let url = `/mobile-app/scene-room-device?type=${type}&title=${encodeURIComponent(tran(title))}`;
+            mainView.router.navigate(url);
+          },
+          toScene(){
+            let url = `/mobile-app/scene-guid-list-test-for-mira`;
             mainView.router.navigate(url);
           },
           toSceneList(title, type, operateType) {

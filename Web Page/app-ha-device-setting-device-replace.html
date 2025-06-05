@@ -303,7 +303,7 @@
               </div>
               <div class="row" style="margin-bottom: 15px; margin-top: 15px; position: fixed; bottom: 10px; z-index: 999">
                 <div class="col">
-                  <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("previous")}}</div>
+                  <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("previous")}}</div>
                 </div>
                 <div class="col">
                   <div class="button button-fill button-save" v-on:click="updateRcuSceneDevice()">{{_("Mapping")}}</div>
@@ -346,11 +346,12 @@
       $on = ctx.$on;
 
     let vueApp = null;
-    let { guid, title, name } = $f7route.query;
-    window.retryUpdateTriggerButton = ()=>{
+    let { guid, title, name,filter_value } = $f7route.query;
+    console.log('filter_value', filter_value);
+    window.retryUpdateTriggerButton = () => {
       console.log('retryUpdateTriggerButton');
       vueApp.$retryUpdate();
-    }
+    };
     console.log('title', title);
     $update();
     $on('pageMounted', (e, page) => {
@@ -398,14 +399,17 @@
           rawSceneList: [],
           thisModel: null,
           updateSceneTriggerDeviceMap: {},
+          oldRcuGuid: '',
+          currentRcuGuid: '',
         },
         watch: {},
         async mounted() {
-          Vue.prototype.$retryUpdate = this.retryUpdate
+          Vue.prototype.$retryUpdate = this.retryUpdate;
           this.showDevices();
           this.initStepList();
           await this.initSceneList();
-          await this.initRolePermission();
+          await this.checkDeviceReplaceReady();
+          // await this.initRolePermission();
           emitter.off('gateway/sync');
           emitter.on('gateway/sync', (data) => {
             if (data.code == 1) {
@@ -441,25 +445,60 @@
               behavior: 'instant',
             });
           },
-          async initRolePermission(){
+          async checkDeviceReplaceReady() {
+            return new Promise(async (resolve, reject) => {
+              try {
+                //if the rcu, pay attention, should replace the wifi device
+                /*
+                1.if repalce the rcu, check if have the wifi device
+                */
+                let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+                let subdevice_map = subdevices.find((item) => item.name == name);
+                if (!subdevice_map) {
+                  resolve(0);
+                }
+                if (subdevice_map.device_mode.includes('RCU Controller')) {
+                  let profile_device = cloneDeep(erp.info.profile.profile_device);
+                  let isWifiDevice = profile_device.filter(
+                    (item) => item.device_model.includes('360') || item.device_model.includes('121-AC') || item.device_model.includes('103')
+                  );
+                  let replaceStatus = true;
+                  isWifiDevice.forEach((item) => {
+                    if (!item.device) {
+                      replaceStatus = false;
+                    }
+                  });
+                  if (!replaceStatus) {
+                    app.dialog.alert(_('Please note, you must first replace the other Wi-Fi devices.'));
+                    resolve(1);
+                  }
+                } else {
+                  resolve(0);
+                }
+              } catch (error) {
+                reject(error);
+              }
+            });
+          },
+          async initRolePermission() {
             let url = `/api/method/get_user_permission_4_doctype?doctype=Scene&user=${users[users.current].usr}`;
-            try{
+            try {
               let res = await http2.request(url, {
                 method: 'GET',
                 serializer: 'json',
                 responseType: 'json',
                 timeout: 3,
               });
-              console.log("res",res);
-              if(res.data){
-                console.log("res.data.data",res.data.message);
-                if(!res.data.message.write){
+              console.log('res', res);
+              if (res.data) {
+                console.log('res.data.data', res.data.message);
+                if (!res.data.message.write) {
                   app.dialog.alert(_('Pay attention, you do not have permission to replace scene.'));
                   return;
                 }
               }
-            }catch(error){
-              console.log("error",error);
+            } catch (error) {
+              console.log('error', error);
             }
           },
           async initSceneList() {
@@ -483,8 +522,17 @@
                 });
                 list = listMap.data.data;
                 console.log('list', list);
+                //should update the curtain scene and welcome scene
+                let thisSceneMap = cloneDeep(erp.info.scene);
+
                 list.forEach((item) => {
                   item.writeStatus = false;
+                  for (let scene in thisSceneMap) {
+                    if (thisSceneMap[scene].copy_from == item.name) {
+                      item.action = thisSceneMap[scene].action;
+                      item.trigger = thisSceneMap[scene].trigger;
+                    }
+                  }
                 });
                 this.sceneList = list;
                 this.rawSceneList = list;
@@ -630,6 +678,7 @@
               let p_model = Object.values(modeList).find((e) => e.hexid.toLowerCase() === p.hexModel.toLowerCase());
               if (!p_model || device_mode != p_model.mode) continue;
               if (map_device.indexOf(p.guid) != -1) continue;
+              if (filter_value && p.rssi < filter_value) continue;
               ps.push(app.utils.extend({ model: p_model.model_code }, p));
             }
             let rssi_sort = function (a, b) {
@@ -868,6 +917,7 @@
                   // await this.updateDeviceSettingInErp();
                   app.dialog.close();
                   //check if the device is mesh device
+                  // debugger
                   let device_model = erp.info.device[guid ? guid : this.rawGuid].device_model;
                   let meshModelList = ['M86-1G', 'M86-3DP', 'M86-3BR', 'M86-3MIR', 'M146-LRL', 'M146-BRR', 'M146-BRL', 'YO780'];
                   if (meshModelList.indexOf(device_model) != -1) {
@@ -962,14 +1012,14 @@
               resolve();
             });
           },
-          async retryUpdate(){
-            try{
+          async retryUpdate() {
+            try {
               await this.updateSceneButtonWithBle();
 
               await this.updateRcuSceneDeviceWithApi();
               await this.updateErpSceneTriggerCommandAndActionCommand();
               this.updateErpData();
-            }catch(error){
+            } catch (error) {
               app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
@@ -978,19 +1028,24 @@
               //update the device in server script
               try {
                 // await this.updateRcuSceneDeviceWithApi();
-                //replace the command
-                await this.replaceRcuSceneDeviceCommand();
-                console.log('this.updateSceneTriggerDeviceMap', this.updateSceneTriggerDeviceMap);
+                if (this.thisModel.includes('YO780') || this.thisModel.includes('M86') || this.thisModel.includes('M146')) {
+                  //replace the command
+                  await this.replaceRcuSceneDeviceCommand();
+                  console.log('this.updateSceneTriggerDeviceMap', this.updateSceneTriggerDeviceMap);
 
-                if(this.thisModel == 'YO780' && (guid != 'undefined' && guid != '')){
-                  debugger
-                  await this.updateTriggerButton();
-                  await this.updateSceneButtonWithBle();
-                  //return;
+                  if (this.thisModel == 'YO780' && guid != 'undefined' && guid != '') {
+                    debugger;
+                    await this.updateTriggerButton();
+                    await this.updateSceneButtonWithBle();
+                    //return;
+                  }
+                  await this.updateRcuSceneDeviceWithApi();
+                  //update the erp scene trigger command
+                  await this.updateErpSceneTriggerCommandAndActionCommand();
+                } else if (this.thisModel.includes('121-AC') || this.thisModel.includes('360') || this.thisModel.includes('103')) {
+                  //update the erp scene trigger command
+                  await this.repalceRcuSceneActionCommandForWifiDevice();
                 }
-                await this.updateRcuSceneDeviceWithApi();
-                //update the erp scene trigger command
-                await this.updateErpSceneTriggerCommandAndActionCommand();
                 this.updateErpData();
               } catch (error) {
                 reject(error);
@@ -1000,6 +1055,45 @@
               //if scene button ,replace the trigger,replace the Scene Device Location,replace the Scene Virtual Button
 
               //if rcu,replace the Action,replace the trigger,replace the Scene Device Location,replace the Scene Virtual Button,replace the Scene Subscribe Address,replace Condition,replace the UI Configuration
+            });
+          },
+          repalceRcuSceneActionCommandForWifiDevice() {
+            /*
+            1. find the scene of the wifi device 
+            2. replace the action command
+            */
+            return new Promise(async (resolve, reject) => {
+              let thisGuid = guid ? guid : this.rawGuid;
+              let scenes = cloneDeep(erp.info.scene);
+              let sceneList = [];
+              try {
+                for (let i in scenes) {
+                  let action = scenes[i].action;
+                  if (action.includes(thisGuid)) {
+                  //update the action command
+                  let newAction = this.replaceInJsonString(action, {
+                    [thisGuid]: this.targetGuid,
+                    [core_utils_get_mac_address_from_guid(thisGuid, true)]: core_utils_get_mac_address_from_guid(this.targetGuid, true),
+                    [core_utils_get_mac_address_from_guid(thisGuid).replace(/:/g, '')]: core_utils_get_mac_address_from_guid(
+                      this.targetGuid
+                    ).replace(/:/g, ''),
+                    [core_utils_get_mac_address_from_guid(thisGuid)]: core_utils_get_mac_address_from_guid(this.targetGuid),
+                  });
+                  //post to the erp
+                  let url = `/api/resource/Scene/${scenes[i].name}`;
+                  await http2.request(url, {
+                    method: 'PUT',
+                    serializer: 'json',
+                    data: {
+                      action: newAction,
+                    },
+                    });
+                  }
+                }
+                resolve(1);
+              } catch (error) {
+                reject(error);
+              }
             });
           },
           replaceRcuSceneDeviceCommand() {
@@ -1023,7 +1117,7 @@
               for (let i in scenes) {
                 let scene_device_location = scenes[i].scene_device_location || [];
 
-                let scene_location_map = scene_device_location.find((item) => (item.device == guid ? guid : this.rawGuid));
+                let scene_location_map = scene_device_location.find((item) => item.device == (guid ? guid : this.rawGuid));
                 if (!scene_location_map) {
                   continue;
                 }
@@ -1036,16 +1130,29 @@
                 let trigger = JSON.parse(scenes[i].trigger);
                 let action = JSON.parse(scenes[i].action);
                 let rcuGuid = this.getTheSceneRcu(scenes[i]);
+                //if not rcuGuid,skip
+                if (!rcuGuid) {
+                  rcuGuid = this.rawGuid;
+                }
                 await sleep(1000);
                 let bleList = [];
                 if (this.thisModel == 'YO780') {
                   this.saveRcuTriggerCommand(scenes[i]);
                   let thisCommandList = await this.saveActionCommand(scenes[i]);
                   thisCommandList.forEach((item) => {
+                    let thisItemCommand = item.command;
+                    // debugger
+                    if (this.oldRcuGuid) {
+                      thisItemCommand = this.replaceMacInInstruction(
+                        thisItemCommand,
+                        core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                        core_utils_get_mac_address_from_guid(this.targetGuid, true)
+                      );
+                    }
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: item.command,
+                      data: thisItemCommand,
                     });
                   });
                 } else {
@@ -1063,7 +1170,7 @@
                     closeTimeout: 2000,
                   });
                   toast.open();
-                  // await peripheral[this.targetGuid].write(bleList);
+                  await peripheral[this.targetGuid].write(bleList);
                   postStatus = true;
                   this.sceneList.forEach((item) => {
                     if (item.name == scenes[i].name) {
@@ -1221,6 +1328,10 @@
               let actionMap = JSON.parse(scenesMap.action);
               let triggerMap = JSON.parse(scenesMap.trigger);
               let rcuGuid = this.getTheSceneRcu(scenesMap);
+              if (!rcuGuid) {
+                rcuGuid = this.rawGuid;
+              }
+              this.currentRcuGuid = this.targetGuid;
               console.log('guid', guid);
               let oldMac = core_utils_get_mac_address_from_guid(guid ? guid : this.rawGuid, true);
               let newMac = core_utils_get_mac_address_from_guid(this.targetGuid, true);
@@ -1286,7 +1397,7 @@
               resolve(commandList);
             });
           },
-          async saveRcuTriggerCommand(scenesMap){
+          async saveRcuTriggerCommand(scenesMap) {
             return new Promise(async (resolve, reject) => {
               let triggerList = JSON.parse(scenesMap.trigger);
               let rcuGuid = this.getTheSceneRcu(scenesMap);
@@ -1308,12 +1419,14 @@
                 let ledActionOn = triggerList[i].ledActionOn;
                 let ledActionOff = triggerList[i].ledActionOff;
                 let ledRawSettingCommand = triggerList[i].ledRawSettingCommand;
-                [triggercommand, actionCommand, ledTriggerOn, ledTriggerOff, ledActionOn, ledActionOff, ledRawSettingCommand].forEach((item) => {
-                  if (item) {
-                    let command = this.replaceMacInInstruction(item, oldMac, newMac);
-                    this.updateSceneTriggerDeviceMap[thisGuid]['commandList'].push(command);
+                [triggercommand, actionCommand, ledTriggerOn, ledTriggerOff, ledActionOn, ledActionOff, ledRawSettingCommand].forEach(
+                  (item) => {
+                    if (item) {
+                      let command = this.replaceMacInInstruction(item, oldMac, newMac);
+                      this.updateSceneTriggerDeviceMap[thisGuid]['commandList'].push(command);
+                    }
                   }
-                });
+                );
                 settingCommandList?.forEach((item) => {
                   let command = this.replaceMacInInstruction(item, oldMac, newMac);
                   this.updateSceneTriggerDeviceMap[thisGuid]['commandList'].push(command);
@@ -1334,11 +1447,13 @@
               let triggerList = JSON.parse(scenesMap.trigger);
               let actionList = JSON.parse(scenesMap.action);
               let rcuGuid = this.getTheSceneRcu(scenesMap);
+              this.currentRcuGuid = rcuGuid;
               let oldMac = core_utils_get_mac_address_from_guid(guid ? guid : this.rawGuid, true);
               let newMac = core_utils_get_mac_address_from_guid(this.targetGuid, true);
+
               let bleList = [];
               for (let i in triggerList) {
-                if (triggerList[i].guid != guid ? guid : this.rawGuid) {
+                if (triggerList[i].guid != (guid ? guid : this.rawGuid)) {
                   continue;
                 }
                 let triggercommand = triggerList[i].triggercommand;
@@ -1349,70 +1464,127 @@
                 let ledActionOn = triggerList[i].ledActionOn;
                 let ledActionOff = triggerList[i].ledActionOff;
                 let ledRawSettingCommand = triggerList[i].ledRawSettingCommand;
+                //debugger
                 if (triggercommand) {
                   triggercommand = this.replaceMacInInstruction(triggercommand, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    triggercommand = this.replaceMacInInstruction(
+                      triggercommand,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: triggercommand,
+                    data: triggercommand.toLocaleLowerCase(),
                   });
                 }
                 if (actionCommand) {
                   actionCommand = this.replaceMacInInstruction(actionCommand, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    actionCommand = this.replaceMacInInstruction(
+                      actionCommand,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: actionCommand,
+                    data: actionCommand.toLocaleLowerCase(),
                   });
                 }
                 if (settingCommandList && settingCommandList.length) {
                   settingCommandList.forEach((item) => {
                     item = this.replaceMacInInstruction(item, oldMac, newMac);
+                    if (this.oldRcuGuid) {
+                      item = this.replaceMacInInstruction(
+                        item,
+                        core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                        core_utils_get_mac_address_from_guid(rcuGuid, true)
+                      );
+                    }
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: item,
+                      data: item.toLocaleLowerCase(),
                     });
                   });
                 }
                 if (ledTriggerOn) {
                   ledTriggerOn = this.replaceMacInInstruction(ledTriggerOn, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    ledTriggerOn = this.replaceMacInInstruction(
+                      ledTriggerOn,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: ledTriggerOn,
+                    data: ledTriggerOn.toLocaleLowerCase(),
                   });
                 }
                 if (ledTriggerOff) {
                   ledTriggerOff = this.replaceMacInInstruction(ledTriggerOff, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    ledTriggerOff = this.replaceMacInInstruction(
+                      ledTriggerOff,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: ledTriggerOff,
+                    data: ledTriggerOff.toLocaleLowerCase(),
                   });
                 }
                 if (ledActionOn) {
                   ledActionOn = this.replaceMacInInstruction(ledActionOn, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    ledActionOn = this.replaceMacInInstruction(
+                      ledActionOn,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: ledActionOn,
+                    data: ledActionOn.toLocaleLowerCase(),
                   });
                 }
                 if (ledActionOff) {
                   ledActionOff = this.replaceMacInInstruction(ledActionOff, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    ledActionOff = this.replaceMacInInstruction(
+                      ledActionOff,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: ledActionOff,
+                    data: ledActionOff.toLocaleLowerCase(),
                   });
                 }
                 if (ledRawSettingCommand) {
                   ledRawSettingCommand = this.replaceMacInInstruction(ledRawSettingCommand, oldMac, newMac);
+                  if (this.oldRcuGuid) {
+                    ledRawSettingCommand = this.replaceMacInInstruction(
+                      ledRawSettingCommand,
+                      core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
+                      core_utils_get_mac_address_from_guid(rcuGuid, true)
+                    );
+                  }
                   bleList.push({
                     service: 'ff80',
                     characteristic: 'ff81',
-                    data: ledRawSettingCommand,
+                    data: ledRawSettingCommand.toLocaleLowerCase(),
                   });
                 }
               }
@@ -1924,14 +2096,15 @@
           },
           getTheSceneRcu(sceneMap) {
             //select the profile rcu,and return the rcu guid
+            // debugger
             let rcuGuid = '';
             let rcuList = [];
             let scene_device_location = sceneMap.scene_device_location || [];
             for (let i in scene_device_location) {
               let guid = scene_device_location[i].device;
               if (isset(erp.info.device[guid])) {
-                let device_model = erp.info.device[guid].device_model;
-                if (device_model == 'YO780') {
+                let device_mode = erp.info.device[guid].device_mode;
+                if (device_mode == 'RCU Controller') {
                   if (rcuList.indexOf(guid) == -1) {
                     rcuList.push(guid);
                   }
@@ -1951,10 +2124,21 @@
             } else if (rcuList.length == 1) {
               rcuGuid = rcuList[0];
             }
+            //if rcuGuid is empty, find the current rcu guid
+            if (!rcuGuid) {
+              let thisDevices = cloneDeep(erp.info.device);
+              for (let i in thisDevices) {
+                if (thisDevices[i].device_mode == 'RCU Controller') {
+                  rcuGuid = i;
+                  break;
+                }
+              }
+            }
             return rcuGuid;
           },
           async updateErpSceneTriggerCommandAndActionCommand() {
             app.dialog.preloader(_('Updating Scene Commands'));
+            debugger;
             let list = [];
             let oldMac = '';
             if (!isset(guid) || guid == 'undefined' || guid == '') {
@@ -1981,13 +2165,39 @@
               app.dialog.close();
               app.dialog.alert(_(erp.get_log_description(error)));
             }
+            //update the action and trigger data
+            let thisSceneMap = cloneDeep(erp.info.scene);
             for (let i in list) {
+              if (thisSceneMap[list[i].name]) {
+                list[i].trigger = thisSceneMap[list[i].name].trigger;
+                list[i].action = thisSceneMap[list[i].name].action;
+              }
               let trigger = list[i].trigger;
               let action = list[i].action;
               let obj = {};
               obj[oldMac] = newMac;
+              obj[guid ? guid : this.rawGuid] = this.targetGuid;
+              obj[core_utils_get_mac_address_from_guid(guid ? guid : this.rawGuid).replace(/:/g, '')] = core_utils_get_mac_address_from_guid(
+                this.targetGuid
+              ).replace(/:/g, '');
               let newTrigger = this.replaceInJsonString(trigger, obj);
               let newAction = this.replaceInJsonString(action, obj);
+              if (this.oldRcuGuid) {
+                let oldRcuReplaceMap = {};
+                oldRcuReplaceMap[core_utils_get_mac_address_from_guid(this.oldRcuGuid, true)] = core_utils_get_mac_address_from_guid(
+                  this.currentRcuGuid,
+                  true
+                );
+                oldRcuReplaceMap[this.oldRcuGuid] = this.currentRcuGuid;
+                oldRcuReplaceMap[core_utils_get_mac_address_from_guid(this.oldRcuGuid).replace(/:/g, '')] =
+                  core_utils_get_mac_address_from_guid(this.currentRcuGuid).replace(/:/g, '');
+                oldRcuReplaceMap[core_utils_get_mac_address_from_guid(this.oldRcuGuid)] = core_utils_get_mac_address_from_guid(
+                  this.currentRcuGuid
+                );
+                newTrigger = this.replaceInJsonString(newTrigger, oldRcuReplaceMap);
+                newAction = this.replaceInJsonString(newAction, oldRcuReplaceMap);
+                debugger;
+              }
               // debugger;
               console.log('newTrigger', newTrigger);
               console.log('newAction', newAction);
@@ -2030,6 +2240,11 @@
                 if (profile_device_map) {
                   thisGuid = profile_device_map.device;
                 }
+                //pay attention, if have two rcu, this logic is wrong
+                let rcuMap = profile_device.find((item) => item.device_model == 'YO780');
+                if (rcuMap) {
+                  this.oldRcuGuid = rcuMap.device;
+                }
                 console.log('thisGuid', thisGuid);
                 mac = core_utils_get_mac_address_from_guid(thisGuid, true);
                 console.log('mac', mac);
@@ -2057,18 +2272,17 @@
             return jsonStr.replace(pattern, (match) => replaceMap[match]);
           },
           //update the trigger button
-          updateTriggerButton(){
-            
-            return new Promise(async (resolve,reject)=>{
-              //show the device connet button 
+          updateTriggerButton() {
+            return new Promise(async (resolve, reject) => {
+              //show the device connet button
               let html = '';
-              for(let i in this.updateSceneTriggerDeviceMap){
+              for (let i in this.updateSceneTriggerDeviceMap) {
                 let this_mac = core_utils_get_mac_address_from_guid(i);
                 let obj = this.getSubDeviceInfo(i);
                 let room_name = obj.room_name;
                 let sub_device_title = obj.title;
                 let device_model = obj.device_model;
-                if(device_model == 'YO780'){
+                if (device_model == 'YO780') {
                   continue;
                 }
                 this.updateSceneTriggerDeviceMap.postStatus = false;
@@ -2084,7 +2298,7 @@
                         <span class="room-title text-color-gray">/</span>
                           <span class="room-title text-color-gray">${tran(sub_device_title)}</span>
                         </p>
-                      <p class="error-log text-color-red">${this.updateSceneTriggerDeviceMap[i].errorLog?this.updateSceneTriggerDeviceMap[i].errorLog:''}</p>
+                      <p class="error-log text-color-red">${this.updateSceneTriggerDeviceMap[i].errorLog ? this.updateSceneTriggerDeviceMap[i].errorLog : ''}</p>
                     </div>
                     <div class="item-after">
                       <i class="icon material-icons">watch_later</i>
@@ -2093,9 +2307,9 @@
                 </div>
               </li>`;
               }
-              debugger
+              // debugger
               this.deviceSheet = app.sheet.create({
-              content: `
+                content: `
                 <div class="sheet-modal" style="height:auto">
                   <div class="sheet-modal-inner">
                     <div class="swipe-handler"></div>
@@ -2108,7 +2322,7 @@
                       <div class="block block-strong">
                         <p class="row">
                           <div class="col">
-                            <div class="button button-raised button-fill button-save" func="retryUpdateTriggerButton">${ _('Retry') }</div>
+                            <div class="button button-raised button-fill button-save" func="retryUpdateTriggerButton">${_('Retry')}</div>
                           </div>
                         </p>
                       </div>
@@ -2116,94 +2330,95 @@
                   </div>
                 </div>
               `,
-              on: {
-                closed: () => {
-                  console.log('closed');
+                on: {
+                  closed: () => {
+                    console.log('closed');
+                  },
                 },
-              },
                 swipeToClose: true,
                 push: true,
                 backdrop: true,
               });
               this.deviceSheet.open();
-              resolve(1)
+              resolve(1);
             });
           },
-          updateStep(device,type,error){
-            if(type == 0){
+          updateStep(device, type, error) {
+            if (type == 0) {
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('i').removeClass('rotate-animation');
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('i').html('error');
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('.error-log').html(error);
-
-            }else if(type == 1){
+            } else if (type == 1) {
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('i').removeClass('rotate-animation');
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('i').html('check');
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('.error-log').html('');
-            }else if(type == 2){
+            } else if (type == 2) {
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('i').addClass('rotate-animation');
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('i').html('sync');
               $(`.manufacturing-steps-list li[deviceName="${device}"]`).find('.error-log').html('');
             }
           },
-          updateSceneButtonWithBle(){
-            return new Promise(async(resolve,reject)=>{
+          updateSceneButtonWithBle() {
+            return new Promise(async (resolve, reject) => {
               let thisPostStatus = true;
               let postError = '';
-              for(let i in this.updateSceneTriggerDeviceMap){
+              for (let i in this.updateSceneTriggerDeviceMap) {
                 let device_model = this.getSubDeviceInfo(i).device_model;
-                if(device_model == 'YO780'){
+                if (device_model == 'YO780') {
                   continue;
                 }
-                if(this.updateSceneTriggerDeviceMap[i].postStatus){
-                  this.updateStep(i,1);
+                if (this.updateSceneTriggerDeviceMap[i].postStatus) {
+                  this.updateStep(i, 1);
                   continue;
                 }
-                this.updateStep(i,2);
+                this.updateStep(i, 2);
                 let index = 1;
-                
+
                 let list = this.updateSceneTriggerDeviceMap[i].commandList;
-                for(let j in list){
-                  try{
-                    debugger
-                    await window.peripheral[i].write([{
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data : list[j]
-                    }]);
+                for (let j in list) {
+                  try {
+                    // debugger
+                    await window.peripheral[i].write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: list[j],
+                      },
+                    ]);
                     index++;
-                    if(index == list.length){
-                      this.updateStep(i,1);
+                    if (index == list.length) {
+                      this.updateStep(i, 1);
                       this.updateSceneTriggerDeviceMap[i].postStatus = true;
                     }
-                  }catch(error){
-                    console.log("error",error);
+                  } catch (error) {
+                    console.log('error', error);
                     this.updateSceneTriggerDeviceMap[i].errorLog = erp.get_log_description(error);
-                    this.updateStep(i,0);
+                    this.updateStep(i, 0);
                     // app.dialog.alert(_(erp.get_log_description(error)));
                     thisPostStatus = false;
                     postError = error;
                   }
                 }
               }
-              if(thisPostStatus){
+              if (thisPostStatus) {
                 this.deviceSheet.close();
                 resolve(1);
-              }else{
+              } else {
                 reject(postError);
               }
-            })
+            });
           },
-          getSubDeviceInfo(device){
+          getSubDeviceInfo(device) {
             //device is means guid
             let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
             let deviceMap = erp.info.device[device];
             let obj = {
-              room_name : '',
-              title : '',
-              device_model : isset(deviceMap) ? deviceMap.device_model : ''
-            }
-            for(let i in profile_subdevice){
-              if(profile_subdevice[i].device == device){
+              room_name: '',
+              title: '',
+              device_model: isset(deviceMap) ? deviceMap.device_model : '',
+            };
+            for (let i in profile_subdevice) {
+              if (profile_subdevice[i].device == device) {
                 obj.room_name = profile_subdevice[i].room_name;
                 obj.title = profile_subdevice[i].title;
                 break;
@@ -2696,7 +2911,7 @@
                         			"index": 0,
                         			"key": "${generateMeshKey()}",
                         			"phase": 0,
-                        			"minSecurity": "insecure",
+                        			"minSecurity": "secure",
                         			"timestamp": "${getCurrentISOFormat()}"
                         		}
                         	],
@@ -2711,7 +2926,7 @@
                         	"provisioners": [
                         		{
                         			"provisionerName": "nRF Mesh Provisioner",
-                        			"UUID": "${provisionerUUid}",
+                        			"UUID": "${generateUUIDv4}",
                         			"allocatedUnicastRange": [
                         				{
                         					"lowAddress": "0001",
@@ -2734,7 +2949,7 @@
                         	],
                         	"nodes": [
                         		{
-                        			"UUID": "${provisionerUUid}",
+                        			"UUID": "${generateUUIDv4}",
                         			"name": "nRF Mesh Provisioner",
                         			"deviceKey": "${generateMeshKey()}",
                         			"unicastAddress": "0001",
@@ -2843,18 +3058,33 @@
           async iotSetMeshIdentify() {
             console.log('iotSetMeshIdentify');
             app.dialog.preloader(_('Identifying...'));
+            //set timer
+            erp.replaceIdentifyTimer = setTimeout(() => {
+              app.dialog.close();
+              app.dialog.alert(_('Mesh failed, please retry!'));
+            }, 30000);
             try {
               setmesh_produce_timer = null;
               await this.sleep(1000);
               await window.peripheral[this.targetGuid].disconnect();
-            } catch (error) {}
+            } catch (error) {
+              if (erp.replaceIdentifyTimer) {
+                clearTimeout(erp.replaceIdentifyTimer);
+              }
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
             try {
               await window.peripheral[this.targetGuid].identify();
+              if (erp.replaceIdentifyTimer) {
+                clearTimeout(erp.replaceIdentifyTimer);
+              }
               this.identifyNotify();
-              await this.sleep(1000);
               // await this.iotSetMeshProvisioning();
             } catch (error) {
               app.dialog.close();
+              if (erp.replaceIdentifyTimer) {
+                clearTimeout(erp.replaceIdentifyTimer);
+              }
               console.log('iotSetMeshIdentify error=' + error);
               app.dialog.confirm(
                 _('Identifing failed, retry?'),
@@ -2882,10 +3112,21 @@
           },
           async identifyNotify() {
             this.identifyListenerFun = (rs) => {
+              //defind timmer
+              this.identifyTimer = setTimeout(() => {
+                // this.identifyTimer = null;
+                app.dialog.alert(_('Identifing failed, please retry!'));
+              }, 30000);
               console.log('identifyListenerFun=', rs);
               if (rs.code == 200) {
+                if (this.identifyTimer) {
+                  clearTimeout(this.identifyTimer);
+                }
                 this.iotSetMeshProvisioning();
               } else if (rs.code == 7300) {
+                if (this.identifyTimer) {
+                  clearTimeout(this.identifyTimer);
+                }
                 app.dialog.confirm(
                   _('Identifing failed, retry?'),
                   async () => {
@@ -2894,7 +3135,7 @@
                         {
                           service: 'ff80',
                           characteristic: 'ff81',
-                          data: '931200000101',
+                          data: '8110',
                         },
                         {
                           service: 'ff80',
@@ -2911,6 +3152,7 @@
               }
             };
             if (this.identifyListenerFun) {
+              console.log('off mesh/identify');
               emitter.off('mesh/identify', this.identifyListenerFun);
             }
             emitter.on('mesh/identify', this.identifyListenerFun);
@@ -2937,15 +3179,25 @@
                       break;
                     }
                   }
-                  app.dialog.alert(_('Mesh Successfully!'));
+                  await http.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
+                    method: 'PUT',
+                    serializer: 'json',
+                    data: {
+                      mesh_config: JSON.stringify(this.meshConfig),
+                    },
+                  });
                   this.meshComplete = true;
-                  // await http.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
-                  //   method: 'PUT',
-                  //   serializer: 'json',
-                  //   data: {
-                  //     mesh_config: JSON.stringify(this.meshConfig),
-                  //   },
-                  // });
+                  app.dialog.close();
+                  if (!this.toast) {
+                    this.toast = app.toast.create({
+                      text: _('Mesh Successfully!'),
+                      position: 'center',
+                      closeTimeout: 2000,
+                    });
+                  }
+                  this.toast.open();
+                  this.initSettingList({ guid: guid });
+                  this.toTab(3);
                 },
                 (error) => {
                   while (true) {
@@ -2990,6 +3242,7 @@
           checkMeshComplete() {
             if (this.meshComplete) {
               // this.updateDeviceNetwork();
+              this.initSettingList({ guid: guid });
               this.toTab(3);
             } else {
               if (this.networkType == 2) {
@@ -3010,7 +3263,17 @@
           },
         },
         computed: {},
-        beforeDestroy() {},
+        beforeDestroy() {
+          if (this.identifyListenerFun) {
+            emitter.off('mesh/identify', this.identifyListenerFun);
+          }
+          if (setmesh_produce_timer) {
+            clearTimeout(setmesh_produce_timer);
+          }
+          if (erp.replaceIdentifyTimer) {
+            clearTimeout(erp.replaceIdentifyTimer);
+          }
+        },
       });
     });
 
@@ -3036,10 +3299,10 @@
     border-radius: inherit;
   }
   .rotate-animation {
-  animation: rotate 2s linear infinite;
-  display: inline-block; /* 确保transform生效 */
-}
-.rotate-animation.paused {
-  animation: none;
-}
+    animation: rotate 2s linear infinite;
+    display: inline-block; /* 确保transform生效 */
+  }
+  .rotate-animation.paused {
+    animation: none;
+  }
 </style>

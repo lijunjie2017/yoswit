@@ -70,7 +70,7 @@
                     :id="'room-bar-title-'+room.name"
                     v-on:click="showRoom(room,1)"
                   >
-                    {{room.title}}
+                    {{tran(room.title)}}
                   </a>
                 </div>
               </div>
@@ -142,6 +142,8 @@
               </div>
             </div>
             <!-- this show the music device list end -->
+
+            <!-- this show the anthor device list -->
             <div class="anthor-box">
               
               <div class="anthor-box">
@@ -154,6 +156,7 @@
                         :style="{'flex-wrap': 'wrap','width': group.width,'padding': '5px 10px','margin-bottom': '6px'}"
                         v-for="group in groupByList"
                         :key="group.group"
+                        v-if="group.isShow"
                       >
                         <h3 class="tv-title" style="width: 100%; text-align: left; padding-left: 10px;max-height: 25px;">
                           <span class="pure-title-main">{{group.title}}</span>
@@ -203,6 +206,7 @@
                       v-for="item in rangeBarDeviceList"
                       :key="item.index"
                       :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
+                      v-if="item.roomHidden"
                     >
                       <li class="swipeout display-flex">
                         <div class="iconbtn swipeout-content" style="width: 100%">
@@ -923,6 +927,7 @@
           showRoom(item, status) {
             console.log('name', item.name);
             console.log('status', status);
+            let room_title = item.title;
             if (status == '0') {
               this.roomList.forEach((room) => {
                 room.isActive = false;
@@ -948,12 +953,38 @@
               this.musicDeviceList.forEach((musicItem) => {
                 musicItem.roomHidden = false;
                 //if the room is the living room,will find the entrance bathroom speaker,if in bedroom,will find the bedroom speaker
-                let room_title = item.title;
                 if(room_title.toLowerCase().includes('living') && musicItem.room_name.toLowerCase().includes('entrance')){
                   musicItem.roomHidden = true;
                 }
                 if(room_title.toLowerCase().includes('bedroom') && musicItem.room_name.toLowerCase().includes('bathroom') && !musicItem.room_name.toLowerCase().includes('entrance')){
                   musicItem.roomHidden = true;
+                }
+              });
+              /*
+              hide anthoer list device
+              1.hide the group
+              */
+              this.groupByList.forEach((groupItem) => {
+                groupItem.isShow = false;
+                if(room_title.toLowerCase().includes('living') && (groupItem.title.toLowerCase().includes('entrance') || groupItem.title.toLowerCase().includes('living'))){
+                  groupItem.isShow = true;
+                }
+                if(room_title.toLowerCase().includes('bedroom') && (groupItem.title.toLowerCase().includes('bathroom') || groupItem.title.toLowerCase().includes('bedroom')) && !groupItem.title.toLowerCase().includes('entrance')){
+                  groupItem.isShow = true;
+                }
+              });
+
+              /*
+              range bar device
+              */
+              this.rangeBarDeviceList.forEach((rangeItem) => {
+                rangeItem.roomHidden = false;
+                
+                if(room_title.toLowerCase().includes('bedroom') && rangeItem.room_name.toLowerCase().includes('bedroom')){
+                  rangeItem.roomHidden = true;
+                }
+                if(room_title.toLowerCase().includes('living') && rangeItem.room_name.toLowerCase().includes('living')){
+                  rangeItem.roomHidden = true;
                 }
               });
             }
@@ -1114,7 +1145,7 @@
                   if (!this.roomList.find((room) => room.name == item.profile_room)) {
                     this.roomList.push({
                       name: item.profile_room,
-                      title: tran(item.room_name),
+                      title: item.room_name,
                       isActive: false,
                     });
                   }
@@ -1243,7 +1274,19 @@
               this.rangeBarDeviceList = anthorList.filter(
                 (item) => item.device_button_group.startsWith('RCU DIMMING') || item.device_button_group.startsWith('OPENCLOSE')
               );
-
+              if(this.roomList.length > 1){
+                let room_title = this.roomList[0].title;
+                this.rangeBarDeviceList.forEach((item) => {
+                  item.roomHidden = false;
+                  if(item.room_name.toLowerCase().includes(room_title.toLowerCase())){
+                    item.roomHidden = true;
+                  }
+                });
+              }else{
+                this.rangeBarDeviceList.forEach((item) => {
+                  item.roomHidden = true;
+                });
+              }
               let musicDeviceList = anthorList.filter((item) => item.device_mode.startsWith('Music Player'));
               musicDeviceList.forEach((item) => {
                 item.buttonType = 'music';
@@ -1291,38 +1334,40 @@
                     if(!isset(item.group_index)){
                       debugger
                     }
-                    this.groupByList.push({
-                      group: item.group_index,
-                      title: tran(item.room_name),
-                      width: item.sort_order == 25 ? '100%' : '100%'
-                    });
+                    //check if the roomlist > 1
+                    if(this.roomList.length > 1){
+                      let is_show = false;
+                      let room_title = this.roomList[0].title;
+                      if(room_title.toLowerCase().includes('living')){
+                        if(item.room_name.toLowerCase().includes('living') || item.room_name.toLowerCase().includes('entrance')){
+                          is_show = true;
+                        }
+                      }else if(room_title.toLowerCase().includes('bedroom')){
+                        if(item.room_name.toLowerCase().includes('bedroom') || (item.room_name.toLowerCase().includes('bathroom') && !item.room_name.toLowerCase().includes('entrance'))){
+                          is_show = true;
+                        }
+                      }
+                      if(item.room_name.toLowerCase().includes(room_title.toLowerCase())){
+                        is_show = true;
+                      }
+                      this.groupByList.push({
+                        group: item.group_index,
+                        title: tran(item.room_name),
+                        width: item.sort_order == 25 ? '100%' : '100%',
+                        isShow: is_show
+                      });
+                    }else{
+                      this.groupByList.push({
+                        group: item.group_index,
+                        title: tran(item.room_name),
+                        width: item.sort_order == 25 ? '100%' : '100%',
+                        isShow: true
+                      });
+                    }
+                    
                   }
                 }
                 this.anthorDeviceList.push(item);
-                //find the group index;
-                return
-                let indexMap = index % 4;
-                let group = parseInt(index / 4);
-                if (index == 0) {
-                  this_title = tran(item.room_name);
-                  this.groupByList.push({
-                    group: 1,
-                    title: this_title,
-                  });
-                  item.group = 1;
-                  this.anthorDeviceList.push(item);
-                } else if (indexMap == 0) {
-                  this_title = tran(item.room_name);
-                  this.groupByList.push({
-                    group: group + 1,
-                    title: this_title,
-                  });
-                  item.group = group + 1;
-                  this.anthorDeviceList.push(item);
-                } else {
-                  item.group = group + 1;
-                  this.anthorDeviceList.push(item);
-                }
               });
               console.log('this.groupByList', this.groupByList);
               console.log('this.anthorDeviceList', this.anthorDeviceList);

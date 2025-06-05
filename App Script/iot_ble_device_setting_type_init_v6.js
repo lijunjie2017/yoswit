@@ -868,7 +868,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     let soltGang = type.replace('init_slot_','');
     let slot = parseInt(soltGang).toString(16).pad('00');
     console.log('rangeList',rangeList);
-    let command = `1306971f${slot}8909${parseInt(rangeList[0]*255/100).toString(16).pad("00")}06971f${slot}8909${parseInt(rangeList[2]*255/100).toString(16).pad("00")}06971f${slot}8905${parseInt(valueList[rangeList[1]]).toString(16).pad("00")}06971f${slot}8905${parseInt(valueList[rangeList[3]]).toString(16).pad("00")}`;
+    let command = `1307971f${slot}8909${parseInt(rangeList[0]*255/100).toString(16).pad("00")}${parseInt(rangeList[2]*255/100).toString(16).pad("00")}07971f${slot}8905${parseInt(valueList[rangeList[1]]).toString(16).pad("00")}${parseInt(valueList[rangeList[3]]).toString(16).pad("00")}`;
     return command;
   }
 

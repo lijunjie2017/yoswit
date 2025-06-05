@@ -323,6 +323,8 @@ window.iot_setup_mesh_test_init = async function(params) {
                         iot_mesh_config['networks'][selected]['nodes'][0]['configComplete'] = true
                         iot_mesh_config['networks'][selected]['nodes'][0]['crpl'] = "7FFF"
 
+                        let includedUnicastAddress = [];
+                        let maxIUnicastAddress = 0;
                         for(let nnn in iot_mesh_config['networks'][selected]['nodes']){
                             const node = iot_mesh_config['networks'][selected]['nodes'][nnn];
                             console.log(JSON.stringify(node));
@@ -333,8 +335,36 @@ window.iot_setup_mesh_test_init = async function(params) {
                         let newnodearray = [];
                         for(let nnn in nodearray){
                             newnodearray.push(nodedetail[nodearray[nnn]])
+                            
+                            const node = nodedetail[nodearray[nnn]];
+                            const iAddr = parseInt(node.unicastAddress, 16);
+                            if(iAddr > maxIUnicastAddress){
+                                maxIUnicastAddress = iAddr;
+                            }
+                            includedUnicastAddress.push(iAddr);
+                            console.log(`iAddr=${iAddr}, maxIUnicastAddress=${maxIUnicastAddress}, includedUnicastAddress=${JSON.stringify(includedUnicastAddress)}`)
                         }
                         iot_mesh_config['networks'][selected]['nodes'] = newnodearray;
+                        
+                        
+                        iot_mesh_config['networks'][selected]['networkExclusions'] = [];
+                        iot_mesh_config['networks'][selected]['networkExclusions'].push({
+                            "addresses":[],
+                            "ivIndex":0
+                        });
+                        for(let i=1; i<maxIUnicastAddress; i++){
+                            console.log(`check ${i}`)
+                            if(includedUnicastAddress.includes(i)) continue;
+                            
+                            console.log(`${i} is not exist`)
+                            let hexString = i.toString(16);
+                            
+                            console.log(`${i} is ${hexString} with ${('0'.repeat(4 - hexString.length) + hexString.substring(0,4))}`)
+                            iot_mesh_config['networks'][selected]['networkExclusions'][0]['addresses'].push(('0'.repeat(4 - hexString.length) + hexString.substring(0,4)));
+                        }
+                        
+                        
+                        
                         
                         iot_setmesh_scan_count = 0;
                         ble.importNetwork(JSON.stringify(iot_mesh_config['networks'][selected]), function(){

@@ -6005,6 +6005,7 @@
                       characteristic: 'ff81',
                       data: `972003${parseInt(virtualGang).toString(16).pad('00')}01${toggle_default_on_item}`,
                     })
+                    defaultOnCommand = `972003${parseInt(virtualGang).toString(16).pad('00')}01${toggle_default_on_item}`;
                   }
                   if(toggle_default_off_item){
                     bleList.push({
@@ -6012,6 +6013,7 @@
                       characteristic: 'ff81',
                       data: `972003${parseInt(virtualGang).toString(16).pad('00')}00${toggle_default_off_item}`,
                     })
+                    defaultOffCommand = `972003${parseInt(virtualGang).toString(16).pad('00')}00${toggle_default_off_item}`;
                   }
                   // alert(toggle_default_on_item)
                   // alert(toggle_default_off_item)

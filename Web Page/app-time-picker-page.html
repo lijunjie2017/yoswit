@@ -120,7 +120,7 @@
     let timer2 = {};
     let this_day = dayjs().date().toString(16).pad('00');
     let this_month = (dayjs().month() + 1).toString(16).pad('00');
-    let this_years = dayjs().year().toString(16).pad('0000').match(/.{1,2}/g).reverse().join('');
+    let this_years = (parseInt((dayjs().year())) - 1).toString(16).pad('0000').match(/.{1,2}/g).reverse().join('');
     console.log(`${this_day}-${this_month}-${this_years}`);
     const showTimeBox = (index) => {
       if (index == 2) {

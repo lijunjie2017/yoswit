@@ -88,6 +88,14 @@ window.ble_button_group_icon_map = ()=>{
         "on_icon":"newss_bath_room_sleep_on",
         "off_icon":"newss_bath_room_sleep_off",
       },
+      "SCENE VIRTUAL CHECKROOM":{
+        "on_icon":"newss_check_room_on",
+        "off_icon":"newss_check_room_off",
+      },
+      "SCENE VIRTUAL ENTRANCE BATHROOM":{
+        "on_icon":"newss_entrance_bath_room_on",
+        "off_icon":"newss_entrance_bath_room_off",
+      },
     }
     return obj;
 }
