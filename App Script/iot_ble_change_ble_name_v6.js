@@ -40,7 +40,9 @@ window.iot_ble_change_ble_name = (params) => {
           service: 'ff80',
           characteristic: 'ff81',
           data: `810e`,
-        }]).then(() => {
+        }]).then(()=>{
+          return iot_device_setting_sync_server(guid, 'BLE Name', `${new_device_name}/${erp.info.profile.flat}`);
+        }).then(() => {
             app.dialog.alert(_('Update Successfully.'));
           })
           .catch((error) => {

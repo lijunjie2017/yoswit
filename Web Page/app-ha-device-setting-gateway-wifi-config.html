@@ -478,6 +478,9 @@
             }
             if (!this.setting.server_url) {
               this.setting.server_url = 'mqtt://' + erp.settings[erp.appId].mqtt_server;
+              if(erp.settings[erp.appId].mqtt_scheme){
+                this.setting.server_url = `${erp.settings[erp.appId].mqtt_scheme}://' + ${erp.settings[erp.appId].mqtt_server}`;
+              }
             }
             if (!this.setting.port) {
               this.setting.port = erp.settings[erp.appId].mqtt_port;

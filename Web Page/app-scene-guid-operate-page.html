@@ -282,13 +282,31 @@
                       class="add-box add-action display-flex justify-content-space-between align-items-center"
                       
                     >
-                      <div class="trigger-icon display-flex justify-content-flex-start align-items-center" v-on:click="toRoomList('Choose Action Device','2','1')">
+                      <div class="trigger-icon display-flex justify-content-flex-start align-items-center" v-on:click="toRoomList('Choose Action Device','2','1')" v-if="templateName != 'RCU Master'">
                         <i class="material-icons">add_circle</i>
                         <div class="trigger-text margin-left">{{_("Add Actions")}}</div>
                       </div>
                       <div class="trigger-icon display-flex justify-content-flex-start align-items-center" v-on:click="toSceneList('Choose Scene','7','1')">
                         <i class="material-icons">add_circle</i>
                         <div class="trigger-text margin-left">{{_("Add Scene")}}</div>
+                      </div>
+                    </div>
+                    <div
+                      class="add-box add-action display-flex justify-content-space-between align-items-center"
+                      v-if="templateName == 'RCU Scene Button'"
+                    >
+                      <div class="trigger-icon display-flex justify-content-flex-between align-items-center" v-on:click="IsCheckout()">
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Is Checkout")}}</div>
+                      </div>
+                    </div>
+                    <div
+                      class="add-box add-action display-flex justify-content-space-between align-items-center"
+                      v-if="templateName == 'RCU Radar' || templateName == 'Welcome Scene'"
+                    >
+                      <div class="trigger-icon display-flex justify-content-flex-between align-items-center" v-on:click="CleanCheckout()">
+                        <i class="material-icons">add_circle</i>
+                        <div class="trigger-text margin-left">{{_("Clean Checkout")}}</div>
                       </div>
                     </div>
                   </div>
@@ -369,6 +387,7 @@
                 </div>
               </div>
             </div>
+            <!-- this page is choose the trigger  -->
             <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
               <div class="card">
                 <div class="card-content card-content-padding">
@@ -437,6 +456,17 @@
                     <div class="radar-onchange-info">
                       <p class="text-color-gray" style="font-size: 12px;padding:5px 15px;margin-top: -10px;;">{{_('Only supports occupied to unoccupied.')}}</p>
                     </div>
+                    <div class="add-box add-action display-flex justify-content-space-between align-items-center">
+                      <div class="trigger-text">{{_('Clean Checkout')}}</div>
+                      <div
+                        class="trigger-right display-flex justify-content-space-between align-items-cente"
+                        v-on:click="cleanCheckOut = !cleanCheckOut"
+                      >
+                        <i class="material-icons text-color-gray" style="font-size: 50px" v-if="!cleanCheckOut">toggle_off</i>
+                        <i class="material-icons text-color-theme" style="font-size: 50px" v-if="cleanCheckOut">toggle_on</i>
+                      </div>
+                    </div>
+                    
                   </div>
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
@@ -1382,6 +1412,46 @@
                 },
               ],
             },
+            rcu_master_scene: {
+              name: 'RCU Master',
+              step: [
+                {
+                  id: 1,
+                  relatedIndex: 0.5,
+                  name: '1',
+                },
+                {
+                  id: 2,
+                  relatedIndex: 1,
+                  name: '2',
+                },
+                {
+                  id: 3,
+                  relatedIndex: 15,
+                  name: '3',
+                },
+                {
+                  id: 4,
+                  relatedIndex: 2,
+                  name: '4',
+                },
+                {
+                  id: 5,
+                  relatedIndex: 3,
+                  name: '5',
+                },
+                {
+                  id: 6,
+                  relatedIndex: 4,
+                  name: '6',
+                },
+                {
+                  id: 7,
+                  relatedIndex: 5,
+                  name: '7',
+                },
+              ],
+            },
             rcu_scene_new_toggle: {
               name: 'RCU Scene New Toggle',
               step: [
@@ -1823,6 +1893,12 @@
                   color: '#ff9500',
                 },
                 {
+                  name: 'RCU Master',
+                  desription: '',
+                  icon: 'power_settings_new',
+                  color: '#708090',
+                },
+                {
                   name: 'RCU Curtain',
                   desription: '',
                   icon: 'stop_circle',
@@ -1919,6 +1995,7 @@
           sceneTriggerStatus: false, //is trigger by scene
           statusIndex:'',//0x16
           radarOnchange : false,
+          cleanCheckOut : false,
         },
         watch: {
           index: function (val) {
@@ -1927,6 +2004,28 @@
         },
         mounted() {
           this.init();
+          emitter.on('trigger_master', (data) => {
+            console.log(data);
+            let thisList = JSON.parse(data.data);
+            thisList.forEach((item) => {
+              console.log('item',item);
+              let obj = cloneDeep(item);
+              obj.button_group = item.device_button_group;
+              obj.model = item.device_model;
+              obj.mode = item.device_mode;
+              obj.img_url = 'https://my.yoswit.com/files/YO780.svg';
+              obj.mac_address = core_utils_get_mac_address_from_guid(item.device).replace(/:/g, '');
+              obj.room_title = item.room_name;
+              obj.display_name = tran(item.title);
+              obj.guid = item.device;
+              if(obj.ref == 1){
+                obj.status = 'ON';
+              }else{
+                obj.status = 'OFF';
+              }
+              this.trigger.push(obj);
+            });
+          });
           emitter.on('trigger_save', (data) => {
             console.log(data);
             //if exist the same trigger, warn it
@@ -1940,6 +2039,7 @@
               app.dialog.alert(_('The trigger condition already exists. Please modify it.'));
               return;
             }
+            debugger
             const { button_group, display_name, mac_address, model, mode, img_url, room_name, guid, gateway, config } = data;
             let ref = data.value;
             let temp = data.temp;
@@ -1977,6 +2077,8 @@
                 status = 'CLICK AND STOP';
               } else if (ref == 3) {
                 status = 'CLICK';
+              }else if(ref == 6){
+                status = 'CHECKOUT';
               } else {
                 status = 'OFF';
               }
@@ -1998,6 +2100,11 @@
                 status = 'ON';
               } else {
                 status = 'OFF';
+              }
+            }else if(mode == 'RCU Controller' && button_group == 'ONOFF GANG1'){
+              debugger
+              if(ref == 6){
+                status = 'CHECKOUT';
               }
             } else if (mode == 'Door Sensor') {
               debugger;
@@ -3068,6 +3175,13 @@
                     if(isset(uiConfiguration.radarOnchange)){
                       this.radarOnchange = uiConfiguration.radarOnchange;
                     }
+                    if(isset(uiConfiguration.cleanCheckOut)){
+                      this.cleanCheckOut = uiConfiguration.cleanCheckOut;
+                    }
+                  }else if(this.templateName == 'RCU Radar'){
+                    if(isset(uiConfiguration.cleanCheckOut)){
+                      this.cleanCheckOut = uiConfiguration.cleanCheckOut;
+                    }
                   }else if(this.templateName == 'RCU Scene Button'){
                     this.deviceStatusList = isset(uiConfiguration.deviceStatusList)?uiConfiguration.deviceStatusList : [] ;
                   }
@@ -3237,10 +3351,11 @@
             // this.pickObj.open();
             if(isset(this.overallSceneMap['ui_configuration'])){
               this.overallSceneMap['ui_configuration'].radarOnchange = this.radarOnchange;
+              this.overallSceneMap['ui_configuration'].cleanCheckOut = this.cleanCheckOut;
             }
             app.dialog.preloader();
             console.log('overallSceneMap', this.overallSceneMap);
-            if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Scene Toggle - Save Status' || this.templateName == 'RCU Curtain' || this.templateName == 'RCU Scene New Toggle') {
+            if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Scene Toggle - Save Status' || this.templateName == 'RCU Curtain' || this.templateName == 'RCU Scene New Toggle' || this.templateName == 'RCU Master') {
               let url = encodeURI(`/api/resource/Scene`);
               let method = 'POST';
               if (this.scenePostId) {
@@ -3839,7 +3954,11 @@
             app.dialog.preloader();
             let list = cloneDeep(this.deviceStatusList);
             //tindy the same guid device
+            let self = this;
+            let outerResolve, outerReject;
             return new Promise(async (resolve, reject) => {
+              outerResolve = resolve;
+              outerReject = reject;
               let statusList = this.strucActionList(list);
               let sceneStatusList = [];
               for(let i in statusList){
@@ -3883,7 +4002,8 @@
                   }else if(device_button_group.startsWith('Thermostat')){
                     command += `029403029404029405029406`;
                   }else if(device_button_group.startsWith('Hdmicec')){
-                    command += `0a972102016b6120312030`;
+                    // command += `0a972102016b6120312030`;
+                    command += `028010`;
                   }
                 }
                 statusList[i].command = command;
@@ -3966,6 +4086,7 @@
               }
               console.log("statusList",statusList)
               let postStatus = true
+              let errorGuid = '';
               for(let i in statusList){
                 let command = statusList[i].command;
                 let scene_command = statusList[i].scene_command;
@@ -3991,8 +4112,18 @@
                 try {
                   await window.peripheral[i].write(ble_list);
                   await window.peripheral[i].disconnect();
+                  if(isset(this.overallSceneMap['ui_configuration'])){
+                    this.overallSceneMap['ui_configuration'][`${i}_device`] = ble_command
+                    this.overallSceneMap['ui_configuration'][`${i}_scene_command`] = scene_command
+                  }else{
+                    this.overallSceneMap['ui_configuration'] = {}
+                    this.overallSceneMap['ui_configuration'][`${i}_device`] = ble_command
+                    this.overallSceneMap['ui_configuration'][`${i}_scene_command`] = scene_command
+                  }
                 } catch (error) {
                   postStatus = false;
+                  errorGuid = i;
+                  break;
                 }
               }
               if(postStatus){
@@ -4004,12 +4135,20 @@
                 }
                 app.dialog.close();
                 resolve(1)
-              }else{
+              }else{ 
                 app.dialog.close();
-                app.dialog.confirm(`${_('Save failed, please try again.')}`,()=>{
-                  // this.saveWelcomeMode();
-                  resolve(1)
-                },()=>{})
+                //get the device info
+                let mac_address = core_utils_get_mac_address_from_guid(errorGuid).replace(/:/g, '');
+                app.dialog.confirm(`${mac_address} ${_('save failed, please try again.')}`,async()=>{
+                  try{
+                    await self.saveWelcomeMode();
+                    outerResolve(1);
+                  }catch(err){  
+                    outerReject(err);
+                  }
+                },()=>{
+                  outerReject(_('Cancel the save.'));
+                })
               }
             });
           },
@@ -4038,6 +4177,7 @@
                 return; 
               }else{
                 await this.saveActionOnBle();
+                debugger
                 if(this.templateName == 'Welcome Scene'){
                   await this.saveActionForWelcomeScene();
                 }
@@ -4126,6 +4266,11 @@
                   ui_configuration = {
                     isCheckGateway: this.gatewayMapGuid,
                     gatewayTopic: this.gatewayTopic,
+                  };
+                }
+                if(this.templateName == 'RCU Radar'){
+                  ui_configuration = {
+                    cleanCheckOut: this.cleanCheckOut,
                   };
                 }
                 let post_data = {
@@ -4435,6 +4580,71 @@
             let sceneObj = erp.info.scene;
             let sceneDeviceLocationList = [];
             let postStatus = true;
+            if(this.templateName == 'RCU Master'){
+              /*
+              任意一个灯亮    8f20000101+length+00+30+mac+02+00+slot+gang+slot+gang+...
+
+              全部灯灭    8f20000101+length+00+30+mac+00+00+slot+gang+slot+gang+...
+
+              master type    8f20000101+length+00+30+mac+00/01/02+status+slot+gang+slot+gang+...
+
+              8f200001011400308a3f094aec24020001010204030205011105
+              */
+             console.log('this.actionLocation[i]',this.actionLocation[this.actionGuid]);
+             let triggerId = this.actionLocation[this.actionGuid];
+             let opcode = '00';
+             let typeIndex = '30';
+             let preCommand = `8f2000${parseInt(triggerId).toString(16).pad('00')}${parseInt(triggerId).toString(16).pad('00')}`;
+             let _itemCommand = ``;
+             let this_ref = '02';
+             this.trigger.forEach((item)=>{
+              if(item.ref == 0){
+                this_ref = '00';
+              }
+              let solt = item.config;
+              let device_button_group = item.device_button_group;
+              if(device_button_group.startsWith('RCU ONOFF GANG')){
+                let gang = device_button_group.replace('RCU ONOFF GANG','')*1;
+                let target_gang = gang%4;
+                if(target_gang == 0){
+                  target_gang = 4;
+                }
+                let _command = `${solt}${parseInt(target_gang).toString(16).pad('00')}`;
+                _itemCommand += _command;
+              }else if(device_button_group.startsWith('RCU DIMMING')){
+                let gang = device_button_group.replace('RCU DIMMING','')*1;
+                let target_gang = gang%2;
+                if(target_gang == 0){
+                  target_gang = 2;
+                }
+                let _command = `${solt}${parseInt(target_gang).toString(16).pad('00')}`;
+                _itemCommand += _command;
+              }else if(device_button_group.startsWith('RCU OUTPUT')){
+                let target_gang = device_button_group.replace('RCU OUTPUT','')*1;
+                let _command = `11${parseInt(target_gang).toString(16).pad('00')}`;
+                _itemCommand += _command;
+              }
+             })
+             _itemCommand = `${opcode}${typeIndex}${core_utils_get_mac_address_from_guid(this.actionGuid,true)}${this_ref}00${_itemCommand}`;
+             let command = `${preCommand}${parseInt(_itemCommand.length/2).toString(16).pad('00')}${_itemCommand}`;
+             console.log('command',command);
+             app.dialog.preloader(_('Save Master Scene'));
+             try{
+              await window.peripheral[this.actionGuid].write([{
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: command,
+              }]);
+              app.dialog.close();
+              this.overallSceneMap['action'][this.actionGuid]['triggerCommand'] = command;
+              this.overallSceneMap['trigger'] = this.trigger;
+              this.index = 5;
+             }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+             }
+             return;
+            }
             //get exist scene id
             for (let i in sceneObj) {
               sceneObj[i].scene_device_location.forEach((item) => {
@@ -4549,9 +4759,10 @@
                 let ledActionCommand_1 = '';
                 let changeLedStatus_2 = false;
                 let ledActionCommand_2 = '';
+                let flashCommand = '';
                 debugger;
                 this.actionList.forEach((actionItem) => {
-                  if (actionItem.device_mode == 'RCU Controller' && actionItem.device_button_group == 'ONOFF GANG1') {
+                  if (actionItem.device_mode == 'RCU Controller' && actionItem.device_button_group == 'ONOFF GANG1' && !actionItem.isCheckout) {
                     changeLedStatus_1 = true;
                     let virtualId = actionItem.virtualId;
                     let virtualIdType = actionItem.virtualIdType;
@@ -4562,6 +4773,9 @@
                       //ledActionCommand_1 += `0c02${mac}972103${parseInt(virtualId).toString(16).pad('00')}${actionItem.ref == 1 ? '01' : '00'}0c02${rcuMac}972103${parseInt(virtualId).toString(16).pad('00')}${actionItem.ref == 1 ? '01' : '00'}`;
                       ledActionCommand_1 +=   `05972103${parseInt(virtualId).toString(16).pad('00')}${actionItem.ref == 1 ? '01' : '00'}`;
                     }
+                  }
+                  if(actionItem.device_mode == 'RCU Controller' && actionItem.device_button_group == 'ONOFF GANG1' && actionItem.isCheckout){
+                    flashCommand = `04812c0006`;
                   }
                 });
                 this.actionList_2.forEach((actionItem) => {
@@ -4829,6 +5043,9 @@
                   if (changeLedStatus_1 && !changeLedStatus_2) {
                     _commands += ledActionCommand_1;
                   }
+                  if(this.trigger[i].ref == 6){
+                    _commands += `${flashCommand}`;
+                  }
                   if(this.templateName == 'RCU Scene Button'){
                     if(this.deviceStatusList.length > 0){
                       this.deviceStatusList.forEach(item => {
@@ -4848,6 +5065,7 @@
                 let triggerStatus = false;
                 let virtualSceneId = '';
                 let this_ref = 0;
+                debugger
                 this.virtualList.forEach((item) => {
                   if (item.display) {
                     triggerStatus = true;
@@ -4965,6 +5183,10 @@
                 console.log('settingCommand', settingCommand);
                 if (settingCommand) {
                   settingCommandList.push(settingCommand);
+                }
+                debugger
+                if(this.trigger[i].ref == 6){
+                  settingCommandList = [];
                 }
                 //console.log("toggleVirtualCommand",toggleVirtualCommand);
                 this.trigger[i].triggercommand = last_command;
@@ -5151,6 +5373,13 @@
                         data: this_command,
                       },
                     ]);
+                    //save the command in erp
+                    if(isset(this.overallSceneMap['ui_configuration'])){
+                      this.overallSceneMap['ui_configuration'][`${m_86_dp_list[i]}`] = this_command;
+                    }else{
+                      this.overallSceneMap['ui_configuration'] = {};
+                      this.overallSceneMap['ui_configuration'][`${m_86_dp_list[i]}`] = this_command;
+                    }
                     await window.peripheral[m_86_dp_list[i]].disconnect();
                     app.dialog.close();
                   } catch (error) {
@@ -5306,6 +5535,67 @@
             }
             return macMap;
           },
+          //clean checkout the scene
+          CleanCheckout(){
+            let haveBeenCheckout = false;
+            this.actionList.forEach((item)=>{
+              if(item.isCheckout){
+                haveBeenCheckout = true;
+              }
+            })
+            if(haveBeenCheckout){
+              app.dialog.alert(_('You have already checked out the scene, please uncheck it first.'));
+              return;
+            }
+            //find the rcu
+            let rcuGuid = this.actionGuid;
+            console.log('rcuGuid',rcuGuid);
+            //add the checkout UI
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let subMap = subdevices.find(item=>item.device == rcuGuid && item.device_button_group == 'ONOFF GANG1');
+            console.log('subMap',subMap);
+            subMap.imgUrl = 'https://my.yoswit.com/files/YO780.svg';
+            subMap.device_model = 'YO780';
+            subMap.device_mode = 'RCU Controller';
+            subMap.mac_address = core_utils_get_mac_address_from_guid(rcuGuid,true);
+            subMap.ref = 0;
+            subMap.isCheckout = true;
+            this.actionList.push(subMap);
+          },
+          //is checkout the scene
+          IsCheckout(){
+            let haveBeenCheckout = false;
+            this.actionList.forEach((item)=>{
+              if(item.isCheckout){
+                haveBeenCheckout = true;
+              }
+            })
+            if(haveBeenCheckout){
+              app.dialog.alert(_('You have already checked out the scene, please uncheck it first.'));
+              return;
+            }
+            //find the rcu
+            let rcuGuid = this.actionGuid;
+            console.log('rcuGuid',rcuGuid);
+            //add the checkout UI
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let subMap = subdevices.find(item=>item.device == rcuGuid && item.device_button_group == 'ONOFF GANG1');
+            console.log('subMap',subMap);
+            subMap.imgUrl = 'https://my.yoswit.com/files/YO780.svg';
+            subMap.device_model = 'YO780';
+            subMap.device_mode = 'RCU Controller';
+            subMap.mac_address = core_utils_get_mac_address_from_guid(rcuGuid,true);
+            subMap.ref = 1;
+            subMap.isCheckout = true;
+            this.actionList.push(subMap);
+          },
+          //this function save the led trigger
+          masterTrigger(){
+            //8f200001011400308a3f094aec24000001010204030205011105
+            //任意一个灯亮    8f20000101+length+00+30+mac+02+00+slot+gang+slot+gang+...
+            // 全部灯灭    8f20000101+length+00+30+mac+00+00+slot+gang+slot+gang+...
+            
+          },
           postActionBle(actualActionList,isWelcome=false) {
             let controlIndex = 0;
             let postList = cloneDeep(actualActionList);
@@ -5387,18 +5677,30 @@
                     let gang = parseInt(item.config);
                     if (index == 0 && controlIndex == 0) {
                       let this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
+                      if(this.templateName == 'RCU Master'){
+                        this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '40' : ref == 1 ? '41' : '42'}`;
+                      }
                       let $command = `02${mac}13${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
                       data = `${$command}`;
                     } else {
                       let $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
+                      if(this.templateName == 'RCU Master'){
+                        $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '40' : ref == 1 ? '41' : '42'}`;
+                      }
                       data = `${($command.length / 2).toString(16).pad('00')}${$command}`;
                     }
-                  } else if (item.device_button_group == 'ONOFF GANG1' && item.virtualIdType != 2) {
+                  } else if (item.device_button_group == 'ONOFF GANG1' && item.virtualIdType != 2 && !item.isCheckout) {
                     //if led,do not change this gang
                     let gang = parseInt(item.virtualId);
                     let $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
+                    if(this.templateName == 'RCU Master'){
+                      $command = `972103${gang.toString(16).pad('00')}${ref == 0 ? '40' : ref == 1 ? '41' : '42'}`;
+                    }
                     if (index == 0 && controlIndex == 0) {
                       let this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '00' : ref == 1 ? '01' : '02'}`;
+                      if(this.templateName == 'RCU Master'){
+                        this_data = `972103${gang.toString(16).pad('00')}${ref == 0 ? '40' : ref == 1 ? '41' : '42'}`;
+                      }
                       $command = `02${mac}13${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
                       data = `${$command}`;
                     } else {
@@ -5433,6 +5735,10 @@
                       let $command = `972101${val_led.toString(16).pad('00')}${onoff_satus}`;
                       data = `${($command.length / 2).toString(16).pad('00')}${$command}${attach_command ? '05' : ''}${attach_command}`;
                     }
+                  }else if(item.isCheckout){
+                    let ref = item.ref;
+                    let $command = `02${mac}130597210380${parseInt(ref).toString(16).pad('00')}`;
+                    data = `${$command}`;
                   } else {
                     let val_led = button_group.replaceAll('RCU OUTPUT', '') * 1;
                     if (val_led == 33) {
@@ -5524,7 +5830,11 @@
                       //`15${mac}${(_command.length / 2).toString(16).pad('00')}${_command}`;
                       $ac_command += _command;
                     }else{
-                      $ac_command += `${gatewayMac}13${($command.length / 2).toString(16).pad('00')}${$command}`;
+                      if(item.mainType == 50){
+                        $ac_command += `${gatewayMac}130597210380010c8f1f00c80000009721038000`;
+                      }else{
+                        $ac_command += `${gatewayMac}13${($command.length / 2).toString(16).pad('00')}${$command}`;
+                      }
                     }
                     if (controlIndex == 0) {
                       let _command_item = `15${gatewayMac}${($ac_command.length / 2).toString(16).pad('00')}${$ac_command}`
@@ -5556,21 +5866,26 @@
                     if(!gatewayMac){
                       gatewayMac = core_utils_get_mac_address_from_guid(item.device, true);
                     }
-                    let pre_command = `972102016B61203120`;
+                    let pre_command = `80001`;
                     let ref = item.ref;
-                    let $command = `${core_utils_get_mac_address_from_guid(item.device,true)}130c${pre_command}30${ref == 1?'31':'30'}0D`;
+                    let $command = `${core_utils_get_mac_address_from_guid(item.device,true)}1303${pre_command}${ref == 1?'1':'0'}`;
                     let $ac_command = '';
                     let delay_command_item = `${core_utils_get_mac_address_from_guid(item.device,true)}8f1f01d0070000${pre_command}30${ref == 1?'31':'30'}0D`;
                     let delay_command = '';
                     //if cec,should send the delay command 2s
                     if(this.radarExitUnmannedModeStatus || this.radarEnterUnmannedModeStatus){
-                      $command = `${core_utils_get_mac_address_from_guid(item.device,true)}13048f17${this.radarExitUnmannedModeStatus?'01':'00'}010c${pre_command}30${ref == 1?'31':'30'}0D`;
+                      $command = `${core_utils_get_mac_address_from_guid(item.device,true)}13048f17${this.radarExitUnmannedModeStatus?'01':'00'}0103${pre_command}${ref == 1?'1':'0'}`;
                     }
                     $ac_command = `15${gatewayMac}${($command.length / 2).toString(16).pad('00')}${$command}`;
                     if(controlIndex == 0){
                         data = `13${($ac_command.length / 2).toString(16).pad('00')}${$ac_command}`;
                     }else{
                       data = `${($ac_command.length / 2).toString(16).pad('00')}${$ac_command}`;
+                    }
+                    if(item.mainType == 50){
+                      let this_data = `${mac}130597210380010c8f1f00c80000009721038000`;
+                      data = `15${gatewayMac}${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
+                      data = `${(data.length / 2).toString(16).pad('00')}${data}`;
                     }
                     //alert(data)
                     // if(ref == 1){
@@ -5587,7 +5902,8 @@
                   this.templateName != 'RCU Scene Toggle' &&
                   this.templateName != 'RCU Scene Toggle - Save Status' &&
                   this.templateName != 'RCU Curtain' &&
-                  this.templateName != 'Welcome Scene'
+                  this.templateName != 'Welcome Scene' &&
+                  this.templateName != 'RCU Master'
                 ) {
                   start_length = data.length / 2;
                   actioncommand += `${start_length.toString(16).pad('00')}${data}`;
@@ -5597,7 +5913,8 @@
                   this.templateName == 'RCU Scene Toggle' ||
                   this.templateName == 'RCU Scene Toggle - Save Status' ||
                   this.templateName == 'RCU Curtain' ||
-                  this.templateName == 'Welcome Scene'
+                  this.templateName == 'Welcome Scene' ||
+                  this.templateName == 'RCU Master'
                 ) {
                   actioncommand += data;
                 } else if (button_group.startsWith('RCU')) {
@@ -5661,6 +5978,11 @@
                         actioncommand = `${(_command_item.length / 2).toString(16).pad('00')}${_command_item}`;
                       }
                   }
+                  if(item.mainType == 50){
+                    let this_actioncommand = `${mac}130597210380010c8f1f00c80000009721038000`;
+                    actioncommand = `15${mac}${(this_actioncommand.length / 2).toString(16).pad('00')}${this_actioncommand}`;
+                    actioncommand = `${(actioncommand.length / 2).toString(16).pad('00')}${actioncommand}`;
+                  }
                   //alert(actioncommand)
                 }
               });
@@ -5682,19 +6004,29 @@
                   //check if have 13 in actioncommand
                   //get the scene status index
                   let _command = '048f170102';
+                  if(!this.statusIndex){
+                    this.statusIndex = 2;
+                  }
                   if(this.statusIndex){
                     let index = this.statusIndex;
-                    _command = `${_command}048f1701${parseInt(index).toString(16).pad('00')}`;
+                    if(index != 2){
+                      _command = `${_command}048f1701${parseInt(index).toString(16).pad('00')}`;
+                    }
                     strList.splice(16, 0, `${_command}`);
                     actioncommand = strList.join('');
                   }
                 }
                 if(this.radarEnterUnmannedModeStatus){
                   let _command = `048f170002`;
-                  if(this.statusIndex){
-                    let index = this.statusIndex;
-                    _command = `${_command}048f1700${parseInt(index).toString(16).pad('00')}`;
-                  }
+                  let list = this.getExistIndex();
+                  list.forEach((zitem)=>{
+                    _command = `${_command}048f1700${parseInt(zitem).toString(16).pad('00')}`;
+                  });
+                  console.log("_command",_command);
+                  // if(this.statusIndex){
+                  //   let index = this.statusIndex;
+                  //   _command = `${_command}048f1700${parseInt(index).toString(16).pad('00')}`;
+                  // }
                   strList.splice(16, 0, `${_command}`);
                   actioncommand = strList.join('');
                 }
@@ -5744,8 +6076,8 @@
                 return;
               }
             });
-            for (let i in postList) {
-              if (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar' || this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Scene Toggle - Save Status' || this.templateName == 'Welcome Scene') {
+            for (let i in postList) { 
+              if (this.templateName == 'RCU Scene Button' || this.templateName == 'RCU Radar' || this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Scene Toggle - Save Status' || this.templateName == 'Welcome Scene' || this.templateName == 'RCU Master') {
                 if (
                   postList[i].device_mode == 'Triac Dimming' ||
                   postList[i].device_mode == '0-10v Dimming' ||
@@ -6179,8 +6511,14 @@
                 let $length = parseInt(preActionCommand.substring(8, 10),16);
                 let targetLength = $length + 5;
                 preActionCommand = preActionCommand.substring(0, 8) + parseInt(targetLength).toString(16).pad('00') + preActionCommand.substring(10);
-                this.overallSceneMap['action'][i]['actionCommand'] = totalActionCommand;
-                try {
+                debugger
+                if(isset(this.actionMap[i])){
+                  this.actionMap[i]= preActionCommand;
+                }else{ 
+                  this.actionMap[i] = ''; 
+                  this.actionMap[i] = preActionCommand; 
+                }
+                try { 
                   await window.peripheral[i].write([
                     {
                       service: 'ff80',
@@ -6233,6 +6571,7 @@
               console.log('actualActionList', actualActionList);
               
               let actionCommandList = this.postActionBle(actualActionList);
+              debugger
               //have this case,485 connect the rcu,but the action is not have main rcu
               if (this.mainRcuGuid && !isset(actionCommandList[this.mainRcuGuid])) {
                 actionCommandList[this.mainRcuGuid] = '';
@@ -6656,8 +6995,14 @@
                 this.overallSceneMap['ui_configuration']['radarExitUnmannedModeStatus'] = this.radarExitUnmannedModeStatus;
               }
               //save the device setting
-              await this.saveWelcomeMode();              
-              this.index = 2;
+              try{
+                await this.saveWelcomeMode();        
+                this.index = 2;      
+              }catch(err){
+                app.dialog.close();
+                app.dialog.alert(_(err));
+                return;
+              }
               //this.scrollItem(110 * 2);
             }else if(index == 15){
               //save the scene status
@@ -6681,6 +7026,10 @@
             mainView.router.navigate(url);
           },
           toRoomList(title, type, mutiwayStatus) {
+            if(this.templateName == 'RCU Master'){
+              mainView.router.navigate(`/mobile-app/scene-room-device?type=100`);
+              return;
+            }
             if (type == 4) {
               let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
               this.virtualList = [];
@@ -6887,7 +7236,13 @@
               }
               //total_command += this_command;
             });
-            let _length_command = `${pre_item_command}${item_command}`;
+            let _length_command = ``;
+            let clean_command = '';
+            if(this.cleanCheckOut){
+              _length_command = `${pre_item_command}${item_command}`;
+            }else{
+              _length_command = `${pre_item_command}${item_command}`;
+            }
             total_command = `${pre_command}${parseInt(_length_command.length / 2).toString(16).pad('00')}${_length_command}`;
             let this_command_item = `002f00`;
             sceneTriggerList.forEach((item, index) => {
@@ -6898,6 +7253,10 @@
             })
             if(sceneTriggerList.length > 0 && this.timercommand.length > 0){
               total_command = `${total_command}${parseInt(this_command_item.length / 2).toString(16).pad('00')}${this_command_item}`;
+            }
+            if(this.cleanCheckOut){
+              clean_command = `001f${core_utils_get_mac_address_from_guid(this.actionGuid,true)}81011380`;
+              total_command = `${total_command}${parseInt(clean_command.length / 2).toString(16).pad('00')}${clean_command}`;
             }
             return total_command;
           },
@@ -7039,6 +7398,10 @@
                   } else if (ref == 5) {
                     this.isExtraStatus = true;
                     this_ref = '00';
+                  }else if(ref == 6){
+                    typeIndex = `01`;
+                    this_ref = '05';
+                    runTime = '05';
                   } else {
                     this_ref = '00';
                   }
@@ -7439,16 +7802,24 @@
               let status = '';
               let device_button_group = item.device_button_group;
               if (mode == 'On Off Switch' || mode == 'RCU Scene Button' || mode == 'Hdmicec') {
-                if (ref == 1) {
-                  status = 'ON';
-                } else if (ref == 2) {
+                if(item.mainType == 50){
+                  status = 'CHECKOUT';
+                }else{
+                  if (ref == 1) {
+                    status = 'ON';
+                  } else if (ref == 2) {
                   status = 'TOGGLE';
                 } else {
-                  status = 'OFF';
+                    status = 'OFF';
+                  }
                 }
               } else if (mode == 'RCU Controller') {
                 if (ref == 1) {
-                  status = 'ON';
+                  if(item.isCheckout){
+                    status = 'CHECKIN';
+                  }else{
+                    status = 'ON';
+                  }
                 } else if (ref == 2) {
                   status = 'TOGGLE';
                 } else if (ref == 31) {
@@ -7460,7 +7831,11 @@
                 } else if (ref == 35) {
                   status = 'DND OFF';
                 } else {
-                  status = 'OFF';
+                  if(item.isCheckout){
+                    status = 'CHECKOUT';
+                  }else{ 
+                    status = 'OFF';
+                  }
                 }
               } else if (mode == 'RF Sensor' || mode == 'Radar Sensor') {
                 if (ref == 1) {
@@ -7484,20 +7859,28 @@
                   status = 'DIM';
                 }
               } else if (device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')) {
-                if (ref > 1 && ref != 2) {
-                  status = 'OPEN';
-                } else if (ref == 2) {
-                  status = 'PAUSE';
-                } else {
-                  status = 'CLOSE';
+                if(item.mainType == 50){
+                  status = 'CHECKOUT';
+                }else{
+                  if (ref > 1 && ref != 2) {
+                    status = 'OPEN';
+                  } else if (ref == 2) {
+                    status = 'PAUSE';
+                  } else {
+                    status = 'CLOSE';
+                  }
                 }
               } else if (mode == 'Thermostat') {
-                if (item.temperature) {
-                  console.log(item.ref == '0');
-                  let mode_text = item.modeStr == 2 ? 'COOL' : item.modeStr == 1 ? 'HOT' : item.modeStr == 0 ? 'AUTO' : 'UNSET';
-                  let fan_text =
+                if(item.mainType == 50){
+                  status = 'CHECKOUT';
+                }else{
+                  if (item.temperature) {
+                    console.log(item.ref == '0');
+                    let mode_text = item.modeStr == 2 ? 'COOL' : item.modeStr == 1 ? 'HOT' : item.modeStr == 0 ? 'AUTO' : 'UNSET';
+                    let fan_text =
                     item.speedVaule == 4 ? '3 SPEED' : item.speedVaule == 3 ? '2 SPEED' : item.speedVaule == 2 ? '1 SPEED' : 'AUTO';
-                  status = `${item.ref == '0' ? 'Off' : 'On'}/${item.temperature}℃`;
+                    status = `${item.ref == '0' ? 'Off' : 'On'}/${item.temperature}℃`;
+                  }
                 }
               } else if (mode == 'IR' || mode == 'On Off IR') {
                 if (item.ir_temp) {
@@ -7586,6 +7969,7 @@
           emitter.off('save_device_status');
           emitter.off('save_scene_action');
           emitter.off('save_scene_status');
+          emitter.off('trigger_master');
           this.$actionSheetMap = null;
           //emitter.off('set_timmer');
         },

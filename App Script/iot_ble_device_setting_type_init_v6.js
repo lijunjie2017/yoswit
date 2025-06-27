@@ -63,6 +63,9 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     'Manned Backlight Brightness': {},
     'Manned Backlight Time': {},
     'radar_distance_limit': {},
+    'unmanned_duration' : {},
+    'reference' : {},
+    'mode_detail' : {},
   };
   let commandList = [];
 
@@ -341,6 +344,12 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     } else if (type == 'Server URI') {
       let server_url_data = '930000' + value.length.toString(16).pad('0000') + value.convertToHex();
       data = server_url_data;
+    }else if(type == 'Server Username'){
+      let server_username_data = '930200' + value.toLowerCase().length.toString(16).pad('0000') + value.toLowerCase().convertToHex();
+      data = server_username_data;
+    }else if(type == 'Server Password'){
+      let server_password_data = '930300' + value.toLowerCase().length.toString(16).pad('0000') + value.toLowerCase().convertToHex();
+      data = server_password_data;
     }
     return data;
   };
@@ -453,6 +462,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
           'setpoint_limit_upper_heat',
           'humidity_offset',
           'temperature_offset',
+          'keypad_lock_after_backlight_off',
         ];
         if (default_value_list.indexOf(item.setting_type) != -1) {
           if (isset(item.setting)) {
@@ -466,10 +476,14 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       }
     });
     let data = '9402000013';
+    debugger
     if (window.peripheral && isset(window.peripheral[guid])) {
       if (window.peripheral[guid].prop.firmware >= 12.3) {
         data = '9402000015';
       }
+    }
+    if(!isset(window.peripheral[guid])){
+      data = '9402000015';
     }
     data += parseInt(`${thermostatMap['fan_speed']}`).toString(16).pad('00');
     data += parseInt(`${thermostatMap['mode_selection']}`).toString(16).pad('00');
@@ -924,6 +938,50 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     return data;
   };
 
+  //radar unmanned_duration
+
+  //radar reference
+  const get_radar_reference_command = (value) => {
+    let list = value.split('/');
+    let movingRange = list[0].split(',');
+    let staticRange = list[1].split(',');
+    let data = '9505000016';
+    //should find the unmanned_duration
+    let device_settings = erp.info.device[oldGuid].settings;
+    let unmanned_duration = device_settings.find((e) => e.setting_type == 'unmanned_duration').setting;
+    if(unmanned_duration){
+      data += iot_utils_to_little_endian_hex(parseInt(unmanned_duration), 4);
+    }else{
+      return '';
+    }
+    if(movingRange){
+      data += `${movingRange.map((e) => {
+        return parseInt(e).toString(16).pad('00');
+      }).join('')}`;
+    }
+    if(staticRange){
+      data += `${staticRange.map((e) => {
+        return parseInt(e).toString(16).pad('00');
+      }).join('')}`;
+    }
+    return data;
+  }
+
+  //change ble name
+  const get_change_ble_name_command = (value) => {
+    let thisName = cloneDeep(value);
+    let thisFlatName = erp.info.profile.flat;
+    let oldFlatName = '';
+    let nameList = thisName.split('/');
+    oldFlatName = nameList[1];
+    let newName = nameList[0];
+    thisName = newName.replace(`${oldFlatName}`,`${thisFlatName}`);
+    debugger
+    let nameHex = convertToFileHex(`${thisName}`, 63);
+    let data = `98060000${(nameHex.length / 2).toString(16)}${nameHex}`;
+    return data;
+  }
+
   switch (type) {
     case 'Set Time':
       let command = get_set_time_command();
@@ -990,6 +1048,20 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       });
       break;
     case 'Server URI':
+      commandList.push({
+        command: get_wifi_server_post(type, value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'Server Username':
+      commandList.push({
+        command: get_wifi_server_post(type, value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'Server Password':
       commandList.push({
         command: get_wifi_server_post(type, value),
         title: type,
@@ -1119,6 +1191,20 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
         value: `${value.this_button_group} - ${value.target_button_group}`,
         targetPairingCommand: obj.targetPairingCommand,
         targetGuid: obj.targetGuid,
+      });
+      break;
+    case 'reference':
+      commandList.push({
+        command: get_radar_reference_command(value),
+        title: type,
+        value: `9 Items`,
+      });
+      break;
+    case 'Ble Name':
+      commandList.push({
+        command: get_change_ble_name_command(value),
+        title: type,
+        value: value,
       });
       break;
     default:

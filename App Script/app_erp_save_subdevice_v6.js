@@ -1,7 +1,24 @@
 window.app_erp_save_subdevice = async() => {
-	app.dialog.preloader();
 	let data = app.form.convertToData('#frappe-form');
 	console.log("data",data);
+	//check if the room and the name and the device mode is empty
+	if(!data.profile_room){
+		app.dialog.alert(_('Please fill in the room'));
+		return;
+	}
+	if(!data.title){
+		app.dialog.alert(_('Please fill in the device name.'));
+		return;
+	}
+	if(!data.device_mode){
+		app.dialog.alert(_('Please fill in the device mode.'));
+		return;
+	}
+	if(!data.device_button_group){
+		app.dialog.alert(_('Please fill in the device button group.'));
+		return;
+	}
+	app.dialog.preloader();
 	let device_button_group = data.device_button_group;
 	let device_mode = data.device_mode;
 	if(device_button_group == 'Door Open'){

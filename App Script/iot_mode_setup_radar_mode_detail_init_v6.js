@@ -373,7 +373,7 @@ window.iot_mode_setup_radar_mode_detail_init = function (json, mode) {
           this.staticRange = [].concat(this.staticReferenceRange);
         }
       },
-      handleSave() {
+      async handleSave() {
         if (!app.input.validateInputs(this.$refs.container)) {
           return;
         }
@@ -393,13 +393,39 @@ window.iot_mode_setup_radar_mode_detail_init = function (json, mode) {
         data += this.staticRange.map((e) => {
           return parseInt(e).toString(16).pad('00');
         }).join('');
-
-        app.preloader.show();
-        this.writeCmd(data);
-
-        setTimeout(() => {
-          app.preloader.hide();
-        }, 1500);
+        debugger
+        app.dialog.preloader();
+        try{
+          await window.peripheral[guid].write([
+            {
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: data,
+            },
+          ]);
+          app.dialog.close();
+          app.dialog.alert(_('Save Successfully'));
+        }catch(err){
+          app.dialog.close();
+          app.dialog.alert(_(erp.get_log_description(err)));
+          return;
+        }
+        // this.writeCmd(data);
+        //save erp
+        let movingRangeStr = ``;
+        let staticRangeStr = ``;
+        movingRangeStr = this.movingRange.join(',');
+        staticRangeStr = this.staticRange.join(',');
+        let postStr = `${movingRangeStr}/${staticRangeStr}`;
+        let objMap = {
+          unmanned_duration: this.unmannedDuration,
+          reference: postStr,
+          mode_detail: mode,
+        }
+        await iot_device_setting_sync_server(guid,null,null,true, objMap);
+        // setTimeout(() => {
+        //   app.preloader.hide();
+        // }, 1500);
       }
     },
     mounted() {
@@ -411,6 +437,14 @@ window.iot_mode_setup_radar_mode_detail_init = function (json, mode) {
 
       this.startNotification();
     },
-    destroyed() {},
+    destroyed() {
+      try {
+        if (this.$refs.formSave?.parentNode) {
+          this.$refs.formSave.parentNode.removeChild(this.$refs.formSave);
+        }
+      } catch (e) {
+        console.warn("移除 formSave 时出错:", e);
+      }
+    },
   });
 };

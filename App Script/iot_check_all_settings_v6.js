@@ -276,7 +276,7 @@ window.iot_check_all_settings = async (params) => {
       <div class="sheet-modal-inner">
         <div class="swipe-handler"></div>
         <div class="page-content" style="height:600px;">
-        <div class="block-title">${_('Device Settings')}</div>
+        <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Device Settings')}</div>
           <div class="list list-strong list-outline list-dividers-ios">
             <ul class="manufacturing-steps-list">
               <li class="manufacturing-steps manufacturing-step1" deviceName="">
@@ -299,9 +299,46 @@ window.iot_check_all_settings = async (params) => {
                 <span class="progressbar-text end_progressbar_text" >${totalCount}</span>
                 </p>
               </li>
+              <li class="manufacturing-steps manufacturing-step1" deviceName="">
+                <div class="item-content" style="padding-right:15px;">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${_('Checking STA/LAN/AP Mac Address.')}</span>
+                    </div>
+                  </div>
+                  <div class="item-after">
+                    <i class="icon material-icons checking-item-for-sta-lan-ap-mac-address">watch_later</i>
+                  </div>
+                </div>
+              </li>
             </ul>
           </div>
-          <div class="block-title">${_('Device Scenes')}</div>
+          <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Device Firmware')}</div>
+          <div class="list list-strong list-outline list-dividers-ios">
+            <ul class="manufacturing-steps-list">
+              <li class="manufacturing-steps manufacturing-step1" deviceName="">
+                <div class="item-content" style="padding-right:15px;">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${_('Current Firmware')} : </span>
+                      <span class="device-title" name="current-firmware"></span>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="manufacturing-steps manufacturing-step1" deviceName="">
+                <div class="item-content" style="padding-right:15px;">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${_('Latest Firmware')} : </span>
+                      <span class="device-title" name="latest-firmware"></span>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Device Scenes')}</div>
           <div class="list list-strong list-outline list-dividers-ios">
             <ul class="manufacturing-steps-list">
               <li class="manufacturing-steps manufacturing-step1" deviceName="">
@@ -325,13 +362,13 @@ window.iot_check_all_settings = async (params) => {
               </li>
             </ul>
           </div>
-          <div class="block-title">${_('Problematic Scenario')}</div>
+          <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Problematic Scenario')}</div>
           <div class="list list-strong list-outline list-dividers-ios">
             <ul class="manufacturing-steps-list problematic-scenario-list" style="padding:0 15px;">
               
             </ul>
           </div>
-          <div class="block-title">${_('Wifi Info')}</div>
+          <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Wifi Info')}</div>
           <div class="list list-strong list-outline list-dividers-ios">
             <ul class="manufacturing-steps-list" style="padding:0 15px;">
               <li class="manufacturing-steps manufacturing-step1">
@@ -390,8 +427,8 @@ window.iot_check_all_settings = async (params) => {
   `,
     on: {
       closed: () => {
-        if(erp.script.getWifiInfoFun){
-          emitter.off('iot/wifi/info',erp.script.getWifiInfoFun);
+        if (erp.script.getWifiInfoFun) {
+          emitter.off('iot/wifi/info', erp.script.getWifiInfoFun);
         }
         console.log('closed');
       },
@@ -401,92 +438,147 @@ window.iot_check_all_settings = async (params) => {
     backdrop: true,
   });
   erp.checkAllSettingsSheet.open();
-  
 
-  const getJsonData = async()=>{
+  const getFirmwareInfoForThisMode = async () => {
+    app.dialog.preloader(_('Get Firmware Info'));
+    try {
+      await window.peripheral[guid].connect();
+      let firmwareInfo = await readFirmware();
+      console.log('firmwareInfo', firmwareInfo);
+      $('.device-title[name="current-firmware"]').html(firmwareInfo);
+      erp.currentFirmware = firmwareInfo;
+      //get the latest firmware
+      let hexModel = window.peripheral[guid].prop.hexModel.toUpperCase();
+      let modelMap = erp.doctype.device_model[hexModel];
+      if(isset(modelMap)){
+        let modelFirmware = modelMap.latest_firmware;
+        if(isset(modelFirmware)){
+          let modelFirmwareNo = extractVersion(modelFirmware);
+          $('.device-title[name="latest-firmware"]').html(modelFirmwareNo);
+          erp.latestFirmware = modelFirmwareNo;
+        }else{
+          $('.device-title[name="latest-firmware"]').html('N/A');
+        }
+      }
+      while (true) {
+        try {
+          const dialog = app.dialog.close();
+          if (!dialog) {
+            break;
+          }
+        } catch (err) {}
+      }
+    } catch (error) {
+      console.log(error);
+      while (true) {
+        try {
+          const dialog = app.dialog.close();
+          if (!dialog) {
+            break;
+          }
+        } catch (err) {}
+      }
+    }
+  };
+
+  const readFirmware = () => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        let service = '180a',
+          characteristic = '2a26';
+        if (isset(window.peripheral[guid].prop.characteristics)) {
+          for (let c of window.peripheral[guid].prop.characteristics) {
+            if (c.characteristic.toLowerCase() == '2a26' || c.characteristic.toLowerCase() == '2a28') {
+              service = c.service;
+              characteristic = c.characteristic;
+            }
+          }
+        }
+        ble.read(
+          window.peripheral[guid].prop.id,
+          service,
+          characteristic,
+          (data)=> {
+            let firmware = data.convertToAscii().toLowerCase();
+            let firmwareNo = extractVersion(firmware);
+            console.log('firmwareNo',firmwareNo);
+            resolve(firmwareNo);
+          },
+          (failure)=> {
+            reject('Failed to read Firmware');
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  const extractVersion = (version) => {
+    const v = version.match(/[0-9.]+/)[0];
+    // apple store semantic format support
+    const semanticVersion = v.replace(/(\d+)\.(\d)(\d+)/, '$1.$2.$3');
+    try {
+      return semanticVersion
+        .split('.')
+        .map((e) => parseInt(e))
+        .join('.');
+    } catch (err) {
+      return semanticVersion;
+    }
+  };
+
+  const getJsonData = async () => {
     app.dialog.preloader(_('Get Wifi Info'));
-    try{
-      if(window.peripheral[guid].prop.connected){
+    try {
+      if (window.peripheral[guid].prop.connected) {
         await window.peripheral[guid].disconnect();
       }
       await peripheral[guid].connect();
-      erp.script.getWifiInfoFun = (data)=>{
-        console.log('data',data);
+      erp.script.getWifiInfoFun = (data) => {
+        console.log('data', data);
         let rs = data.rs;
         let jsonData = JSON.parse(hexToPlainText(rs.substring(10, rs.length)));
-        console.log('jsonData',jsonData);
+        console.log('jsonData', jsonData);
         if (isset(jsonData)) {
-          if(isset(jsonData.ipv4)){
+          if (isset(jsonData.ipv4)) {
             $('.item-after[name="ipaddress"]').html(jsonData.ipv4);
-          }else{
+          } else {
             $('.item-after[name="ipaddress"]').html('N/A');
           }
-          if(isset(jsonData.macAddress)){
+          if (isset(jsonData.macAddress)) {
             $('.item-after[name="wifimacaddress"]').html(jsonData.macAddress);
-          }else{
+          } else {
             $('.item-after[name="wifimacaddress"]').html('N/A');
           }
-          if(isset(jsonData.ipv6)){
+          if (isset(jsonData.ipv6)) {
             $('.item-after[name="ipv6"]').html(jsonData.ipv6);
-          }else{
+          } else {
             $('.item-after[name="ipv6"]').html('N/A');
           }
-          if(isset(jsonData.bssid)){
+          if (isset(jsonData.bssid)) {
             $('.item-after[name="bssid"]').html(jsonData.bssid);
-          }else{
+          } else {
             $('.item-after[name="bssid"]').html('N/A');
           }
-          if(isset(jsonData.rssi)){
+          if (isset(jsonData.rssi)) {
             $('.item-after[name="rssi"]').html(jsonData.rssi);
-          }else{
+          } else {
             $('.item-after[name="rssi"]').html('N/A');
           }
         }
         app.dialog.close();
       };
-      emitter.on('iot/wifi/info',erp.script.getWifiInfoFun);
-      if(deviceInfo.operatingSystem != 'ios'){
+      emitter.on('iot/wifi/info', erp.script.getWifiInfoFun);
+      if (deviceInfo.operatingSystem != 'ios') {
         await ble.requestMtu(
           peripheral[guid].prop.id,
           512,
-          ()=>{},
-          ()=>{},
-        )
+          () => {},
+          () => {}
+        );
       }
-      // await ble.startNotification(
-      //   peripheral[guid].prop.id,
-      //   'ff80',
-      //   'ff82',
-      //   (rs) => {
-      //     if (rs.startsWith('9329')) {
-      //       let data = rs.substring(10, rs.length);
-      //       console.log('>>>> iot_mode_setup_iaq_ip' + this.hexToPlainText(data));
-      //       //check is nor wifi setting
-      //       let wifi_length = rs.substring(8, 10);
-      //       if (wifi_length == '00') {
-      //         app.preloader.hide();
-      //         if (type == 2) {
-      //           app.dialog.alert('Wifi is not set or connection error.', runtime.appInfo.name);
-      //         }
-      //         return;
-      //       }
-      //       console.log(JSON.parse(this.hexToPlainText(data)));
-      //       let jsonData = JSON.parse(this.hexToPlainText(data));
-      //       if (isset(jsonData.ipv4)) {
-      //         this.wifiInfo.ipaddress = jsonData.ipv4;
-      //         this.wifiInfo.wifimacaddress = jsonData.macAddress;
-      //         this.wifiInfo.ipv6 = jsonData.ipv6;
-      //         this.wifiInfo.bssid = jsonData.bssid;
-      //         this.wifiInfo.rssi = jsonData.rssi;
-      //       }
-      //     }
-      //   },
-      //   (err) => {
-      //     console.log(err);
-      //     //reject(err);
-      //   }
-      // );
-      setTimeout(async()=>{
+      setTimeout(async () => {
         await peripheral[guid].write([
           {
             service: 'ff80',
@@ -494,13 +586,13 @@ window.iot_check_all_settings = async (params) => {
             data: '9329',
           },
         ]);
-      },500)
-    }catch(error){
+      }, 500);
+    } catch (error) {
       app.dialog.close();
       console.log(error);
       app.dialog.alert(erp.get_log_description(error));
     }
-  }
+  };
   const hexToPlainText = (hexString) => {
     // 使用正则表达式检查输入是否是合法的十六进制字符串
     const hexPattern = /^[0-9A-Fa-f]+$/;
@@ -519,100 +611,109 @@ window.iot_check_all_settings = async (params) => {
     const plainText = decoder.decode(new Uint8Array(byteArray));
 
     return plainText;
-  }
+  };
 
-  const getSceneFromBle = async()=>{
-    return new Promise(async(resolve,reject)=>{
+  const getSceneFromBle = async () => {
+    return new Promise(async (resolve, reject) => {
       app.dialog.preloader(_('Get scene from ble.'));
       let commandList = [];
       //define the timer
       let sceneTimer = null;
-      sceneTimer = setTimeout(async()=>{
+      sceneTimer = setTimeout(async () => {
         clearTimeout(sceneTimer);
         app.dialog.close();
         reject(_('Get scene from ble timeout.'));
-      },20000)
-    if(erp.script.getSceneFromBleFun){
-      emitter.off('iot/scene/from/ble',erp.script.getSceneFromBleFun);
-    }
-    erp.script.getSceneFromBleFun = (data)=>{
-      let rs = data.rs;
-      commandList.push(rs);
-      if(commandList.indexOf('8f1300ff') != -1 && 
-      commandList.indexOf('8f200000ff') != -1 &&
-      commandList.indexOf('972303ff02') != -1 &&
-      commandList.indexOf('8f1000ff') != -1){
-        clearTimeout(sceneTimer);
-        app.dialog.close();
-        resolve(commandList);
+      }, 20000);
+      if (erp.script.getSceneFromBleFun) {
+        emitter.off('iot/scene/from/ble', erp.script.getSceneFromBleFun);
       }
-    }
-    emitter.on('iot/scene/from/ble',erp.script.getSceneFromBleFun);
-    let read_action_command = '8F1200FF';
-    let read_trriger_command = `8F220000FF`;
-    let read_scene_toggle_on_command = `972303ff01`;
-    let read_scene_toggle_off_command = `972303ff00`;
-    let read_scene_toggle_setting_command = `972303ff02`;
-    let read_raw_setting_command = `8f1500ff`;
-    try{
-      await peripheral[guid].write([
-        {
-          service: 'ff80',
-          characteristic: 'ff81',
-          data: read_action_command,
-        },
-        {
-          service: 'ff80',
-          characteristic: 'ff81',
-          data: read_trriger_command,
-        },
-        {
-          service: 'ff80',
-          characteristic: 'ff81',
-          data: read_scene_toggle_on_command,
-        },
-        {
-          service: 'ff80',
-          characteristic: 'ff81',
-          data: read_scene_toggle_off_command,
-        },
-        {
-          service: 'ff80',
-          characteristic: 'ff81',
-          data: read_scene_toggle_setting_command,
-        },
-        {
-          service: 'ff80',
-          characteristic: 'ff81',
+      erp.script.getSceneFromBleFun = (data) => {
+        let rs = data.rs;
+        if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '02') {
+          rs = rs.replace('972303', '972003');
+        } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '01') {
+          rs = rs.replace('972303', '972003');
+        } else if (rs.startsWith('972303') && rs.length > 10 && rs.substring(8, 10) == '00') {
+          rs = rs.replace('972303', '972003');
+        }
+        commandList.push(rs);
+        if (
+          commandList.indexOf('8f1300ff') != -1 &&
+          commandList.indexOf('8f200000ff') != -1 &&
+          commandList.indexOf('972303ff02') != -1 &&
+          commandList.indexOf('8f1000ff') != -1
+        ) {
+          clearTimeout(sceneTimer);
+          app.dialog.close();
+          resolve(commandList);
+        }
+      };
+      emitter.on('iot/scene/from/ble', erp.script.getSceneFromBleFun);
+      let read_action_command = '8F1200FF';
+      let read_trriger_command = `8F220000FF`;
+      let read_scene_toggle_on_command = `972303ff01`;
+      let read_scene_toggle_off_command = `972303ff00`;
+      let read_scene_toggle_setting_command = `972303ff02`;
+      let read_raw_setting_command = `8f1500ff`;
+      try {
+        await peripheral[guid].write([
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: read_action_command,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: read_trriger_command,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: read_scene_toggle_on_command,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: read_scene_toggle_off_command,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: read_scene_toggle_setting_command,
+          },
+          {
+            service: 'ff80',
+            characteristic: 'ff81',
             data: read_raw_setting_command,
           },
         ]);
-    }catch(error){
-      app.dialog.close();
-      // app.dialog.alert(erp.get_log_description(error));
-      reject(error);
-    }
-    
+      } catch (error) {
+        app.dialog.close();
+        // app.dialog.alert(erp.get_log_description(error));
+        reject(error);
+      }
     });
-  }
-  getJsonData();
+  };
+  await getJsonData();
+  await getFirmwareInfoForThisMode();
   window.startCheckAllScene = async () => {
     $('.start-check-all-scene').addClass('disabled');
     $('.start-check-all-scene').html(_('Fixed Scene...'));
     for (let i in sceneList) {
-      if(sceneList[i]['isCheck'] == false){
+      if (sceneList[i]['isCheck'] == false) {
         let sceneBleList = sceneList[i].sceneBleList;
         let postChildStatus = true;
         for (let j in sceneBleList) {
-          try{
+          try {
             await window.peripheral[guid].write([sceneBleList[j]]);
-          }catch(error){
+          } catch (error) {
             postChildStatus = false;
             break;
           }
         }
         sceneList[i]['isCheck'] = postChildStatus;
-        if(postChildStatus){
+        if (postChildStatus) {
           $(`.error-icon[scene-name="${sceneList[i].name}"]`).removeClass('text-color-red');
           $(`.error-icon[scene-name="${sceneList[i].name}"]`).html('check');
         }
@@ -621,18 +722,19 @@ window.iot_check_all_settings = async (params) => {
     //check if the scene is fixed
     let haveProblematicScene = false;
     for (let i in sceneList) {
-      if(sceneList[i]['isCheck'] == false){
+      if (sceneList[i]['isCheck'] == false) {
         haveProblematicScene = true;
       }
     }
-    if(!haveProblematicScene){
+    if (!haveProblematicScene) {
       $('.start-check-all-scene').addClass('device-none');
       $('.start-check-all-scene').removeClass('disabled');
       $('.start-check-all-settings').removeClass('disabled');
       $('.start-check-all-settings').removeClass('device-none');
       $('.start-check-all-settings').html(_('Start'));
     }
-  }
+  };
+  //start function
   window.startCheckAllSettings = async () => {
     $('.start-check-all-settings').addClass('disabled');
     $('.start-check-all-settings').html(_('Checking Setting...'));
@@ -661,10 +763,7 @@ window.iot_check_all_settings = async (params) => {
         try {
           await window.peripheral[guid].write([settingBleList[i]]);
           currentSettingCount++;
-          app.progressbar.set(
-            '#demo-inline-progressbar-check-all-settings',
-            parseInt((currentSettingCount / totalSettingCount) * 100)
-          );
+          app.progressbar.set('#demo-inline-progressbar-check-all-settings', parseInt((currentSettingCount / totalSettingCount) * 100));
           $('.star_progressbar_text').text(currentSettingCount);
           if (currentSettingCount == totalSettingCount) {
             $('.checking-item-for-all-settings').html('check');
@@ -677,16 +776,127 @@ window.iot_check_all_settings = async (params) => {
           break;
         }
       }
+    } else {
+      $('.checking-item-for-all-settings').html('check');
+      $('.checking-item-for-all-settings').removeClass('rotate-animation');
     }
+    //setting check end
+    debugger;
+    //start check the sta lan ap mac address
+    $('.checking-item-for-sta-lan-ap-mac-address').html('sync');
+    $('.checking-item-for-sta-lan-ap-mac-address').addClass('rotate-animation');
+    const checkStaLanApMacAddress = () => {
+      return new Promise(async (resolve, reject) => {
+        let deviceErpInfo = erp.info.device[guid];
+        let wifi_mac_address = cloneDeep(deviceErpInfo.wifi_mac_address);
+        let lan_mac_address = cloneDeep(deviceErpInfo.lan_mac_address);
+        let ap_mac_address = cloneDeep(deviceErpInfo.ap_mac_address);
+        if (!wifi_mac_address || !lan_mac_address || !ap_mac_address) {
+          // staLanApMacAddressStatus = false;
+          //set timer
+          let wifiTimer = null;
+          wifiTimer = setTimeout(async () => {
+            clearTimeout(wifiTimer);
+            reject(_('Can not get the sta/lan/ap mac address.'));
+          }, 5000);
+          //send the command to the ble and upload
+          if (erp.script.getWifiMacAddressFun) {
+            emitter.off('wifi_mac_address', erp.script.getWifiMacAddressFun);
+          }
+          erp.script.getWifiMacAddressFun = async (data) => {
+            let rs = data.rs;
+            if (data.guid == guid) {
+              clearTimeout(wifiTimer);
+              wifi_mac_address = rs.substring(10, 22);
+              lan_mac_address = rs.substring(22, 34);
+              ap_mac_address = rs.substring(46, 58);
+              if (!deviceErpInfo.wifi_mac_address || !deviceErpInfo.lan_mac_address || !deviceErpInfo.ap_mac_address) {
+                let url = `/api/resource/Device/${guid}`;
+                try {
+                  await http2.request(url, {
+                    method: 'PUT',
+                    serializer: 'json',
+                    responseType: 'json',
+                    data: {
+                      wifi_mac_address: wifi_mac_address ? formatMAC(wifi_mac_address) : '',
+                      lan_mac_address: lan_mac_address ? formatMAC(lan_mac_address) : '',
+                      ap_mac_address: ap_mac_address ? formatMAC(ap_mac_address) : '',
+                    },
+                  });
+                  resolve(1);
+                } catch (error) {
+                  reject(error);
+                }
+              }
+            }
+          };
+          emitter.on('wifi_mac_address', erp.script.getWifiMacAddressFun);
+          setTimeout(async () => {
+            await window.peripheral[guid].write([{ service: 'ff80', characteristic: 'ff81', data: '932d' }]);
+          }, 500);
+        } else {
+          resolve(1);
+        }
+      });
+    };
+    //check the ble info
+    try {
+      await checkStaLanApMacAddress();
+      $('.checking-item-for-sta-lan-ap-mac-address').removeClass('rotate-animation');
+      $('.checking-item-for-sta-lan-ap-mac-address').html('check');
+    } catch (error) {
+      $('.checking-item-for-sta-lan-ap-mac-address').removeClass('rotate-animation');
+      $('.checking-item-for-sta-lan-ap-mac-address').removeClass('text-color-green');
+      $('.checking-item-for-sta-lan-ap-mac-address').addClass('text-color-red');
+      $('.checking-item-for-sta-lan-ap-mac-address').html('info');
+    }
+    //sta lan ap mac address check
+
+    //start compare the firmware
+    //erp.currentFirmware && erp.latestFirmware
+    if(erp.currentFirmware && erp.latestFirmware){
+      let currentFirmware = cloneDeep(erp.currentFirmware);
+      let latestFirmware = cloneDeep(erp.latestFirmware);
+      let currentFirmwareNo = extractVersion(currentFirmware);
+      let latestFirmwareNo = extractVersion(latestFirmware);
+      if(currentFirmwareNo !== latestFirmwareNo){
+        let wifiInfo = await window.showPromptDialog(_('Please enter the wifi information.'));
+        if(wifiInfo){
+          let ssid = wifiInfo.username;
+          let password = wifiInfo.password;
+          let confirmWifiInfo = await window.showUpdateConfirm(
+            `Please confirm your ssid is (${ssid}) and the password is (${password}).`
+          );
+          if(confirmWifiInfo){
+            let otaMap = {
+              latestFirmware : erp.latestFirmware,
+              ssid : ssid,
+              password : password,
+            };
+            let otaResult = new window.iotWifiOta(otaMap);
+            try{
+              await otaResult.wifiConnect();
+              await otaResult.startOta();
+            }catch(error){
+              console.log('error', error);
+              app.dialog.close();
+              app.dialog.alert(erp.get_log_description(error));
+            }
+          }
+        }
+        
+      }
+    }
+    return
     //get the scene from the ble
-    let sceneCommandList = []
-    try{
+    let sceneCommandList = [];
+    try {
       $('.start-check-all-settings').html(_('Checking Scene...'));
       $('.checking-item-for-all-settings-scene').html('sync');
       $('.checking-item-for-all-settings-scene').addClass('rotate-animation');
       sceneCommandList = await getSceneFromBle();
-      console.log('sceneCommandList',sceneCommandList);
-    }catch(error){
+      console.log('sceneCommandList', sceneCommandList);
+    } catch (error) {
       sceneCommandList = [];
       console.log(error);
     }
@@ -705,7 +915,11 @@ window.iot_check_all_settings = async (params) => {
             try {
               // await window.peripheral[guid].write([sceneBleList[j]]);
               let commandItem = sceneBleList[j].data;
-              if(sceneCommandList.indexOf(commandItem.toLocaleLowerCase()) == -1){
+              if (commandItem.startsWith('8f0c00') || commandItem.startsWith('8f32')) {
+                continue;
+              }
+              if (sceneCommandList.indexOf(commandItem.toLocaleLowerCase()) == -1) {
+                debugger;
                 postSceneStatus = false;
               }
               // sceneItemIndex++;
@@ -736,11 +950,11 @@ window.iot_check_all_settings = async (params) => {
           $('.checking-item-for-all-settings-scene').removeClass('rotate-animation');
         }
       }
-      console.log('sceneList',sceneList);
+      console.log('sceneList', sceneList);
       //append the problematic scene to the list
       let haveProblematicScene = false;
       for (let i in sceneList) {
-        if(sceneList[i]['isCheck'] == false){
+        if (sceneList[i]['isCheck'] == false) {
           haveProblematicScene = true;
           $('.problematic-scenario-list').append(`<li class="manufacturing-steps manufacturing-step1">
             <a class="item-content" style="padding-left: 0px">
@@ -754,16 +968,31 @@ window.iot_check_all_settings = async (params) => {
           </li>`);
         }
       }
-      if(!haveProblematicScene){
+      if (!haveProblematicScene) {
         $('.problematic-scenario-list').html('');
         $('.problematic-scenario-list').addClass('hidden');
         $('.start-check-all-scene').addClass('device-none');
         $('.start-check-all-settings').html(_('Start'));
         $('.start-check-all-settings').removeClass('disabled');
-      }else{
+        $('.problematic-scenario-list').append(`<li class="manufacturing-steps manufacturing-step1">
+          <a class="item-content" style="padding-left: 0px">
+            <div class="item-inner" style="padding-right: 0px">
+              <div class="item-title" style="">${_('All settings are correct')}</div>
+              <div class="item-after">
+                <i class="icon material-icons text-color-green">check</i>
+              </div>
+            </div>
+          </a>
+        </li>`);
+      } else {
         $('.start-check-all-settings').hide();
         $('.start-check-all-scene').removeClass('device-none');
       }
+    } else {
+      $('.checking-item-for-all-settings-scene').html('check');
+      $('.checking-item-for-all-settings-scene').removeClass('rotate-animation');
+      $('.start-check-all-settings').html(_('Start'));
+      $('.start-check-all-settings').removeClass('disabled');
     }
   };
 };

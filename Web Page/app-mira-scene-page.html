@@ -29,7 +29,7 @@
                 :style="{'flex-wrap': 'wrap','margin-bottom':roomList.length <2?'6px':'0'}"
                 >
                   <!-- this show the bar of 4 item -->
-                  <div class="show-item" v-for="item in topDeviceList" :key="item.index" :style="{width:item.width,height:item.height}">
+                  <div class="show-item-mira-page" v-for="item in topDeviceList" :key="item.index" :style="{width:item.width,height:item.height}">
                     <li class="swipeout display-flex">
                       <div class="iconbtn swipeout-content" style="width: 100%">
                         <dnd-button
@@ -80,7 +80,7 @@
                 <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
                   <!-- this show the bar of 4 item -->
                   <div
-                    class="show-item"
+                    class="show-item-mira-page"
                     v-for="item in tvAndThermostatList"
                     :key="item.index"
                     :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
@@ -114,7 +114,7 @@
               <div id="guest-1-div" class="list media-list no-margin">
                 <ul>
                   <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
-                    <div class="show-item" v-for="item in musicDeviceList" :key="item.index" 
+                    <div class="show-item-mira-page" v-for="item in musicDeviceList" :key="item.index" 
                     :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
                     v-if="item.roomHidden"
                     >
@@ -152,7 +152,7 @@
                     <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
                       <!-- this show the bar of 4 item -->
                       <div
-                        class="show-item display-flex justify-content-flex-start"
+                        class="show-item-mira-page display-flex justify-content-flex-start"
                         :style="{'flex-wrap': 'wrap','width': group.width,'padding': '5px 10px','margin-bottom': '6px'}"
                         v-for="group in groupByList"
                         :key="group.group"
@@ -202,7 +202,7 @@
                   <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
                     <!-- this show the bar of 4 item -->
                     <div
-                      class="show-item"
+                      class="show-item-mira-page"
                       v-for="item in rangeBarDeviceList"
                       :key="item.index"
                       :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
@@ -322,10 +322,10 @@
     <!-- opclose -->
     <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose'">
       <div class="display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="height:100%;">
-        <button :class="['button button-raised button-big circle display-flex']" style="margin-bottom:10px;" @click="clickCurtain(name,1)">
+        <button :class="['button button-raised button-big circle display-flex',status == 100 || status == 99 ? 'btn-bg' : '']" style="margin-bottom:10px;" @click="clickCurtain(name,1)">
           <img :src="fileUrl+selfIcon+'.png'" :style="{'width': '30px','height': '30px'}" />
         </button>
-        <button :class="['button button-raised button-big circle display-flex']" @click="clickCurtain(name,0)">
+        <button :class="['button button-raised button-big circle display-flex',status == 0 || status == 1 ? 'btn-bg' : '']" @click="clickCurtain(name,0)">
           <img :src="fileUrl+selfIconOff+'.png'" :style="{'width': '30px','height': '30px'}" />
         </button>
       </div>
@@ -773,6 +773,7 @@
           let power = value_list[0];
           if (type == 1) {
             //mode
+            debugger
             if (mode == 0) {
               mode = 2;
             } else if (mode == 1) {
@@ -1039,6 +1040,11 @@
                 }
               }
             });
+            let virtual_id_for_bedroom_mode = {
+              '94': 0,
+              '95': 0,
+              '96': 0,
+            };
             this.anthorDeviceList.forEach((item) => {
               if (item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')) {
                 let gang = this.getVirtualIdForPeripheral(item.config);
@@ -1047,8 +1053,58 @@
                 console.log('gang', gang);
                 let thisStatus = status[0][gang];
                 item.device_status = thisStatus;
+                if([94,95,96].indexOf(parseInt(gang)) != -1){
+                  virtual_id_for_bedroom_mode[gang] = thisStatus;
+                }
               }
             });
+            //check if the virtual id is 94(100%),(95)50%,(96)25%
+            let is_change_bedroom_mode_index = 0
+            for(let key in virtual_id_for_bedroom_mode){
+              is_change_bedroom_mode_index+=parseInt(virtual_id_for_bedroom_mode[key]);
+            }
+            debugger
+            if(is_change_bedroom_mode_index == 2 || is_change_bedroom_mode_index == 3){
+              //check the date
+              const now = dayjs();
+              const currentTime = now.hour() * 3600 + now.minute() * 60 + now.second();
+              const startSeconds = 7 * 3600;
+              const endSeconds = 19 * 3600;
+              if(currentTime >= startSeconds && currentTime <= endSeconds){
+                //morning
+                this.anthorDeviceList.forEach((item)=>{
+                  if(item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')){
+                    let gang = this.getVirtualIdForPeripheral(item.config);
+                    let status = this.findLatestStatus(window.peripheral[guid].prop.status);
+                    if(gang == '94'){
+                      item.device_status = 1;
+                    }
+                    if(gang == '95'){
+                      item.device_status = 0;
+                    }
+                    if(gang == '96'){
+                      item.device_status = 0;
+                    }
+                  }
+                })
+              }else{
+                this.anthorDeviceList.forEach((item)=>{
+                  if(item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')){
+                    let gang = this.getVirtualIdForPeripheral(item.config);
+                    let status = this.findLatestStatus(window.peripheral[guid].prop.status);
+                    if(gang == '94'){
+                      item.device_status = 0;
+                    }
+                    if(gang == '95'){
+                      item.device_status = 1;
+                    }
+                    if(gang == '96'){
+                      item.device_status = 0;
+                    }
+                  }
+                })
+              }
+            }
           },
           async initData() {
             try {
@@ -1626,12 +1682,22 @@
           onPeripheralChanged(p) {
             //console.log('onPeripheralChanged', p);
             //update the subdevice
-            if (p.guid == '3963396536653065363533321203611d') {
+            if (p.guid == '3234656334613039343766651203751d') {
               // console.log('p', p);
             }
             this.topDeviceList.forEach((item) => {
               if (item.device == p.guid) {
                 this.update_subdevice_by_peripheral(item, p, false);
+              }
+            });
+            this.tvAndThermostatList.forEach((item) => {
+              if (item.device == p.guid) {
+                this.update_subdevice_by_peripheral(item, p, true);
+              }
+            });
+            this.rangeBarDeviceList.forEach((item) => {
+              if (item.device == p.guid) {
+                this.update_subdevice_by_peripheral(item, p, true);
               }
             });
             this.anthorDeviceList.forEach((item) => {
@@ -1773,7 +1839,7 @@
           async update_subdevice_by_peripheral(s, p, render_status = true) {
             let device_status = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
             let device_config = p.guid ? peripheral[p.guid].getGangConfig(s.name) : 'ir|0|25,1,2,1,0,1'; //ir|0|25,1,2,1,0,1
-            if (p.guid == '3963396536653065363533321203611d') {
+            if (p.guid == '3234656334613039343766651203751d') {
               console.log('device_status', device_status);
             }
             s['device_config'] = device_config;
@@ -1787,7 +1853,9 @@
             s['is_mobile_gateway'] = p.is_mobile_gateway;
             s['connecting'] = p.connecting;
             s['connected'] = p.connected;
-            s['device_attachment_status'] = `0,0,0,26,26,0`;
+            if(!isset(s['device_attachment_status'])){
+              s['device_attachment_status'] = `0,0,0,26,26,0`;
+            }
             s['bluetooth_count'] = p.bluetooth_count;
             if (render_status) {
               if (!s.device_button_group.includes('SCENE VIRTUAL')) {
@@ -1801,10 +1869,11 @@
             let hexModel = p.hexModel;
             if (hexModel == '021B' || hexModel == '0363' || hexModel == '0375') {
               //thermostat
+              debugger
               if (s['click_status']) {
-                //return
-                s['device_attachment_status'] = peripheral[p.guid].getAttachmentStatus(s.device_button_group, true).join(',');
-                console.log("s['device_attachment_status']", s['device_attachment_status']);
+                return
+                // s['device_attachment_status'] = peripheral[p.guid].getAttachmentStatus(s.device_button_group, true).join(',');
+                // console.log("s['device_attachment_status']", s['device_attachment_status']);
               } else {
                 s['device_attachment_status'] = peripheral[p.guid].getAttachmentStatus(s.device_button_group).join(',');
               }
@@ -2521,7 +2590,7 @@
             }
             return Array.from(numbers);
           },
-          calculateFutureTime() {
+          calculateFutureTime(days) {
             const futureDate = dayjs().add(days, 'day');
             const futureTimeArray = [
               futureDate.year(),
@@ -2574,7 +2643,7 @@
                       try {
                         //await window.peripheral[props.kitem.device].doConnect();
                         //get the years and months and the days and the hours and the seconds
-                        let this_time_list = calculateFutureTime(days);
+                        let this_time_list = this.calculateFutureTime(days);
                         let this_year = this_time_list[0];
                         let this_month = this_time_list[1];
                         let this_day = this_time_list[2];
@@ -2596,11 +2665,22 @@
                         // }]);
                         await iot_device_setting_sync_server(guid, 'TimeStream', JSON.stringify(list));
                         await iot_device_setting_sync_server(guid, 'ConnectKey', this_password);
-                        item.password = this_password;
-                        //app.dialog.alert(`${tran('Connection Key: ')}${this_password}`, runtime.appInfo.name, () => {});
-                      } catch (error) {
                         app.dialog.close();
-                        app.dialog.alert(`${_('Get the music player password failed')}`);
+                        subdevice.password = this_password;
+                        app.dialog.alert(`${_('Connection Key: ')}${this_password}`);
+                      } catch (error) {
+                        console.log('error', error);
+                        while (true) {
+                          try {
+                            const dialog = app.dialog.close();
+                            if (!dialog) {
+                              break;
+                            }
+                          } catch (e) {
+                            break;
+                          }
+                        }
+                        app.dialog.alert(`${_('Get the music player password failed')}, ${error}`);
                       }
                     }
                   },
@@ -2742,6 +2822,13 @@
               guid = subdevice.device;
               subdevice.device_attachment_status = config;
               subdevice.device_status = 1;
+              subdevice.click_status = true;
+              if(this.cleanClickStatus){
+                clearTimeout(this.cleanClickStatus);
+              }
+              this.cleanClickStatus = setTimeout(() => {
+                subdevice.click_status = false;
+              }, 10000);
             }
             let valueList = config.split(',');
             let mode_value = valueList[1];
@@ -2751,6 +2838,7 @@
             let command_type = '';
             let gang = 42;
             let post_value = '';
+            debugger
             if (type == 1) {
               command = `9404000001${parseInt(mode_value).toString(16).pad('00')}`;
               command_type = 'mode';
@@ -3052,6 +3140,11 @@
             state.clickCount++;
             if (state.clickCount === 1) {
               console.log(`${name}: 第一次点击`);
+              if(obj.status == 1){
+                subdevice.device_status = 100;
+              }else{
+                subdevice.device_status = 0;
+              }
               this.operateCurtain(guid, subdevice.name, subdevice.device_button_group, obj.status);
               state.timeoutId = setTimeout(() => {
                 console.log(`${name}: 自动重置`);
@@ -3059,6 +3152,7 @@
               }, 15000);
             } else if (state.clickCount >= 2) {
               console.log(`${name}: 触发双击`);
+              subdevice.device_status = 2;
               // this.handleDoubleClickAction(state.device);
               this.operateCurtain(guid, subdevice.name, subdevice.device_button_group, 2);
               this.resetState(stateKey);
@@ -3232,9 +3326,27 @@
                 guid = item.device;
               }
             });
+            //get all the Welcome Scene and the RCU Radar
+            let scenes = cloneDeep(erp.info.scene);
+            let scene_id_list = [];
+            for(let i in scenes){
+              let templateName = scenes[i].scene_template;
+              if(templateName.startsWith('Welcome Scene') || templateName.startsWith('RCU Radar')){
+                let scene_device_location = scenes[i].scene_device_location;
+                for(let j in scene_device_location){
+                  scene_id_list.push(scene_device_location[j].storage_id);
+                }
+              }
+            }
+
             //send the command to the rcu
             //8F2D0000+index+01/00  scene disable/enable
-            let command = `8f2d0000${parseInt(scene_id).toString(16).pad('00')}${enable ? '00' : '01'}`;
+            let command = `13`;
+            for(let i = 0; i < scene_id_list.length; i++){
+              let _command = `8f2d0000${parseInt(scene_id_list[i]).toString(16).pad('00')}${enable ? '00' : '01'}`;
+              command += `${parseInt(_command.length/2).toString(16).pad('00')}${_command}`;
+            }
+            
             console.log('command', command);
             try {
               await window.peripheral[guid].rcuDoScene([
@@ -3279,7 +3391,7 @@
     background: var(--f7-theme-color) !important;
     color: #fff !important;
   }
-  .show-item {
+  .show-item-mira-page {
     width: 49%;
     background: var(--f7-block-strong-bg-color);
     border-radius: 28px;
@@ -3304,13 +3416,13 @@
     height: 50px;
   }
 
-  .page-content .show-item li {
+  .page-content .show-item-mira-page li {
     height: 100%;
     justify-content: space-around;
     align-items: center;
   }
 
-  .page-content .show-item .button.button-raised {
+  .page-content .show-item-mira-page .button.button-raised {
     width: 60px;
     height: 60px;
     padding: 0;
@@ -3429,7 +3541,7 @@
     vertical-align: middle;
   }
 
-  .page-content .show-item .button.button-raised p.showValue {
+  .page-content .show-item-mira-page .button.button-raised p.showValue {
     line-height: 30px !important;
   }
 
@@ -4004,10 +4116,6 @@
   .btn-get {
     background-color: var(--f7-theme-color);
     color: #fff;
-  }
-
-  .btn-get:hover {
-    background-color: #d1d1d6;
   }
 
   .btn-connect {

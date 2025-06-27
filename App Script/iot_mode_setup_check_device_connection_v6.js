@@ -41,7 +41,20 @@ window.iot_mode_setup_check_device_connection = function(params) {
             if(doms.length > 0){
                 doms.remove();
             }
-            app.dialog.alert(_(erp.get_log_description(error)));
+            if(error == 7200){
+                erp.script.iot_entry_class_password_verify(guid).then(()=>{
+                    $(".bluetooth-icons").attr("ref", 1);
+                    rootEl.find(".button").removeClass("disabled");
+                    rootEl.find(".toggle").removeClass("disabled");
+                    setTimeout(()=>{
+                        rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".button").removeClass("disabled");
+                        rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".toggle").removeClass("disabled");
+                    },1000)
+                })
+            }else{
+                app.dialog.alert(_(erp.get_log_description(error)));
+            }
+            
         })
         // iot_ble_check_enable().then(() => {
         //     return iot_ble_do_pre_action(guid);

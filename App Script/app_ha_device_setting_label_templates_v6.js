@@ -636,6 +636,44 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Change Rules";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_ir_rule_auto_init"
+            setting-type="{{ led_data.setting_type }}"
+            setting-name="{{ led_data.name }}"
+            setting-value="{{ led_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{led_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="led_mode" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">wb_iridescent</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _('Change Rules') }}</h5>
+                        {% if led_data.setting == '' %}
+                        <p class="setting-value text-muted size-12">{{ _('Rule D') }}</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(led_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Backlight Brightness";
     setting_label_template[setting_label] = `
         <div 

@@ -115,6 +115,11 @@
                               <i class="material-icons" style="line-height: 25px!important;">arrow_forward_ios</i>
                           </div>
                         </a>
+                        <a class="right" v-on:click="${()=>toScene(subItem)}" v-if="subItem.mainType == 50">
+                          <div class="button button-raised button-big circle rf-sensor">
+                              <i class="material-icons" style="line-height: 25px!important;">logout</i>
+                          </div>
+                        </a>
                         <a class="right" v-if="subItem.mainType == 15">
                           <div class="button button-raised button-big circle rf-sensor">
                               <i class="material-icons" style="line-height: 30px!important;font-size: 30px!important;">check</i>
@@ -132,6 +137,7 @@
                             <i v-else class="material-icons" style="line-height: 70px !important; font-size: 25px !important">settings</i>
                           </div>
                         </div>
+
                         <div
                           class="button button-raised button-big circle"
                           style="float: left;"
@@ -550,6 +556,12 @@
                   }
                 }
               }
+              if(type == 100){
+                item.isHidden = true;
+                if(item.device_button_group.includes('RCU ONOFF GANG') || item.device_button_group.includes('RCU DIMMING') || item.device_button_group.includes('RCU OUTPUT')){
+                  item.isHidden = false;
+                }
+              }
               //rcu,open virtual id to choose
               // if(item.device_model == 'YO780' && item.device_button_group == 'ONOFF GANG1' && type == 2){
               //   item.isHidden = false;
@@ -743,9 +755,37 @@
             this.subName = subItem.name;
             if (button_group.startsWith('ONOFF GANG') || button_group.startsWith('RCU ONOFF GANG')) {
               
+            }else if(button_group.startsWith('Hdmicec')){
+              chooseList = [
+                {
+                  value: '01',
+                  text: 'ON/OFF',
+                  type: 2,
+                },
+                {
+                  value: '02',
+                  text: 'TOGGLE',
+                  type: 4,
+                },
+                {
+                  value: '50',
+                  text: 'CHECKOUT',
+                  type: 50,
+                },
+              ];
             } else if (button_group.startsWith('Thermostat')) {
-              this.home_ui_click_touch_app_save(chooseList[0]);
-              return;
+              chooseList = [
+                {
+                  value: '01',
+                  text: 'ON/OFF',
+                  type: 2,
+                },
+                {
+                  value: '50',
+                  text: 'CHECKOUT',
+                  type: 50,
+                },
+              ];
             } else if (button_group.startsWith('RCU DIMMING') || button_group.startsWith('DIMMING')) {
               chooseList = [{
                 value: '4',
@@ -778,6 +818,11 @@
                   value: '02',
                   text: 'PAUSE',
                   type: 9,
+                },
+                {
+                  value: '50',
+                  text: 'CHECKOUT',
+                  type: 50,
                 },
               ];
               //this.home_ui_click_touch_app_save(chooseList[0]);
@@ -920,11 +965,16 @@
               let mackey = core_utils_get_mac_address_from_guid(device, true);
               let command = ``;
               //on off and the rcu on off
+              debugger
               if (device_button_group.startsWith('Thermostat')) {
-                item.action_command = `02${mackey}9403000001${parseInt(ref).toString(16).pad('00')}`;
-                item.thermostat_mode = `02${mackey}9404000001${parseInt(item.modeStr).toString(16).pad('00')}`;
-                item.thermostat_fan = `02${mackey}9405000001${parseInt(item.speedVaule).toString(16).pad('00')}`;
-                item.thermostat_temp = `02${mackey}9406000001${parseInt(item.temperature).toString(16).pad('00')}`;
+                if(item.chooseType == 50){
+                  item.action_command = `02${mackey}13059721038001059721038000`;
+                }else{
+                  item.action_command = `02${mackey}9403000001${parseInt(ref).toString(16).pad('00')}`;
+                  item.thermostat_mode = `02${mackey}9404000001${parseInt(item.modeStr).toString(16).pad('00')}`;
+                  item.thermostat_fan = `02${mackey}9405000001${parseInt(item.speedVaule).toString(16).pad('00')}`;
+                  item.thermostat_temp = `02${mackey}9406000001${parseInt(item.temperature).toString(16).pad('00')}`;
+                }
               }else if(device_button_group.startsWith('DIMMING') || device_button_group.startsWith('RCU DIMMING')){
                 if(item.chooseType == 4){
                   item.turnlight = 4;
@@ -952,6 +1002,10 @@
                 //   let reversedMac = cleanedMac.match(/.{1,2}/g).reverse().join('');
                 //   mackey = reversedMac;
                 // }
+                if(item.chooseType == 50){
+                  item.action_command = `02${mackey}13059721038001059721038000`;
+                  return;
+                }
                 let otherModelStatus = false;
                 if(device_model == 'YO121-AC-R2W') otherModelStatus = true;
                 if(item.ref == 2){
@@ -993,6 +1047,13 @@
             //send to page
             if(type == 5){
               emitter.emit('save_device_status', {
+                data: JSON.stringify(this_list),
+              });
+              mainView.router.back(mainView.history[mainView.history.length - 2], { force: false });
+              return;
+            }
+            if(type == 100){
+              emitter.emit('trigger_master', {
                 data: JSON.stringify(this_list),
               });
               mainView.router.back(mainView.history[mainView.history.length - 2], { force: false });

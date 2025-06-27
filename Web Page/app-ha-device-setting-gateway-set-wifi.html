@@ -198,7 +198,7 @@
             ssid: '',
             ssid_password: '',
             email: users[users.current].usr,
-            server_url: 'mqtt://' + erp.settings[erp.appId].mqtt_server,
+            server_url: erp.settings[erp.appId].mqtt_scheme?erp.settings[erp.appId].mqtt_scheme:'mqtt://' + erp.settings[erp.appId].mqtt_server,
             port: erp.settings[erp.appId].mqtt_port,
             username: '',
             server_password: '',
@@ -270,6 +270,11 @@
                   service: 'ff80',
                   characteristic: 'ff81',
                   data: ssid_password_data,
+                });
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '810e',
                 });
                 try {
                   await peripheral[guid].write(bleList);

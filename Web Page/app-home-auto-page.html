@@ -3,7 +3,7 @@
 		<div class="navbar active">
 			<div class="navbar-bg"></div>
 			<div class="navbar-inner sliding">
-				${(isHomePage && !engineerMode) ? $h`
+				${(isHomePage) ? $h`
 				<div class="left">
 					<a href="#" class="button button-fill text-color-theme bg-color-white button-44 panel-open" data-panel="left">
 						<i class="icon material-icons">menu</i>
@@ -29,25 +29,6 @@
 				<a class="button button-fill text-color-theme bg-color-white button-44" href="#" func="open_accounts">
 					<i class="icon material-icons">settings</i>
 				</a>
-				<!-- ` : (isHomePage && engineerMode) ? $h`
-				<div class="left">
-				</div>
-				<div class="title">${title}</div>
-				<div class="right">
-					<a link icon-only>
-						${mobileAsHubStatus && $h`
-            <div class="device-mobile-as-hub" @click="${()=>clickForMobile()}"></div>
-						`}
-          </a>
-					${listCssStatus == 'Card' && $h`
-					<a link icon-only @click="${()=>changeListCss(1)}">
-						<i class="icon material-icons md-only">grid_view</i>
-          </a>
-					`}
-					<a class="button button-fill text-color-theme bg-color-white button-44" href="#" func="open_accounts">
-						<i class="icon material-icons">settings</i>
-					</a>
-				</div> -->
 				` :  $h`
 				<div class="left">
 					<a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
@@ -378,6 +359,7 @@
 																			<!--<i class="prioritysss icon material-icons text-color-red device-none" style="font-size: 35px;">priority_high</i>-->
 																			<!--<i class="priorityss icon material-icons text-color-orange ${kitem.mac_error_status?'':'device-none'}" style="font-size: 35px;">priority_high</i>-->
 																			<i class="prioritys icon material-icons text-color-yellow ${kitem.guid_status?'device-none':''}" style="font-size: 35px;">priority_high</i>
+																			<i class="priority icon material-icons text-color-orange ${kitem.scene_status || !kitem.guid_status?'device-none':''}" style="font-size: 35px;">priority_high</i>
 																			<!--<i class="priority icon material-icons text-color-red device-none" style="font-size: 35px;">priority_high</i>-->
 																		</div>
 																	<div class="item-inner" style="${listCssStatus == 'Card'?'width: 100%;margin-left: 0;':''}">
@@ -479,7 +461,7 @@
 </template>
 
 <script>
-let filter_value = -50;
+let filter_value = -60;
 let engineerMode = false;
 //defined components
 const renderSignalItem = (props, {
@@ -612,7 +594,7 @@ const renderSignalItem = (props, {
 		console.log("is_mesh_status",is_mesh_status)
 	}
 	return () => $h`
-			<div class="signal-view-main" signal="${isset(props.kitem.rssilv)?props.kitem.rssilv:0}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}" mesh="${props.kitem.network_id>0?1:0}" mobilehub="${props.kitem.is_mobile_gateway?props.kitem.is_mobile_gateway:0}">
+			<div class="signal-view-main" signal="${isset(props.kitem.rssilv)?props.kitem.rssilv:0}" mn-size="${props.kitem.mn_size}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob}" mesh="${(props.kitem.network_id>0 && props.kitem.mn_size > 0 && props.kitem.device)?1:0}" mobilehub="${props.kitem.is_mobile_gateway?props.kitem.is_mobile_gateway:0}">
 			<div class="signal"></div>
 			<div class="bluetooth">${props.kitem.bluetooth_count && props.kitem.bluetooth_count > 0?props.kitem.bluetooth_count:''}</div>
 			<div class="mesh" guid="${props.kitem.device}" @click="${()=>fixNetwork(props.kitem,is_mesh_status)}">
@@ -891,7 +873,10 @@ const renderSwipeRightPanel = (props, {
 };
 
 let engineerModeStatus = false;
-
+let wifiInfoMap = {
+	ssid : '',
+	password : ''
+}
 const renderMainButton = (props, {
 	$h,
 	$update
@@ -4189,7 +4174,17 @@ export default async (props, ctx) => {
 	let res = (await db.get('peripheral')) || null;
 	console.log("init ready")
 	if(Capacitor.platform !== 'ios'){
-		app.dialog.close();
+		
+		while (true) {
+			try {
+				const dialog = app.dialog.close();
+				if (!dialog) {
+					break;
+				}
+			} catch (e) {
+				break;
+			}
+		}
 	}
 	if (isset(res)) {
 			const storedPeripheral = JSON.parse(res);
@@ -4388,7 +4383,7 @@ export default async (props, ctx) => {
 						will_topic = `will/${md5(md5(profile_device[i].gateway.toLowerCase()))}`;
 					}
 					core_mqtt_subscribe(will_topic, 1, false);
-					emitter.off(will_topic);
+					emitter.off(will_topic,on_gateway_will_changed);
 					emitter.on(will_topic, on_gateway_will_changed);
 
 					//get the devices' status from gateway
@@ -4412,7 +4407,10 @@ export default async (props, ctx) => {
 				}
 			}
 		}
-		
+		//the gateway will topic some time can not be change 
+		setTimeout(()=>{
+			refreshGateway();
+		},1000)
 		// init profile topic
 		if(!isset(erp['checksum'])) erp['checksum'] = {};
 		if(isset(erp.info.profile)){
@@ -4778,7 +4776,8 @@ export default async (props, ctx) => {
 			clearTimeout(clearTime);
 		}
 	}
-	const EngineerModeCheck = ()=>{
+	//check if rcu scene have wifi device and the mac address is not correct
+	window.EngineerModeCheck = ()=>{
 		//find all the device 
 		let profile_device = erp.info.profile.profile_device;
 		let sceneMap = cloneDeep(erp.info.scene);
@@ -4827,6 +4826,9 @@ export default async (props, ctx) => {
 		//app.dialog.alert("Coming soon, Please wait for the update the mesh.");
 	}
 	const generateSingleDeviceModel =(list)=>{
+		if(erp.deviceSheet){
+			erp.deviceSheet.close();
+		}
 		let html = '';
 		for(let i in list){
 			if(!list[i].device_name){
@@ -4844,20 +4846,6 @@ export default async (props, ctx) => {
 								<span class="room-title text-color-gray">/</span>
 								<span class="room-title text-color-gray">${tran(list[i].titleList[0])}</span>
 							</p>
-							<div class="error-log text-color-theme display-flex justify-content-flex-start" style="margin-right:10px;">
-								<div class="setting-value-box display-flex">
-									<span class="icon material-icons" style="margin-right:5px;">settings</span>
-									<span class="setting-value">0</span>
-									<span class="setting-value-str">/</span>
-									<span class="setting-total">10</span>
-								</div>
-								<div class="scene-value-box display-flex">
-									<span class="icon material-icons">motion_photos_auto</span>
-									<span class="scene-value">0</span>
-									<span class="scene-value-str">/</span>
-									<span class="scene-total">20</span>
-								</div>
-							</div>
 							<p class="error-log text-color-red">${list[i].errorLog}</p>
 						</div>
 						<div class="item-after">
@@ -4881,7 +4869,7 @@ export default async (props, ctx) => {
 							<div class="block block-strong">
 								<p class="row">
 									<div class="col">
-										<div class="button button-raised button-fill button-save" func="retryGenerateDeviceModel">${ _('Retry') }</div>
+										<div class="button button-raised button-fill button-save" func="EngineerModeCheck">${ _('Retry') }</div>
 									</div>
 								</p>
 							</div>
@@ -4892,6 +4880,17 @@ export default async (props, ctx) => {
 			on: {
 				closed: () => {
 					console.log('closed');
+					while (true) {
+						try {
+							const dialog = app.dialog.close();
+							if (!dialog) {
+								break;
+							}
+						} catch (e) {
+							break;
+						}
+					}
+					app.dialog.alert(_('Cancel the checking.'))
 				},
 			},
 			swipeToClose: true,
@@ -4901,56 +4900,515 @@ export default async (props, ctx) => {
 		erp.deviceSheet.open();
 		startCheckDevice(list);
 	}
+	window.retryCheckDevice = ()=>{
+		app.toast.create({
+			text: _('Retry'),
+			position: 'center',
+			closeTimeout: 2000,
+		}).open();
+	}
+	const checkDeviceFirmware = (guid)=>{
+		return new Promise(async(resolve,reject)=>{
+			//get the erp device firmware
+			let deviceMap = erp.info.device[guid];
+			let deviceModel = deviceMap.device_model;
+			if(!deviceModel){
+				reject({
+					error : 'Device Model Error',
+					firmware : '',
+				});
+			}
+			let deviceModelMap = null;
+			let deviceModelList = erp.doctype.device_model;
+			for(let i in deviceModelList){
+				if(deviceModelList[i].name == deviceModel){
+					deviceModelMap = deviceModelList[i];
+					break;
+				}
+			}
+			if(!deviceModelMap){
+				reject({
+					error : 'Device Model Error',
+					firmware : '',
+				});
+			}
+			if(!deviceModelMap.latest_firmware){
+				resolve({
+					firmware : '',
+				});
+			}
+			let deviceFirmware = deviceModelMap.latest_firmware.replace(/[^0-9.]/g, '');
+			deviceFirmware = deviceFirmware.split('.');
+			deviceFirmware = deviceFirmware[0] + '.' + (deviceFirmware.length>1 ? deviceFirmware.slice(1).join('') : '0');
+			let currentFirmware = window.peripheral[guid].getProp().firmware;
+			
+			if(!currentFirmware){
+				reject({
+					error : 'Current Firmware Error',
+					firmware : '',
+				});
+			}
+			currentFirmware = currentFirmware.replace(/[^0-9.]/g, '');
+			currentFirmware = currentFirmware.split('.');
+			currentFirmware = currentFirmware[0] + '.' + (currentFirmware.length>1 ? currentFirmware.slice(1).join('') : '0');
+			console.log("deviceFirmware",deviceFirmware)
+			console.log("currentFirmware",currentFirmware)
+			if(currentFirmware < deviceFirmware){
+				reject({
+					error : 'The device firmware is not the latest version.',
+					firmware : deviceModelMap.latest_firmware,
+				});
+			}else{
+				resolve({
+					firmware : deviceModelMap.latest_firmware,
+				});
+			}
+		})
+	}
+	window.showPromptDialog = (title)=>{
+		return new Promise(async(resolve,reject)=>{
+			app.dialog.login(_(title),(username,password)=>{
+				resolve({
+					username : username,
+					password : password,
+				});
+			},()=>{
+				resolve(false);
+			});
+			//change the dialog to the wifi dialog
+			setTimeout(()=>{
+				$('.dialog-input-field input[name="dialog-username"]').attr('placeholder','Ssid');
+				$('.dialog-input-field input[name="dialog-password"]').attr('type','text');
+				$('.dialog-input-field input[name="dialog-password"]').attr('placeholder','Password');
+				$('.dialog-input-field input[name="dialog-username"]').val(wifiInfoMap.ssid);
+				$('.dialog-input-field input[name="dialog-password"]').val(wifiInfoMap.password);
+			},200);
+		})
+	}
+	window.showUpdateConfirm = (title)=>{
+		return new Promise(async(resolve,reject)=>{ 
+			app.dialog.confirm(_(title),()=>{
+				resolve(true);
+			},()=>{
+				resolve(false);
+			});
+		})
+	}
+	const updateFirmware = (guid,firmware)=>{
+		debugger
+		return new Promise(async(resolve,reject)=>{
+			app.dialog.preloader(_('Updating firmware, it may take 3-4 minutes.'));
+			let wifiStatus = await checkWifiStatus(guid);
+			debugger
+			if(!wifiStatus){
+				app.dialog.close();
+				reject('Wi-Fi not connected.');
+				return;
+			}
+			//find the device gateway
+			let profile_device = cloneDeep(erp.info.profile.profile_device);
+			let deviceMap = profile_device.find((item)=>item.device == guid);
+			if(!deviceMap){
+				app.dialog.close();
+				reject('Device is not found.');
+				return;
+			}
+			let gateway = deviceMap.gateway;
+			if(!gateway){
+				app.dialog.close();
+				reject('Device gateway is not set.');
+				return;
+			}
+			let topic = `cmd/${md5(md5(gateway.toLowerCase()))}`;
+			let check_topic = `status/${md5(md5(gateway.toLowerCase()))}`;
+			let full_firmware_name = firmware;
+			// if(!(deviceMap.device_model.includes('YO105') || deviceMap.device_model.includes('YO161'))){
+			// 	full_firmware_name = `https://dev.mob-mob.com/files/firmware/${firmware}.bin`;
+			// }
+			full_firmware_name = `${full_firmware_name}.bin`;
+			let command = {
+				command: "OTA",
+				function: "bleHelper.ota",
+				params: full_firmware_name,
+				callback: "",
+				raw: ""
+			}
+			console.log("command",command);
+			//send to the mqtt topic
+			try{
+				await core_mqtt_publish(topic, command, 0, false, false, false);
+				try{
+					let result = await checkIsUpdateLatestFirmware(check_topic,guid,firmware);
+					if(!result){
+						reject('Update Failed');
+					}else{
+						await uploadFirmwareToServer(guid,firmware);
+						resolve(true);
+					}
+				}catch(updateError){
+					reject(updateError);
+				}
+				
+			}catch(error){
+				console.log("error",error);
+			}
+			app.dialog.close();
+			resolve(true);
+		})
+	}
+	const uploadFirmwareToServer = (guid,current_firmware)=>{
+		return new Promise(async(resolve,reject)=>{
+			try {
+        await http.request(encodeURI('/api/resource/Device/' + guid), {
+          method: 'PUT',
+          responseType: 'json',
+          serializer: 'json',
+          data: {
+            firmware: current_firmware,
+          },
+        });
+				resolve(true);
+      } catch (err) {
+        // ignore
+				reject(err);
+      }
+		})
+	}
+	const checkIsUpdateLatestFirmware = (check_topic,guid,firmware)=>{
+		return new Promise(async(resolve,reject)=>{
+			let timeoutId = null;
+			let isOnline = false;
+			let versionMatched = false;
+			const cleanup = () => {
+				clearTimeout(timeoutId);
+				emitter.off(check_topic, handleStatusMessage);
+			};
+			const handleStatusMessage = (payload) => {
+			console.log('handleStatusMessage: ',payload);
+			try {
+				const data = JSON.parse(payload.message); 
+				if (data.Info.version.toLowerCase() === firmware.toLowerCase()) {
+									debugger
+									versionMatched = true;
+									completeCheck(true);
+							}
+					} catch (e) {
+							console.log(e)
+					}
+			};
+			const completeCheck = (result) => {
+					cleanup();
+					resolve(result);
+			};
+			const checkVersionStatus = () => {
+					if (versionMatched) {
+							completeCheck(true);
+							return;
+					}
+					// 主动请求设备状态
+					core_mqtt_publish(`cmd/${check_topic}`, {
+							command: "Pubmsg",
+							function: "bleHelper.pubmsg",
+							params: "",
+							callback: "",
+							raw: ""
+					}, 0, false, false, false).catch(console.error);
+			};
+			core_mqtt_subscribe(check_topic, 1, false);
+			emitter.on(check_topic, handleStatusMessage);
+			timeoutId = setTimeout(() => {
+					completeCheck(versionMatched);
+			}, 60000*4);
+			setTimeout(() => {
+					checkVersionStatus()
+			}, 500);
+		})
+	}
+	const connectWifi = (ssid,password,guid)=>{
+		return new Promise(async(resolve,reject)=>{
+			app.dialog.preloader(_('Connect Wi-Fi...'));
+			let wifiConnectTimmer = setTimeout(()=>{
+				reject('Sorry, Wi-Fi is not connected yet.');
+			},1000*60*2);
+			if (ssid === '' || password === '') {
+				clearTimeout(wifiConnectTimmer);
+				reject('Please fill in the SSID and Password.');
+				return;
+			}else{
+				const saveSsid = () => {
+					const data = '932000' + ssid.length.toString(16).pad('0000') + ssid.convertToHex();
+					return window.peripheral[guid].write([
+						{
+							service: 'ff80',
+							characteristic: 'ff81',
+							data: data,
+						},
+					]);
+				};
+				const saveSsidPassword = () => {
+					const data = '932100' + password.length.toString(16).pad('0000') + password.convertToHex();
+
+					return window.peripheral[guid].write([
+						{
+							service: 'ff80',
+							characteristic: 'ff81',
+							data: data,
+						},
+					]);
+				};
+				const saveEmail = () => {
+					let email = users[users.current].usr.toLowerCase();
+					const data = '932200' + email.length.toString(16).pad('0000') + email.convertToHex();
+
+					return window.peripheral[guid].write([
+						{
+							service: 'ff80',
+							characteristic: 'ff81',
+							data: data,
+						},
+					]);
+				};
+				const savePort = () => {
+					let port = erp.settings[erp.appId].mqtt_port;
+					const data = '9301000002' + (port * 1).toString(16).pad('0000');
+
+					return window.peripheral[guid].write([
+						{
+							service: 'ff80',
+							characteristic: 'ff81',
+							data: data,
+						},
+					]);
+				};
+				const saveServerUrl = () => {
+					let server_url = 'mqtt://' + erp.settings[erp.appId].mqtt_server;
+					const data = '930000' + server_url.length.toString(16).pad('0000') + server_url.convertToHex();
+
+					return window.peripheral[guid].write([
+						{
+							service: 'ff80',
+							characteristic: 'ff81',
+							data: data,
+						},
+					]);
+				};
+				const restartDevice = () => {
+					return window.peripheral[guid].write([
+						{
+							service: 'ff80',
+							characteristic: 'ff81',
+							data: '810E',
+						},
+					]);
+				};
+				const sleep = (ms) => {
+					return new Promise((resolve, reject) => {
+						setTimeout(() => {
+							resolve();
+						}, ms);
+					});
+				};
+				const checkIfOnline = () => {
+					let mac = core_utils_get_mac_address_from_guid(guid, false);
+					let topic_self = `${mac.toLowerCase()}-${users[users.current].usr.toLowerCase()}`;
+					let will_topic = `will/${md5(md5(topic_self))}`;
+					mqtt.subscribe(will_topic);
+					window.$subscribeTimer = setTimeout(() => {
+						mqtt.subscribe(will_topic);
+					}, 10 * 1000);
+					if (window.$wifiTopicFun) {
+						emitter.off(will_topic, window.$wifiTopicFun);
+					}
+					window.$wifiTopicFun = async (res) => {
+						console.log('component res', res);
+						let message = res.message;
+						if (message.includes('Online')) {
+							clearTimeout(window.$subscribeTimer);
+							clearTimeout(wifiConnectTimmer);
+							//update profile_devices
+							let thisMap = erp.info.profile.profile_device.find((item)=>item.device == guid);
+							thisMap.gateway = topic_self;
+							window.peripheral[guid].prop.is_mobmob = 1;
+							app.dialog.close();
+							resolve(true)
+							//check the state of the connect status
+						}
+					};
+					emitter.on(will_topic, window.$wifiTopicFun);
+				};
+				try{
+					await saveSsid();
+					await saveSsidPassword();
+					await saveEmail();
+					await savePort();
+					await saveServerUrl();
+					await restartDevice();
+					await sleep(10 * 1000);
+					await window.peripheral[guid].connect();
+					checkIfOnline();
+				}catch(error){
+					reject(error)
+				}
+			}
+		})
+	}
+	const checkWifiStatus = (guid)=>{
+		return new Promise(async(resolve,reject)=>{
+			//check if set the gateway
+			let wifiStatus = false;
+			let profile_devices = cloneDeep(erp.info.profile.profile_device);
+			let deviceMap = {};
+			deviceMap = profile_devices.find((item)=>item.device == guid);
+			if(deviceMap){
+				let gateway = deviceMap.gateway;
+				if(gateway){
+					wifiStatus = peripheral[guid].getProp().is_mobmob?true:false;
+				}else{
+					wifiStatus = false;
+				}
+			}
+			resolve(wifiStatus);
+		})
+	}
 	window.getDeviceNotificationForEngineerMode = (guid)=>{
 		return new Promise(async(resolve,reject)=>{
+			let sceneTimer = setTimeout(()=>{
+				app.dialog.close();
+				reject('Scene Check Timed Out')
+			},1000*60)
+			//check if not the mesh device
+			let deviceMap = erp.info.device[guid];
+			if(!deviceMap){
+				reject('Device is not found.');
+			}
+			let deviceModel = deviceMap.device_model;
+			if(!(deviceModel.includes('780') || deviceModel.includes('M146') || deviceModel.includes('M86'))){
+				clearTimeout(sceneTimer);
+				resolve([]);
+			}
+			let commandList = [];
 			if(erp.script.getDeviceNotification){
 				emitter.off('get/device/notification',erp.script.getDeviceNotification)
 			}
 			erp.script.getDeviceNotification = (data) => {
-				console.log("data",data);
+				// console.log("data",data);
+				let rs = data.rs;
+				commandList.push(rs);
+				if ((rs.startsWith('8f20') || rs.startsWith('8f22')) && rs.length > 8){
+					//trigger command
+					let thisSceneId = rs.slice(6, 8);
+					if (thisSceneId == '00') {
+						return;
+					}
+					
+				}else if((rs.startsWith('8f10') || rs.startsWith('8f12')) && rs.length > 8){
+					//action command
+					let thisSceneId = rs.slice(6, 8);
+					if (thisSceneId == '00') {
+						return;
+					}
+					
+				}else if(rs.startsWith('972303') && rs.length > 10 && rs.substring(8,10) == '02'){
+					//toggle setting command
+					let thisSceneId = rs.slice(6, 8);		
+					if (thisSceneId == '00') {
+						return;
+					}
+					rs = rs.replace('972303','972003');
+					commandList.push(rs);
+					
+				}else if(rs.startsWith('972303') && rs.length > 10 && rs.substring(8,10) == '01'){
+					//toggle on command
+					let thisSceneId = rs.slice(6, 8);
+					if (thisSceneId == '00') {
+						return;
+					}
+					rs = rs.replace('972303','972003');
+					commandList.push(rs);
+				}else if(rs.startsWith('972303') && rs.length > 10 && rs.substring(8,10) == '00'){
+					//toggle off command
+					let thisSceneId = rs.slice(6, 8);
+					if (thisSceneId == '00') {
+						return;
+					}
+					rs = rs.replace('972303','972003');
+					commandList.push(rs);
+				}else if(rs.startsWith('8f13') && rs.length > 8){
+					//raw setting command
+					let thisSceneId = rs.slice(6, 8);
+					if (thisSceneId == '00') {
+						return;
+					}
+				}else if(commandList.indexOf('8f1300ff') != -1 && 
+								commandList.indexOf('8f200000ff') != -1 &&
+								commandList.indexOf('972303ff02') != -1 &&
+								commandList.indexOf('8f1000ff') != -1){
+					//8f1000ff,972303ff02,8f1300ff,8f200000ff
+					clearTimeout(sceneTimer);
+					resolve(commandList);
+				}
+				
 			}
 			emitter.on('get/device/notification',erp.script.getDeviceNotification);
-			let read_action_command = '8F1200FF';
-			let read_trriger_command = `8F220000FF`;
-			let read_scene_toggle_on_command = `972303ff01`;
-			let read_scene_toggle_off_command = `972303ff00`;
-			let read_scene_toggle_setting_command = `972303ff02`;
-			let read_raw_setting_command = `8f1500ff`;
-			await peripheral[guid].write([
-				{
-					service: 'ff80',
-					characteristic: 'ff81',
-					data: read_trriger_command,
-				},
-				{
-					service: 'ff80',
-					characteristic: 'ff81',
-					data: read_action_command,
-				},
-				{
-					service: 'ff80',
-					characteristic: 'ff81',
-					data: read_scene_toggle_setting_command,
-				},
-				{
-					service: 'ff80',
-					characteristic: 'ff81',
-					data: read_scene_toggle_on_command,
-				},
-				{
-					service: 'ff80',
-					characteristic: 'ff81',
-					data: read_scene_toggle_off_command,
-				},
-				{
-					service: 'ff80',
-					characteristic: 'ff81',
-					data: read_raw_setting_command,
-				}
-			]);
+			try{
+				let read_action_command = '8F1200FF';
+				let read_trriger_command = `8F220000FF`;
+				let read_scene_toggle_on_command = `972303ff01`;
+				let read_scene_toggle_off_command = `972303ff00`;
+				let read_scene_toggle_setting_command = `972303ff02`;
+				let read_raw_setting_command = `8f1500ff`;
+				let totalCommand = `1304${read_action_command}05${read_trriger_command}05${read_scene_toggle_on_command}05${read_scene_toggle_off_command}05${read_scene_toggle_setting_command}04${read_raw_setting_command}`;
+				await peripheral[guid].connect();
+				await peripheral[guid].write([
+					{
+						service: 'ff80',
+						characteristic: 'ff81',
+						data: totalCommand.toLocaleLowerCase(),
+					}
+				]);
+			}catch(error){
+				reject(error);
+			}
+			
 		})
 	}
 	const startCheckDevice = async(list)=>{
+
+		const connectAndCheckWifi = () => {
+			return new Promise(async (resolve, reject) => {
+					while (true) {
+							let wifiInfo = await showPromptDialog(_('Please enter the wifi information'));
+							
+							if (wifiInfo) {
+									let ssid = wifiInfo.username;
+									let password = wifiInfo.password;
+									wifiInfoMap.ssid = ssid;
+									wifiInfoMap.password = password;
+									
+									let confirmWifiInfo = await showUpdateConfirm(
+											`Please confirm your ssid is (${ssid}) and the password is (${password}).`
+									);
+									
+									if (confirmWifiInfo) {
+											resolve(1);  // 用户确认，正确解析
+											return;      // 退出循环和函数
+									}
+									// 用户不确认则继续循环
+							} else {
+									let cancelWifiStatus = await showUpdateConfirm(
+											_('Are you sure you want to cancel the Wi-Fi connection and discard the firmware upgrade?')
+									);
+									
+									if (cancelWifiStatus) {
+											reject(0);  // 用户确认取消，拒绝Promise
+											return;     // 退出循环和函数
+									}
+									// 用户不取消则继续循环
+							}
+					}
+			});
+		}
+
 		/*
 		1.check the device setting
 	  1.1 chcek the wifi is connected
@@ -4961,11 +5419,234 @@ export default async (props, ctx) => {
 		for(let i in list){
 			let guid = list[i].device;
 			let settings = initSettingList(guid);
+			console.log("settings",settings);
 			let sceneList = await initSceneList(guid);
 			console.log("sceneList",sceneList);
-			await getDeviceNotificationForEngineerMode(guid);
+			$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('sync');
+			$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('rotate-animation');
+			//check settings
+			let toast = app.toast.create({
+					text: _('Checking ')+_(`${list[i].titleList[0]}`),
+					position: 'center',
+					closeTimeout: 2000,
+				});
+			toast.open();
+			await new Promise(resolve => setTimeout(resolve, 2000));
+			//check the device
+			try{
+				app.dialog.preloader(_('Connecting to the device'));
+				await peripheral[guid].connect();
+				app.dialog.close();
+			}catch(error){
+				app.dialog.close();
+				console.log("connect error",error);
+				list[i].device_status = 'Connect Error';
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(erp.get_log_description(error))}`);
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+				continue;
+			}
+			let bleList = [];
+			let progress = 0;
+			let sceneProgress = 0;
+			let dialog = null;
+			if(settings.length > 0){
+				dialog = await initDeterminedProgress(progress,'Checking Device Settings');
+			}
+			for(let i in settings){
+				try{
+					await peripheral[guid].write([{
+						service: 'ff80',
+						characteristic: 'ff81',
+						data: settings[i].command.toLocaleLowerCase(),
+					}]);
+					progress++;
+					let progressValue = parseInt(progress/settings.length*100);
+					dialog.setProgress(progressValue);
+					dialog.setText('Checking ' + (progress) + ' of ' + settings.length);
+					if(progressValue == 100){
+						dialog.close();
+					}
+				}catch(error){
+					console.log("error",error);
+					dialog.close();
+				}
+			}
+			//check the device firmare
+			try{
+				let firmwareInfo = await checkDeviceFirmware(guid);
+			}catch(errorMap){
+				console.log("error",errorMap);
+				list[i].firmware_status = _(erp.get_log_description(errorMap.error));
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(errorMap.error)}`);
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+				//continue;
+				app.dialog.close();
+				let shouldUpdate = await showUpdateConfirm(_('The device firmware is not the latest version, do you want to update the firmware?'));
+				if (!shouldUpdate) continue;
+				try{
+					await updateFirmware(guid,errorMap.firmware);
+
+				}catch(error){
+					console.log("error",error);
+					list[i].firmware_status = _(erp.get_log_description(error));
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(error)}`);
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+					//if wifi is not connected, show the connect wifi dialog
+					if(error.includes('Wi-Fi not connected.')){
+						try{
+							let checkWifiStatus = await connectAndCheckWifi();
+						}catch(checkWifiStatusError){
+							continue;
+						}
+						debugger
+						let wifiConnectStatus = await connectWifi(wifiInfoMap.ssid,wifiInfoMap.password,guid);
+							if(wifiConnectStatus){
+								try{
+									await updateFirmware(guid,errorMap.firmware);
+								}catch(wifiUpdateError){
+									console.log("wifiUpdateError",wifiUpdateError);
+									app.dialog.alert(_(wifiUpdateError));
+									continue;
+								}
+							}
+					}else{
+						let confirmStatus = await showUpdateConfirm(_(error));
+					}
+				}
+			}
+			let sceneCommandList = [];
+			app.dialog.preloader(_('Checking Scene'));
+			try{
+				sceneCommandList = await getDeviceNotificationForEngineerMode(guid);
+
+			}catch(error){
+				sceneCommandList = [];
+				list[i].scene_status = _(erp.get_log_description(error));
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(erp.get_log_description(error));
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+				app.dialog.close();
+				continue;
+			}
+			//checking the scene 
+			if(sceneList.length > 0){
+				dialog = await initDeterminedProgress(sceneProgress,'Checking Device Scene');
+			}
+			if(sceneList.length > 0){
+				app.dialog.close();
+				let errorSceneList = [];
+				for(let j in sceneList){
+					let item = sceneList[j];
+					let scene_device_location = item.scene_device_location || [];
+					let templateName = item.scene_template;
+					let trigger = JSON.parse(item.trigger);
+					let action = JSON.parse(item.action);
+					let rcuGuid = getTheSceneRcu(item);
+					let deviceMap = {};
+					let deviceModel = '';
+					let bleList = [];
+					try {
+						deviceMap = erp.info.device[guid];
+						deviceModel = deviceMap.device_model;
+					} catch (error) {}
+					if (deviceModel == 'YO780') {
+						let thisCommandList = await saveActionCommand(item);
+						thisCommandList.forEach((item) => {
+							bleList.push({
+								service: 'ff80',
+								characteristic: 'ff81',
+								data: item.command,
+							});
+						});
+					} else {
+						bleList = bleList.concat(await saveTriggetCommand(item,guid));
+					}
+					sceneProgress++;
+					let progressValue = parseInt(sceneProgress/sceneList.length*100);
+					dialog.setProgress(progressValue);
+					dialog.setText('Checking ' + (sceneProgress) + ' of ' + sceneList.length);
+					if(progressValue == 100){
+						dialog.close();
+					}
+					console.log("bleList",bleList);
+					bleList.forEach((item)=>{
+						item.checkStatus = true;
+						let command = item.data;
+						if(sceneCommandList.indexOf(command) == -1){
+							errorSceneList.push(item);
+							list[i].scene_status = 'Scene Error';
+							$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+							$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+							$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_('Scene Error')}`);
+							$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+							item.checkStatus = false;
+						}
+					})
+				}
+				let checkSceneStatus = true;
+				console.log("errorSceneList",errorSceneList)
+				if(errorSceneList.length){
+					let shouldUpdate = await showUpdateConfirm(_('The scene is not set correctly, do you want to fix the scene?'));
+					if(!shouldUpdate){
+						try{
+							await window.peripheral[guid].disconnect();
+						}catch(disconnectError){
+							console.log("disconnectError",disconnectError);
+						}
+						continue;
+					}
+					app.dialog.preloader(_('Fixing Scene...'));
+					for(let k in errorSceneList){
+						let kitem = errorSceneList[k];
+						try{
+							await peripheral[guid].write([{
+								service: 'ff80',
+								characteristic: 'ff81',
+								data: kitem.data,
+							}]);
+						}catch(error){
+							console.log("error",error);
+							app.dialog.close();
+							app.dialog.alert(_(erp.get_log_description(error)));
+							checkSceneStatus = false;
+						}
+					}
+					if(checkSceneStatus){
+						list[i].scene_status = '';
+						app.dialog.close();
+					}
+				}
+			}
+			try{
+				await window.peripheral[guid].disconnect();
+				app.dialog.close();
+				if(!list[i].scene_status){
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_('Check Success')}`);
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').addClass('text-color-green');
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('check');
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-green');
+					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+				}
+			}catch(error){
+				app.dialog.close();
+				console.log("error",error);
+			}
+			console.log("sceneCommandList",sceneCommandList);
 		}
 
+	}
+	const initDeterminedProgress = (progress,title)=>{
+		return new Promise(async(resolve,reject)=>{
+			let dialog = app.dialog.progress(title,progress);
+			resolve(dialog);
+		})
 	}
 	const initSettingList = (guid)=>{
 		let settings = [];
@@ -4995,9 +5676,9 @@ export default async (props, ctx) => {
       }
     }
     console.log('sceneList', sceneList);
-    let sceneBleList = await replaceRcuSceneDeviceCommand(sceneList,guid);
+    // let sceneBleList = await replaceRcuSceneDeviceCommand(sceneList,guid);
     // console.log('sceneBleList', sceneBleList);
-    return sceneBleList;
+    return sceneList;
 	}
 	const replaceRcuSceneDeviceCommand = (sceneList,guid) => {
     return new Promise(async (resolve, reject) => {
@@ -5274,6 +5955,48 @@ export default async (props, ctx) => {
 				})
 		})
 	}
+	const refreshGateway = ()=>{
+		const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway().toLowerCase()));
+		for (let i in profile_device) {
+			if (!profile_device[i].gateway || profile_device[i].gateway.trim() == "") continue;
+
+			const gatewayhash = md5(md5(profile_device[i].gateway.toLowerCase()));
+			if (selfgatewayhash == gatewayhash) { // self gateway, need to listen to cmd
+
+				const cmd_topic = `cmd/${gatewayhash}`;
+				core_mqtt_subscribe(cmd_topic, 0, false);
+				emitter.off(cmd_topic);
+				emitter.on(cmd_topic, on_gateway_commands_received);
+
+			} else { // other gateway, need to listen to status and will
+
+				//check if gateway is online / offline
+				const will_topic = `will/${gatewayhash}`;
+				core_mqtt_subscribe(will_topic, 1, false);
+				emitter.off(will_topic,on_gateway_will_changed);
+				emitter.on(will_topic, on_gateway_will_changed);
+
+				//get the devices' status from gateway
+				const status_topic = `status/${gatewayhash}`;
+				core_mqtt_subscribe(status_topic, 1, false);
+				emitter.off(status_topic,on_gateway_device_changed);
+				emitter.on(status_topic, on_gateway_device_changed);
+
+				//refresh gateway
+				setTimeout(() => {
+					core_mqtt_publish(`cmd/${gatewayhash}`, {
+						"command": "Pubmsg",
+						"function": "bleHelper.pubmsg",
+						"params": "",
+						"callback": "",
+						"raw": ""
+					}, 0, false, false, false).then(() => {
+
+					}).catch(reject => {});
+				}, 3000)
+			}
+		}
+	}
 	//ui functions
 	const refresh = async (e, done) => {
 		await ha_profile_ready();
@@ -5295,7 +6018,7 @@ export default async (props, ctx) => {
 				//check if gateway is online / offline
 				const will_topic = `will/${gatewayhash}`;
 				core_mqtt_subscribe(will_topic, 1, false);
-				emitter.off(will_topic);
+				emitter.off(will_topic,on_gateway_will_changed);
 				emitter.on(will_topic, on_gateway_will_changed);
 
 				//get the devices' status from gateway
@@ -6402,6 +7125,7 @@ export default async (props, ctx) => {
 		s['connected'] = p.connected;
 		s['device_attachment_status'] = `0,0,0,26,26,0`;
 		s['bluetooth_count'] = p.bluetooth_count;
+		s['mn_size'] = p.mnSize || 0;
 		if(!s['click_status']){
 			s['device_status'] = device_status;
 		}
@@ -6557,6 +7281,7 @@ export default async (props, ctx) => {
 			s['guid_status'] = false;
 		}else{
 			s['guid_status'] = true;
+			s['scene_status'] = true;
 		}
 		
 	};
@@ -6907,6 +7632,7 @@ export default async (props, ctx) => {
 								deviceItem.status['mobmob'][0][flourIndex] = this_ref[0];
 							}
 						})
+						// console.log("rcuDataList",rcuDataList)
 						deviceItem.status['mobmob'][1] = deviceInfo.date;
 						//if this gateway status date > contorl status date,overflow
 						if(deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]){
@@ -7096,6 +7822,40 @@ export default async (props, ctx) => {
 		}
 		//should open the scan 
 		scan();
+		//check if the wifi device is compelte
+		window.iot_check_profile_device('rcu').then((is_check)=>{
+			//check if scene all have been write the rcu device
+			if(is_check && erp.info.profile.location != '1 write' && erp.info.profile.copy_from){
+				//find the rcu device
+				let rcu_device = erp.info.profile.profile_device.find((item)=>{
+					return (item.device_mode == 'RCU Controller' || item.device_model == 'YO780') && item.device;
+				});
+				if(rcu_device){
+					//find the device
+					let rcu_sub_device = subdevices.find((item)=>{
+						return item.profile_device == rcu_device.name;
+					})	
+					if(rcu_sub_device){
+						//close all the dialog
+						while (true) {
+							try {
+								const dialog = app.dialog.close();
+								if (!dialog) {
+									break;
+								}
+							} catch (e) {
+								break;
+							}
+						}
+						//find the device
+						app.dialog.confirm(_('RCU-related devices are ready. Would you like to update the RCU?'),()=>{
+							let url = `/mobile-app/device-replace-page?guid=${rcu_sub_device.device}&title=${_('Update')} ${encodeURIComponent(_('RCU Control Unit'))}&name=${rcu_sub_device.name}&filter_value=${filter_value}&update_scene=true`;
+							mainView.router.navigate(url);
+						})
+					}
+				}
+			}
+		})
 	}) 
 	$onBeforeMount(async() => {
 		document.removeEventListener("touchstart", handleUserActivity);
@@ -7103,8 +7863,8 @@ export default async (props, ctx) => {
 		document.removeEventListener("click", handleUserActivity);
 		clearTimeout(idleTimer);
 		mobileAsHubStatus = false;
-		let data = await db.get('home_auto_listCssStatus');
-		listCssStatus = isset(data)?data:'List';
+		// let data = await db.get('home_auto_listCssStatus');
+		// listCssStatus = isset(data)?data:'List';
 		console.log("onBeforeMount")
 	});
 	$onMounted(async() => {

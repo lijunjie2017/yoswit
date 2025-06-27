@@ -269,6 +269,29 @@
             try{
               let action = JSON.parse(item.action);
               let actionList = action.actionList;
+              let ui_configuration = item.ui_configuration?JSON.parse(item.ui_configuration):{};
+              let deviceStatusList = [];
+              if(isset(ui_configuration.deviceStatusList)){
+                deviceStatusList = ui_configuration.deviceStatusList;
+              }
+              let statusHtml = '';
+              for(let i in deviceStatusList){
+                let deviceStatus = deviceStatusList[i];
+                let device = deviceStatus.device;
+                let status = deviceStatus.ref;
+                statusHtml += `<li class="manufacturing-steps manufacturing-step1">
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">${tran(deviceStatus.title)}</span>
+                      <p>
+                        <span class="room-title text-color-gray">${deviceStatus.virtualId?_('virtualId'):deviceStatus.device_button_group}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </li>`;
+              }
               //show the action list
               let html = '';
               for(let i in actionList){
@@ -299,6 +322,18 @@
                       <div class="list list-strong list-outline list-dividers-ios">
                         <ul class="manufacturing-steps-list">
                         ${html}
+                        </ul>
+                      </div>
+                      <div class="list list-strong list-outline list-dividers-ios">
+                        <div class="item-content">
+                          <div class="item-inner">
+                            <div class="item-title">
+                              <span class="device-title">${_('Device Status')}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <ul class="manufacturing-steps-list">
+                        ${statusHtml}
                         </ul>
                       </div>
                     </div>
@@ -1308,7 +1343,7 @@
                   } catch (error) {
                     app.dialog.close();
                     console.log(error);
-                    app.dialog.alert(_('Permission Error'));
+                    app.dialog.alert(_(erp.get_log_description(error)));
                   }
                 },
                 () => {}
@@ -1396,7 +1431,7 @@
                 } catch (error) {
                   app.dialog.close();
                   console.log(error);
-                  app.dialog.alert(_('Permission Error'));
+                  app.dialog.alert(_(erp.get_log_description(error)));
                 }
               },
               () => {}

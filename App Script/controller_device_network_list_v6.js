@@ -534,7 +534,9 @@ window.device_network_list_component = {
         
       },1000*3);
       //check if update the network list
+      const startTime = Date.now();
       this.$checkUpdateSingalNetworkListTimer = setInterval(()=>{
+        const elapsedTime = Date.now() - startTime;
         let checkStatus = true;
         $(`.manufacturing-steps`).each(function(){
           console.log($(this).find('.item-after i').hasClass('text-color-green'));
@@ -542,6 +544,15 @@ window.device_network_list_component = {
             checkStatus = false;
           }
         })
+        // 超时处理（20秒）
+        console.log('elapsedTime',elapsedTime);
+        if (elapsedTime >= 5000) {
+          clearInterval(this.$checkUpdateSingalNetworkListTimer);
+          app.dialog.confirm(_('The original gateway is offline. Would you like to continue?'),()=>{
+            this.updateGatewayStatus = true;
+          })
+          return; // 结束执行
+        }
         if(checkStatus){
           clearInterval(this.$checkUpdateSingalNetworkListTimer);
           this.updateGatewayStatus = true;
@@ -839,7 +850,6 @@ window.device_network_list_component = {
                 }
               })
             },500)
-            return;
           }
           debugger
           await core_mqtt_publish("cmd/"+md5(md5(i.toLowerCase())), {
@@ -863,7 +873,6 @@ window.device_network_list_component = {
           },1000)
           
           //app.dialog.alert(_(erp.get_log_description(err)));
-          return;
         }
       }
       
@@ -889,7 +898,6 @@ window.device_network_list_component = {
                   }
                 })
               },500)
-              return;
             }
             await core_mqtt_publish("cmd/"+md5(md5(i.toLowerCase())), {
               command:"Control",
@@ -911,7 +919,6 @@ window.device_network_list_component = {
                 }
               })
             },500)
-            
             //app.dialog.alert(_(erp.get_log_description(err)));
             return
           }

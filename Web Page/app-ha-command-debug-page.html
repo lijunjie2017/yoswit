@@ -10,6 +10,11 @@
           </a>
         </div>
         <div class="title">{{ _('Command Debug') }}</div>
+        <div class="right">
+          <a class="link icon-only" @click="${()=>clickWifi()}">
+            <i class="icon material-icons md-only">wifi</i>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -34,10 +39,12 @@
           <div class="list list-strong-ios list-dividers-ios inset-ios">
             <ul>
               <li class="code-block" style="padding: 5px 15px; font-size: 18px" v-for="(item,index) in notifications" :key="index">
-                <div style="font-size: 14px;color: #999;margin-right: 10px;word-wrap: break-word;">{{item}}</div>
+                <div style="font-size: 14px; color: #999; margin-right: 10px; word-wrap: break-word">{{item}}</div>
               </li>
               <li class="code-block" style="padding: 30px 15px; font-size: 18px" v-if="notifications.length == 0">
-                <span style="font-size: 14px;color: #999;margin-right: 10px;display: inline-block;width: 140px;">{{_('No notifications')}}</span>
+                <span style="font-size: 14px; color: #999; margin-right: 10px; display: inline-block; width: 140px"
+                  >{{_('No notifications')}}</span
+                >
               </li>
             </ul>
           </div>
@@ -64,27 +71,72 @@
     let vueApp = null;
     window.htmi_log_list = [];
     const { guid } = $f7route.query;
+    const clickWifi = () => {
+      vueApp.$checkScene();
+    };
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
           command: '',
           notifications: [],
+          wifiStatus: false,
         },
         computed: {},
         watch: {},
         mounted() {
+          Vue.prototype.$checkScene = this.checkScene;
           this.postNotifications();
         },
         methods: {
+          checkScene() {
+            this.wifiStatus = !this.wifiStatus;
+            app.dialog.alert('wifiStatus is ' + this.wifiStatus ? 'ON' : 'OFF');
+          },
           async postCommand() {
             let command = this.command;
             try {
-              await window.peripheral[guid].write([{
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: command,
-              }])
+              if (this.wifiStatus) {
+                //get the gateway
+                debugger
+                let devices = cloneDeep(erp.info.profile.profile_device);
+                let deviceMap = devices.find((device) => device.device == guid);
+                if (deviceMap) {
+                  let gateway = deviceMap.gateway;
+                  let topic = `cmd/${md5(md5(gateway))}`;
+                  core_mqtt_publish(
+                    'cmd/' + md5(md5(gateway)),
+                    {
+                      command: 'Control',
+                      function: 'bleHelper.perform',
+                      params: [
+                        {
+                          action: 'write',
+                          guid: guid,
+                          mac_address: peripheral[guid].getProp().mac_address.toLowerCase(),
+                          service_id: 'ff80',
+                          char_id: 'ff81',
+                          value: command,
+                        },
+                      ],
+                      callback: '',
+                      raw: '',
+                    },
+                    0,
+                    false,
+                    false,
+                    false
+                  );
+                }
+              } else {
+                await window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: command,
+                  },
+                ]);
+              }
             } catch (e) {
               app.dialog.alert(_(erp.get_log_description(e)));
             }
@@ -110,13 +162,13 @@
             let device_id = window.peripheral[guid].prop.id;
             try {
               await this.connectDevice();
-            }catch(error){
+            } catch (error) {
               throw error;
             }
-            debugger
-              return new Promise((resolve, reject) => {
-                ble.write(
-                  device_id,
+            debugger;
+            return new Promise((resolve, reject) => {
+              ble.write(
+                device_id,
                 'ff80',
                 'ff81',
                 command,

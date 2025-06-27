@@ -78,14 +78,16 @@ window.createBLEUploadManager = () => {
               }
               currentDeviceId = deviceId;
               isConnected = true;
-              callbacks.onConnect?.();
+              if (callbacks && typeof callbacks.onConnect === 'function') {
+                  callbacks.onConnect();
+                }
               resolve();
             },
             error => reject(`Connection failed: ${error}`)
           );
         });
       } catch (error) {
-        callbacks.onError?.(error);
+        // callbacks.onError?.(error);
         throw error;
       }
     },
@@ -108,13 +110,13 @@ window.createBLEUploadManager = () => {
 
         for (const [index, chunk] of chunks.entries()) {
           await this.sendChunk(chunk, index);
-          options.onProgress?.(index + 1, total);
+        //   options.onProgress?.(index + 1, total);
           await delay(getPlatformConfig().delay);
         }
         
         return true;
       } catch (error) {
-        options.onError?.(error);
+        // options.onError?.(error);
         throw error;
       }
     },

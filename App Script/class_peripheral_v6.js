@@ -748,6 +748,7 @@ window.Peripheral = (function() {
     				    emitter.emit('iot/wifi/info',{"rs" : data})
     				}else if(data.startsWith("8f20") || data.startsWith("8f22") || data.startsWith("8f10") || data.startsWith("8f12") || data.startsWith("972303") || data.startsWith("8f13") ){
     				    emitter.emit('iot/scene/from/ble',{"rs" : data})
+    				    emitter.emit('get/device/notification',{"rs" : data})
     				}else if(data.startsWith("87")){
     				// 	console.log("87 data is",data);
     					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
