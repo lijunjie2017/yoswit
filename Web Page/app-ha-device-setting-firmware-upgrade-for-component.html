@@ -1,0 +1,123 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Firmware Upgrade') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <device-firmware-upgrade-component
+            ref="childRefForFirmwareUpgrade"
+            :guid="targetGuid"
+            :model="device_map_mode"
+            :gateway="gateway"
+            :show="true"
+            v-on:update-status="updateStatusFun"
+          ></device-firmware-upgrade-component>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, subdevice } = $f7route.query;
+    let device_map_mode = '';
+    let gateway = '';
+    const updateValue = ()=>{
+      let profile_subdevice_list = cloneDeep(erp.info.profile.profile_subdevice);
+      let profile_device_list = cloneDeep(erp.info.profile.profile_device);
+      let subMap = profile_subdevice_list.find(item => item.name == subdevice);
+      let profile_device_name = '';
+      if(subMap){
+        profile_device_name = subMap.profile_device;
+      }
+      let deviceMap = profile_device_list.find(item => item.name == profile_device_name);
+      if(deviceMap){
+        device_map_mode = deviceMap.device_model;
+        gateway = deviceMap.gateway;
+      }
+    }
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        components:{
+          DeviceFirmwareUpgradeComponent: window.device_firmware_upgrade_component,
+        },
+        data: {
+          targetGuid : guid,
+          device_map_mode : device_map_mode,
+          gateway : gateway,
+        },
+        computed: {},
+        mounted() {
+          this.init();
+        },
+        methods: {
+          init(){
+            this.targetGuid = guid;
+            //get guid
+            //get device_map_mode
+            //get gateway
+            
+          },
+          updateStatusFun(status){
+
+          }
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  /* HTML: <div class="loader"></div> */
+  .loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(farthest-side, #ffa516 94%, #0000) top/8px 8px no-repeat,
+      conic-gradient(#0000 30%, #ffa516);
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
+    mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
+    animation: l13 1s infinite linear;
+  }
+
+  @keyframes l13 {
+    100% {
+      transform: rotate(1turn);
+    }
+  }
+</style>

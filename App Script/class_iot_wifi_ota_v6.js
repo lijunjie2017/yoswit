@@ -14,6 +14,7 @@ window.iotWifiOta = (function () {
       guid: '',
       gateway: '',
       isOnline: false,
+      issetWifi: false,
     };
     this.updateWifiObject(wifiObject);
   }
@@ -21,7 +22,7 @@ window.iotWifiOta = (function () {
   iotWifiOta.prototype.updateWifiObject = function (wifiObject) {
     const SAFE_PROPS = new Set([
       'ssid', 'password', 'currentFirmware', 
-      'latestFirmware', 'status', 'progress', 'guid', 'gateway', 'isOnline'
+      'latestFirmware', 'status', 'progress', 'guid', 'gateway', 'isOnline', 'issetWifi'
     ]);
     Object.keys(wifiObject).forEach(key => {
       if (SAFE_PROPS.has(key) && wifiObject[key] !== undefined) {
@@ -62,7 +63,7 @@ window.iotWifiOta = (function () {
         return window.peripheral[self.prop.guid].write([
           {
             service: 'ff80',
-            characteristic: 'ff82',
+            characteristic: 'ff81',
             data: data,
           },
         ]);
@@ -74,7 +75,7 @@ window.iotWifiOta = (function () {
         return window.peripheral[self.prop.guid].write([
           {
             service: 'ff80',
-            characteristic: 'ff83',
+            characteristic: 'ff81',
             data: data,
           },
         ]);
@@ -85,7 +86,7 @@ window.iotWifiOta = (function () {
         return window.peripheral[self.prop.guid].write([
           {
             service: 'ff80',
-            characteristic: 'ff84',
+            characteristic: 'ff81',
             data: data,
           },
         ]);
@@ -96,7 +97,7 @@ window.iotWifiOta = (function () {
         return window.peripheral[self.prop.guid].write([
           {
             service: 'ff80',
-            characteristic: 'ff85',
+            characteristic: 'ff81',
             data: data,
           },
         ]);
@@ -106,7 +107,7 @@ window.iotWifiOta = (function () {
         return window.peripheral[self.prop.guid].write([
           {
             service: 'ff80',
-            characteristic: 'ff86',
+            characteristic: 'ff81',
             data: data,
           },
         ]);

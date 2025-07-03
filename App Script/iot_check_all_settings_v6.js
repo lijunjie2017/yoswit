@@ -593,7 +593,7 @@ window.iot_check_all_settings = async (params) => {
       app.dialog.alert(erp.get_log_description(error));
     }
   };
-  const hexToPlainText = (hexString) => {
+  window.hexToPlainText = (hexString) => {
     // 使用正则表达式检查输入是否是合法的十六进制字符串
     const hexPattern = /^[0-9A-Fa-f]+$/;
     if (!hexPattern.test(hexString)) {
@@ -860,6 +860,30 @@ window.iot_check_all_settings = async (params) => {
       let currentFirmwareNo = extractVersion(currentFirmware);
       let latestFirmwareNo = extractVersion(latestFirmware);
       if(currentFirmwareNo !== latestFirmwareNo){
+        //get the gateway
+        let gateway = '';
+        let ssid = '';
+        let password = '';
+        let deviceErpInfo = erp.info.device[guid];
+        if(deviceErpInfo){
+          let settings = deviceErpInfo.settings;
+          let users = erp.info.profile.owner;
+          if(settings.length > 0){
+            settings.forEach(item=>{
+              if(item.setting_type == 'Email Address'){
+                users = item.setting;
+              }
+              if(item.setting_type == 'Wifi SSID'){
+                ssid = item.setting;
+              }
+              if(item.setting_type == 'Wifi Password'){
+                password = item.setting;
+              }
+            });
+          }
+          gateway = `${core_utils_get_mac_address_from_guid(guid)}-${users.toLowerCase()}`;
+          console.log('gateway', gateway);
+        }
         let wifiInfo = await window.showPromptDialog(_('Please enter the wifi information.'));
         if(wifiInfo){
           let ssid = wifiInfo.username;
@@ -872,6 +896,8 @@ window.iot_check_all_settings = async (params) => {
               latestFirmware : erp.latestFirmware,
               ssid : ssid,
               password : password,
+              gateway : '',
+              guid : guid,
             };
             let otaResult = new window.iotWifiOta(otaMap);
             try{
@@ -879,6 +905,8 @@ window.iot_check_all_settings = async (params) => {
               await otaResult.startOta();
             }catch(error){
               console.log('error', error);
+              $('.start-check-all-settings').removeClass('disabled');
+              $('.start-check-all-settings').html(_('Start'));
               app.dialog.close();
               app.dialog.alert(erp.get_log_description(error));
             }

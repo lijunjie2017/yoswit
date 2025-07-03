@@ -4176,9 +4176,10 @@
                 this.index = 3;
                 return; 
               }else{
+                debugger
                 await this.saveActionOnBle();
                 debugger
-                if(this.templateName == 'Welcome Scene'){
+                if(this.templateName == 'Welcome Scene' || this.templateName == 'RCU Radar'){
                   await this.saveActionForWelcomeScene();
                 }
                 await this.saveRcuTrigger(1);
@@ -4253,7 +4254,7 @@
                     storage_id: this.actionLocation[i],
                   });
                 }
-                if(this.templateName == 'Welcome Scene'){
+                if(this.templateName == 'Welcome Scene' || this.templateName == 'RCU Radar'){
                   if(isset(this.actionMap[`second_action_id`])){
                     scene_device_location.push({
                       device: this.actionMap[`second_action_guid`],
@@ -6555,7 +6556,7 @@
           saveActionOnBle(extraStaus) {
             return new Promise(async (resolve, reject) => {
               let actualActionList;
-              if(this.templateName == 'Welcome Scene'){
+              if(this.templateName == 'Welcome Scene' || this.templateName == 'RCU Radar'){
                 let actionList = this.actionList.filter(item=>{
                   return !item.isCheck;
                 });
@@ -6719,7 +6720,11 @@
                   //totalActionCommand = this.tindyRadarUnmanedModeCommand(totalActionCommand,i);
                 }
                 //if the action length more than 240 bytes,should warn the user
-                if(totalActionCommand.length > (240+4)*2){
+                //alert(totalActionCommand);
+                let only_radar_action = this.actionList.filter(item=>{
+                  return item.isCheck
+                });
+                if((totalActionCommand.length > (240+4)*2) && only_radar_action.length == 0){
                   app.dialog.alert(`${_('Action length is too long,please check the action.')}`);
                   break;
                 }

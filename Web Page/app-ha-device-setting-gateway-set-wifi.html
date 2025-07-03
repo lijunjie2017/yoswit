@@ -198,7 +198,7 @@
             ssid: '',
             ssid_password: '',
             email: users[users.current].usr,
-            server_url: erp.settings[erp.appId].mqtt_scheme?erp.settings[erp.appId].mqtt_scheme:'mqtt://' + erp.settings[erp.appId].mqtt_server,
+            server_url: erp.settings[erp.appId].mqtt_scheme?erp.settings[erp.appId].mqtt_scheme+'://'+erp.settings[erp.appId].mqtt_server:'mqtt://' + erp.settings[erp.appId].mqtt_server,
             port: erp.settings[erp.appId].mqtt_port,
             username: '',
             server_password: '',
@@ -362,8 +362,12 @@
                 await ble.requestMtu(
                   peripheral[guid].prop.id,
                   512,
-                  ()=>{},
-                  ()=>{},
+                  ()=>{
+                    console.log('requestMtu success');
+                  },
+                  ()=>{
+                    console.log('requestMtu error');
+                  },
                 )
               }
               let bleList = [];
@@ -393,6 +397,7 @@
                 data: email_data,
               });
               //server_url
+              console.log('this.setting.server_url', this.setting.server_url);
               let server_url_data =
                 '930000' + this.setting.server_url.length.toString(16).pad('0000') + this.setting.server_url.convertToHex();
               bleList.push({
@@ -407,6 +412,28 @@
                 characteristic: 'ff81',
                 data: port_data,
               });
+              //if mira, default username and password
+              if(erp.appId.toLowerCase().includes('mira')){
+                debugger
+                let server_username = `iot-device-themira`;
+                let server_password = `Uiop0987!@#`;
+                console.log('server_username', server_username);
+                console.log('server_password', server_password);
+                let server_username_data =
+                '930200' + server_username.length.toString(16).pad('0000') + server_username.convertToHex();
+                let server_password_data =
+                '930300' + server_password.length.toString(16).pad('0000') + server_password.convertToHex();
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: server_username_data,
+                });
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: server_password_data,
+                });
+              }
               //write ble data
               await peripheral[guid].write(bleList);
               //post to erp data

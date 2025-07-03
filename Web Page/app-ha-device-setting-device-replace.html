@@ -23,7 +23,6 @@
                 <button
                   v-for="(item,index) in stepList"
                   :key="item.id"
-                  v-on:click="toTab(item.id)"
                   :class="item.isActive?'button-active button':'button'"
                   v-if="item.isShow"
                 >
@@ -716,7 +715,12 @@
             this.$refs.childRef.syncGateways();
           },
           startFirmwareUpgrade() {
-            this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
+            //this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
+            if(users.current.includes('grace.zhao@yoswit.com') || users.current.includes('takyeyu@gmail.com') || users.current.includes('david.lam@yoswit.com') || users.current.includes('jacob.wong@yoswit.local')){
+              this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
+            }else{ 
+              this.toTab(5);
+            }
           },
           initGatewayConfig() {
             let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
@@ -1093,8 +1097,6 @@
               this.replacePassword = new_password;
             }
             debugger;
-            commandList.push(82 + password.convertToHex() + new_password.convertToHex());
-            commandList.push('812A');
             this.settingList.forEach((item) => {
               //filter same item command
               if (commandList.indexOf(item.command) == -1) {
@@ -1108,6 +1110,8 @@
               }
             });
             console.log('commandList', commandList);
+            commandList.push(82 + password.convertToHex() + new_password.convertToHex());
+            commandList.push('812A');
             this.blePostCommand = commandList;
             //if android, should request mtu
             await new Promise((resolves)=>{
@@ -3324,6 +3328,13 @@
               }
               app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
                 window.globalUpdate = true;
+                if(!this.updateSceneStatus){
+                  window.peripheral[this.targetGuid].write([{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '810e',
+                  }]);
+                }
                 mainView.router.back();
               });
             } catch (error) {
@@ -3653,43 +3664,30 @@
               app.dialog.preloader(_('Disconnecting other devices.'));
               for (let device in window.peripheral) {
                 if (window.peripheral[device].getProp().connected) {
-                  await window.peripheral[device].disconnect();
+                  try{
+                    await window.peripheral[device].disconnect();
+                  }catch(error){
+                    console.log('disconnect error=' + error);
+                  }
                 }
               }
               app.dialog.close();
             } catch (error) {
+              app.dialog.close();
               console.log('disconnect error=' + error);
             }
-
-            app.dialog.preloader(_('Identifying, this will take about 2 minute.'));
             //set timer
             erp.replaceIdentifyTimer = setTimeout(async () => {
               app.dialog.close();
               app.dialog.confirm(
-                _('Mesh failed, retry?'),
+                _('Mesh failed, would you like to reset and try again?'),
                 async () => {
                   try {
                     if (this.identifyListenerFun) {
                       console.log('off mesh/identify');
                       emitter.off('mesh/identify', this.identifyListenerFun);
                     }
-                    app.dialog.preloader(_('Restarting, this will take about 2 minutes.'));
-                    // await window.peripheral[this.targetGuid].write([
-                    //   {
-                    //     service: 'ff80',
-                    //     characteristic: 'ff81',
-                    //     data: '8110',
-                    //   },
-                    //   {
-                    //     service: 'ff80',
-                    //     characteristic: 'ff81',
-                    //     data: '810e',
-                    //   },
-                    // ]);
-                    // window.peripheral[this.targetGuid].getProp().password = '000000';
-                    // await this.sleep(30000);
                     this.initMeshNetwork();
-                    app.dialog.close();
                   } catch (error) {}
                   this.iotSetMeshIdentify();
                 },
@@ -3698,8 +3696,6 @@
             }, 150000);
             try {
               setmesh_produce_timer = null;
-              await this.sleep(1000);
-              await window.peripheral[this.targetGuid].disconnect();
             } catch (error) {
               if (erp.replaceIdentifyTimer) {
                 clearTimeout(erp.replaceIdentifyTimer);
@@ -3707,26 +3703,36 @@
               app.dialog.alert(_(erp.get_log_description(error)));
             }
             try {
+              app.dialog.preloader(_('Restarting, this will take about 2 minutes.'));
               await window.peripheral[this.targetGuid].write([
                 {
                   service: 'ff80',
                   characteristic: 'ff81',
                   data: '8110',
                 },
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: '810e',
-                },
               ]);
+              
               window.peripheral[this.targetGuid].getProp().password = '000000';
               await this.sleep(30000);
-
+              app.dialog.close();
+              app.dialog.preloader(_('Identifying, this will take about 2 minute.'));
               await window.peripheral[this.targetGuid].identify();
               this.identifyNotify();
+              if(this.identifyTimer){
+                clearTimeout(this.identifyTimer);
+              }
               // await this.iotSetMeshProvisioning();
             } catch (error) {
-              app.dialog.close();
+              while (true) {
+                try {
+                  const dialog = app.dialog.close();
+                  if (!dialog) {
+                    break;
+                  }
+                } catch (e) {
+                  break;
+                }
+              }
               if (erp.replaceIdentifyTimer) {
                 clearTimeout(erp.replaceIdentifyTimer);
               }
@@ -3750,27 +3756,11 @@
                 async () => {
                   try {
                     this.retryCount++;
-                    app.dialog.preloader(_('Restarting, this will take about 1-2 minutes.'));
                     if (this.identifyListenerFun) {
                       console.log('off mesh/identify');
                       emitter.off('mesh/identify', this.identifyListenerFun);
                     }
-                    // await window.peripheral[this.targetGuid].write([
-                    //   {
-                    //     service: 'ff80',
-                    //     characteristic: 'ff81',
-                    //     data: '8110',
-                    //   },
-                    //   {
-                    //     service: 'ff80',
-                    //     characteristic: 'ff81',
-                    //     data: '810e',
-                    //   },
-                    // ]);
-                    // window.peripheral[this.targetGuid].getProp().password = '000000';
-                    // await this.sleep(30000);
                     this.initMeshNetwork();
-                    app.dialog.close();
                   } catch (error) {}
                   this.iotSetMeshIdentify();
                 },
@@ -3786,19 +3776,37 @@
               this.identifyTimer = setTimeout(() => {
                 // this.identifyTimer = null;
                 app.dialog.alert(_('Identifing failed, please retry!'));
-              }, 30000);
+              }, 4000);
               console.log('identifyListenerFun=', rs);
+              debugger
               if (rs.code == 200) {
                 if (this.identifyTimer) {
                   clearTimeout(this.identifyTimer);
                 }
                 if (!this.emmitStatus) {
+                  while (true) {
+                    try {
+                      const dialog = app.dialog.close();
+                      if (!dialog) {
+                        break;
+                      }
+                    } catch (e) {
+                      break;
+                    }
+                  }
                   this.iotSetMeshProvisioning();
                 }
                 this.emmitStatus = true;
               } else if (rs.code == 7300) {
                 if (this.identifyTimer) {
                   clearTimeout(this.identifyTimer);
+                }
+                while(true){
+                  try{
+                    const dialog = app.dialog.close();
+                  }catch(error){
+                    break;
+                  }
                 }
                 app.dialog.confirm(
                   _('Identifing failed, retry?'),
@@ -3808,20 +3816,6 @@
                         console.log('off mesh/identify');
                         emitter.off('mesh/identify', this.identifyListenerFun);
                       }
-                      await window.peripheral[this.targetGuid].write([
-                        {
-                          service: 'ff80',
-                          characteristic: 'ff81',
-                          data: '8110',
-                        },
-                        {
-                          service: 'ff80',
-                          characteristic: 'ff81',
-                          data: '810e',
-                        },
-                      ]);
-                      window.peripheral[this.targetGuid].getProp().password = '000000';
-                      await this.sleep(1000);
                     } catch (error) {}
                     this.iotSetMeshIdentify();
                   },
@@ -3837,8 +3831,17 @@
           },
           async iotSetMeshProvisioning() {
             console.log('iotSetMeshProvisioning');
-            app.dialog.close();
-            app.dialog.preloader(_('Provisioning, this will take about 1 minutes.'));
+            while (true) {
+              try {
+                const dialog = app.dialog.close();
+                if (!dialog) {
+                  break;
+                }
+              } catch (e) {
+                break;
+              }
+            }
+            app.dialog.preloader(_('Provisioning, this will take about 2 minutes.'));
             try {
               let uuid = window.peripheral[this.targetGuid].getProp().id;
               await ble.startProvisioning(
@@ -3900,21 +3903,6 @@
                   app.dialog.confirm(
                     _('Provisioning failed, retry?'),
                     async () => {
-                      try {
-                        await window.peripheral[this.targetGuid].write([
-                          {
-                            service: 'ff80',
-                            characteristic: 'ff81',
-                            data: '931200000101',
-                          },
-                          {
-                            service: 'ff80',
-                            characteristic: 'ff81',
-                            data: '810e',
-                          },
-                        ]);
-                        await this.sleep(1000);
-                      } catch (error) {}
                       this.iotSetMeshIdentify();
                     },
                     () => {}

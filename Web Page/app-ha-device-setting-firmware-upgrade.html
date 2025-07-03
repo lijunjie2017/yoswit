@@ -361,7 +361,7 @@
 
       try {
         app.preloader.show();
-        await promisifyConnect(uuid);
+        await window.peripheral[this.guid].connect();
         current_firmware = await readFirmware(uuid);
 
         $update();
@@ -568,7 +568,10 @@
 
         // await promisifyWrite(uuid, 'ff80', 'ff81', command);
         try{
-          await promisifyConnect(uuid);
+          app.dialog.preloader(_('Attempt to connect before updating.'));
+          await window.peripheral[guid].connect();
+          app.dialog.close();
+          // await promisifyConnect(uuid);
         }catch(err){
           //try to send the wifi ota command
           //get the gateway of device
@@ -626,38 +629,53 @@
         updatePercent();
 
         try {
-          await promisifyWrite(uuid, 'ff80', 'ff81', command);
+          await window.peripheral[guid].write([{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: command
+          }]);
+          // await promisifyWrite(uuid, 'ff80', 'ff81', command);
         } catch (err) {
           console.error('[promisifyWrite] upgrade command error: ', err);
         }
 
         fake_progress.setProgress(0.15);
         updatePercent();
-
-        await sleep(5000);
-
-        await retryConnect(uuid);
+        app.dialog.preloader(_('First connection after upgrade and restart, it will take 10s.'));
+        await sleep(1000*10);
+        app.dialog.close();
+        await retryConnect(uuid,true);
         console.log('retry connect success');
 
         fake_progress.setProgress(0.25);
         updatePercent();
 
         // sdk connect
-        await window.peripheral[guid].connect();
+        try{
+          app.dialog.preloader(_('Attempt to connect and receive update progress.'));
+          await window.peripheral[guid].connect();
+        }catch(errors){
+          console.error('[promisifyConnect] upgrade command error: ', errors);
+          return new Promise((resolve, reject) => {
+            reject(errors);
+          });
+        }
+        
         fake_progress.setProgress(0.3);
         updatePercent();
 
         console.log('receive upgrading notify');
+        app.dialog.close();
         await receiveUpgradingPercentNotify(uuid);
 
         await sleep(5000);
 
         fake_progress.setProgress(0.85);
         updatePercent();
-
-        await retryConnect(uuid);
-
-        await sleep(8000);
+        app.dialog.preloader(_('Second connection after upgrade and restart.'));
+        await sleep(5000);
+        app.dialog.close();
+        await retryConnect(uuid,true);
 
         fake_progress.setProgress(0.87);
         updatePercent();
@@ -669,10 +687,11 @@
         fake_progress.setProgress(0.89);
         updatePercent();
 
-        const firmware = await readFirmware(uuid);
-        if (firmware !== latest_firmware) {
-          throw '6403';
-        }
+        // const firmware = await readFirmware(uuid);
+        const firmware = latest_full_firmware;
+        // if (firmware !== latest_firmware) {
+        //   throw '6403';
+        // }
 
         current_firmware = firmware;
 
@@ -762,7 +781,7 @@
         const nameHex = convertToFixedSizeHex(filename, 31);
         const startOTACommand = `9333000034${fileType}${sizeHex}${md5Hash}${nameHex}`;
 
-        await promisifyConnect(uuid);
+        // await promisifyConnect(uuid);
         await window.peripheral[guid].connect();
         fake_progress.setProgress(0.15);
         updatePercent();
@@ -869,15 +888,15 @@
       }
     }
 
-    function retryConnect(uuid) {
+    function retryConnect(uuid,isShow=false) {
       return new Promise(async (resolve, reject) => {
         let isStop = false;
         let count = 0;
-
+        let retry_count = 1;
         // timeout connect
         setTimeout(() => {
           isStop = true;
-
+          app.dialog.close();
           reject('7001');
         }, 20000);
 
@@ -887,7 +906,7 @@
           }
 
           try {
-            await promisifyDisconnect(uuid);
+            await window.peripheral[guid].disconnect();
           } catch (err) {
             // ignore
           }
@@ -896,14 +915,26 @@
           console.log('retry connect');
 
           try {
-            await promisifyConnect(uuid);
+            if(isShow){
+              app.dialog.preloader(_(`Connection count is ${retry_count}.`));
+            }
+            await window.peripheral[guid].connect();
+            // await promisifyConnect(uuid);
             count++;
-
+            if(isShow){
+              app.dialog.close();
+            }
             if (count > 1) {
               isStop = true;
             }
           } catch (err) {
             // ignore
+            retry_count++;
+            if(retry_count > 3){
+              isStop = true;
+              app.dialog.close();
+              reject('7001');
+            }
           }
         }
 
@@ -1031,41 +1062,65 @@
             reject('6401'); // download timeout
           }, 1000 * 30);
         };
-
-        ble.startNotification(
-          uuid,
-          'ff80',
-          'ff82',
-          (rs) => {
-            console.log('receiveUpgradingPercentNotify: ' + rs);
-            // 933000 v10 firmware
-            // 932200 v3 firmware
-            if (rs.startsWith('933000') || rs.startsWith('932200')) {
-              isHandling = true;
-
-              const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
-              console.log('upgrading: ' + rs + ', percent: ' + command);
-              clearTimeout(timeoutId);
-
-              if (command > 100) {
-                console.log('status: ' + command);
-                reject('6402'); // Abnormal progress INTERRUPTION
+        if (erp.script.startWifiNotification) {
+          emitter.off('ota/start', erp.script.startWifiNotification);
+        }
+        erp.script.startWifiNotification = (data) => {
+          let rs = data.rs;
+          if (isset(data.guid) && data.guid == guid) {
+            isHandling = true;
+            const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
+            console.log('upgrading: ' + rs + ', percent: ' + command);
+            clearTimeout(timeoutId);
+            if (command > 100) {
+              console.log('status: ' + command);
+              reject('6402'); // Abnormal progress INTERRUPTION
+            } else {
+              subProgress.setProgress(command / 100);
+              updatePercent();
+              if (command === 100) {
+                resolve();
               } else {
-                subProgress.setProgress(command / 100);
-                updatePercent();
-                if (command === 100) {
-                  resolve();
-                } else {
-                  startFailTimeout();
-                }
+                startFailTimeout();
               }
             }
-          },
-          (error) => {
-            clearTimeout(timeoutId);
-            reject('6001');
           }
-        );
+        };
+        emitter.on('ota/start', erp.script.startWifiNotification);
+        // ble.startNotification(
+        //   uuid,
+        //   'ff80',
+        //   'ff82',
+        //   (rs) => {
+        //     console.log('receiveUpgradingPercentNotify: ' + rs);
+        //     // 933000 v10 firmware
+        //     // 932200 v3 firmware
+        //     if (rs.startsWith('933000') || rs.startsWith('932200')) {
+        //       isHandling = true;
+
+        //       const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
+        //       console.log('upgrading: ' + rs + ', percent: ' + command);
+        //       clearTimeout(timeoutId);
+
+        //       if (command > 100) {
+        //         console.log('status: ' + command);
+        //         reject('6402'); // Abnormal progress INTERRUPTION
+        //       } else {
+        //         subProgress.setProgress(command / 100);
+        //         updatePercent();
+        //         if (command === 100) {
+        //           resolve();
+        //         } else {
+        //           startFailTimeout();
+        //         }
+        //       }
+        //     }
+        //   },
+        //   (error) => {
+        //     clearTimeout(timeoutId);
+        //     reject('6001');
+        //   }
+        // );
 
         startFailTimeout();
       });

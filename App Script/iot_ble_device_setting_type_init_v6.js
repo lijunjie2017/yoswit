@@ -427,8 +427,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
         'Default': 30,
       },
       'keypad_lock_after_backlight_off': {
-        'On': 0,
-        'Off': 1,
+        'Default': 100,
       },
       'backlight_brightness': {
         'Default': 100,
@@ -505,9 +504,10 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     data += parseInt(`${thermostatMap['frost_protection_setpoint']}`).toString(16).pad('00');
     data += parseInt(`${thermostatMap['restart_after_power_failure']}`).toString(16).pad('00');
     data += parseInt(`${thermostatMap['backlight_off']}`).toString(16).pad('00');
-    data += parseInt(`${thermostatMap['keypad_lock_after_backlight_off']}`).toString(16).pad('00');
+    data += `00`;
     data += parseInt(`${thermostatMap['backlight_brightness']}`).toString(16).pad('00');
-    data += `01`;
+    data += parseInt(`${thermostatMap['keypad_lock_after_backlight_off']}`).toString(16).pad('00');
+    
     if (thermostatMap['humidity_offset'] < 0) {
       const unsignedInt = thermostatMap['humidity_offset'] & 0xff;
       data += unsignedInt.toString(16).pad('00');

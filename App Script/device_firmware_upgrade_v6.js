@@ -47,12 +47,20 @@ window.device_firmware_upgrade_component = {
             <span v-else style="font-size: 12px;">Connecting...</span>
           </div>
           <div v-if="isUpgrading" class="text-align-center text-color-primary mt-4" style="font-size: 18px">Upgrading...</div>
+          <div v-if="uploadLogStatus" class="text-align-center text-color-primary mt-4" style="font-size: 14px">{{uploadLog}}</div>
           <div style="height: 20px"></div>
         </div>
       </div>
       <div style="height: 50px"></div>
       <h3 style="font-weight: bold; padding: 20px; font-size: 16px" v-if="updateStatus == 'Normal' && firmwareDescRef.value && !isLatest && checkingFirmware">${_('Update Logs')}</h3>
       <p class="text-muted" style="padding: 0 20px; font-size: 12px" v-if="updateStatus == 'Normal' && firmwareDescRef.value && !isLatest && checkingFirmware" v-html="firmwareDescRef.value"></p>
+      <div class="row mt-4" style="position: fixed; bottom: calc(10px + var(--f7-safe-area-top))" v-if="isDeveloper && show">
+        <div class="col-100">
+          <a href="#" class="upgrade-action button button-fill color-theme button-raised" @click="startUpdateFirmware()">
+            <span class="size-16">{{ _('Update Now') }}</span> 
+          </a>
+        </div>
+      </div>
     </yo-skeleton>
   </div>
   `,
@@ -68,6 +76,10 @@ window.device_firmware_upgrade_component = {
     model: {
       type: String,
       default: '',
+    },
+    show: {
+      type: Boolean,
+      default: false,
     },
   },
   data: () => {
@@ -92,7 +104,12 @@ window.device_firmware_upgrade_component = {
       },
       isLogged: !!users.current && users.current !== 'Guest',
       isDeveloper: false,
-      downloadLink : '',
+      downloadLink: '',
+      wifiConnectStatus : false,
+      uploadLog : '',
+      uploadLogStatus : false,
+      preloaderActive: false,
+      preloaderMessage: ''
     };
   },
   methods: {
@@ -252,12 +269,12 @@ window.device_firmware_upgrade_component = {
       return uuid;
     },
     async readFirmware(uuid) {
-      try{
+      try {
         const mac = await this.promisifyRead(uuid, '180a', '2a26');
         return this.extractVersion(mac.convertToAscii());
-      }catch(error){
+      } catch (error) {
         this.checkingFirmware = false;
-        this.$emit('update-status',false);
+        this.$emit('update-status', false);
         this.updateStatusFun('Fail');
         this.fail_msg = 'Firmware check failed';
         app.dialog.alert(_(erp.get_log_description(error)));
@@ -267,6 +284,10 @@ window.device_firmware_upgrade_component = {
     destory() {
       Capacitor.Plugins.NordicDFU.abortDFU();
       Capacitor.Plugins.NordicDFU.removeAllListeners();
+      emitter.off('iot/wifi/info',erp.script._handleWillMessage);
+      emitter.off('iot/wifi/info', erp.script.getWifiInfoByBle);
+      emitter.off('ota/start', erp.script.startWifiNotification);
+      
     },
     async uploadFirmwareToServer() {
       try {
@@ -276,184 +297,225 @@ window.device_firmware_upgrade_component = {
           serializer: 'json',
           debug: true,
           data: {
-            firmware: this.current_firmware,
+            firmware: this.latest_full_firmware,
           },
         });
-        peripheral[this.guid].getProp().firmware = this.current_firmware;
+        debugger
+        peripheral[this.guid].getProp().firmware = this.extractVersion(this.latest_firmware);
       } catch (err) {
         // ignore
       }
     },
     async startUpdateFirmware() {
-      if (!this.latest_firmware){
-        this.$emit('update-status',true);
-        return
-      };
-      if(this.isLatest){
-        this.$emit('update-status',true);
-        return
-      }
-      if(!this.checkingFirmware){
-        app.dialog.alert(_('Please wait for the firmware check to complete.'));
-        return;
-      }
-      this.percent = 0;
-      if (this.latest_full_firmware.endsWith('N')) {
-        // this.updateNordicFirmware();
-      } else if (this.latest_full_firmware.endsWith('E')) {
-        //check wifi connect status
-        app.dialog.preloader(_('Checking Wi-Fi...'));
-        let wifiStatus = await this.checkWifiStatus();
-        debugger
-        app.dialog.close();
-        let checkWifiStatus = true;
-        if(!wifiStatus){
-          let wifiInfo = null;
-          try{
-            wifiInfo = await this.connectAndCheckWifi();
-          }catch(error){
-            this.updateStatusFun('Fail');
-            this.fail_msg = 'Wifi connection failed';
-            this.$emit('update-status',false);
-            return;
-          }
-          if(wifiInfo){
-            try{
-              await this.connectWifi(wifiInfo.username,wifiInfo.password);
-            }catch(error){
+      try {
+        this.showPreloader(_('Checking Wi-Fi...'));
+        
+        if (!this.wifiConnectStatus) {
+          this.wifiConnectStatus = await this.checkWifiStatus();
+        }
+        
+        this.hidePreloader();
+        
+        if (!this.latest_firmware) {
+          this.$emit('update-status', true);
+          return;
+        }
+        if (this.isLatest && !this.show) {
+          this.$emit('update-status', true);
+          return;
+        }
+        if (!this.checkingFirmware) {
+          app.dialog.alert(_('Please wait for the firmware check to complete.'));
+          return;
+        }
+        this.percent = 0;
+        if (this.latest_full_firmware.endsWith('N')) {
+          // this.updateNordicFirmware();
+        } else if (this.latest_full_firmware.endsWith('E')) {
+          //check wifi connect status
+          if (!this.wifiConnectStatus) {
+            let wifiInfo = null;
+            try {
+              wifiInfo = await this.connectAndCheckWifi();
+            } catch (error) {
               this.updateStatusFun('Fail');
               this.fail_msg = 'Wifi connection failed';
-              this.$emit('update-status',false);
+              this.$emit('update-status', false);
               return;
             }
-          }else{
-            this.updateStatusFun('Fail');
-            this.fail_msg = 'Wifi connection failed';
-            this.$emit('update-status',false);
+            if (wifiInfo) {
+              try {
+                await this.connectWifi(wifiInfo.username, wifiInfo.password);
+                this.updateWifiFirmware();
+              } catch (error) {
+                this.updateStatusFun('Fail');
+                this.fail_msg = 'Wifi connection failed';
+                this.$emit('update-status', false);
+                return;
+              }
+            } else {
+              this.updateStatusFun('Fail');
+              this.fail_msg = 'Wifi connection failed';
+              this.$emit('update-status', false);
+            }
+          } else {
+            this.updateWifiFirmware();
           }
         }
-        if(checkWifiStatus){
-          this.updateWifiFirmware();
-        }else{
-          this.updateStatusFun('Fail');
-          this.fail_msg = 'Wifi connection failed';
-          this.$emit('update-status',false);
-        }
+      } catch (error) {
+        this.hidePreloader();
+        this.updateStatusFun('Fail');
+        this.fail_msg = 'Wi-Fi check failed';
+        return;
       }
     },
-    checkWifiStatus(){
-      return new Promise((resolve, reject) => { 
-        let wifiStatus = false;
-        let will_topic = `will/${md5(md5(this.gateway))}`;
-        let status_topic = `status/${md5(md5(this.gateway))}`;
+    checkWifiStatus() {
+      return new Promise((resolve, reject) => {
         let timeoutId = null;
         let isOnline = false;
-        const cleanup = () => {
-          clearTimeout(timeoutId);
-          emitter.off(will_topic, handleWillMessage);
-        };
-        const handleWillMessage = (payload) => {
-          console.log('handleWillMessage: ', payload);
-          if (payload.message.toLowerCase().includes('online')) {
-            isOnline = true;
-            completeCheck(true);
-          }else{
+        const handleWillMessage = (data) => {
+          try {
+            const rs = data.rs;
+            const jsonData = JSON.parse(this.hexToPlainText(rs.substring(10)));
+            if (jsonData.ipv4) {
+              isOnline = true;
+              completeCheck(true);
+            } else {
+              completeCheck(false);
+            }
+          } catch (e) {
             completeCheck(false);
           }
-
+        };
+        const cleanup = () => {
+          clearTimeout(timeoutId);
+          emitter.off('iot/wifi/info', handleWillMessage);
         };
         const completeCheck = (result) => {
           cleanup();
           resolve(result);
         };
-        core_mqtt_subscribe(will_topic, 1, false);
-        emitter.on(will_topic, handleWillMessage);
-        timeoutId = setTimeout(() => {
+        emitter.off('iot/wifi/info',handleWillMessage);
+        emitter.on('iot/wifi/info',handleWillMessage);
+        setTimeout(async () => {
+          try{
+            await window.peripheral[this.guid].write([
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: '9329',
+              },
+            ]);
+          }catch(error){
             completeCheck(isOnline);
-        }, 1000*3);
-      })
+          }
+          
+        }, 500);
+        // core_mqtt_subscribe(will_topic, 1, false);
+        // emitter.on(will_topic, handleWillMessage);
+        timeoutId = setTimeout(() => {
+          debugger
+          completeCheck(isOnline);
+        }, 1000 * 6);
+      });
     },
-    connectWifi(ssid,password){
-      return new Promise(async(resolve,reject)=>{
-        app.dialog.preloader(_('Connect Wi-Fi, it will take about 2-3 minutes.'));
-        let wifiConnectTimmer = setTimeout(()=>{
-          app.dialog.close();
-          reject('Sorry, Wi-Fi is not connected yet.');
-        },1000*60*2);
+    hexToPlainText(hexString) {
+      // 使用正则表达式检查输入是否是合法的十六进制字符串
+      const hexPattern = /^[0-9A-Fa-f]+$/;
+      if (!hexPattern.test(hexString)) {
+        throw new Error('Invalid HEX input. Only hexadecimal characters (0-9, A-F) are allowed.');
+      }
+
+      // 将十六进制字符串转换为字节数组
+      const byteArray = [];
+      for (let i = 0; i < hexString.length; i += 2) {
+        byteArray.push(parseInt(hexString.substr(i, 2), 16));
+      }
+
+      // 使用TextDecoder将字节数组转换为普通字符
+      const decoder = new TextDecoder();
+      const plainText = decoder.decode(new Uint8Array(byteArray));
+
+      return plainText;
+    },
+    connectWifi(ssid, password) {
+      return new Promise(async (resolve, reject) => {
+        this.showPreloader(_('Connect Wi-Fi, it will take about 2-3 minutes.'));
+        let wifiConnectTimmer = setTimeout(
+          () => {
+            this.hidePreloader();
+            reject('Sorry, Wi-Fi is not connected yet.');
+          },
+          1000 * 60 * 2
+        );
         if (ssid === '' || password === '') {
           clearTimeout(wifiConnectTimmer);
           reject('Please fill in the SSID and Password.');
           return;
-        }else{
+        } else {
+          let bleList = [];
           const saveSsid = () => {
             const data = '932000' + ssid.length.toString(16).pad('0000') + ssid.convertToHex();
-            return window.peripheral[this.guid].write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: data,
-              },
-            ]);
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: data,
+            });
           };
           const saveSsidPassword = () => {
             const data = '932100' + password.length.toString(16).pad('0000') + password.convertToHex();
-  
-            return window.peripheral[this.guid].write([
-              {
+            bleList.push({
                 service: 'ff80',
-                characteristic: 'ff81',
-                data: data,
-              },
-            ]);
+              characteristic: 'ff81',
+              data: data,
+            });
           };
           const saveEmail = () => {
             let list = this.gateway.split('-');
             let email = list[1];
+            console.log('email', email);
             const data = '932200' + email.length.toString(16).pad('0000') + email.convertToHex();
-  
-            return window.peripheral[this.guid].write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: data,
-              },
-            ]);
+
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: data,
+            });
           };
           const savePort = () => {
             let port = erp.settings[erp.appId].mqtt_port;
+            
+            // if(parseFloat(this.current_firmware)  < 13.5){
+            //   port = 32792;
+            // }
+            console.log('port', port);
             const data = '9301000002' + (port * 1).toString(16).pad('0000');
-  
-            return window.peripheral[this.guid].write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: data,
-              },
-            ]);
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: data,
+            });
           };
           const saveServerUrl = () => {
-            let server_url = 'mqtt://' + erp.settings[erp.appId].mqtt_server;
-            if(erp.settings[erp.appId].mqtt_scheme){
-              server_url = `${erp.settings[erp.appId].mqtt_scheme}://' + ${erp.settings[erp.appId].mqtt_server}`;
-            }
+            let server_url = (erp.settings[erp.appId].mqtt_scheme?erp.settings[erp.appId].mqtt_scheme:'mqtt') + '://' + erp.settings[erp.appId].mqtt_server;
+            
+            // if(parseFloat(this.current_firmware)  < 13.5){
+            //   server_url = 'mqtt://themira.mob-mob.com';
+            // }
+            console.log('server_url', server_url);
             const data = '930000' + server_url.length.toString(16).pad('0000') + server_url.convertToHex();
-  
-            return window.peripheral[this.guid].write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: data,
-              },
-            ]);
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: data,
+            });
           };
           const restartDevice = () => {
-            return window.peripheral[this.guid].write([
-              {
-                service: 'ff80',
-                characteristic: 'ff81',
-                data: '810e',
-              },
-            ]);
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: '810e',
+            });
           };
           const sleep = (ms) => {
             return new Promise((resolve, reject) => {
@@ -462,88 +524,132 @@ window.device_firmware_upgrade_component = {
               }, ms);
             });
           };
-            const checkIfOnline = () => {
-              let will_topic = `will/${md5(md5(this.gateway))}`;
-              try{
-                core_mqtt_subscribe(will_topic, 1, false);
-                window.$subscribeTimer = setTimeout(() => {
-                  core_mqtt_subscribe(will_topic, 1, false);
-                }, 10 * 1000);
-              }catch(error){
-                reject(error);
-              }
-            if (window.$wifiTopicFun) {
-              emitter.off(will_topic, window.$wifiTopicFun);
+          const checkIfOnline = () => {
+            //   let will_topic = `will/${md5(md5(this.gateway))}`;
+            //   try{
+            //     core_mqtt_subscribe(will_topic, 1, false);
+            //     window.$subscribeTimer = setTimeout(() => {
+            //       core_mqtt_subscribe(will_topic, 1, false);
+            //     }, 10 * 1000);
+            //   }catch(error){
+            //     reject(error);
+            //   }
+            // if (window.$wifiTopicFun) {
+            //   emitter.off(will_topic, window.$wifiTopicFun);
+            // }
+            // window.$wifiTopicFun = async (res) => {
+            //   console.log('component res', res);
+            //   let message = res.message;
+            //   if (message.includes('Online')) {
+            //     clearTimeout(window.$subscribeTimer);
+            //     clearTimeout(wifiConnectTimmer);
+            //     //update profile_devices
+            //     let thisMap = erp.info.profile.profile_device.find((item)=>item.device == this.guid);
+            //     if(thisMap){
+            //       thisMap.gateway = this.gateway;
+            //     }
+            //     window.peripheral[this.guid].prop.is_mobmob = 1;
+            //     app.dialog.close();
+            //     resolve(true)
+            //     //check the state of the connect status
+            //   }
+            // };
+            // emitter.on(will_topic, window.$wifiTopicFun);
+            //check the wifi status by ble
+            if (erp.script.getWifiInfoByBle) {
+              emitter.off('iot/wifi/info', erp.script.getWifiInfoByBle);
             }
-            window.$wifiTopicFun = async (res) => {
-              console.log('component res', res);
-              let message = res.message;
-              if (message.includes('Online')) {
-                clearTimeout(window.$subscribeTimer);
+            erp.script.getWifiInfoByBle = (data) => {
+              let rs = data.rs;
+              let jsonData = JSON.parse(this.hexToPlainText(rs.substring(10, rs.length)));
+              if (isset(jsonData.ipv4)) {
                 clearTimeout(wifiConnectTimmer);
-                //update profile_devices
-                let thisMap = erp.info.profile.profile_device.find((item)=>item.device == this.guid);
-                if(thisMap){
-                  thisMap.gateway = this.gateway;
-                }
-                window.peripheral[this.guid].prop.is_mobmob = 1;
-                app.dialog.close();
-                resolve(true)
-                //check the state of the connect status
+                this.hidePreloader();
+                resolve(true);
+              } else {
+                clearTimeout(wifiConnectTimmer);
+                this.hidePreloader();
+                reject('Sorry, Wi-Fi is not connected yet.');
               }
             };
-            emitter.on(will_topic, window.$wifiTopicFun);
+            emitter.on('iot/wifi/info', erp.script.getWifiInfoByBle);
+            setTimeout(async () => {
+              try{
+                await window.peripheral[this.guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '9329',
+                  },
+                ]);
+              }catch(error){
+                clearTimeout(wifiConnectTimmer);
+                this.hidePreloader();
+                reject(error);
+              }
+              
+            }, 500);
           };
-          try{
-            await saveSsid();
-            await saveSsidPassword();
-            await saveEmail();
-            await savePort();
-            await saveServerUrl();
-            await restartDevice();
-            await sleep(10 * 1000);
+          try {
+            saveSsid();
+            saveSsidPassword();
+            saveEmail();
+            savePort();
+            saveServerUrl();
+            restartDevice();
+            console.log('bleList', bleList);
+            await window.peripheral[this.guid].write(bleList);
+            await sleep(20 * 1000);
             await window.peripheral[this.guid].connect();
             checkIfOnline();
-          }catch(error){
+          } catch (error) {
             clearTimeout(wifiConnectTimmer);
-            app.dialog.close();
-            reject(error)
+            this.hidePreloader();
+            reject(error);
           }
         }
-      })
+      });
     },
-    showPromptDialog(title){
-      return new Promise(async(resolve,reject)=>{
-        app.dialog.login(_(title),(username,password)=>{
-          resolve({
-            username : username,
-            password : password,
-          });
-        },()=>{
-          resolve(false);
-        });
+    showPromptDialog(title) {
+      return new Promise(async (resolve, reject) => {
+        app.dialog.login(
+          _(title),
+          (username, password) => {
+            resolve({
+              username: username,
+              password: password,
+            });
+          },
+          () => {
+            resolve(false);
+          }
+        );
         //change the dialog to the wifi dialog
-        setTimeout(()=>{
-          $('.dialog-input-field input[name="dialog-username"]').attr('placeholder','Ssid');
-          $('.dialog-input-field input[name="dialog-password"]').attr('type','text');
-          $('.dialog-input-field input[name="dialog-password"]').attr('placeholder','Password');
-          if(erp.wifiInfo){
+        setTimeout(() => {
+          $('.dialog-input-field input[name="dialog-username"]').attr('placeholder', 'Ssid');
+          $('.dialog-input-field input[name="dialog-password"]').attr('type', 'text');
+          $('.dialog-input-field input[name="dialog-password"]').attr('placeholder', 'Password');
+          if (erp.wifiInfo) {
             $('.dialog-input-field input[name="dialog-username"]').val(erp.wifiInfo.ssid);
             $('.dialog-input-field input[name="dialog-password"]').val(erp.wifiInfo.password);
           }
           // $('.dialog-input-field input[name="dialog-username"]').val(wifiInfoMap.ssid);
           // $('.dialog-input-field input[name="dialog-password"]').val(wifiInfoMap.password);
-        },200);
-      })
+        }, 200);
+      });
     },
-    showUpdateConfirm(title){
-      return new Promise(async(resolve,reject)=>{ 
-        app.dialog.confirm(_(title),()=>{
-          resolve(true);
-        },()=>{
-          resolve(false);
-        });
-      })
+    showUpdateConfirm(title) {
+      return new Promise(async (resolve, reject) => {
+        app.dialog.confirm(
+          _(title),
+          () => {
+            resolve(true);
+          },
+          () => {
+            resolve(false);
+          }
+        );
+      });
     },
     connectAndCheckWifi() {
       return new Promise(async (resolve, reject) => {
@@ -554,9 +660,9 @@ window.device_firmware_upgrade_component = {
             let ssid = wifiInfo.username;
             let password = wifiInfo.password;
             erp.wifiInfo = {
-              ssid : ssid,
-              password : password,
-            }
+              ssid: ssid,
+              password: password,
+            };
             let confirmWifiInfo = await this.showUpdateConfirm(`Please confirm your ssid is (${ssid}) and the password is (${password}).`);
 
             if (confirmWifiInfo) {
@@ -608,12 +714,12 @@ window.device_firmware_upgrade_component = {
               completeCheck(true);
               return;
             }
-            if(count == 3){
-              if(data.Info.version.toLowerCase() === expectedVersion.toLowerCase()){
+            if (count == 3) {
+              if (data.Info.version.toLowerCase() === expectedVersion.toLowerCase()) {
                 versionMatched = true;
                 completeCheck(true);
                 return;
-              }else{
+              } else {
                 completeCheck(false);
                 return;
               }
@@ -682,7 +788,6 @@ window.device_firmware_upgrade_component = {
     //Wifi Action
     async updateWifiFirmware() {
       try {
-        
         const uuid = this.getUUID();
         this.updateStatusFun('Upgrading');
         const version = parseInt(this.current_firmware.split('.')[0]);
@@ -695,231 +800,132 @@ window.device_firmware_upgrade_component = {
         const command = '93300000' + full_firmware_name.length.toString(16).pad('00') + full_firmware_name.convertToHex();
         console.log('Upgrade Firmware: ' + full_firmware_name);
         console.log('Upgrade Command: ' + command);
-        // try {
-        //   await this.promisifyConnect(uuid);
-        //   app.dialog.close();
-        // } catch (err) {
-        //   app.dialog.close();
-        //   debugger
-        //   if (!this.gateway) {
-
-        //   } else {
-        //     let gateway_address = this.gateway;
-        //     let topic = `cmd/${md5(md5(gateway_address.toLowerCase()))}`;
-        //     let command = {
-        //       command: 'OTA',
-        //       function: 'bleHelper.ota',
-        //       params: full_firmware_name,
-        //       callback: '',
-        //       raw: '',
-        //     };
-        //     await core_mqtt_publish(topic, command, 0, false, false, false);
-        //     this.fake_progress.setProgress(0.1);
-        //     this.updatePercent();
-        //     await sleep(1000 * 20);
-        //     this.fake_progress.setProgress(0.3);
-        //     this.updatePercent();
-        //     await sleep(1000 * 10);
-        //     this.fake_progress.setProgress(0.5);
-        //     this.updatePercent();
-        //     await sleep(1000 * 10);
-        //     this.fake_progress.setProgress(0.7);
-        //     this.updatePercent();
-        //     await sleep(1000 * 10);
-        //     this.fake_progress.setProgress(0.85);
-        //     this.updatePercent();
-        //     await sleep(1000 * 10);
-        //     let result = await this.checkDeviceOnlineAndVersion(md5(md5(gateway_address.toLowerCase())), this.latest_full_firmware);
-        //     if (!result) {
-        //       throw '6300';
-        //     } else {
-        //       this.fake_progress.setProgress(100);
-        //       emitter.emit('ha:device:firmware:upgrade', { guid: this.guid });
-        //       this.updateStatusFun('Success');
-        //       //if success, will reset the wifi info
-        //       if(this.model && (this.model.includes('RCU Scene Button') || this.model.includes('RF Sensor'))){
-        //         await this.iotResetWifi();
-        //       }
-        //       this.$emit('update-status',true);
-        //     }
-        //   }
-        // }
-        // try {
-        //   await this.promisifyWrite(uuid, 'ff80', 'ff81', command);
-        // } catch (err) {
-        //   console.error('[promisifyWrite] upgrade command error: ', err);
-        // }
+        this.uploadLogStatus = true;
+        this.uploadLog = _('Attempt to connect before updating.');
+        try{
+          await window.peripheral[this.guid].write([
+            {
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: command,
+            },
+          ]);
+          this.hidePreloader();
+        }catch(error){
+          this.hidePreloader();
+          this.uploadLogStatus = false;
+          throw error;
+        }
         this.fake_progress.setProgress(0.15);
         this.updatePercent();
-        let gateway_address = this.gateway;
-        let topic = `cmd/${md5(md5(gateway_address.toLowerCase()))}`;
-        let ota_command = {
-          command: 'OTA',
-          function: 'bleHelper.ota',
-          params: full_firmware_name,
-          callback: '',
-          raw: '',
-        };
-        setTimeout(()=>{
-          cordova.plugin.innocow.mqtt.execute({
-              command:"publish",
-              id:(Math.floor(Math.random() * 100000) + 1),
-              topic:`status/${md5(md5(gateway_address.toLowerCase()))}`,
-              msg:'',
-              qos:0,
-              retained:false
-          }, function(success){
-              console.log("Publish status successfully.");
-          }, function(error){
-              console.log("Publish Error: "+JSON.stringify(error));
-          });
-          // core_mqtt_publish(`status/${md5(md5(gateway_address.toLowerCase()))}`, ota_command, 0, false, false, false);
-        },10000);
-        await core_mqtt_publish(topic, ota_command, 0, false, false, false);
+        this.uploadLog = _('First connection after upgrade and restart, it will take 10s.');
+        await this.sleep(1000*10);
+        try{
+          await this.retryConnect(uuid,true);
+        }catch(error){
+          console.error('connect error', error);
+          //ignore this ble connect error, because wil connect and then disconnect
+        }   
+        this.fake_progress.setProgress(0.25);
         this.updatePercent();
-        await sleep(1000 * 20);
+        this.uploadLog = _('Attempt to connect and receive update progress.');
+        try{
+          await window.peripheral[this.guid].connect();
+        }catch(connect_error){
+          console.error('connect error', connect_error);
+          //ignore this ble connect error, because wil connect and then disconnect
+        }
         this.fake_progress.setProgress(0.3);
         this.updatePercent();
-        await sleep(1000 * 10);
-        this.fake_progress.setProgress(0.4);
-        this.updatePercent();
-        await sleep(1000 * 10);
-        this.fake_progress.setProgress(0.5);
-        this.updatePercent();
-        await sleep(1000 * 10);
-        this.fake_progress.setProgress(0.6);
-        this.updatePercent();
-        await sleep(1000 * 10);
-        this.fake_progress.setProgress(0.7);
-        this.updatePercent();
-        await sleep(1000 * 10);
-        this.fake_progress.setProgress(0.8);
-        this.updatePercent();
-        await sleep(1000 * 10);
+        await this.receiveUpgradingPercentNotify(uuid);
+        await this.sleep(5000);
         this.fake_progress.setProgress(0.85);
         this.updatePercent();
-        await sleep(1000 * 10);
+        this.uploadLog = _('Second connection after upgrade and restart.');
+        try{
+          await this.retryConnect(uuid);
+          debugger
+        }catch(connect_error){
+          console.error('connect error', connect_error);
+          //ignore this ble connect error, because wil connect and then disconnect
+        }
+        this.current_firmware = this.extractVersion(this.latest_firmware);
         this.fake_progress.setProgress(0.9);
         this.updatePercent();
-        await sleep(1000 * 10);
+        await this.uploadFirmwareToServer();
         this.fake_progress.setProgress(0.95);
         this.updatePercent();
-        await sleep(1000 * 10);
-        let result = await this.checkDeviceOnlineAndVersion(md5(md5(gateway_address.toLowerCase())), this.latest_full_firmware);
-        if (!result) {
-          throw '6300';
-        } else {
-          this.current_firmware = this.latest_firmware;
-          await this.uploadFirmwareToServer();
-          this.fake_progress.setProgress(100);
-          emitter.emit('ha:device:firmware:upgrade', { guid: this.guid });
-          this.updateStatusFun('Success');
-          //if success, will reset the wifi info
-          if(this.model && (this.model.includes('RCU Scene Button') || this.model.includes('RF Sensor'))){
-            await this.iotResetWifi();
-          }
-          this.$emit('update-status',true);
-        }
-        return
-        debugger
-        // this.fake_progress.setProgress(0.15);
-        // this.updatePercent();
-        // await this.sleep(5000);
-        // await this.retryConnect(uuid);
-        // console.log('retry connect success');
-        // this.fake_progress.setProgress(0.25);
-        // this.updatePercent();
-        // await window.peripheral[this.guid].connect();
-        // this.fake_progress.setProgress(0.3);
-        // this.updatePercent();
-        // await this.receiveUpgradingPercentNotify(uuid);
-        // await this.sleep(5000);
-        // this.fake_progress.setProgress(0.85);
-        // this.updatePercent();
-        // await this.retryConnect(uuid);
-        // await this.sleep(8000);
-        // this.fake_progress.setProgress(0.87);
-        // this.updatePercent();
-        // await this.retryConnect(uuid);
-        // await this.sleep(8000);
-        // this.fake_progress.setProgress(0.89);
-        // this.updatePercent();
-        // // const firmware = await this.readFirmware(uuid);
-        // // if (firmware !== this.latest_firmware) {
-        // //   throw '6403';
-        // // }
-        // this.current_firmware = this.latest_firmware;
-        // this.fake_progress.setProgress(0.9);
-        // this.updatePercent();
-        // await this.uploadFirmwareToServer();
-        // this.fake_progress.setProgress(0.95);
-        // this.updatePercent();
-        // await this.sleep(1000);
+        await this.sleep(1000);
         emitter.emit('ha:device:firmware:upgrade', { guid: this.guid });
         this.updateStatusFun('Success');
+        this.uploadLogStatus = false;
         //if success, will reset the wifi info
-        if(this.model && (this.model.includes('RCU Scene Button') || this.model.includes('RF Sensor'))){
+        if (this.model && (this.model.includes('RCU Scene Button') || this.model.includes('RF Sensor'))) {
           await this.iotResetWifi();
         }
-        this.$emit('update-status',true);
+        this.$emit('update-status', true);
       } catch (err) {
+        
         if (typeof err === 'string') {
           this.fail_msg = erp.get_log_description(err);
         } else {
           try {
-            this.fail_msg = JSON.stringify(err);
+            this.fail_msg = JSON.stringify(erp.get_log_description(err));
           } catch (e) {
-            fail_msg = `${err}`;
+            this.fail_msg = `${erp.get_log_description(err)}`;
           }
         }
-
         // device maybe restart
         console.error('upgrade fail', err);
-
+        this.uploadLogStatus = false;
         this.updateStatusFun('Fail');
-        this.$emit('update-status',false);
+        this.$emit('update-status', false);
       }
     },
-    iotResetWifi(){
-      return new Promise(async(resolve,reject)=>{
-        app.dialog.confirm(_('Are you sure you want to reset the wifi info?'),async()=>{
-          app.dialog.preloader(_('Resetting Wi-Fi...'));
-          let bleList = [];
-          let ssid_data = '932000';
-          let password_data = '932100';
-          bleList.push({
-            service: 'ff80',
-            characteristic: 'ff81',
-            data: ssid_data,
-          });
-          bleList.push({
-            service: 'ff80',
-            characteristic: 'ff81',
-            data: password_data,
-          });
-          bleList.push({
-            service: 'ff80',
-            characteristic: 'ff81',
-            data: '810e',
-          });
-          try{
-            await window.peripheral[this.guid].write(bleList);
-            app.dialog.close();
+    iotResetWifi() {
+      return new Promise(async (resolve, reject) => {
+        app.dialog.confirm(
+          _('Are you sure you want to reset the wifi info?'),
+          async () => {
+            this.showPreloader(_('Resetting Wi-Fi...'));
+            let bleList = [];
+            let ssid_data = '932000';
+            let password_data = '932100';
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: ssid_data,
+            });
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: password_data,
+            });
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: '810e',
+            });
+            try {
+              await window.peripheral[this.guid].write(bleList);
+              this.hidePreloader();
+              resolve();
+            } catch (error) {
+              this.hidePreloader();
+              reject(error);
+            }
+          },
+          () => {
             resolve();
-          }catch(error){
-            app.dialog.close();
-            reject(error);
           }
-        },()=>{
-          resolve();
-        });
-      })
+        );
+      });
     },
-    async retryConnect(uuid) {
+    async retryConnect(uuid,isShow=false) {
       return new Promise(async (resolve, reject) => {
         let isStop = false;
         let count = 0;
-
+        let retry_count = 1;
         // timeout connect
         setTimeout(() => {
           isStop = true;
@@ -933,23 +939,33 @@ window.device_firmware_upgrade_component = {
           }
 
           try {
-            await this.promisifyDisconnect(uuid);
+            // await this.promisifyDisconnect(uuid);
+            await window.peripheral[this.guid].disconnect();
           } catch (err) {
             // ignore
           }
-          await sleep(1000);
+          await sleep(5000);
 
           console.log('retry connect');
 
           try {
-            await this.promisifyConnect(uuid);
+            // await this.promisifyConnect(uuid);
+            if(isShow){
+              this.uploadLog = _(`Connection count is ${retry_count}.`);
+            }
+            await window.peripheral[this.guid].connect();
             count++;
-
             if (count > 1) {
               isStop = true;
             }
           } catch (err) {
             // ignore
+            retry_count++;
+            if(retry_count > 3){
+              isStop = true;
+              this.hidePreloader();
+              reject('7001');
+            }
           }
         }
 
@@ -970,56 +986,83 @@ window.device_firmware_upgrade_component = {
           }, 1000 * 30);
         };
 
-        ble.startNotification(
-          uuid,
-          'ff80',
-          'ff82',
-          (rs) => {
-            console.log('receiveUpgradingPercentNotify: ' + rs);
-            // 933000 v10 firmware
-            // 932200 v3 firmware
-            if (rs.startsWith('933000') || rs.startsWith('932200')) {
-              isHandling = true;
-
-              const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
-              console.log('upgrading: ' + rs + ', percent: ' + command);
-              clearTimeout(timeoutId);
-
-              if (command > 100) {
-                console.log('status: ' + command);
-                reject('6402'); // Abnormal progress INTERRUPTION
+        if (erp.script.startWifiNotification) {
+          emitter.off('ota/start', erp.script.startWifiNotification);
+        }
+        erp.script.startWifiNotification = (data) => {
+          let rs = data.rs;
+          debugger
+          if (isset(data.guid) && data.guid == this.guid) {
+            isHandling = true;
+            const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
+            console.log('upgrading: ' + rs + ', percent: ' + command);
+            clearTimeout(timeoutId);
+            if (command > 100) {
+              console.log('status: ' + command);
+              reject('6402'); // Abnormal progress INTERRUPTION
+            } else {
+              // this.updateStatusFun(_('Receive update progress.'));
+              subProgress.setProgress(command / 100);
+              this.updatePercent();
+              if (command === 100) {
+                resolve();
               } else {
-                subProgress.setProgress(command / 100);
-                this.updatePercent();
-                if (command === 100) {
-                  resolve();
-                } else {
-                  startFailTimeout();
-                }
+                startFailTimeout();
               }
             }
-          },
-          (error) => {
-            clearTimeout(timeoutId);
-            reject('6001');
           }
-        );
+        };
+        emitter.on('ota/start', erp.script.startWifiNotification);
+        // ble.startNotification(
+        //   uuid,
+        //   'ff80',
+        //   'ff82',
+        //   (rs) => {
+        //     console.log('receiveUpgradingPercentNotify: ' + rs);
+        //     // 933000 v10 firmware
+        //     // 932200 v3 firmware
+        //     if (rs.startsWith('933000') || rs.startsWith('932200')) {
+        //       isHandling = true;
+
+        //       const command = parseInt(rs.substring(rs.length - 2, rs.length), 16);
+        //       console.log('upgrading: ' + rs + ', percent: ' + command);
+        //       clearTimeout(timeoutId);
+
+        //       if (command > 100) {
+        //         console.log('status: ' + command);
+        //         reject('6402'); // Abnormal progress INTERRUPTION
+        //       } else {
+        //         subProgress.setProgress(command / 100);
+        //         this.updatePercent();
+        //         if (command === 100) {
+        //           resolve();
+        //         } else {
+        //           startFailTimeout();
+        //         }
+        //       }
+        //     }
+        //   },
+        //   (error) => {
+        //     clearTimeout(timeoutId);
+        //     reject('6001');
+        //   }
+        // );
 
         startFailTimeout();
       });
     },
-    checkGatewayValue(){
-      return new Promise(async(resolve,reject)=>{
-        if(!this.gateway){
+    checkGatewayValue() {
+      return new Promise(async (resolve, reject) => {
+        if (!this.gateway) {
           //get gateway from device
           let mac = core_utils_get_mac_address_from_guid(this.guid);
           let gateway = mac + '-' + users[users.current].usr.toLowerCase();
           this.gateway = gateway;
           resolve();
-        }else{
+        } else {
           resolve();
         }
-      })
+      });
     },
     async init() {
       console.log('init', this.guid);
@@ -1039,8 +1082,9 @@ window.device_firmware_upgrade_component = {
       const uuid = this.getUUID();
       try {
         // await this.promisifyConnect(uuid);
-        await window.peripheral[this.guid].connect();
-        this.current_firmware = await this.readFirmware(uuid);
+        // this.current_firmware = await this.readFirmware(uuid);
+
+        this.current_firmware = this.extractVersion(window.peripheral[this.guid].prop.firmware);
         this.checkingFirmware = true;
         //debugger
       } catch (err) {
@@ -1088,6 +1132,35 @@ window.device_firmware_upgrade_component = {
       } catch (error) {
         this.isIniting.value = false;
       }
+    },
+    showPreloader(message) {
+      if (!this.preloaderActive) {
+        this.preloaderActive = true;
+        this.preloaderMessage = message;
+        app.dialog.preloader(message);
+      }
+    },
+    hidePreloader() {
+      if (this.preloaderActive) {
+        this.preloaderActive = false;
+        app.dialog.close();
+      }
+    },
+    beforeDestroy() {
+      this.cleanup();
+    },
+    cleanup() {
+      // 清理所有定时器
+      if (this.wifiConnectTimmer) {
+        clearTimeout(this.wifiConnectTimmer);
+      }
+      
+      // 清理事件监听器
+      emitter.off('iot/wifi/info', this.handleWifiInfo);
+      emitter.off('ota/start', this.handleOtaStart);
+      
+      // 关闭preloader
+      this.hidePreloader();
     },
   },
   mounted() {

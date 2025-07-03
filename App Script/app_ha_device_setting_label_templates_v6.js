@@ -1189,6 +1189,35 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Repair";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">restart_alt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                        func="iot_device_repair"
+                        profile-device-name="{{ profile_device_name }}"
+                        profile-subdevice-name="{{ profile_subdevice_name }}"
+                        ref="{{ device }}" 
+                        href="#"
+                        class="button button-fill button-44 color-theme button-raised"
+                    >
+                        <i class="material-icons">navigate_next</i>
+                    </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Restore";
     setting_label_template[setting_label] = `
         <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
@@ -1235,6 +1264,35 @@ window.initSettingTemplate = ()=>{
                         <a href="/mobile-app/gateway-wifi-setting?profile_subdevice_name={{ profile_subdevice_name }}&guid={{guid}}&device_name={{profile_device_name}}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Update Mqtts";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">restart_alt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                        func="iot_device_update_mqtts"
+                        profile-device-name="{{ profile_device_name }}"
+                        profile-subdevice-name="{{ profile_subdevice_name }}"
+                        ref="{{ device }}" 
+                        href="#"
+                        class="button button-fill button-44 color-theme button-raised"
+                    >
+                        <i class="material-icons">navigate_next</i>
+                    </a>
                     </div>
                 </div>
             </div>
@@ -1554,7 +1612,7 @@ window.initSettingTemplate = ()=>{
                     </div>
                     <div class="col-auto">
                         <!-- href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_HA_Device_Firmware_Upgrade_Form_V5/Profile Subdevice/{{ profile_subdevice_name }}/" -->
-                        <a href="/mobile-app/ha-device-setting-firmware-upgrade?guid={{guid}}&subdevice={{ profile_subdevice_name }}" class="button button-fill button-44 color-theme button-raised">
+                        <a href="/mobile-app/iot-ota-new-function?guid={{guid}}&subdevice={{ profile_subdevice_name }}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>

@@ -1,0 +1,1057 @@
+<template>
+    <form id="basic-form" block-name="{{ block.name }}" style="display: none">
+        <input type="hidden" name="web_form" value="{{ web_form }}"/>
+        <input type="hidden" name="section_image" value="{{ section_image }}"/>
+        <input type="hidden" name="label_translation_context" value="{{ label_translation_context }}"/>
+    </form>
+    <div id="form-container" block-name="{{ block.name }}">
+        <div id="vue-app" v-cloak></div>
+    </div>
+</template>
+
+<script name="initialization">
+  'use script';
+
+  try {
+    (() => {
+      let vueApp = null;
+
+      $on('pageMounted', (e, page) => {
+        const store = app.form.convertToData($(page.el).find('#basic-form[block-name="{{ block.name }}"]'));
+        store.page_context = ctx;
+
+        vueApp = erp.script.core_app_basic_form_render(
+          store,
+          page.el.querySelector('#form-container[block-name="{{ block.name }}"] #vue-app'),
+          null,
+          (frappe) => {
+            //---  ---
+            frappe.web_form._load_schedule = async (facility, year, month) => {
+              try {
+                if (!frappe.$allow_schedule_date) {
+                  frappe.$allow_schedule_date = {};
+                }
+
+                if (!frappe.$allow_schedule_date[facility.facility_code]) {
+                  frappe.$allow_schedule_date[facility.facility_code] = {};
+                }
+
+                if (frappe.$allow_schedule_date[facility.facility_code][year + '-' + month]) {
+                  return;
+                }
+
+                // init
+                frappe.$allow_schedule_date[facility.facility_code][year + '-' + month] = {};
+
+                const lastDay = `${new Date(year, month, 0).getDate()}`.padStart(2, '0');
+                const res = await http2.request({
+                  url: encodeURI(
+                    '/api/method/lincogn.property_management.doctype.facility_booking.facility_booking.check_facility_booking'
+                  ),
+                  method: 'POST',
+                  responseType: 'json',
+                  serializer: 'json',
+                  data: {
+                    from_time: `${year}-${`${month}`.padStart(2, '0')}-01 00:00:00`,
+                    to_time: `${year}-${`${month}`.padStart(2, '0')}-${lastDay} 23:59:59`,
+                    facility_type: facility.facility_type,
+                    facility: facility.facility_code,
+                    qty: 1,
+                  },
+                });
+                console.log('res-check_facility_booking1',res);
+
+                // used 是那個時段已經預約的數量
+                // booking_period是指那個timeslot開放預約了沒有
+                // Yes -> 可以預約
+                // Not Started -> 預約還沒開始
+                // Ended -> 預約的時段已經過了
+                const message = res.data.message[0];
+                const slots = message.slots.forEach((slot) => {
+                  const date = slot.from_time.split(' ')[0];
+                  if (slot.booking_period === 'Yes') {
+                    frappe.$allow_schedule_date[facility.facility_code][year + '-' + month][date] = true;
+                  }
+                });
+              } catch (err) {
+                console.error(err);
+              }
+            };
+
+            frappe.web_form.after_load = async () => {
+              try {
+                const parent_facility = mainView.router.currentRoute.query.docname;
+
+                app.preloader.show();
+
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+
+                frappe.web_form.set_df_property('date', 'options', {
+                  minDate: yesterday,
+                });
+
+                const facilityTypeRes = await http2.request({
+                  url: encodeURI('/api/resource/Facility Type/' + parent_facility),
+                  method: 'GET',
+                  responseType: 'json',
+                  serializer: 'json',
+                });
+
+                if (facilityTypeRes.data.data.image) {
+                  frappe.web_form.set_section_image(facilityTypeRes.data.data.image);
+                }
+
+                if (facilityTypeRes.data.data.price_control !== 1) {
+                  frappe.web_form.set_df_property('mode_of_payment', 'hidden', 1);
+                }
+
+                const facilityListRes = await http2.request({
+                  url: encodeURI('/api/resource/Facility'),
+                  params: {
+                    fields: '["*"]',
+                    filters: `[["facility_type","=","${parent_facility}"],["allow_booking","=","1"]]`,
+                  },
+                  method: 'GET',
+                  responseType: 'json',
+                  serializer: 'json',
+                });
+                const facilities = facilityListRes.data.data;
+                console.log('facility', facilities);
+                
+
+                if (facilities.length <= 0) {
+                  app.preloader.hide();
+                  app.dialog.alert(
+                    _('Sorry! Facility not available for this facility type. Please go backand check other facility type.'),
+                    () => {
+                      mainView.router.back();
+                    }
+                  );
+                  return;
+                }
+
+                frappe.web_form.set_value('facilities', facilities);
+                frappe.web_form.set_value('facility_type', facilityTypeRes.data.data);
+                // frappe.web_form.set_value('guest_flat', erp.info.profile.flat || '');
+
+                frappe.web_form.set_df_property(
+                  'facility',
+                  'options',
+                  facilities.map((e) => {
+                    return {
+                      value: e.facility_code,
+                      displayValue: _(e.facility_name),
+                    };
+                  })
+                );
+
+                app.preloader.hide();
+              } catch (err) {
+                app.preloader.hide();
+                console.error(err);
+                app.dialog.alert(_(err));
+              }
+            };
+
+            frappe.web_form.submit = async () => {
+              try {
+                app.preloader.show();
+                window.pageRefresher.goup('Facility Booking');
+                const form = frappe.web_form.get_values();
+
+                const user = users[users.current];
+                let mainPrice = 0;
+                if (!form.facility_booking_credit) {
+                  form.slots.forEach((e) => {
+                    mainPrice += e.price;
+                  });
+                }
+
+                const mainGuest = {
+                  guest_name: form.main_guest_name || user.full_name,
+                  guest_email: user.usr,
+                  ticket_type: 'Booking Fee',
+                  price: mainPrice,
+                  // guest_phone: erp.info.user_settings.guest_phone || null,
+                };
+
+                const guests = [mainGuest, ...(form.guests || [])];
+
+                const res = await http2.request(encodeURI('/api/resource/Facility Booking'), {
+                  method: 'POST',
+                  responseType: 'json',
+                  serializer: 'json',
+                  data: {
+                    facility_type: mainView.router.currentRoute.query.docname,
+                    facility_booking_credit: form.facility_booking_credit,
+                    facility: form.facility,
+                    price: form.price,
+                    date: form.date,
+                    from_time: form.from_time,
+                    to_time: form.to_time,
+                    mode_of_payment: form.mode_of_payment,
+                    guest_flat: form.guest_flat,
+                    currency: form.currency,
+                    // booking_for_who: 'Me',
+                    guests,
+                  },
+                });
+
+                mainView.router.navigate('/mobile-app/facility-booking-detail-page?docname=' + encodeURIComponent(res.data.data.name), {
+                  reloadCurrent: true,
+                });
+
+                app.preloader.hide();
+              } catch (err) {
+                console.log(err);
+
+                app.preloader.hide();
+                app.dialog.alert(err);
+              }
+            };
+
+            frappe.web_form.on('facility', async (field, value) => {
+              const facility = field.doc.facilities.find((e) => e.facility_code === value);
+              
+              if (facility && facility.pos_profile) {
+                frappe.web_form.set_value('pos_profile', facility.pos_profile || '');
+              } else {
+                frappe.web_form.set_value('pos_profile', '');
+              }
+
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              yesterday.setHours(0, 0, 0, 0);
+
+              if (!frappe.$allow_schedule_date) {
+                frappe.$allow_schedule_date = {};
+              }
+
+              if (!frappe.$allow_schedule_date[facility.facility_code]) {
+                frappe.$allow_schedule_date[facility.facility_code] = {};
+              }
+
+              const _load_schedule = async (calendar, year, month) => {
+                try {
+                  app.preloader.show();
+                  await frappe.web_form._load_schedule(facility, year, month);
+                  calendar.update();
+                } finally {
+                  app.preloader.hide();
+                }
+              };
+
+              if (facility) {
+                frappe.web_form.set_df_property('date', 'options', {
+                  minDate: yesterday,
+                  disabled: (date) => {
+                    if (frappe.$allow_schedule_date[facility.facility_code][date.getFullYear() + '-' + (date.getMonth() + 1)]) {
+                      const d = dayjs(date).format('YYYY-MM-DD');
+                      if (frappe.$allow_schedule_date[facility.facility_code][date.getFullYear() + '-' + (date.getMonth() + 1)][d]) {
+                        return false;
+                      } else {
+                        return true;
+                      }
+                    }
+
+                    return false;
+                  },
+                  on: {
+                    monthYearChangeEnd: async (calendar, year, month) => {
+                      _load_schedule(calendar, year, month + 1);
+                    },
+                    opened: async (calendar) => {
+                      const d = frappe.web_form.get_value('date');
+                      if (d) {
+                        const date = dayjs(d).toDate();
+                        _load_schedule(calendar, date.getFullYear(), date.getMonth() + 1);
+                      }
+                    },
+                  },
+                });
+
+                frappe.web_form.set_value('terms_and_condition', tran(facility.booking_terms_and_conditions));
+                frappe.web_form.load_credit();
+              }
+            });
+
+            frappe.web_form.on('to_time', async (field, value) => {
+              frappe.web_form.load_credit();
+            });
+
+            frappe.web_form.load_credit = async () => {
+              const form = frappe.web_form.get_values();
+              let options = [];
+
+              if (!form.facility || !form.from_time || !form.to_time) {
+                options = [];
+              } else {
+                try {
+                  const user = users[users.current];
+
+                  // const response = await http2.request({
+                  //   url: encodeURI('/api/method/frappe.desk.search.search_link'),
+                  //   method: 'GET',
+                  //   cacheStrategy: false,
+                  //   debug: true,
+                  //   params: {
+                  //     txt: '',
+                  //     doctype: 'Facility Booking Credit',
+                  //     ignore_user_permissions: 0,
+                  //     reference_doctype: 'Facility Booking',
+                  //     query: 'lincogn.property_management.doctype.facility_booking.get_facility_booking_credit_query',
+                  //     page_length: 999,
+                  //     filters: JSON.stringify({
+                  //       'guest_email': user.usr,
+                  //       'facility': form.facility,
+                  //       'from_time': form.from_time,
+                  //       'to_time': form.to_time,
+                  //     }),
+                  //   },
+                  // });
+
+                  const response = await http2.request({
+                    url: encodeURI('/api/resource/Facility Booking Credit'),
+                    method: 'GET',
+                    params: {
+                      fields: JSON.stringify(['name', 'facility_booking_subscription', 'from_time', 'to_time']),
+                      filters: JSON.stringify([
+                        ['docstatus', '!=', '2'],
+                        ['guest_email', '=', user.usr],
+                        ['facility', '=', form.facility],
+                        ['from_time', '<', form.to_time],
+                        ['to_time', '>=', form.to_time],
+                        ['to_time', '>', form.from_time],
+                        ['ticket_type', '=', 'Booking Fee'],
+                      ]),
+                    },
+                  });
+
+                  options = response.data.data.map((e) => {
+                    return {
+                      value: e.name,
+                      description: `${e.facility_booking_subscription}, ${e.from_time}, ${e.to_time}`,
+                    };
+                  });
+                } catch (err) {
+                  console.error(err);
+                }
+              }
+
+              frappe.web_form.set_df_property('facility_booking_credit', 'options', options);
+              frappe.web_form.set_df_property('facility_booking_credit', 'hidden', options.length <= 0 ? 1 : 0);
+            };
+
+            frappe.web_form.ui('check_availability', {
+              template: {% raw %}`
+              <div class="field" style="width: 100%;">
+                <div class="button button-fill" style="width: 100%; text-transform: uppercase;" @click="handleCheck">
+                  {{ _("Check Availability") }}
+                </div>
+
+                <div class="card mx-0" v-if="timeSlots.length > 0">
+                  <div class="card-content card-content-padding">
+                    <ul class="w-100" style="padding: 0; margin: 0; flex-wrap: wrap; display: grid; grid-template-columns: repeat(2, 1fr); grid-column-gap: 10px; grid-row-gap: 2px;">
+                      <li style="width: 100%;" class="p-0" :class="[canActive(item) ? '' : 'disabled']" v-for="item in timeSlots" :key="item.key" @click="handleClickSlot(item)">
+                        <div class="py-2 my-1 list-box button display-flex flex-direction-column" :class="[item.selected ? 'button-fill' : 'button-outline']" style="box-sizing: border-box; text-transform: none;">
+                          <span class="p-0 m-0" >{{ item.key }}</span>
+                          <span class="p-0 m-0" style="font-size: 12px; white-space: pre-wrap;" v-if="displayRemainingQuota && item.remaining > 1 && item.booking_period === 'Yes'">{{ _('Remaining') }}: {{ item.remaining }}</span>
+                          <span class="p-0 m-0" style="font-size: 12px;" v-else-if="item.booking_period === 'Not Started'">{{ _('Opening Soon') }}</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {% endraw %}`,
+              inject: ['form', 'setShowNextButton', 'validateStepForm', 'notifyFieldValueChange'],
+              props: ['value'],
+              computed: {
+                selectedSlots() {
+                  return this.form['slots'] || [];
+                },
+                maxBookingTimeslot() {
+                  const facility = (this.form.facilities || []).find((e) => e.facility_code === this.form.facility);
+                  if (facility) return facility.max_booking_timeslot;
+
+                  return 1;
+                },
+                minBookingTimeslot() {
+                  const facility = (this.form.facilities || []).find((e) => e.facility_code === this.form.facility);
+                  if (facility) return facility.min_booking_timeslot;
+
+                  return 1;
+                },
+                displayRemainingQuota() {
+                  const facility = (this.form.facilities || []).find((e) => e.facility_code === this.form.facility);
+                  if (facility) {
+                    return facility.display_remaining_quota === 1;
+                  }
+                  return true;
+                },
+              },
+              data() {
+                return {
+                  timeSlots: [],
+                  lock: false,
+                };
+              },
+              watch: {
+                selectedSlots: {
+                  handler: function (val) {
+                    const showNext = val.length <= this.maxBookingTimeslot && val.length >= this.minBookingTimeslot;
+                    this.setShowNextButton(showNext);
+                  },
+                  immediate: true,
+                },
+                'form.facility': {
+                  handler: function () {
+                    this.timeSlots = [];
+                  },
+                },
+                'form.date': {
+                  handler: function () {
+                    this.timeSlots = [];
+                  },
+                },
+                'form.slots': {
+                  handler: function (val) {
+                    this.notifyFieldValueChange('slots', val);
+                  },
+                },
+                timeSlots: function () {
+                  this.setValue([]);
+                  this.$set(this.form, 'from_time', '');
+                  this.$set(this.form, 'to_time', '');
+                  this.$set(this.form, 'guests', []);
+                },
+              },
+              methods: {
+                setValue(val) {
+                  this.$set(this.form, 'slots', val);
+                },
+                async handleCheck() {
+                  this.timeSlots = [];
+                  if (!this.validateStepForm()) return;
+
+                  const facility = this.form.facilities.find((e) => e.facility_code === this.form.facility);
+
+                  let isAvailable = true;
+                  try {
+                    app.preloader.show();
+                    const res = await http2.request({
+                      url: encodeURI(
+                        '/api/method/lincogn.property_management.doctype.facility_booking.facility_booking.check_facility_booking'
+                      ),
+                      method: 'POST',
+                      responseType: 'json',
+                      serializer: 'json',
+                      data: {
+                        from_time: this.form.date + ' 00:00:00',
+                        to_time: this.form.date + ' 23:59:59',
+                        facility_type: facility.facility_type,
+                        facility: facility.facility_code,
+                        qty: 1,
+                      },
+                    });
+                    console.log('res-check_facility_booking2',res);
+
+                    // used 是那個時段已經預約的數量
+                    // booking_period是指那個timeslot開放預約了沒有
+                    // Yes -> 可以預約
+                    // Not Started -> 預約還沒開始
+                    // Ended -> 預約的時段已經過了
+                    const message = res.data.message[0];
+                    console.log("处理前的slots:", message.slots);
+                    this.timeSlots = message.slots.map((e) => {
+                      return {
+                        key: this.formatSlotTime(e),
+                        selected: false,
+                        allowSelect: true,
+                        ...e,
+                      };
+                    });
+                    console.log("处理后的slots:", this.timeSlots);
+                    if (this.timeSlots.length <= 0) {
+                      isAvailable = false;
+                    }
+                    app.preloader.hide();
+                  } catch (err) {
+                    console.log(err);
+
+                    isAvailable = false;
+                    app.preloader.hide();
+
+                    app.dialog.alert(_(err));
+                  }
+
+                  if (!isAvailable) {
+                    app.toast.show({ text: _('No any facility available in your selected time.'), closeTimeout: 1000, position: 'bottom' });
+                  }
+                },
+                async handleClickSlot(item) {
+                  try {
+                    if (this.lock) return;
+                    this.lock = true;
+
+                    const wantSelect = !item.selected;
+
+                    item.selected = wantSelect;
+                    const val = this.timeSlots.filter((e) => e.selected);
+
+                    // 遍历timeSlots，禁用掉非连续的时间段
+                    let fistSelectedIdx = -1;
+                    let lastSelectedIdx = -1;
+                    this.timeSlots.forEach((e, idx) => {
+                      if (!e.selected) return;
+
+                      if (fistSelectedIdx === -1 || lastSelectedIdx === -1) {
+                        fistSelectedIdx = idx;
+                        lastSelectedIdx = idx;
+                      }
+
+                      if (fistSelectedIdx !== -1) {
+                        lastSelectedIdx = idx;
+                      }
+                    });
+                    if (fistSelectedIdx !== -1 && lastSelectedIdx !== -1) {
+                      const prepreIdx = fistSelectedIdx - 2;
+                      const preIdx = fistSelectedIdx - 1;
+                      if (preIdx >= 0) {
+                        this.timeSlots[preIdx].allowSelect = true;
+                      }
+                      if (prepreIdx >= 0) {
+                        for (let i = 0; i <= prepreIdx; i++) {
+                          this.timeSlots[i].allowSelect = false;
+                        }
+                      }
+
+                      const nextnextIdx = lastSelectedIdx + 2;
+                      const nextIdx = lastSelectedIdx + 1;
+                      if (nextIdx <= this.timeSlots.length - 1) {
+                        this.timeSlots[nextIdx].allowSelect = true;
+                      }
+                      if (nextnextIdx < this.timeSlots.length) {
+                        for (let i = nextnextIdx; i < this.timeSlots.length; i++) {
+                          this.timeSlots[i].allowSelect = false;
+                        }
+                      }
+
+                      // 检查连续的区间，中间连续的区间不允许再取消
+                      for (let i = fistSelectedIdx; i <= lastSelectedIdx; i++) {
+                        if (i === fistSelectedIdx || i === lastSelectedIdx) {
+                          this.timeSlots[i].allowSelect = true;
+                        } else {
+                          this.timeSlots[i].allowSelect = false;
+                        }
+                      }
+                    } else {
+                      this.timeSlots.forEach((e) => {
+                        e.allowSelect = true;
+                      });
+                    }
+
+                    // emit form value
+                    if (val.length <= 0) {
+                      this.$set(this.form, 'from_time', '');
+                      this.$set(this.form, 'to_time', '');
+                    } else {
+                      let from_time = '';
+                      let to_time = '';
+                      val.forEach((e) => {
+                        if (!from_time) {
+                          from_time = e.from_time;
+                        } else {
+                          const t1 = dayjs(e.from_time).toDate().getTime();
+                          const t2 = dayjs(from_time).toDate().getTime();
+
+                          if (t1 < t2) {
+                            from_time = e.from_time;
+                          }
+                        }
+
+                        if (!to_time) {
+                          to_time = e.to_time;
+                        } else {
+                          const t1 = dayjs(e.to_time).toDate().getTime();
+                          const t2 = dayjs(to_time).toDate().getTime();
+
+                          if (t1 > t2) {
+                            to_time = e.to_time;
+                          }
+                        }
+                      });
+
+                      this.$set(this.form, 'from_time', from_time);
+                      this.$set(this.form, 'to_time', to_time);
+                    }
+
+                    this.setValue(val);
+                  } catch (err) {
+                    console.error(err);
+                  }
+
+                  this.lock = false;
+                },
+                canActive(slot) {
+                  if (!slot.allowSelect) return false;
+                  if (!slot.available) return false;
+
+                  if (this.selectedSlots.length >= this.maxBookingTimeslot) {
+                    return slot.selected;
+                  } else {
+                    return true;
+                  }
+                },
+                formatSlotTime(slot) {
+                  try {
+                    console.log("处理时间:", slot.from_time, slot.to_time);
+                    return `${dayjs(slot.from_time).format('HH:mm')}-${dayjs(slot.to_time).format('HH:mm')}`;
+                  } catch (err) {
+                    console.error("时间格式化错误:", err);
+                    // 备用格式化方案，不依赖dayjs
+                    return `${slot.from_time.split(' ')[1].substring(0,5)}-${slot.to_time.split(' ')[1].substring(0,5)}`;
+                  }
+                },
+              },
+            });
+
+            
+
+            frappe.web_form.ui('guests', {
+              template: {% raw %}`
+              <div class="field-container" style="width: 100%;">
+                <div class="item-title item-label" lang="en">
+                    {{ _(field.label) }}
+                    <span v-if="field.reqd === 1" style="color: red; vertical-align: middle">*</span>
+                </div>
+
+                <div class="card no-margin mt-3">
+                  <div class="card-content p-1">
+                    <div class="list media-list guest-list-box m-0" style="width: 100%;">
+                      <ul style="padding:0;" class="guest-list color-theme-gray-dark">
+                        <li>
+                          <div class="item-content" :class="!main_guest_name ? 'skeleton-text skeleton-effect-fade' : ''">
+                            <div class="item-media">
+                              <i class="icon material-icons size-32">account_circle</i>
+                            </div>
+                            <div class="item-inner" style="justify-content: center;">
+                              <div class="item-title" v-if="main_guest_name">{{ main_guest_name }}</div>
+                              <div class="item-title" v-else>{{ _("Guest Name") }}</div>
+                            </div>
+                          </div>
+                        </li>
+
+                        <li v-for="(item, idx) in guests" :key="idx">
+                          <div class="item-content">
+                            <div class="item-media">
+                              <i class="icon material-icons size-32">account_circle</i>
+                            </div>
+                            <div class="item-inner" style="justify-content: center; flex-direction: row; align-items: center;">
+                              <div class="item-title">{{ item.guest_name }}</div>
+                              <div class="item-after">
+                                <a href="#" @click="handleDeleteGuest(item, idx)"><i class="f7-icons size-22">trash</i></a>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="card-footer no-padding" v-if="guests.length < getMaximumGuest">
+                    <div class="button text-color-primary" @click="navigateTo">
+                        <i class="f7-icons size-22">plus</i>
+                        <span class="ml-2"> {{ _("Add More Guest") }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+               {% endraw %}`,
+              props: ['value'],
+              inject: ['form', 'field'],
+              computed: {
+                facility() {
+                  const facility = this.form.facilities.find((e) => e.facility_code === this.form.facility);
+                  return facility;
+                },
+                guests() {
+                  if (Array.isArray(this.value)) {
+                    return this.value;
+                  } else {
+                    return [];
+                  }
+                },
+                getMaximumGuest() {
+                  return this.form.facility_type ? this.form.facility_type.maximum_guest || 0 : 0;
+                },
+              },
+              watch: {
+                main_guest_name: function (val) {
+                  frappe.web_form.set_value('main_guest_name', val || '');
+                },
+              },
+              data() {
+                return {
+                  main_guest_name: '',
+                };
+              },
+              mounted() {
+                emitter.off('submit_facility_booking_guest_form');
+                emitter.on('submit_facility_booking_guest_form', (guest) => {
+                  const g = [].concat(this.guests);
+                  g.push(guest);
+                  this.$emit('input', g);
+                });
+
+                this.getMainGuestName();
+              },
+              beforeDestroy() {
+                emitter.off('submit_facility_booking_guest_form');
+              },
+              methods: {
+                async getMainGuestName() {
+                  try {
+                    const guest_name = erp.info.user_settings.guest_registration;
+                    if (!guest_name) {
+                      throw new Error('Guest name not found');
+                    }
+
+                    const response = await http2.request({
+                      url: encodeURI('/api/resource/Guest Registration/' + guest_name),
+                      method: 'GET',
+                      responseType: 'json',
+                      serializer: 'json',
+                    }); 
+
+                    if (!response.data.data.guest_name) {
+                      throw new Error('Guest name not found');
+                    }
+
+                    this.main_guest_name = response.data.data.guest_name;
+                  } catch (error) {
+                    try {
+                      this.main_guest_name = users[users.current].full_name;
+                    } catch (error) {
+                      // ignore error
+                    }
+                  }
+                },
+                navigateTo() {
+                  const booking = {
+                    date: this.form.date,
+                    from_time: this.form.from_time,
+                    to_time: this.form.to_time,
+                    facility_schedule: this.facility.facility_schedule,
+                    facility: this.form.facility,
+                    facility_type: this.form.facility_type.facility_type_name,
+                  };
+                  
+
+                  mainView.router.navigate(
+                    '/mobile-app/facility-booking-add-guest-form-page?booking=' + encodeURIComponent(JSON.stringify(booking))
+                  );
+                },
+                handleDeleteGuest(item, idx) {
+                  app.dialog.confirm(_('Are you sure want to delete ') + item.guest_name, undefined, () => {
+                    const g = [].concat(this.guests);
+                    g.splice(idx, 1);
+                    this.$emit('input', g);
+                  });
+                },
+              },
+            });
+
+            frappe.web_form.ui('price', {
+              props: ['value'],
+              inject: ['form', 'field'],
+              template: {% raw %}`
+              <div class="field-container" style="width: 100%;">
+                <div class="item-title item-label" lang="en">
+                    {{ _(field.label) }}
+                    <span v-if="field.reqd === 1" style="color: red; vertical-align: middle">*</span>
+                </div>
+
+                <div class="card price-card no-margin mt-3" style="font-size: 16px; line-height: 30px;">
+                <div class="card-content card-content-padding">
+                    <div class="price-box" style="width: 100%;">
+                      <div id="facility">{{ _(form.facility) }}</div>
+                      <div id="selected_date">{{ form.date }}</div>
+                      <div style="display: flex; justify-content: space-between;">
+                        <span id="time">{{ time }}</span>
+                        <span id="price" :data-price="price"></span>
+                      </div>
+                    </div>
+                </div>
+                <div class="card-footer display-flex justify-content-flex-between" v-if="enablePriceControl">
+                    <strong>{{ _("Total Amount") }}</strong>
+                    <strong id="total">\${{ price }}</strong>
+                </div>
+              </div>
+              </div>
+               {% endraw %}`,
+              computed: {
+                time() {
+                  const from_time = this.form.from_time;
+                  const to_time = this.form.to_time;
+
+                  if (from_time && to_time) {
+                    return `${dayjs(from_time).format('HH:mm')} - ${dayjs(to_time).format('HH:mm')}`;
+                  }
+
+                  return '';
+                },
+                price() {
+                  let price = 0;
+                  if (this.form.facility_booking_credit) {
+                    price = 0;
+                  } else if (this.form.slots) {
+                    this.form.slots.forEach((e) => (price += e.price));
+                  }
+
+                  if (this.form.guests) {
+                    this.form.guests.forEach((e) => (price += e.price));
+                  }
+
+                  this.$set(this.form, 'price', price);
+                  return price;
+                },
+                enablePriceControl() {
+                  if (this.form.facility_type) {
+                    return this.form.facility_type.price_control === 1;
+                  } else {
+                    return true;
+                  }
+                },
+              },
+            });
+
+            frappe.web_form.ui('facility_booking_credit', {
+              template: {% raw %}`
+              <div class="field-container" style="width: 100%;">
+                <div class="item-title item-label" lang="en">
+                  {{ _(field.label) }}
+                  <span v-if="field.reqd === 1" style="color: red; vertical-align: middle">*</span>
+                </div>
+
+                <div class="item-input-wrap input-dropdown-wrap">
+                  <input ref="input" type="text" readonly :required="field.reqd === 1" :placeholder="field.label" @focus="onFocus" :value="value" />
+                </div>
+              </div>
+               {% endraw %}`,
+              props: ['value'],
+              inject: ['field'],
+              computed: {
+                creditOptions() {
+                  return this.field.options || [];
+                },
+                getSubscription() {
+                  return this.value;
+                },
+              },
+              methods: {
+                onFocus() {
+                  if (this.$sheet) {
+                    this.$sheet.close();
+                    this.$sheet.destroy();
+                    this.$sheet = null;
+                  }
+
+                  this.$sheet = app.sheet.create({
+                    content: `
+                    <div class="sheet-modal my-sheet-swipe-to-step" style="height:auto; --f7-sheet-bg-color: #fff;">
+                      <div class="toolbar" style="background-color: #fff;">
+                        <div class="toolbar-inner">
+                          <div class="left">
+                            <div class="block-title block-title-medium py-2">${_('Credit')}</div>
+                          </div>
+                          <div class="title"></div>
+                          <div class="right"></div>
+                        </div>
+                      </div>
+                      <div class="sheet-modal-inner">
+                        <div class="page-content display-flex flex-direction-column" style="max-height: 50vh; padding-bottom: calc(74px + var(--f7-safe-area-bottom));">
+                          <div class="list no-hairlines media-list m-0">
+                            <ul>
+                              ${this.creditOptions
+                                .map(
+                                  (e) => `
+                                  <li>
+                                    <label class="item-radio item-radio-icon-end item-content">
+                                      <input type="radio" name="subscription" value="${e.value}" />
+                                      <i class="icon icon-radio"></i>
+
+                                      <div class="item-inner">
+                                        <div class="item-title-row">
+                                          <div class="item-title">${e.value}</div>
+                                          <div class="item-after"></div>
+                                        </div>
+                                        <div class="item-text">${e.description}</div>
+                                      </div>
+                                    </label>
+                                  </li>
+                              `
+                                )
+                                .join('')}
+                            </ul>
+                          </div>
+
+                          <div class="padding-horizontal" style="position: fixed; bottom: 0; left: 0; right: 0; background-color: #fff; z-index: 9999; padding-bottom: calc(4px + var(--f7-safe-area-bottom))">
+                            <a class="button button-large button-fill confirm">${_('Confirm')}</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    `,
+                    on: {
+                      open: (sheet) => {
+                        if (this.value) {
+                          sheet.$el.find(`input[value="${this.value}"]`).prop('checked', true);
+                        }
+
+                        $(sheet.$el.find('.confirm.button')).on('click', async () => {
+                          const val = sheet.$el.find('input[name="subscription"]:checked').val();
+                          this.$emit('input', val);
+
+                          sheet.close();
+                          this.$refs.input.blur();
+                        });
+                      },
+                    },
+                    swipeToClose: true,
+                    backdrop: true,
+                  });
+
+                  this.$sheet.open();
+                },
+              },
+            });
+
+            frappe.web_form.ui('mode_of_payment', {
+              template: {% raw %}`
+              <div class="field-container" style="width: 100%;">
+                <div class="item-title item-label" lang="en">
+                    {{ field.label }}
+                    <span v-if="field.reqd === 1" style="color: red; vertical-align: middle">*</span>
+                </div>
+
+                <input type="text" :value="value" :required="field.reqd === 1" style="display: none;" />
+
+                <div style="padding: 6px;">
+                  <div class="mt-2 payment-list">
+                    <label :class="['payment-box', item === value ? 'bg-color-primary checked' : '']" v-for="(item, idx) in payments" @click="handleClick(item)" :key="item">
+                      <i class="material-icons size-22">add_card</i>
+                      <span class="mt-2">{{ _(item) }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+               {% endraw %}`,
+              props: ['value'],
+              inject: ['field', 'form'],
+              data() {
+                return {
+                  payments: [],
+                };
+              },
+              watch: {
+                'form.pos_profile': {
+                  handler(v) {
+                    this.init();
+                  },
+                  immediate: true,
+                },
+              },
+              methods: {
+                async init() {
+                  try {
+                    let payments = [];
+                    let defaultPayment = '';
+
+                    if (!this.form.pos_profile) {
+                      const res = await http2.request({
+                        method: 'GET',
+                        url: encodeURI('/api/resource/Mode of Payment'),
+                        responseType: 'json',
+                        serializer: 'json',
+                        params: {
+                          fields: '["name"]',
+                          filters: `[["enabled","=","1"]]`,
+                        },
+                      });
+
+                      payments = res.data.data.map((e) => e.name);
+                    } else {
+                      const res = await http2.request(encodeURI('/api/resource/POS Profile/' + this.form.pos_profile), {
+                        method: 'GET',
+                        responseType: 'json',
+                        serializer: 'json',
+                      });
+
+                      payments = res.data.data.payments.map((e) => {
+                        if (e.default === 1) {
+                          defaultPayment = e.mode_of_payment;
+                        }
+
+                        return e.mode_of_payment;
+                      });
+                    }
+
+                    this.payments = payments;
+
+                    this.$emit('input', defaultPayment || payments[0]);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                },
+                handleClick(pay) {
+                  this.$emit('input', pay);
+                },
+              },
+            });
+
+            frappe.web_form.ui('terms_and_condition', {
+              components: {
+                YoEditorViewer: window.app_core_vue_component_map['YoEditorViewer'],
+                CheckboxField: frappe.web_form.components['CheckboxField'],
+              },
+              template: {% raw %}`
+              <div>
+                <div class="field-container" style="width: 100%;">
+                  <yo-editor-viewer style="margin-top: 10px;" :value="value" />
+                </div>
+
+                <div class="field-container" style="width: 100%; margin-top: 10px;">
+                  <checkbox-field :label="_('I agree to the terms and conditions.')" v-model="accept" />
+                </div>
+
+                <input type="text" :value="isAccepted" required style="display: none;" :data-error-message="_('I agree to the Terms & Conditions.')" />
+              </div>
+               {% endraw %}`,
+              props: ['value'],
+              inject: ['field'],
+              data() {
+                return {
+                  accept: 0,
+                };
+              },
+              computed: {
+                isAccepted() {
+                  return this.accept === 1 ? 'true' : '';
+                },
+              },
+            });
+            //---  ---
+          }
+        );
+      });
+
+      $on('pageBeforeRemove', (e, page) => {
+        vueApp && vueApp.$destroy();
+      });
+    })();
+  } catch (e) {
+    console.error('Error in App Basic Form initialization:', e);
+  }
+</script>

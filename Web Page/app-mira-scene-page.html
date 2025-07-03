@@ -206,7 +206,7 @@
                       v-for="item in rangeBarDeviceList"
                       :key="item.index"
                       :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
-                      v-if="item.roomHidden"
+                      v-show="item.roomHidden"
                     >
                       <li class="swipeout display-flex">
                         <div class="iconbtn swipeout-content" style="width: 100%">
@@ -1045,6 +1045,23 @@
               '95': 0,
               '96': 0,
             };
+            let virtual_id_for_living_mode = {
+              '90': 0,
+              '91': 0,
+              '92': 0,
+            };
+            //if the device have two room list
+            let mutiway_room_status = false;
+            if(this.roomList.length == 2){
+              mutiway_room_status = true;
+              //13, 14 ,15 +86
+              virtual_id_for_bedroom_mode = {
+                '99': 0,
+                '100': 0,
+                '101': 0,
+              }
+
+            }
             this.anthorDeviceList.forEach((item) => {
               if (item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')) {
                 let gang = this.getVirtualIdForPeripheral(item.config);
@@ -1053,8 +1070,17 @@
                 console.log('gang', gang);
                 let thisStatus = status[0][gang];
                 item.device_status = thisStatus;
-                if([94,95,96].indexOf(parseInt(gang)) != -1){
-                  virtual_id_for_bedroom_mode[gang] = thisStatus;
+                if(mutiway_room_status){
+                  if([99,100,101].indexOf(parseInt(gang)) != -1){
+                    virtual_id_for_bedroom_mode[gang] = thisStatus;
+                  }
+                  if([90,91,92].indexOf(parseInt(gang)) != -1){
+                    virtual_id_for_living_mode[gang] = thisStatus;
+                  }
+                }else{
+                  if([94,95,96].indexOf(parseInt(gang)) != -1){
+                    virtual_id_for_bedroom_mode[gang] = thisStatus;
+                  }
                 }
               }
             });
