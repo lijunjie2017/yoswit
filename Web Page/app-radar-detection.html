@@ -1,0 +1,401 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Radar Detection') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="radar-detection-container">
+          <div class="card no-border rounded-card">
+            <div class="card-header display-flex justify-content-space-between bg-color-primary active-state">
+              <span class="color-white" style="color: #fff">Radar Status</span>
+            </div>
+            <div class="card-content card-content-padding">
+              <div class="list">
+                <ul>
+                  <!-- 工程模式 -->
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">Engineering Mode</div>
+                        <div class="item-after">
+                          <label class="toggle toggle-init">
+                            <input type="checkbox" v-model="enableEngineeringMode" />
+                            <span class="toggle-icon"></span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <!-- 目标状态 -->
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <!--<div class="item-title"></div>-->
+                        <div class="item-title display-flex justify-content-space-between align-items-center">
+                          <label class="radio">
+                            <input type="radio" readonly disabled name="fitness" :checked="targetStatus !== 0" /><i class="icon-radio"></i>
+                          </label>
+                          <span style="margin-left: 10px">Occupied</span>
+                          <span style="margin-left: 10px"></span>
+                          <label class="radio">
+                            <input type="radio" readonly disabled name="static" :checked="targetStatus === 0" /><i class="icon-radio"></i>
+                          </label>
+                          <span style="margin-left: 10px">Unoccupied</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <!-- 距离 -->
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">Distance</div>
+                        <div class="item-after">{{ distance }} CM</div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <!-- 无人持续时间 -->
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">Unmanned duration</div>
+                        <div class="item-after">{{ unmannedDuration }}</div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="card no-border rounded-card">
+            <div class="card-header display-flex justify-content-space-between bg-color-primary active-state">
+              <span class="color-white" style="color: #fff">Radar Data</span>
+            </div>
+
+            <div class="card-content card-content-padding">
+              <div ref="fitnessChart" style="height: 160px"></div>
+              <div style="height: 10px"><!--space--></div>
+              <div ref="staticChart" style="height: 160px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    // Load echarts
+    try {
+      await new Promise((resolve) => {
+        if (window['echarts']) {
+          resolve();
+        } else {
+          const script = document.createElement('script');
+          script.type = 'text/javascript';
+          script.onload = function () {
+            resolve(true);
+          };
+
+          script.onerror = function () {
+            // reject(false);
+            console.warn(`Echart load error`);
+          };
+
+          script.src = 'https://dev.mob-mob.com/files/echarts.min.js';
+          document.head.appendChild(script);
+        }
+      });
+    } catch (error) {
+      app.dialog.alert(error);
+      return;
+    }
+    let vueApp = null;
+    const { guid } = $f7route.query;
+    const p = window.peripheral[guid].prop;
+    let radarStatusHandlerForDetection = null; // 将处理函数声明在外层scope
+    const baseChartOptions = {
+      color: ['#003366', '#006699'],
+      grid: {
+        left: '20%',
+        right: '5%',
+        top: '10%',
+        bottom: '30%',
+      },
+      legend: {
+        show: true,
+        bottom: 0,
+      },
+    };
+    const baseEnergyChartOption = {
+      xAxis: {
+        type: 'category',
+        data: ['0', '1', '2', '3', '4', '5', '6', '7', '8'],
+        axisTick: {
+          show: false,
+        },
+      },
+      yAxis: {
+        type: 'value',
+        name: 'Energy Value',
+        position: 'left',
+        nameRotate: 90,
+        nameGap: 40,
+        nameLocation: 'middle',
+        silent: true,
+        axisLine: {
+          show: true,
+        },
+        splitLine: {
+          show: false,
+        },
+      },
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          enableEngineeringMode: false,
+          targetStatus: 0, // 0, 1 , 2
+          unmannedDuration: 0,
+          distance: 0,
+          fitnessChartInstance: null,
+          fitnessChartOption: {
+            series: [
+              {
+                data: [],
+                type: 'line',
+                smooth: true,
+                name: 'Sensitivity',
+                symbol: 'none',
+              },
+              {
+                data: [],
+                type: 'line',
+                smooth: true,
+                name: 'Moving target',
+                symbol: 'none',
+              },
+            ],
+          },
+          staticChartInstance: null,
+          staticChartOption: {
+            series: [
+              {
+                data: [],
+                type: 'line',
+                smooth: true,
+                name: 'Sensitivity',
+                symbol: 'none',
+              },
+              {
+                data: [],
+                type: 'line',
+                smooth: true,
+                name: 'Stationary target',
+                symbol: 'none',
+              },
+            ],
+          },
+        },
+        computed: {},
+        watch: {
+          enableEngineeringMode: function (enable) {
+            this.writeCmd(`9504000001${enable ? '01' : '00'}`);
+
+            if (!enable) {
+              this.fitnessChartInstance.setOption({ series: [{}, { data: [] }] });
+              this.staticChartInstance.setOption({ series: [{}, { data: [] }] });
+            }
+          },
+        },
+        mounted() {
+          this.fitnessChartInstance = echarts.init(this.$refs.fitnessChart);
+          this.staticChartInstance = echarts.init(this.$refs.staticChart);
+
+          this.fitnessChartInstance.setOption(Object.assign(this.fitnessChartOption, baseChartOptions, baseEnergyChartOption));
+          this.staticChartInstance.setOption(Object.assign(this.staticChartOption, baseChartOptions, baseEnergyChartOption));
+
+          radarStatusHandlerForDetection = (data) => {
+            if (data.guid === guid) {
+              debugger;
+              this.processNotifyData(data.rs);
+            }
+          };
+          emitter.off('radar/notify', radarStatusHandlerForDetection);
+          emitter.on('radar/notify', radarStatusHandlerForDetection);
+          // listen event
+          this.startNotification();
+        },
+        methods: {
+          startNotification() {
+            iot_ble_check_enable()
+              .then(() => {
+                return window.peripheral[guid].connect();
+              })
+              .then(() => {
+                return new Promise((resolve, reject) => {
+                  if (Capacitor.getPlatform() === 'android') {
+                    ble.requestMtu(
+                      p.id,
+                      512,
+                      () => {
+                        console.log('>>>> radar request mtu success');
+                        resolve();
+                      },
+                      (err) => {
+                        console.log('>>>> radar request mtu fail: ' + err);
+                        reject(err);
+                      }
+                    );
+                  } else {
+                    resolve();
+                  }
+                });
+              })
+              .then(() => {
+                //this.writeCmd('9500');
+                //this.writeCmd('9502');
+                return window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '9500',
+                  },
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '9502',
+                  },
+                ]);
+              })
+              .catch((err) => {
+                app.dialog.alert(erp.get_log_description(err));
+              });
+          },
+          writeCmd(cmd) {
+            iot_ble_check_enable()
+              .then(() => {
+                console.log('>>>>> radar write cmd: ' + cmd);
+
+                return window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: cmd,
+                  },
+                ]);
+              })
+              .catch((err) => {
+                app.dialog.alert(erp.get_log_description(err));
+              });
+          },
+          /**
+           * @param {string} rs
+           */
+          processNotifyData(rs) {
+            if (rs.startsWith('9500000030')) {
+              const byteStrings = rs.match(/.{1,2}/g);
+              console.log(byteStrings);
+
+              // 无人持续时间
+              const no_target_lastfor = iot_utils_from_little_endian_hex(byteStrings.slice(8, 8 + 4).join(''));
+              this.unmannedDuration = no_target_lastfor;
+
+              // 触发间距
+              // 1 -> 0.75m | 0 -> 0.2m
+              // const range_gate_resolution = iot_utils_from_little_endian_hex(
+              //   byteStrings.slice(13, 13 + 2).join(''),
+              // );
+
+              // 运动能量值 [0-8]
+              const move_range_gate = byteStrings.slice(12, 12 + 9).map((e) => parseInt(e, 16));
+              this.fitnessChartInstance.setOption({ series: [{ data: move_range_gate }] });
+
+              // 静止能量值 [0-8]
+              const static_range_gate = byteStrings.slice(21, 21 + 9).map((e) => parseInt(e, 16));
+              this.staticChartInstance.setOption({ series: [{ data: static_range_gate }] });
+            } else if (rs.startsWith('9502000009')) {
+              // 正常模式
+              const byteStrings = rs.match(/.{1,2}/g);
+
+              console.log(byteStrings);
+
+              // 状态
+              this.targetStatus = parseInt(byteStrings[5], 16);
+
+              this.distance =
+                this.targetStatus === 1 || this.targetStatus === 3
+                  ? iot_utils_from_little_endian_hex(byteStrings.slice(6, 6 + 2).join(''))
+                  : iot_utils_from_little_endian_hex(byteStrings.slice(9, 9 + 2).join(''));
+            } else if (rs.startsWith('950100001F'.toLowerCase())) {
+              // 工程模式
+              if (!this.enableEngineeringMode) {
+                this.enableEngineeringMode = true;
+              }
+
+              const byteStrings = rs.match(/.{1,2}/g);
+
+              // 运动能量值 [0-8]
+              const move_range_gate = byteStrings.slice(16, 16 + 9).map((e) => parseInt(e, 16));
+              this.fitnessChartInstance.setOption({ series: [{}, { data: move_range_gate }] });
+
+              // 静止能量值 [0-8]
+              const static_range_gate = byteStrings.slice(25, 25 + 9).map((e) => parseInt(e, 16));
+              this.staticChartInstance.setOption({ series: [{}, { data: static_range_gate }] });
+
+              // 状态
+              this.targetStatus = parseInt(byteStrings[5], 16);
+
+              // 距离
+              this.distance =
+                this.targetStatus === 1 || this.targetStatus === 3
+                  ? iot_utils_from_little_endian_hex(byteStrings.slice(6, 6 + 2).join(''))
+                  : iot_utils_from_little_endian_hex(byteStrings.slice(9, 9 + 2).join(''));
+            }
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {
+      // 移除事件监听器
+      if (radarStatusHandlerForDetection) {
+        emitter.off('radar/notify', radarStatusHandlerForDetection);
+        radarStatusHandlerForDetection = null;
+      }
+    });
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

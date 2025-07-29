@@ -1,0 +1,195 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Mesh Manager') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="list media-list chevron-center sortable" style="margin-top: 0; overflow-x: hidden">
+          <ul class="">
+            <li
+              class="device swipeout swipeout-delete-manual"
+              v-for="device in meshDevices"
+              :key="device.device"
+            >
+              <div class="item-content swipeout-content">
+                <div class="item-media display-flex justify-content-center align-items-center" :style="{backgroundImage: 'url('+device.img_url+')'}">
+                  <i class="priority-icon icon material-icons text-color-yellow" style="font-size: 35px;" v-if="!device.priority">priority_high</i>
+                </div>
+                <div class="item-inner">
+                  <div class="item-title">{{ device.device_model }}</div>
+                  <div class="item-subtitle">{{ device.mac_address }}</div>
+                  <div class="item-text">{{ device.device }}</div>
+                </div>
+              </div>
+              <div class="swipeout-actions-right">
+                <a
+                  href="#"
+                  class="link color-red"
+                  v-on:click="deleteDevice(device)"
+                >
+                  <i class="icon material-icons">delete</i>
+                </a>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { guid } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          meshDevices: [],
+          rcuGateway: '',
+        },
+        computed: {},
+        watch: {
+
+        },
+        mounted() {
+          this.getMqtt();
+        },
+        methods: {
+          //get the mqtt
+          getMqtt(){
+            const device_models = cloneDeep(erp.doctype.device_model);
+            return new Promise(async(resolve, reject)=>{
+              try{
+                this.meshDevices = [];
+                let gateway = '';
+                let profile_device = cloneDeep(erp.info.profile.profile_device);
+                profile_device.forEach((item)=>{
+                  if(item.device == guid){
+                    gateway = item.gateway;
+                    this.rcuGateway = gateway;
+                  }
+                })
+                if(gateway){
+                  const gatewayChanged = (data)=>{
+                    this.meshDevices = [];
+                    let message = JSON.parse(data.message);
+                    console.log(message);
+                    let deviceMap = message.Device;
+                    console.log(deviceMap);
+                    if(deviceMap){
+                      for(let device in deviceMap){
+                        let obj = deviceMap[device];
+                        obj.img_url = 'https://my.yoswit.com/files/products/YO2086-1G.svg';
+                        obj.priority = true;
+                        let deviceModelMap = profile_device.find((item)=>{
+                          return item.device == device;
+                        });
+                        if(deviceModelMap){
+                          obj.device_model = deviceModelMap.device_model;
+                          for (let i in device_models) {
+                            if (obj.device_model == device_models[i].model_code) {
+                              obj.img_url = device_models[i].image || 'https://my.yoswit.com/files/products/YO2086-1G.svg';
+                            }
+                          }
+                        }else{
+                          obj.device_model = 'Unknown';
+                          obj.priority = false;
+                        }
+                        obj.device = device;
+                        obj.img_url = obj.img_url.replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+                        this.meshDevices.push(obj);
+                      }
+                    }
+                  }
+                  let topic = `status/${md5(md5(gateway))}`;
+                  core_mqtt_subscribe(topic, 1, false);
+                  emitter.off(topic,gatewayChanged);
+                  emitter.on(topic, gatewayChanged);
+                  resolve();
+                }
+              }catch(error){
+                reject(error);
+                console.log(error);
+              }
+            })
+          },
+          sleep(ms){
+            return new Promise(resolve => setTimeout(resolve, ms));
+          },
+          deleteDevice(device){
+            app.dialog.confirm('Are you sure you want to remove this device from the mesh?', async()=>{
+              try{
+                app.dialog.preloader('Removing device from the mesh...');
+                let command = `02ffffffffffff11${core_utils_get_mac_address_from_guid(device.device,true)}`;
+                // await peripheral[guid].connect();
+                // await peripheral[guid].write([{
+                //   service: 'ff80',
+                //   characteristic: 'ff81',
+                //   data: command,
+                // }]);
+                let gateway_topic = `cmd/${md5(md5(this.rcuGateway))}`;
+                await core_mqtt_publish(gateway_topic, {
+                  'command': 'Control',
+                  'function': 'bleHelper.perform',
+                  'params': [
+                    {
+                      action: 'write',
+                      guid: guid,
+                      mac_address: core_utils_get_mac_address_from_guid(guid),
+                      service_id: 'ff80',
+                      char_id: 'ff81',
+                      value: command,
+                    },
+                  ],
+                  'callback': '',
+                  'raw': '',
+                }, 0, false, false, false);
+                await this.sleep(2000);
+                await app.dialog.close();
+                await app.dialog.alert('The device has been removed from the mesh. The changes will take effect in 3-5 minutes; please check back.');
+                // await this.getMqtt();
+              }catch(error){
+                console.log(error);
+                app.dialog.close();
+                app.dialog.alert(erp.get_log_description(error));
+              }
+            })
+          }
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {
+
+    });
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>

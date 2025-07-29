@@ -159,6 +159,9 @@
 								<a link icon-only @click="${()=>EngineerModeCheck()}" style="margin-right: 10px;">
 									<i class="icon material-icons md-only text-color-gray" style="font-size: 25px;">construction</i>
 								</a>
+								<a link icon-only @click="${()=>EngineerModeCheck(true)}" style="margin-right: 10px;">
+									<i class="icon material-icons md-only text-color-gray" style="font-size: 25px;">browser_updated</i>
+								</a>
 							`}
 							${(engineerMode && engineerModeStatus == false) && $h`
 							<a link icon-only @click="${()=>changeEngineerModeStatus(true)}" style="margin-right: 10px;">
@@ -3932,7 +3935,7 @@ export default async (props, ctx) => {
 		$onUnmounted = ctx.$onUnmounted;
 		let networkChangeFun;
 		let updateTime = 0;
-		let fixedTop = 60;
+		let fixedTop = 0;
 		
 	//if wifi failed change the wifi status
 	if(networkChangeFun){
@@ -4777,7 +4780,7 @@ export default async (props, ctx) => {
 		}
 	}
 	//check if rcu scene have wifi device and the mac address is not correct
-	window.EngineerModeCheck = ()=>{
+	window.EngineerModeCheck = (onlyOta = false)=>{
 		//find all the device 
 		let profile_device = erp.info.profile.profile_device;
 		let sceneMap = cloneDeep(erp.info.scene);
@@ -4821,11 +4824,11 @@ export default async (props, ctx) => {
 			deviceDetailList.push(obj);
 		});
 		console.log("deviceDetailList",deviceDetailList);
-		generateSingleDeviceModel(deviceDetailList);
+		generateSingleDeviceModel(deviceDetailList,onlyOta);
 		//generate the device list
 		//app.dialog.alert("Coming soon, Please wait for the update the mesh.");
 	}
-	const generateSingleDeviceModel =(list)=>{
+	const generateSingleDeviceModel =(list,onlyOta = false)=>{
 		if(erp.deviceSheet){
 			erp.deviceSheet.close();
 		}
@@ -4898,7 +4901,11 @@ export default async (props, ctx) => {
 			backdrop: true,
 		});
 		erp.deviceSheet.open();
-		startCheckDevice(list);
+		if(!onlyOta){
+			startCheckDevice(list);
+		}else{
+			startBatchOta(list)
+		}
 	}
 	window.retryCheckDevice = ()=>{
 		app.toast.create({
@@ -5197,7 +5204,7 @@ export default async (props, ctx) => {
 						{
 							service: 'ff80',
 							characteristic: 'ff81',
-							data: '810E',
+							data: '810e',
 						},
 					]);
 				};
@@ -5371,6 +5378,157 @@ export default async (props, ctx) => {
 			}
 			
 		})
+	}
+	const get_device_setting_type = (guid,setting_type)=>{
+    let settings = erp.info.device[guid].settings;
+    if(settings && settings.length){
+      let settingMap = settings.find((item)=>item.setting_type == setting_type);
+      if(settingMap){
+        return settingMap.setting;
+      }else{
+        return '';
+      }
+    }else{
+      return '';
+    }
+  }
+	const check_device_firmware_version_and_update = async(guid,device_name)=>{
+		return new Promise(async(resolve,reject)=>{
+			const self = this;
+      const oldResolve = resolve;
+      const oldReject = reject;
+			try{
+				refreshDeviceUi(device_name,'sync');
+        //get the device gateway
+        let gateway = '';
+        let profile_device = cloneDeep(erp.info.profile.profile_device);
+        profile_device.forEach((item)=>{
+          if(item.device == guid){
+            gateway = item.gateway;
+          }
+        })
+        let ssid = get_device_setting_type(guid,'Wifi SSID');
+        let password = get_device_setting_type(guid,'Wifi Password');
+        if(!ssid){
+          //find the ssid from other device
+          let devices = cloneDeep(erp.info.device);
+          for(let i in devices){
+            if(devices[i].device_model == 'YO780' || devices[i].device_mode == 'RCU Controller'){
+              let rcu_ssid = get_device_setting_type(devices[i].guid,'Wifi SSID');
+              let rcu_password = get_device_setting_type(devices[i].guid,'Wifi Password');
+              if(rcu_ssid){
+                ssid = rcu_ssid;
+              }
+              if(rcu_password){
+                password = rcu_password;
+              }
+            }
+          }
+        }
+        const otaInstance = new window.iotWifiOta({
+          guid: guid,
+          gateway: gateway,
+          ssid: ssid,
+          password: password,
+          showUI: true  // 启用UI提示显示
+        });
+        otaInstance.setCallbacks({
+          onProgress: (progress) => {
+            console.log(`进度: ${progress}%`);
+            if(progress > 100){
+              //reject error
+              reject(_('Abnormal progress Interruption'))
+            }
+          },
+          onError: (error) => {
+            refreshDeviceUi(device_name,'error',error);
+						app.dialog.confirm(_(erp.get_log_description(error))+', '+_('would you like to try again?'),async()=>{
+						try{
+							await check_device_firmware_version_and_update(guid,device_name);
+							oldResolve(true);
+						}catch(error){
+							oldReject(error);
+						}
+						},()=>{
+							oldResolve(true);
+						})
+          },
+          onSuccess: (message) => {
+            console.log(`成功: ${message}`);
+            // resolve(true);
+          },
+          onRetryPrompt: (error, retryCount, maxRetries, resolve) => {
+            console.log(`失败原因: ${error}`);
+            console.log(`重试次数: ${retryCount}/${maxRetries}`);
+						
+            app.dialog.confirm(_(erp.get_log_description(error))+'\n\n'+_('Would you like to try again?'),async()=>{
+              try{
+                await check_device_firmware_version_and_update(guid,device_name);
+                oldResolve(true);
+              }catch(error){
+                oldReject(error);
+              }
+            },()=>{
+              oldResolve(true);
+            })
+          }
+        });
+        await otaInstance.init();
+        const status = otaInstance.getStatus();
+        console.log('WiFi状态:', status.wifiStatus);
+        console.log('需要连接WiFi:', status.needsWifiConnection);
+        console.log('需要固件升级:', status.needsFirmwareUpgrade);
+        //判断是否需要OTA升级
+        if(status.needsFirmwareUpgrade){
+          //需要OTA升级
+          if(status.needsWifiConnection){
+            console.log('开始连接WiFi...');
+            await otaInstance.wifiConnect();
+            console.log('WiFi连接成功');
+            console.log('开始固件升级...');
+            await otaInstance.fullUpgrade();
+            console.log('固件升级成功');
+						refreshDeviceUi(device_name,'success');
+            resolve(true);
+          }else{
+            console.log('WiFi连接成功');
+            console.log('开始固件升级...');
+            await otaInstance.fullUpgrade();
+            console.log('固件升级成功');
+						refreshDeviceUi(device_name,'success');
+            resolve(true);
+          }
+        }else{
+          //不需要OTA升级
+					refreshDeviceUi(device_name,'success');
+          resolve(true);
+        }
+      }catch(error){
+				
+        // reject(error);
+      }
+		})
+	}
+	const startBatchOta = async(list)=>{
+		for(let i in list){
+			let guid = list[i].device;
+			await check_device_firmware_version_and_update(guid,list[i].device_name);
+		}
+	}
+	const refreshDeviceUi = (device_name,type='sync',error_log='')=>{
+		if(type == 'sync'){
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').text('sync');
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').addClass('rotate-animation');
+		}else if(type == 'error'){
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').text('error');
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.error-log').html(`${_(erp.get_log_description(error_log))}`);
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+		}else if(type == 'success'){
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').text('check');
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').addClass('text-color-green');
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+		}
 	}
 	const startCheckDevice = async(list)=>{
 
@@ -7358,7 +7516,7 @@ export default async (props, ctx) => {
 			}
 			let checkhash = '';
 			//console.log('p.gateway.split',p.gateway.split('-').length)
-			if(p.gateway.split('-').length <= 2){
+			if(p.gateway.split('-').length <= 2 || (p.gateway.includes(erp.info.profile.name))){
 				checkhash = `will/${md5(md5(p.gateway.toLowerCase()))}`
 			}else{
 				checkhash = `will/${md5(md5(p.gateway))}`;
@@ -7825,7 +7983,7 @@ export default async (props, ctx) => {
 		//check if the wifi device is compelte
 		window.iot_check_profile_device('rcu').then((is_check)=>{
 			//check if scene all have been write the rcu device
-			if(is_check && erp.info.profile.location != '1 write' && erp.info.profile.copy_from){
+			if(is_check && erp.info.profile.location != '1 write' && erp.info.profile.location != ''){
 				//find the rcu device
 				let rcu_device = erp.info.profile.profile_device.find((item)=>{
 					return (item.device_mode == 'RCU Controller' || item.device_model == 'YO780') && item.device;

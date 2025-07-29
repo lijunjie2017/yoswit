@@ -2,6 +2,11 @@ window.iot_device_repair = async (params) => {
   const guid = params.ref;
   const profile_device_name = params.obj.attr('profile-device-name');
   const profile_subdevice_name = params.obj.attr('profile-subdevice-name');
+  let repair_device_model = '';
+  try {
+    let deviceObj = erp.info.device[guid];
+    repair_device_model = deviceObj.device_model;
+  } catch (error) {}
   /*
   repair功能需要包含一下内容：
   1.检测model是否有mesh功能，如果有mesh功能，则需要先reset mesh再重新mesh
@@ -10,33 +15,44 @@ window.iot_device_repair = async (params) => {
   4.恢复setting的数据
   5.恢复场景的数据
   */
-  
+
   //check the device mesh status
   const check_device_mesh_status = (guid) => {
     return new Promise(async (resolve, reject) => {
+      debugger;
       try {
+        //check if no mesh device
+        if (
+          repair_device_model.includes('YO121-AC-R2W') ||
+          repair_device_model.includes('M360s') ||
+          repair_device_model.includes('YO103') ||
+          repair_device_model.includes('YO790DC')
+        ) {
+          resolve(true);
+          return;
+        }
         let rcu_mesh_num = 0;
         let self_mesh_num = 0;
         //find the rcu device
         let profile_device = cloneDeep(erp.info.profile.profile_device);
         let rcu_device = profile_device.find((item) => item.device_model == 'YO780' || item.device_model == 'RCU Controller');
-        if(rcu_device){
+        if (rcu_device) {
           let rcu_device_guid = rcu_device.device;
           rcu_mesh_num = window.peripheral[rcu_device_guid].prop.mnSize;
-        }else{
+        } else {
           resolve(false);
         }
         self_mesh_num = window.peripheral[guid].prop.mnSize;
-        if(rcu_mesh_num == self_mesh_num && rcu_mesh_num > 0){
+        if (rcu_mesh_num == self_mesh_num && rcu_mesh_num > 0) {
           resolve(true);
-        }else{
+        } else {
           resolve(false);
         }
       } catch (error) {
         reject(error);
       }
     });
-  }
+  };
   const sleep_for_repair = (ms) => {
     return new Promise((resolve) => setTimeout(resolve, ms));
   };
@@ -48,7 +64,7 @@ window.iot_device_repair = async (params) => {
             service: 'ff80',
             characteristic: 'ff81',
             data: '8110',
-          }
+          },
         ]);
         resolve(true);
       } catch (error) {
@@ -69,7 +85,7 @@ window.iot_device_repair = async (params) => {
     });
     return { network_id, network_position };
   };
-  
+
   //首先获取所有设置的内容
   const initSettingList = async (guid) => {
     let settings = [];
@@ -98,6 +114,11 @@ window.iot_device_repair = async (params) => {
       if (scene_location_map) {
         sceneList.push(scenes[scene]);
       }
+      if (repair_device_model.includes('M86-DP')) {
+        if (scenes[scene].title.includes('Do Not Disturb') || scenes[scene].title.includes('Clean Up')) {
+          sceneList.push(scenes[scene]);
+        }
+      }
     }
     console.log('sceneList', sceneList);
     let sceneBleList = await replaceRcuSceneDeviceCommand(sceneList);
@@ -122,6 +143,7 @@ window.iot_device_repair = async (params) => {
         try {
           deviceMap = erp.info.device[guid];
           deviceModel = deviceMap.device_model;
+          repair_device_model = deviceModel;
         } catch (error) {}
         if (deviceModel == 'YO780') {
           let thisCommandList = await saveActionCommand(item);
@@ -147,6 +169,12 @@ window.iot_device_repair = async (params) => {
       let rcuGuid = getTheSceneRcu(scenesMap);
       let oldMac = core_utils_get_mac_address_from_guid(guid);
       let bleList = [];
+      let uiConfiguration = null;
+      try {
+        uiConfiguration = JSON.parse(scenesMap.ui_configuration);
+      } catch (e) {
+        uiConfiguration = null;
+      }
       for (let i in triggerList) {
         if (triggerList[i].guid != guid) {
           continue;
@@ -218,6 +246,23 @@ window.iot_device_repair = async (params) => {
           });
         }
       }
+      if (uiConfiguration) {
+        let keyList = Object.keys(uiConfiguration);
+        keyList.forEach((item) => {
+          if (
+            uiConfiguration[item] &&
+            typeof uiConfiguration[item] === 'string' &&
+            uiConfiguration[item].includes('8f32') &&
+            repair_device_model == 'M86-DP'
+          ) {
+            bleList.push({
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: uiConfiguration[item].toLowerCase(),
+            });
+          }
+        });
+      }
       resolve(bleList);
     });
   };
@@ -245,13 +290,13 @@ window.iot_device_repair = async (params) => {
           command: triggerCommand.toLocaleLowerCase(),
         });
         let uiConfigurationMap = uiConfiguration[`${guid}_device`];
-        if(isset(uiConfiguration) && isset(uiConfigurationMap)){
+        if (isset(uiConfiguration) && isset(uiConfigurationMap)) {
           commandList.push({
             guid: rcuGuid,
             command: uiConfigurationMap.toLocaleLowerCase(),
           });
         }
-        if(isset(uiConfiguration[`${guid}_scene_command`])){
+        if (isset(uiConfiguration[`${guid}_scene_command`])) {
           commandList.push({
             guid: rcuGuid,
             command: uiConfiguration[`${guid}_scene_command`].toLocaleLowerCase(),
@@ -305,6 +350,12 @@ window.iot_device_repair = async (params) => {
           commandList.push({
             guid: rcuGuid,
             command: actionMap[rcuGuid]['trigger_2'].toLocaleLowerCase(),
+          });
+        }
+        if (isset(actionMap[`second_action_${rcuGuid}`])) {
+          commandList.push({
+            guid: rcuGuid,
+            command: actionMap[`second_action_${rcuGuid}`].toLocaleLowerCase(),
           });
         }
       }
@@ -392,10 +443,165 @@ window.iot_device_repair = async (params) => {
   const initMeshList = async (guid) => {
     //提醒用户，如果已经reset，需要重新mesh
   };
+  const get_device_setting_type = (guid, setting_type) => {
+    let settings = erp.info.device[guid].settings;
+    if (settings && settings.length) {
+      let settingMap = settings.find((item) => item.setting_type == setting_type);
+      if (settingMap) {
+        return settingMap.setting;
+      } else {
+        return '';
+      }
+    } else {
+      return '';
+    }
+  };
+  check_device_firmware_version_and_update = async (guid) => {
+    return new Promise(async (resolve, reject) => {
+      const self = this;
+      const oldResolve = resolve;
+      const oldReject = reject;
+      try {
+        //get the device gateway
+        let gateway = '';
+        let profile_device = cloneDeep(erp.info.profile.profile_device);
+        profile_device.forEach((item) => {
+          if (item.device == guid) {
+            gateway = item.gateway;
+          }
+        });
+        let ssid = get_device_setting_type(guid, 'Wifi SSID');
+        let password = get_device_setting_type(guid, 'Wifi Password');
+        if (!ssid) {
+          //find the ssid from other device
+          let devices = cloneDeep(erp.info.device);
+          for (let i in devices) {
+            if (devices[i].device_model == 'YO780' || devices[i].device_mode == 'RCU Controller') {
+              let rcu_ssid = get_device_setting_type(devices[i].guid, 'Wifi SSID');
+              let rcu_password = get_device_setting_type(devices[i].guid, 'Wifi Password');
+              if (rcu_ssid) {
+                ssid = rcu_ssid;
+              }
+              if (rcu_password) {
+                password = rcu_password;
+              }
+            }
+          }
+        }
+        const otaInstance = new window.iotWifiOta({
+          guid: guid,
+          gateway: gateway,
+          ssid: ssid,
+          password: password,
+          showUI: true, // 启用UI提示显示
+        });
+        otaInstance.setCallbacks({
+          onProgress: (progress) => {
+            console.log(`进度: ${progress}%`);
+            if (progress > 100) {
+              //reject error
+              reject(_('Abnormal progress Interruption'));
+            }
+          },
+          onError: (error) => {
+            console.log('error', error);
+            // 显示错误信息
+            reject(error);
+          },
+          onSuccess: (message) => {
+            console.log(`成功: ${message}`);
+            // resolve(true);
+          },
+          onRetryPrompt: (error, retryCount, maxRetries, resolve) => {
+            console.log(`失败原因: ${error}`);
+            console.log(`重试次数: ${retryCount}/${maxRetries}`);
+            app.dialog.confirm(
+              _(error) + '\n\n' + _('Would you like to try again?'),
+              async () => {
+                try {
+                  await check_device_firmware_version_and_update(guid);
+                  oldResolve(true);
+                } catch (error) {
+                  oldReject(error);
+                }
+              },
+              () => {
+                oldResolve(true);
+              }
+            );
+          },
+        });
+        await otaInstance.init();
+        const status = otaInstance.getStatus();
+        console.log('WiFi状态:', status.wifiStatus);
+        console.log('需要连接WiFi:', status.needsWifiConnection);
+        console.log('需要固件升级:', status.needsFirmwareUpgrade);
+        //判断是否需要OTA升级
+        if (status.needsFirmwareUpgrade) {
+          //需要OTA升级
+          if (status.needsWifiConnection) {
+            console.log('开始连接WiFi...');
+            await otaInstance.wifiConnect();
+            console.log('WiFi连接成功');
+            console.log('开始固件升级...');
+            await otaInstance.fullUpgrade();
+            console.log('固件升级成功');
+            resolve(true);
+          } else {
+            console.log('WiFi连接成功');
+            console.log('开始固件升级...');
+            await otaInstance.fullUpgrade();
+            console.log('固件升级成功');
+            resolve(true);
+          }
+        } else {
+          //不需要OTA升级
+          resolve(true);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
   const iot_start_repair = async () => {
+    try {
+      await check_device_firmware_version_and_update(guid);
+    } catch (error) {
+      app.dialog.alert(error);
+      return;
+    }
+    //if YO121-AC-R2W
+    if (repair_device_model.includes('YO121-AC-R2W')) {
+      try {
+        await window.peripheral[guid].write([{ service: 'ff80', characteristic: 'ff81', data: '8f130101028900' }]);
+      } catch (error) {
+        app.dialog.alert(erp.get_log_description(error));
+        return;
+      }
+    }
+    //if M360s
+    if (repair_device_model.includes('M360s')) {
+      try {
+        await window.peripheral[guid].write([{ service: 'ff80', characteristic: 'ff81', data: '8f130101029403029404029405029406' }]);
+      } catch (error) {
+        app.dialog.alert(erp.get_log_description(error));
+        return;
+      }
+    }
+    //if YO103
+    if (repair_device_model.includes('YO103')) {
+      try {
+        await window.peripheral[guid].write([{ service: 'ff80', characteristic: 'ff81', data: '8f130101028010' }]);
+      } catch (error) {
+        app.dialog.alert(erp.get_log_description(error));
+        return;
+      }
+    }
+
     let settingList = await initSettingList(guid);
     let sceneList = await initSceneList(guid);
     let groupList = await initGroupList(guid);
+    debugger;
     console.log('groupList', groupList);
     let settingBleList = [];
     settingList.forEach((item) => {
@@ -407,7 +613,7 @@ window.iot_device_repair = async (params) => {
     });
     //先更新setting指令
     let settingUpdateStatus = true;
-    if (settingBleList) {
+    if (settingBleList.length > 0) {
       window.this_dialog = app.dialog.progress(`${_('Restore Device Setting')}`, 0);
       let settingIndex = 1;
       let totalSettingCount = settingBleList.length;
@@ -488,19 +694,65 @@ window.iot_device_repair = async (params) => {
     if (!groupStatus) {
       return;
     }
-    app.dialog.alert(_('Repair Successfully'));
-    return;
+
+    //update the device gateway to the profile
+    try{
+      let profile_email = erp.info.profile.profile_email;
+      if(profile_email){
+        //check if the profile device have the gateway
+        let profile_device = cloneDeep(erp.info.profile.profile_device);
+        let profile_device_map = profile_device.find((item)=>item.device == guid);
+        if(profile_device_map){
+          app.dialog.preloader(`${_('Update Device Gateway...')}`);
+          let gateway = profile_device_map.gateway;
+          if(gateway){
+            let url = `/api/method/appv6.updateProfileDeviceGateway`;
+            await	http2.request(encodeURI(url), {
+              serializer: "json",
+              responseType: "json",
+              method: "POST",
+              data: {
+                device : guid,
+                gateway : `${core_utils_get_mac_address_from_guid(guid)}-${profile_email}`,
+                profile_name : erp.info.profile.name,
+              }
+            });
+            await ha_profile_ready(2);
+            app.dialog.close();
+          }
+        }
+      }
+    }catch(error){
+      app.dialog.close();
+      app.dialog.alert(erp.get_log_description(error));
+    }
+    try {
+      app.dialog.preloader(`${_('Restart Device...')}`);
+      await window.peripheral[guid].write([
+        {
+          service: 'ff80',
+          characteristic: 'ff81',
+          data: '810e',
+        },
+      ]);
+      app.dialog.close();
+      app.dialog.alert(_('Repair Successfully'));
+      return;
+    } catch (error) {
+      app.dialog.close();
+      app.dialog.alert(erp.get_log_description(error));
+    }
   };
 
   try {
     let mesh_status = await check_device_mesh_status(guid);
-    if(mesh_status){
+    if (mesh_status) {
       iot_start_repair();
       return;
     }
     app.dialog.preloader(`${_('Reset Device...')}`);
     await reset_mesh_for_repair(guid);
-    await sleep_for_repair(1000*8);
+    await sleep_for_repair(1000 * 8);
     //start connect
     await window.peripheral[guid].connect();
     app.dialog.close();

@@ -152,21 +152,21 @@ window.iot_mode_setup_radar_mode_detail_init = function (json, mode) {
               }
             });
           })
-          .then(() => {
-            ble.startNotification(
-              p.id,
-              'ff80',
-              'ff82',
-              (rs) => {
-                // console.log('>>>> radar notify data: ' + rs);
+           .then(() => {
+             ble.startNotification(
+               p.id,
+               'ff80',
+               'ff82',
+               (rs) => {
+                 // console.log('>>>> radar notify data: ' + rs);
 
-                this.processNotifyData(rs);
-              },
-              (err) => {
-                console.log('>>>> radar notify error: ' + err);
-              },
-            );
-          })
+                 this.processNotifyData(rs);
+               },
+               (err) => {
+                 console.log('>>>> radar notify error: ' + err);
+               },
+             );
+           })
           .then(() => {
             this.writeCmd('9500');
           })
@@ -434,7 +434,14 @@ window.iot_mode_setup_radar_mode_detail_init = function (json, mode) {
       } catch (err) {
         // ignore
       }
-
+    //   const radarStatusHandler = (data)=>{
+    //     debugger
+    //     if(data.guid === guid){
+    //       this.processNotifyData(data.rs);
+    //     }
+    //   }
+    //   emitter.off('radar/notify',radarStatusHandler);
+    //   emitter.on('radar/notify',radarStatusHandler);
       this.startNotification();
     },
     destroyed() {

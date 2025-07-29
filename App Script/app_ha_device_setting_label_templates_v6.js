@@ -636,6 +636,44 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Button Mode";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_button_mode_auto_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="button_mode" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">wb_iridescent</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if led_data.setting == '' %}
+                        <p class="setting-value text-muted size-12">{{ _('Edge') }}</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Change Rules";
     setting_label_template[setting_label] = `
         <div 
@@ -1123,7 +1161,10 @@ window.initSettingTemplate = ()=>{
                                 <a href="#" class="item-content" style="padding-left: 0px;">
                                     <div class="item-inner" style="padding-right: 0px;">
                                         <div class="item-title">{{ _('Firmware') }}</div>
-                                        <div class="item-after">{{ firmware if firmware != 'undefined' else '----' }}</div>
+                                        <div class="item-after">
+                                        <span class="read-firmware-box-text">{{ firmware if firmware != 'undefined' else '----' }}</span>
+                                        <i class="material-icons" ref="{{ device }}" style="font-size:20px;margin-left: 10px;" func="iot_device_update_firmware_by_class">refresh</i>
+                                        </div>
                                     </div>
                                 </a>
                             </li>
@@ -1196,7 +1237,7 @@ window.initSettingTemplate = ()=>{
                 <div class="row">
                     <div class="col-auto">
                         <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
-                            <i class="material-icons">restart_alt</i>
+                            <i class="material-icons">build</i>
                         </div>
                     </div>
                     <div class="col align-self-center no-padding-left">
@@ -1205,6 +1246,35 @@ window.initSettingTemplate = ()=>{
                     <div class="col-auto">
                         <a 
                         func="iot_device_repair"
+                        profile-device-name="{{ profile_device_name }}"
+                        profile-subdevice-name="{{ profile_subdevice_name }}"
+                        ref="{{ device }}" 
+                        href="#"
+                        class="button button-fill button-44 color-theme button-raised"
+                    >
+                        <i class="material-icons">navigate_next</i>
+                    </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Increase Mesh Power";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">restart_alt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                        func="iot_device_ota_test"
                         profile-device-name="{{ profile_device_name }}"
                         profile-subdevice-name="{{ profile_subdevice_name }}"
                         ref="{{ device }}" 
@@ -1285,6 +1355,35 @@ window.initSettingTemplate = ()=>{
                     <div class="col-auto">
                         <a 
                         func="iot_device_update_mqtts"
+                        profile-device-name="{{ profile_device_name }}"
+                        profile-subdevice-name="{{ profile_subdevice_name }}"
+                        ref="{{ device }}" 
+                        href="#"
+                        class="button button-fill button-44 color-theme button-raised"
+                    >
+                        <i class="material-icons">navigate_next</i>
+                    </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Update Profile Email";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">restart_alt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                        func="batch_update_email_for_mqtt"
                         profile-device-name="{{ profile_device_name }}"
                         profile-subdevice-name="{{ profile_subdevice_name }}"
                         ref="{{ device }}" 
@@ -1927,7 +2026,7 @@ window.initSettingTemplate = ()=>{
                         <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
                     </div>
                     <div class="col-auto">
-                        <a href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_CORE_Mode_Setup_Radar_Detection_Detail_V5/Profile Subdevice/{{ profile_subdevice_name }}/" class="button button-fill button-44 color-theme button-raised">
+                        <a href="/mobile-app/radar-detection?guid={{ device }}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>
@@ -2023,7 +2122,7 @@ window.initSettingTemplate = ()=>{
                         <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
                     </div>
                     <div class="col-auto">
-                        <a href="/frappe/form/{{ _(self_setting_data.setting_type)|replace('/', '%2F') }}/APP_CORE_Mode_Setup_Radar_Mode_Detail_V5/Profile Subdevice/{{ profile_subdevice_name }}/mode=normal/" class="button button-fill button-44 color-theme button-raised">
+                        <a href="/mobile-app/radar-normal-mode-config?guid={{ device }}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>
@@ -2470,7 +2569,7 @@ window.initSettingTemplate = ()=>{
     setting_label_template[setting_label] = `
         <div class="auto-init card margin-bottom-half mx-0 my-3" 
         ref="{{ device }}" 
-        init-func="iot_mode_setup_phase_cut_mode_init" 
+        init-func="iot_mode_setup_phase_cut_mode_init_new" 
         dependencies="{{self_setting_data.dependencies}}"
         setting-type="{{ self_setting_data.setting_type }}"
         setting-name="{{ self_setting_data.name }}"
@@ -2885,6 +2984,41 @@ window.initSettingTemplate = ()=>{
                     </div>
                     <div class="col-auto">
                         <a id="action" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Mesh Manager";
+    setting_label_template[setting_label] = `
+        <div class="auto-init card margin-bottom-half mx-0 my-3" 
+        ref="{{ device }}" 
+        dependencies="{{self_setting_data.dependencies}}"
+        setting-type="{{ self_setting_data.setting_type }}"
+        setting-name="{{ self_setting_data.name }}"
+        setting-value="{{ self_setting_data.setting }}"
+        button-group="{{ device_button_group }}"
+        slot-index="{{slot_index}}"
+        >
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">hub</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting == "" %}
+                        <p class="setting-value text-muted size-12"></p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{ _(self_setting_data.setting) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a href="/mobile-app/mesh-manager?guid={{device}}" class="button button-fill button-44 color-theme button-raised">
                             <i class="material-icons">navigate_next</i>
                         </a>
                     </div>

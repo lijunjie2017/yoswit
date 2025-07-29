@@ -191,11 +191,11 @@
     let keyword = '';
 
     function getTitle(item) {
-      const flat = item.flat;
+      let flat = item.flat;
       const profile_name = tran(item.profile_name);
       if (!flat) {
         return profile_name;
-      } else if (flat === profile_name) {
+      } else if (flat.replace(/^0+/, '') === profile_name) {
         return profile_name;
       } else {
         return `${flat} - ${profile_name}`;

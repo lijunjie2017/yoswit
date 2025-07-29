@@ -336,7 +336,17 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       let ssid_password_data = '932100' + value.length.toString(16).pad('0000') + value.convertToHex();
       data = ssid_password_data;
     } else if (type == 'Email Address') {
-      let email_data = '932200' + value.toLowerCase().length.toString(16).pad('0000') + value.toLowerCase().convertToHex();
+      //in case, if have the Profile Email,then should be get the Profile Email
+      let email_data = '';
+      let profile_email = '';
+      if(isset(erp.info.profile.profile_email) && erp.info.profile.profile_email){
+        profile_email = erp.info.profile.profile_email;
+      }
+      if(profile_email){
+        email_data = '932200' + profile_email.toLowerCase().length.toString(16).pad('0000') + profile_email.toLowerCase().convertToHex();
+      }else{
+        email_data = '932200' + value.toLowerCase().length.toString(16).pad('0000') + value.toLowerCase().convertToHex();
+      }
       data = email_data;
     } else if (type == 'Server Port') {
       let port_data = '9301000002' + (value * 1).toString(16).pad('0000');
@@ -551,7 +561,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
   };
 
   const get_x_y_command = () => {
-    //should find the x1,x2,y1,y2,z1,z2,then return the command
+    //should find the x1,x2,y1,y2,then return the command
     let target_list = ['X1', 'X2', 'Y1', 'Y2'];
     let device_settings = erp.info.device[oldGuid].settings;
     let x_y_map = {
@@ -970,7 +980,7 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
   //change ble name
   const get_change_ble_name_command = (value) => {
     let thisName = cloneDeep(value);
-    let thisFlatName = erp.info.profile.flat;
+    let thisFlatName = erp.info.profile.flat?erp.info.profile.flat.replace(/^0+/, ''):'';
     let oldFlatName = '';
     let nameList = thisName.split('/');
     oldFlatName = nameList[1];
@@ -982,6 +992,22 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     return data;
   }
 
+  //volume_upper
+  const get_volume_upper_command = (value) => {
+    let device_settings = erp.info.device[oldGuid].settings;
+    let volume_upper = device_settings.find((e) => e.setting_type == 'volume_upper');
+    let volume_upper_tv = device_settings.find((e) => e.setting_type == 'volume_upper_tv');
+    let data = '';
+    if(volume_upper){
+      let volume_upper_value = volume_upper.setting;
+      let volume_upper_tv_value = 100;
+      if(volume_upper_tv){
+        volume_upper_tv_value = volume_upper_tv.setting;
+      }
+      data = `980400000400${parseInt(volume_upper_tv_value).toString(16).pad("00")}00${parseInt(volume_upper_value).toString(16).pad("00")}`;
+    }
+    return data;
+  }
   switch (type) {
     case 'Set Time':
       let command = get_set_time_command();
@@ -1203,6 +1229,20 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
     case 'Ble Name':
       commandList.push({
         command: get_change_ble_name_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'volume_upper':
+      commandList.push({
+        command: get_volume_upper_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'volume_upper_tv':
+      commandList.push({
+        command: get_volume_upper_command(value),
         title: type,
         value: value,
       });

@@ -96,6 +96,10 @@ window.ble_button_group_icon_map = ()=>{
         "on_icon":"newss_entrance_bath_room_on",
         "off_icon":"newss_entrance_bath_room_off",
       },
+      "SCENE VIRTUAL PANTRYROOM":{
+        "on_icon":"newss_pantry_room_on",
+        "off_icon":"newss_pantry_room_off",
+      },
     }
     return obj;
 }

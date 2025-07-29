@@ -24,6 +24,7 @@
                   v-for="(item,index) in stepList"
                   :key="item.id"
                   :class="item.isActive?'button-active button':'button'"
+                  v-on:click="toTab(item.id)"
                   v-if="item.isShow"
                 >
                   {{_('Step')}} {{item.name}}
@@ -370,7 +371,9 @@
     console.log('filter_value', filter_value);
     window.retryUpdateTriggerButton = () => {
       console.log('retryUpdateTriggerButton');
-      vueApp.$retryUpdate();
+      if (vueApp && vueApp.$retryUpdate) {
+        vueApp.$retryUpdate();
+      }
     };
     console.log('title', title);
     $update();
@@ -424,6 +427,13 @@
           currentRcuGuid: '',
           emmitStatus: false,
           retryCount: 0,
+          maxRetryCount: 5, // 新增：最大重试次数限制
+          bleCommandRetryCount: 0, // 新增：BLE命令重试次数限制
+          identifyListenerFun: null, // 新增：预定义监听器函数
+          _getWifiMacAddressFun: null, // 新增：预定义WiFi MAC监听器函数
+          gatewayListenerFun: null, // 新增：预定义gateway监听器函数
+          identifyTimer: null, // 新增：identify定时器引用
+          isDisconnectingDevices: false, // 新增：设备断开状态标志
           changeTitle: '',
           updateSceneStatus: isset(update_scene) ? update_scene : false, //if true,should update the scene
           replacePassword: '000000',
@@ -447,15 +457,13 @@
           await this.getRcuWifiInfo();
           console.log('erp.wifiInfo', erp.wifiInfo);
           // await this.initRolePermission();
-          emitter.off('gateway/sync');
-          emitter.on('gateway/sync', (data) => {
-            if (data.code == 1) {
-              app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
-                window.globalUpdate = true;
-                mainView.router.back();
-              });
-            }
-          });
+          
+          // 初始化监听器函数
+          this.initializeListeners();
+          
+          // 注册gateway/sync监听器
+          emitter.off('gateway/sync', this.gatewayListenerFun);
+          emitter.on('gateway/sync', this.gatewayListenerFun);
         },
         methods: {
           toTab(id) {
@@ -636,6 +644,7 @@
               }
             } else {
               thisGuid = guid;
+              this.oldRcuGuid = thisGuid;
               //if guid is not set,should find the old scene,
               let scenes = cloneDeep(erp.info.scene);
               for (let scene in scenes) {
@@ -644,6 +653,9 @@
                 let scene_device_location = scene_item.scene_device_location || [];
                 let scene_location_map = scene_device_location.find((item) => item.device == thisGuid);
                 if (scene_location_map) {
+                  this.sceneList.push(scenes[scene]);
+                }
+                if((this.thisModel.includes('YO121-AC') || this.thisModel.includes('M360s') || this.thisModel.includes('YO103')) && scenes[scene].action.includes(thisGuid)){
                   this.sceneList.push(scenes[scene]);
                 }
               }
@@ -715,12 +727,12 @@
             this.$refs.childRef.syncGateways();
           },
           startFirmwareUpgrade() {
-            //this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
-            if(users.current.includes('grace.zhao@yoswit.com') || users.current.includes('takyeyu@gmail.com') || users.current.includes('david.lam@yoswit.com') || users.current.includes('jacob.wong@yoswit.local')){
-              this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
-            }else{ 
-              this.toTab(5);
-            }
+            this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
+            // if(users.current.includes('grace.zhao@yoswit.com') || users.current.includes('takyeyu@gmail.com') || users.current.includes('david.lam@yoswit.com') || users.current.includes('jacob.wong@yoswit.local')){
+            //   this.$refs.childRefForFirmwareUpgrade.startUpdateFirmware();
+            // }else{ 
+            //   this.toTab(5);
+            // }
           },
           initGatewayConfig() {
             let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
@@ -838,6 +850,65 @@
                 app.dialog.alert(_(erp.get_log_description(error)));
               }
               return;
+            }else if(this.device_map_model.includes('790')){
+              let data = `980900000101`; // tv
+              if(item.flash){
+                data = `980900000100`; // phone
+              }
+              try{
+                await peripheral[guid].doMusicPlayer([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    command: data,
+                  },
+                ]);
+                app.dialog.close();
+              }catch(error){
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+              return;
+            }else if(this.device_map_model.includes('103')){
+              let data = '972102016b6120312030300d';
+              if (item.flash) {
+                data = '972102016b6120312030310d';
+              }
+              try{
+                await peripheral[guid].doHdmiCec([
+                  {
+                    gang: 1,
+                    command: data,
+                  },
+                ]);
+                app.dialog.close();
+              }catch(error){
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            }else if(this.device_map_model.includes('360')){
+              //command
+              const this_gang = 44;
+              let data = '9406000001';
+              let speed_vaule = 25;
+              if (item.flash) {
+                speed_vaule = 27;
+              }
+              data = data + parseInt(speed_vaule).toString(16).pad('00');
+              try {
+                await peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: data,
+                  },
+                ]);
+                app.dialog.close();
+              } catch (error) {
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+              return;
             } else {
               //command
               let data = '8101';
@@ -884,14 +955,7 @@
                 resolve();
               } catch (error) {
                 clearTimeout(connect_timer);
-                while (true) {
-                  try {
-                    const dialog = app.dialog.close();
-                    if (!dialog) {
-                      break;
-                    }
-                  } catch (err) {}
-                }
+                this.clearAllDialogs();
                 if (error == 7200) {
                   //find the profile password ,this.replacePassword
                   try{
@@ -958,7 +1022,7 @@
                   let nameList = value.split('/');
                   let newName = nameList[0];
                   let oldName = nameList[1];
-                  newName = newName.replace(`${oldName}`, `${erp.info.profile.flat}`);
+                  newName = newName.replace(`${oldName}`, `${erp.info.profile.flat?erp.info.profile.flat.replace(/^0+/, ''):''}`);
                   bleNameMap.setting = `${newName}/${erp.info.profile.flat}`;
                 }
               } catch (error) {
@@ -981,6 +1045,10 @@
               //console.log("list",list);
               thisList = thisList.concat(list);
             });
+            //if have the profile email,then should be add the profile email to the settingList
+            if(isset(erp.info.profile.profile_email) && erp.info.profile.profile_email){
+              this.gateway = `${core_utils_get_mac_address_from_guid(this.targetGuid)}-${erp.info.profile.profile_email}`;
+            }
             //add the change name fun
             if (this.thisModel.includes('YO790')) {
               thisList.push({
@@ -996,23 +1064,24 @@
                   app.dialog.preloader(_('Connecting...'));
                   await window.peripheral[this.targetGuid].connect();
                   app.dialog.close();
+                  
+                  ble.requestMtu(
+                    window.peripheral[this.targetGuid].prop.id,
+                    512,
+                    () => {
+                      console.log('request mtu success');
+                    },
+                    (error) => {
+                      if (error) {
+                        app.dialog.alert(_(erp.get_log_description(error)));
+                      }
+                    }
+                  );
                 } catch (error) {
                   app.dialog.close();
                   app.dialog.alert(_(erp.get_log_description(error)));
                   return;
                 }
-                ble.requestMtu(
-                  window.peripheral[this.targetGuid].prop.id,
-                  512,
-                  () => {
-                    console.log('request mtu success');
-                  },
-                  (error) => {
-                    if (error) {
-                      app.dialog.alert(_(erp.get_log_description(error)));
-                    }
-                  }
-                );
               }
             }
             //select the device pairing
@@ -1153,33 +1222,65 @@
                 console.log('err', err);
                 toast.close();
                 app.dialog.alert(_(erp.get_log_description(err)));
+                reject(err); // 修复Promise悬挂问题
+                return;
               }
-              this._getWifiMacAddressFun = (data) => {
-                console.log('data', data);
-                let rs = data.rs;
-                if (data.guid == this.targetGuid) {
-                  this.sta_mac_address = rs.substring(10, 22);
-                  this.ap_mac_address = rs.substring(22, 34);
-                  this.lan_mac_address = rs.substring(46, 58);
-                }
-              };
+              // 定义WiFi MAC地址监听器函数（如果尚未定义）
+              if (!this._getWifiMacAddressFun) {
+                this._getWifiMacAddressFun = (data) => {
+                  console.log('data', data);
+                  let rs = data.rs;
+                  if (data.guid == this.targetGuid) {
+                    this.sta_mac_address = rs.substring(10, 22);
+                    this.ap_mac_address = rs.substring(22, 34);
+                    this.lan_mac_address = rs.substring(46, 58);
+                    
+                    // 获取到数据后立即清除监听器，避免重复处理
+                    emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
+                    this._getWifiMacAddressFun = null;
+                  }
+                };
+              }
+              
               emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
               emitter.on(`wifi_mac_address`, this._getWifiMacAddressFun);
+              
               setTimeout(async () => {
-                await window.peripheral[this.targetGuid].write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: '932d',
-                  },
-                ]);
-                toast.close();
-                resolve();
+                try {
+                  await window.peripheral[this.targetGuid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: '932d',
+                    },
+                  ]);
+                  toast.close();
+                  
+                  // 设置超时清理机制，防止监听器永久存在
+                  setTimeout(() => {
+                    if (this._getWifiMacAddressFun) {
+                      emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
+                      this._getWifiMacAddressFun = null;
+                    }
+                  }, 10000); // 10秒后强制清除
+                  
+                  resolve();
+                } catch (writeError) {
+                  toast.close();
+                  // 写入失败时也要清除监听器
+                  if (this._getWifiMacAddressFun) {
+                    emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
+                    this._getWifiMacAddressFun = null;
+                  }
+                  reject(writeError);
+                }
               }, 200);
             });
           },
           async updateBleCommand() {
-            // app.dialog.preloader(_('Connecting...'));
+            // 清理之前可能存在的toast
+            this.clearAllToasts();
+            
             this.settingToast = app.toast.create({
               text: _('Updating...'),
               position: 'center',
@@ -1216,6 +1317,7 @@
                 console.log('nextStepStatus', nextStepStatus);
                 if (nextStepStatus) {
                   this.settingToast.close();
+                  this.bleCommandRetryCount = 0; // 成功后重置重试计数
                   await this.updateSceneDevice();
                   // await this.updateDeviceSettingInErp();
                   app.dialog.close();
@@ -1249,16 +1351,26 @@
                 this.settingToast.close();
                 app.dialog.close();
                 //if have error,should alert this error and tip
-                app.dialog.confirm(
-                  `${_(erp.get_log_description(error))} ,${_('retry?')}`,
-                  () => {
-                    this.updateBleCommand();
-                  },
-                  () => {
-                    this.toTab(3);
-                    this.initDeviceNetwork();
-                  }
-                );
+                this.bleCommandRetryCount = this.bleCommandRetryCount || 0;
+                if (this.bleCommandRetryCount < 3) {
+                  app.dialog.confirm(
+                    `${_(erp.get_log_description(error))} ,${_('retry?')} (${3 - this.bleCommandRetryCount} ${_('attempts remaining')})`,
+                    () => {
+                      this.bleCommandRetryCount++;
+                      this.updateBleCommand();
+                    },
+                    () => {
+                      this.bleCommandRetryCount = 0;
+                      this.toTab(3);
+                      this.initDeviceNetwork();
+                    }
+                  );
+                } else {
+                  this.bleCommandRetryCount = 0;
+                  app.dialog.alert(_('BLE command retry limit reached, please check device connection'));
+                  this.toTab(3);
+                  this.initDeviceNetwork();
+                }
                 break;
                 //app.dialog.alert(_(erp.get_log_description(error)));
               }
@@ -1392,10 +1504,15 @@
               try {
                 for (let i in this.sceneList) {
                   let thisSceneMap = null;
-                  for (let j in scenes) {
-                    if (scenes[j].copy_from == this.sceneList[i].name) {
-                      thisSceneMap = scenes[j];
-                      break;
+                  //if have been exit guid
+                  if(guid){
+                    thisSceneMap = this.sceneList[i]
+                  }else{
+                    for (let j in scenes) {
+                      if (scenes[j].copy_from == this.sceneList[i].name) {
+                        thisSceneMap = scenes[j];
+                        break;
+                      }
                     }
                   }
                   if (!thisSceneMap) continue;
@@ -1514,6 +1631,16 @@
                     }
                   }
                   this.sceneList[i].writeStatus = true;
+                }
+                if(guid){
+                  await http2.request(`/api/resource/Profile/${erp.info.profile.name}`, {
+                    method: 'PUT',
+                    serializer: 'json',
+                    debug: true,
+                    data: {
+                      'location': '',
+                    },
+                  });
                 }
                 resolve(1);
               } catch (error) {
@@ -1866,6 +1993,12 @@
                     guid: rcuGuid,
                     command: actionMap[rcuGuid]['trigger_2'].toLocaleLowerCase(),
                   });
+                };
+                if(isset(actionMap[`second_action_${rcuGuid}`])){
+                  commandList.push({
+                    guid: rcuGuid,
+                    command: actionMap[`second_action_${rcuGuid}`].toLocaleLowerCase(),
+                  });
                 }
               }
               resolve(commandList);
@@ -1905,6 +2038,36 @@
                   let command = this.replaceMacInInstruction(item, oldMac, newMac);
                   this.updateSceneTriggerDeviceMap[thisGuid]['commandList'].push(command);
                 });
+              }
+              //if have the dnd and clean
+              if(scenesMap.title.includes('Do Not Disturb') || scenesMap.title.includes('Clean Up')){
+                //get the m86-dp device
+                let profile_device = cloneDeep(erp.info.profile.profile_device);
+                let m86_dp_device = profile_device.find((item) => item.device_model == 'M86-DP');
+                if(m86_dp_device){
+                  //get the m86-dp device id
+                  let m86_dp_device_id = m86_dp_device.device;
+                  if (!isset(this.updateSceneTriggerDeviceMap[m86_dp_device_id])) {
+                    this.updateSceneTriggerDeviceMap[m86_dp_device_id] = {};
+                  }
+                  if (!isset(this.updateSceneTriggerDeviceMap[m86_dp_device_id]['commandList'])) {
+                    this.updateSceneTriggerDeviceMap[m86_dp_device_id]['commandList'] = [];
+                  }
+                  let uiConfiguration = null; 
+                  try{
+                    uiConfiguration = JSON.parse(scenesMap.ui_configuration);
+                  }catch(e){
+                    uiConfiguration = null;
+                  }
+                  if(uiConfiguration){
+                    let keyList = Object.keys(uiConfiguration);
+                    keyList.forEach((item)=>{
+                      if(uiConfiguration[item] && typeof uiConfiguration[item] === 'string' && uiConfiguration[item].includes('8f32')){
+                        this.updateSceneTriggerDeviceMap[m86_dp_device_id]['commandList'].push(uiConfiguration[item].toLocaleLowerCase());
+                      }
+                    })
+                  }
+                }
               }
               resolve(1);
             });
@@ -2070,18 +2233,25 @@
                 }
               }
               let dp_command = '';
-              if (isset(uiConfiguration) && isset(uiConfiguration[guid ? guid : this.rawGuid])) {
-                dp_command = uiConfiguration[guid ? guid : this.rawGuid];
+              if (isset(uiConfiguration)) {
+                let keyList = Object.keys(uiConfiguration);
+                keyList.forEach((item)=>{
+                  if(uiConfiguration[item] && typeof uiConfiguration[item] === 'string' && uiConfiguration[item].includes('8f32')){
+                    dp_command = uiConfiguration[item].toLocaleLowerCase();
+                  }
+                })
                 dp_command = this.replaceMacInInstruction(
                   dp_command,
                   core_utils_get_mac_address_from_guid(this.oldRcuGuid, true),
                   core_utils_get_mac_address_from_guid(rcuGuid, true)
                 );
-                bleList.push({
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: dp_command.toLocaleLowerCase(),
-                });
+                if(dp_command && this.thisModel == 'M86-DP'){
+                  bleList.push({
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: dp_command.toLocaleLowerCase(),
+                  });
+                }
               }
               resolve(bleList);
             });
@@ -2643,15 +2813,30 @@
             }
             let newMac = core_utils_get_mac_address_from_guid(this.targetGuid, true);
             try {
+              //fixed if M86-DP,should get the scene from ui_configuration
+              let postData = {
+                profile: erp.info.profile.name,
+                device: this.targetGuid,
+              };
+              if(this.thisModel == 'M86-DP' && !guid){
+                postData = {
+                  profile: erp.info.profile.name,
+                  device: this.rawGuid,
+                  need_action: '1'
+                }
+              }else{
+                postData = {
+                  profile: erp.info.profile.name,
+                  device: guid,
+                  need_action: '1'
+                }
+              }
               let listMap = await http2.request(`/api/method/appv6.getSceneListWithDevice`, {
                 method: 'POST',
                 serializer: 'json',
                 responseType: 'json',
                 debug: true,
-                data: {
-                  profile: erp.info.profile.name,
-                  device: this.targetGuid,
-                },
+                data: postData,
               });
               list = listMap.data.data;
               console.log('list', list);
@@ -3006,6 +3191,8 @@
                       }catch(errors){
                         oldReject(errors);
                       }
+                    }else if(operation_log == ""){
+                      oldResolve(true);
                     }else{
                       reject(response.data._server_messages.substring(0,300)+'...');
                     }
@@ -3250,9 +3437,67 @@
             });
           },
           async updateErpData() {
+            // 清理之前可能存在的dialog
+            this.clearAllDialogs();
+            const sendRemoveCommand = ()=>{
+              return new Promise(async(resolve, reject)=>{
+                let oldResolve = resolve;
+                let oldReject = reject;
+                //check the mesh device is be replace and should send the command to the rcu and remove it
+                if((this.thisModel.includes('M146') || this.thisModel.includes('M86')) && guid && guid != ''){
+                  //send the command to the rcu and remove it
+                  //find the rcu device
+                  let rcu_guid = '';
+                  let profile_device = cloneDeep(erp.info.profile.profile_device);
+                  profile_device.forEach((item)=>{
+                    if(item.device_model == 'YO780'){
+                      rcu_guid = item.device;
+                    }
+                  })
+                  if(rcu_guid){
+                    //alert the user
+                    //send the command to the rcu and remove it
+                    let rcu_command = `02ffffffffffff11${core_utils_get_mac_address_from_guid(guid,true)}`;
+                    try{
+                      app.dialog.close();
+                      app.dialog.preloader(_('Sending command to RCU...'));
+                      await peripheral[rcu_guid].write([{
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: rcu_command,
+                      }]);
+                      app.dialog.close();
+                      resolve();
+                    }catch(error){
+                      app.dialog.close();
+                      if(error != 7200){
+                        app.dialog.confirm(_('Please move closer to the RCU to facilitate the removal of unused devices from the mesh.'), async()=>{
+                          await sendRemoveCommand();
+                          oldResolve();
+                        },()=>{
+                          //do nothing
+                          oldResolve(error);
+                        })
+                      }else{
+                        oldResolve();
+                      }
+                    }
+                  }
+                }else{
+                  resolve();
+                }
+              })
+            }
+            try{
+              await sendRemoveCommand();
+              debugger
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
             app.dialog.preloader(_('Updating, it may take about 1-2 minutes.'));
             let mac_address = core_utils_get_mac_address_from_guid(this.targetGuid);
-            let this_firmware = peripheral[this.targetGuid].getProp().firmware;
+            let this_firmware = peripheral[this.targetGuid].prop.firmware;
             //let device_hex_model = peripheral[guid].getProp().hexModel.toUpperCase();
             let model_name = this.device_map_model;
             let mode_name = this.device_map_mode;
@@ -3307,25 +3552,16 @@
                 });
               }
               //check if the profile is repalce
-              await http2.request(`/api/method/clear_profile_copy_from`, {
-                method: 'POST',
-                serializer: 'json',
-                debug: true,
-                data: {
-                  'profile': erp.info.profile.name,
-                },
-              });
+              // await http2.request(`/api/method/clear_profile_copy_from`, {
+              //   method: 'POST',
+              //   serializer: 'json',
+              //   debug: true,
+              //   data: {
+              //     'profile': erp.info.profile.name,
+              //   },
+              // });
               await ha_profile_ready();
-              while (true) {
-                try {
-                  const dialog = app.dialog.close();
-                  if (!dialog) {
-                    break;
-                  }
-                } catch (e) {
-                  break;
-                }
-              }
+              this.clearAllDialogs();
               app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
                 window.globalUpdate = true;
                 if(!this.updateSceneStatus){
@@ -3338,16 +3574,7 @@
                 mainView.router.back();
               });
             } catch (error) {
-              while (true) {
-                try {
-                  const dialog = app.dialog.close();
-                  if (!dialog) {
-                    break;
-                  }
-                } catch (e) {
-                  break;
-                }
-              }
+              this.clearAllDialogs();
               app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
@@ -3659,49 +3886,94 @@
           },
           async iotSetMeshIdentify() {
             console.log('iotSetMeshIdentify');
+            
+            // 检查重试次数限制
+            if (this.retryCount >= this.maxRetryCount) {
+              this.clearAllDialogs();
+              app.dialog.alert(_('Maximum retry attempts reached, please try again later or contact technical support'));
+              return;
+            }
+            
+            // 清除之前的定时器、监听器和toast
+            this.clearAllTimers();
+            this.clearEventListeners();
+            this.clearAllToasts();
+            
             //should disconnect all the devices
             try {
-              app.dialog.preloader(_('Disconnecting other devices.'));
-              for (let device in window.peripheral) {
-                if (window.peripheral[device].getProp().connected) {
-                  try{
-                    await window.peripheral[device].disconnect();
-                  }catch(error){
-                    console.log('disconnect error=' + error);
+              // 避免重复显示断开连接的 preloader
+              if (!this.isDisconnectingDevices) {
+                this.isDisconnectingDevices = true;
+                app.dialog.preloader(_('Disconnecting other devices.'));
+                
+                // 添加超时保护，确保断开连接不会无限等待
+                const disconnectPromises = [];
+                for (let device in window.peripheral) {
+                  if (window.peripheral[device].getProp().connected) {
+                    const disconnectPromise = Promise.race([
+                      window.peripheral[device].disconnect(),
+                      new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)) // 5秒超时
+                    ]).catch(error => {
+                      console.log('disconnect error for device ' + device + ':', error);
+                      return 'error'; // 返回错误标识而不是抛出异常
+                    });
+                    disconnectPromises.push(disconnectPromise);
                   }
                 }
+                
+                // 等待所有断开连接完成或超时
+                await Promise.all(disconnectPromises);
+                
+                // 重置状态并确保关闭 preloader
+                this.isDisconnectingDevices = false;
+                this.clearAllDialogs();
+              } else {
+                console.log('Already disconnecting devices, skipping...');
+                // 如果已经在断开连接过程中，等待一下再继续
+                await new Promise(resolve => setTimeout(resolve, 1000));
               }
-              app.dialog.close();
             } catch (error) {
-              app.dialog.close();
-              console.log('disconnect error=' + error);
+              console.log('disconnect process error=' + error);
+              // 发生任何错误都要重置状态并确保关闭 preloader
+              this.isDisconnectingDevices = false;
+              this.clearAllDialogs();
             }
+            
             //set timer
             erp.replaceIdentifyTimer = setTimeout(async () => {
-              app.dialog.close();
+              this.clearAllDialogs();
               app.dialog.confirm(
-                _('Mesh failed, would you like to reset and try again?'),
+                _('Mesh timeout failed, reset and retry?') + ' (' + _('Remaining attempts') + ': ' + (this.maxRetryCount - this.retryCount) + ')',
                 async () => {
                   try {
-                    if (this.identifyListenerFun) {
-                      console.log('off mesh/identify');
-                      emitter.off('mesh/identify', this.identifyListenerFun);
-                    }
+                    // 在重试前清除所有定时器
+                    this.clearAllTimers();
+                    this.clearEventListeners();
                     this.initMeshNetwork();
-                  } catch (error) {}
-                  this.iotSetMeshIdentify();
+                    this.retryCount++;
+                    this.iotSetMeshIdentify();
+                  } catch (error) {
+                    this.clearAllDialogs();
+                    app.dialog.alert(_(erp.get_log_description(error)));
+                  }
                 },
-                () => {}
+                () => {
+                  this.retryCount = 0; // 重置重试计数
+                  // 取消重试时也要清除定时器
+                  this.clearAllTimers();
+                }
               );
             }, 150000);
+            
             try {
               setmesh_produce_timer = null;
             } catch (error) {
-              if (erp.replaceIdentifyTimer) {
-                clearTimeout(erp.replaceIdentifyTimer);
-              }
+              this.clearAllTimers();
+              this.clearAllDialogs();
               app.dialog.alert(_(erp.get_log_description(error)));
+              return;
             }
+            
             try {
               app.dialog.preloader(_('Restarting, this will take about 2 minutes.'));
               await window.peripheral[this.targetGuid].write([
@@ -3713,135 +3985,192 @@
               ]);
               
               window.peripheral[this.targetGuid].getProp().password = '000000';
-              await this.sleep(30000);
+              await this.sleep(15000);
               app.dialog.close();
               app.dialog.preloader(_('Identifying, this will take about 2 minute.'));
               await window.peripheral[this.targetGuid].identify();
               this.identifyNotify();
-              if(this.identifyTimer){
-                clearTimeout(this.identifyTimer);
-              }
-              // await this.iotSetMeshProvisioning();
             } catch (error) {
-              while (true) {
-                try {
-                  const dialog = app.dialog.close();
-                  if (!dialog) {
-                    break;
-                  }
-                } catch (e) {
-                  break;
-                }
-              }
-              if (erp.replaceIdentifyTimer) {
-                clearTimeout(erp.replaceIdentifyTimer);
-              }
+              this.clearAllDialogs();
+              this.clearAllTimers();
+              
               console.log('iotSetMeshIdentify error=' + error);
-              let text = _('Identifing failed, retry?');
+              let text = _('Identification failed, retry?') + ' (' + _('Remaining attempts') + ': ' + (this.maxRetryCount - this.retryCount) + ')';
+              
               try {
                 if (error.includes('The bearer is closed.') && this.retryCount > 0) {
                   text = _(
-                    'Mesh failed, You need to disconnect Bluetooth in your phone settings and then turn it back on, and then try restarting the app and then retry, confirm to continue?'
+                    'Mesh failed, you need to disconnect Bluetooth in phone settings, then turn it back on, try restarting the app and retry, confirm to continue?'
                   );
                 }
               } catch (err) {
-                app.dialog.close();
                 if (err == 7200) {
-                  text = _('Can not connect to the device, the password is incorrect, please reset the password and try again.');
+                  text = _('Unable to connect to device, incorrect password, please reset password and retry.');
                 }
                 console.log(typeof error);
               }
-              app.dialog.confirm(
-                text,
-                async () => {
-                  try {
-                    this.retryCount++;
-                    if (this.identifyListenerFun) {
-                      console.log('off mesh/identify');
-                      emitter.off('mesh/identify', this.identifyListenerFun);
-                    }
-                    this.initMeshNetwork();
-                  } catch (error) {}
-                  this.iotSetMeshIdentify();
-                },
-                () => {}
-              );
-            }
-          },
-          async identifyNotify() {
-            this.emmitStatus = false;
-            this.retryCount = 0;
-            this.identifyListenerFun = (rs) => {
-              //defind timmer
-              this.identifyTimer = setTimeout(() => {
-                // this.identifyTimer = null;
-                app.dialog.alert(_('Identifing failed, please retry!'));
-              }, 4000);
-              console.log('identifyListenerFun=', rs);
-              debugger
-              if (rs.code == 200) {
-                if (this.identifyTimer) {
-                  clearTimeout(this.identifyTimer);
-                }
-                if (!this.emmitStatus) {
-                  while (true) {
-                    try {
-                      const dialog = app.dialog.close();
-                      if (!dialog) {
-                        break;
-                      }
-                    } catch (e) {
-                      break;
-                    }
-                  }
-                  this.iotSetMeshProvisioning();
-                }
-                this.emmitStatus = true;
-              } else if (rs.code == 7300) {
-                if (this.identifyTimer) {
-                  clearTimeout(this.identifyTimer);
-                }
-                while(true){
-                  try{
-                    const dialog = app.dialog.close();
-                  }catch(error){
-                    break;
-                  }
-                }
+              
+              if (this.retryCount < this.maxRetryCount) {
                 app.dialog.confirm(
-                  _('Identifing failed, retry?'),
+                  text,
                   async () => {
                     try {
-                      if (this.identifyListenerFun) {
-                        console.log('off mesh/identify');
-                        emitter.off('mesh/identify', this.identifyListenerFun);
-                      }
-                    } catch (error) {}
-                    this.iotSetMeshIdentify();
+                      this.retryCount++;
+                      // 在重试前清除所有定时器
+                      this.clearAllTimers();
+                      this.clearEventListeners();
+                      this.initMeshNetwork();
+                      this.iotSetMeshIdentify();
+                    } catch (error) {
+                      this.clearAllDialogs();
+                      app.dialog.alert(_(erp.get_log_description(error)));
+                    }
                   },
-                  () => {}
+                  () => {
+                    this.retryCount = 0; // 重置重试计数
+                    // 取消重试时也要清除定时器
+                    this.clearAllTimers();
+                  }
                 );
+              } else {
+                app.dialog.alert(_('Maximum retry attempts reached, please try again later or contact technical support'));
+                this.retryCount = 0;
+                // 达到最大重试次数时清除所有资源
+                this.clearAllTimers();
               }
-            };
-            if (this.identifyListenerFun) {
-              console.log('off mesh/identify');
-              emitter.off('mesh/identify', this.identifyListenerFun);
             }
+          },
+          // 新增：初始化监听器函数（避免重复定义）
+          initializeListeners() {
+            // 只在第一次调用时定义监听器函数
+            if (!this.identifyListenerFun) {
+              this.identifyListenerFun = (rs) => {
+                console.log('identifyListenerFun received=', rs);
+                
+                if (rs.code == 200) {
+                  console.log('Identification successful, clearing timer');
+                  // 收到成功响应，清除4秒超时定时器
+                  if (this.identifyTimer) {
+                    clearTimeout(this.identifyTimer);
+                    this.identifyTimer = null;
+                  }
+                  if (!this.emmitStatus) {
+                    this.clearAllDialogs();
+                    this.iotSetMeshProvisioning();
+                  }
+                  this.emmitStatus = true;
+                } else if (rs.code == 7300) {
+                  console.log('Identification failed with code 7300, clearing timer');
+                  // 收到失败响应，清除4秒超时定时器并处理重试
+                  if (this.identifyTimer) {
+                    clearTimeout(this.identifyTimer);
+                    this.identifyTimer = null;
+                  }
+                  this.clearAllDialogs();
+                  
+                  if (this.retryCount < this.maxRetryCount) {
+                    app.dialog.confirm(
+                      _('Identification failed, retry?') + ' (' + _('Remaining attempts') + ': ' + (this.maxRetryCount - this.retryCount) + ')',
+                      async () => {
+                        try {
+                          // 在重试前清除所有定时器
+                          this.clearAllTimers();
+                          this.clearEventListeners();
+                          this.retryCount++;
+                          this.iotSetMeshIdentify();
+                        } catch (error) {
+                          this.clearAllDialogs();
+                          app.dialog.alert(_(erp.get_log_description(error)));
+                        }
+                      },
+                      () => {
+                        this.retryCount = 0;
+                        // 取消重试时也要清除定时器
+                        this.clearAllTimers();
+                      }
+                    );
+                  } else {
+                    app.dialog.alert(_('Maximum retry attempts reached, please try again later or contact technical support'));
+                    this.retryCount = 0;
+                    // 达到最大重试次数时清除所有资源
+                    this.clearAllTimers();
+                  }
+                } else {
+                  // 收到其他未知响应码，记录日志但保持定时器继续运行
+                  console.log('Received unexpected code:', rs.code, 'keeping timeout timer active');
+                }
+              };
+            }
+            
+            // 初始化gateway监听器函数
+            if (!this.gatewayListenerFun) {
+              this.gatewayListenerFun = (data) => {
+                if (data.code == 1) {
+                  app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
+                    window.globalUpdate = true;
+                    mainView.router.back();
+                  });
+                }
+              };
+            }
+          },
+          
+          async identifyNotify() {
+            console.log('identifyNotify started');
+            this.emmitStatus = false;
+            
+            // 清除可能存在的旧定时器
+            if (this.identifyTimer) {
+              console.log('Clearing existing identify timer');
+              clearTimeout(this.identifyTimer);
+              this.identifyTimer = null;
+            }
+            
+            // 确保监听器函数已初始化
+            this.initializeListeners();
+            
+            this.clearEventListeners(); // 确保清除之前的监听器
+            console.log('Registering mesh/identify listener');
             emitter.on('mesh/identify', this.identifyListenerFun);
+            
+            // 在注册监听器后立即设置4秒超时定时器，无论是否收到事件
+            console.log('Setting 4000ms timeout timer immediately after registering listener');
+            this.identifyTimer = setTimeout(() => {
+              console.log('4000ms timeout triggered - no response received');
+              this.clearAllDialogs();
+              
+              if (this.retryCount < this.maxRetryCount) {
+                app.dialog.confirm(
+                  _('Identification timeout (no response), retry?') + ' (' + _('Remaining attempts') + ': ' + (this.maxRetryCount - this.retryCount) + ')',
+                  async () => {
+                    try {
+                      this.clearAllTimers();
+                      this.clearEventListeners();
+                      this.retryCount++;
+                      this.iotSetMeshIdentify();
+                    } catch (error) {
+                      this.clearAllDialogs();
+                      app.dialog.alert(_(erp.get_log_description(error)));
+                    }
+                  },
+                  () => {
+                    this.retryCount = 0;
+                    this.clearAllTimers();
+                  }
+                );
+              } else {
+                app.dialog.alert(_('Maximum retry attempts reached, please try again later or contact technical support'));
+                this.retryCount = 0;
+                this.clearAllTimers();
+              }
+              this.identifyTimer = null;
+            }, 4000);
           },
           async iotSetMeshProvisioning() {
             console.log('iotSetMeshProvisioning');
-            while (true) {
-              try {
-                const dialog = app.dialog.close();
-                if (!dialog) {
-                  break;
-                }
-              } catch (e) {
-                break;
-              }
-            }
+            this.clearAllDialogs();
             app.dialog.preloader(_('Provisioning, this will take about 2 minutes.'));
+            
             try {
               let uuid = window.peripheral[this.targetGuid].getProp().id;
               await ble.startProvisioning(
@@ -3851,19 +4180,10 @@
                   console.log('ble.startProvisioning success=' + JSON.stringify(rs));
                   rs = JSON.parse(rs);
                   this.meshConfig.networks[rs.meshUUID] = rs;
-                  while (true) {
-                    try {
-                      const dialog = app.dialog.close();
-                      if (!dialog) {
-                        break;
-                      }
-                    } catch (e) {
-                      break;
-                    }
-                  }
-                  if (erp.replaceIdentifyTimer) {
-                    clearTimeout(erp.replaceIdentifyTimer);
-                  }
+                  
+                  this.clearAllDialogs();
+                  this.clearOtherTimers(); // 只清除其他定时器，保护identify的4000ms超时
+                  
                   await http.request(encodeURI('/api/resource/Profile/' + erp.info.profile.name), {
                     method: 'PUT',
                     serializer: 'json',
@@ -3871,8 +4191,10 @@
                       mesh_config: JSON.stringify(this.meshConfig),
                     },
                   });
+                  
                   this.meshComplete = true;
-                  app.dialog.close();
+                  this.retryCount = 0; // 成功后重置重试计数
+                  
                   if (!this.toast) {
                     this.toast = app.toast.create({
                       text: _('Mesh Successfully!'),
@@ -3883,34 +4205,43 @@
                   this.toast.open();
                   this.initSettingList({ guid: guid });
                   this.toTab(3);
-                  if (this.identifyListenerFun) {
-                    console.log('off mesh/identify');
-                    emitter.off('mesh/identify', this.identifyListenerFun);
-                  }
+                  this.clearEventListeners();
                 },
                 (error) => {
-                  while (true) {
-                    try {
-                      const dialog = app.dialog.close();
-                      if (!dialog) {
-                        break;
-                      }
-                    } catch (e) {
-                      break;
-                    }
-                  }
+                  this.clearAllDialogs();
+                  // 在 reject 时清除所有定时器
+                  this.clearAllTimers();
+                  this.clearEventListeners(); // 错误时也要清除监听器
                   console.log('Provisioning', error);
-                  app.dialog.confirm(
-                    _('Provisioning failed, retry?'),
-                    async () => {
-                      this.iotSetMeshIdentify();
-                    },
-                    () => {}
-                  );
+                  
+                  if (this.retryCount < this.maxRetryCount) {
+                    app.dialog.confirm(
+                      _('Configuration failed, retry?') + ' (' + _('Remaining attempts') + ': ' + (this.maxRetryCount - this.retryCount) + ')',
+                      async () => {
+                        this.retryCount++;
+                        this.iotSetMeshIdentify();
+                      },
+                      () => {
+                        this.retryCount = 0;
+                        // 取消重试时也要清除定时器
+                        this.clearAllTimers();
+                      }
+                    );
+                  } else {
+                    app.dialog.alert(_('Maximum retry attempts reached, please try again later or contact technical support'));
+                    this.retryCount = 0;
+                    // 达到最大重试次数时清除所有资源
+                    this.clearAllTimers();
+                  }
                 }
               );
             } catch (error) {
+              this.clearAllDialogs();
+              // 在 catch 时清除所有定时器
+              this.clearAllTimers();
+              this.clearEventListeners(); // catch块中也要清除监听器
               console.log('iotSetMeshProvisioning error=' + error);
+              app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
           //check if mesh is complete
@@ -3952,21 +4283,122 @@
               );
             }
           },
+          // 新增：统一的preloader清除方法
+          clearAllDialogs() {
+            try {
+              // 强制关闭所有可能的对话框
+              for (let i = 0; i < 10; i++) {
+                try {
+                  app.dialog.close();
+                } catch (e) {
+                  // 忽略关闭失败的错误
+                }
+              }
+              
+              // 额外保险：直接操作DOM移除preloader元素
+              try {
+                const preloaders = document.querySelectorAll('.preloader-backdrop, .dialog-backdrop');
+                preloaders.forEach(el => {
+                  if (el && el.parentNode) {
+                    el.parentNode.removeChild(el);
+                  }
+                });
+              } catch (e) {
+                console.log('DOM preloader cleanup error:', e);
+              }
+            } catch (error) {
+              console.log('clearAllDialogs error:', error);
+            }
+          },
+          
+                     // 新增：清除所有定时器
+           clearAllTimers() {
+             if (this.identifyTimer) {
+               clearTimeout(this.identifyTimer);
+               this.identifyTimer = null;
+             }
+             if (erp.replaceIdentifyTimer) {
+               clearTimeout(erp.replaceIdentifyTimer);
+               erp.replaceIdentifyTimer = null;
+             }
+             if (typeof setmesh_produce_timer !== 'undefined' && setmesh_produce_timer) {
+               clearTimeout(setmesh_produce_timer);
+               setmesh_produce_timer = null;
+             }
+           },
+           
+           // 新增：清除非identify定时器（保护4000ms超时）
+           clearOtherTimers() {
+             if (erp.replaceIdentifyTimer) {
+               clearTimeout(erp.replaceIdentifyTimer);
+               erp.replaceIdentifyTimer = null;
+             }
+             if (typeof setmesh_produce_timer !== 'undefined' && setmesh_produce_timer) {
+               clearTimeout(setmesh_produce_timer);
+               setmesh_produce_timer = null;
+             }
+           },
+           
+           // 新增：清除所有Toast
+           clearAllToasts() {
+             if (this.settingToast) {
+               this.settingToast.close();
+               this.settingToast = null;
+             }
+             if (this.toast) {
+               this.toast.close();
+               this.toast = null;
+             }
+           },
+          
+                     // 新增：清除事件监听器
+           clearEventListeners() {
+             if (this.identifyListenerFun) {
+               console.log('off mesh/identify');
+               emitter.off('mesh/identify', this.identifyListenerFun);
+               // 注意：不要设置为null，保持函数引用以便重用
+             }
+             if (this._getWifiMacAddressFun) {
+               emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
+               this._getWifiMacAddressFun = null;
+             }
+             if (this.gatewayListenerFun) {
+               emitter.off('gateway/sync', this.gatewayListenerFun);
+               // 注意：不要设置为null，保持函数引用以便重用
+             }
+           },
+           
+           // 新增：全面清理方法
+           cleanupAll() {
+             this.clearAllDialogs();
+             this.clearAllTimers();
+             this.clearAllToasts();
+             this.clearEventListeners();
+             
+             // 在组件销毁时，完全清理所有监听器引用
+             if (this.identifyListenerFun) {
+               emitter.off('mesh/identify', this.identifyListenerFun);
+               this.identifyListenerFun = null;
+             }
+             if (this._getWifiMacAddressFun) {
+               emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
+               this._getWifiMacAddressFun = null;
+             }
+             if (this.gatewayListenerFun) {
+               emitter.off('gateway/sync', this.gatewayListenerFun);
+               this.gatewayListenerFun = null;
+             }
+             
+             // 重置重试计数和状态标志
+             this.retryCount = 0;
+             this.bleCommandRetryCount = 0;
+             this.isDisconnectingDevices = false;
+           },
         },
         computed: {},
         beforeDestroy() {
-          if (this._getWifiMacAddressFun) {
-            emitter.off(`wifi_mac_address`, this._getWifiMacAddressFun);
-          }
-          if (this.identifyListenerFun) {
-            emitter.off('mesh/identify', this.identifyListenerFun);
-          }
-          if (setmesh_produce_timer) {
-            clearTimeout(setmesh_produce_timer);
-          }
-          if (erp.replaceIdentifyTimer) {
-            clearTimeout(erp.replaceIdentifyTimer);
-          }
+          // 使用全面的清理方法
+          this.cleanupAll();
         },
       });
     });

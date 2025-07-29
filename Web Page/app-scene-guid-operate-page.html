@@ -5887,6 +5887,9 @@
                       let this_data = `${mac}130597210380010c8f1f00c80000009721038000`;
                       data = `15${gatewayMac}${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
                       data = `${(data.length / 2).toString(16).pad('00')}${data}`;
+                      if(controlIndex == 0){
+                        data = `13${data}`;
+                      }
                     }
                     //alert(data)
                     // if(ref == 1){
@@ -5983,6 +5986,9 @@
                     let this_actioncommand = `${mac}130597210380010c8f1f00c80000009721038000`;
                     actioncommand = `15${mac}${(this_actioncommand.length / 2).toString(16).pad('00')}${this_actioncommand}`;
                     actioncommand = `${(actioncommand.length / 2).toString(16).pad('00')}${actioncommand}`;
+                    if(controlIndex == 0){
+                      actioncommand = `13${actioncommand}`;
+                    }
                   }
                   //alert(actioncommand)
                 }
@@ -6270,7 +6276,7 @@
                     toggle_default_off_item += `06971f${parseInt(solt).toString(16).pad('00')}892${target_gang == 1?0:1}00`;
                   }else if(device_button_group.startsWith('RCU OUTPUT')){
                     let target_gang = device_button_group.replace('RCU OUTPUT','')*1;
-                    toggle_setting_item += `04972101${parseInt(target_gang).toString(16).pad('00')}${parseInt(target_gang).toString(16).pad('00')}`;
+                    toggle_setting_item += `04972101${parseInt(target_gang).toString(16).pad('00')}`;
                     toggle_default_on_item += `05972101${parseInt(target_gang).toString(16).pad('00')}01`;
                     toggle_default_off_item += `05972101${parseInt(target_gang).toString(16).pad('00')}00`;
                   }else if(device_button_group.startsWith('ONOFF GANG1') && isset(list[i].virtualId)){

@@ -197,7 +197,7 @@
           setting: {
             ssid: '',
             ssid_password: '',
-            email: users[users.current].usr,
+            email: erp.info.profile.profile_email?erp.info.profile.profile_email:erp.info.profile.owner,
             server_url: erp.settings[erp.appId].mqtt_scheme?erp.settings[erp.appId].mqtt_scheme+'://'+erp.settings[erp.appId].mqtt_server:'mqtt://' + erp.settings[erp.appId].mqtt_server,
             port: erp.settings[erp.appId].mqtt_port,
             username: '',

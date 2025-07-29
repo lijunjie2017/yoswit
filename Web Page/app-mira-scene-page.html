@@ -773,7 +773,6 @@
           let power = value_list[0];
           if (type == 1) {
             //mode
-            debugger
             if (mode == 0) {
               mode = 2;
             } else if (mode == 1) {
@@ -895,7 +894,7 @@
           tvAndThermostatList: [],
           rangeList: [],
           totalSubdevices: [],
-          deviceControlLimit: {},
+          deviceControlLimit: {}, //避免多个状态进来影响
           roomList: [],
           showHome: true,
           groupByList: [],
@@ -925,7 +924,7 @@
             await this.initSubdevice();
             await this.initData();
           },
-          showRoom(item, status) {
+          async showRoom(item, status) {
             console.log('name', item.name);
             console.log('status', status);
             let room_title = item.title;
@@ -989,6 +988,12 @@
                 }
               });
             }
+            this.rangeList = [];
+            await this.initRange();
+            $update();
+            // console.log("this.rangeList",this.rangeList);
+            // let key =  `range_box_3234656334613039336666611203461d_RCU DIMMING10`;
+            // this.rangeList[key].setValue(100);
           },
           findLatestStatus(status) {
             const parseTime = (timeStr) => {
@@ -1040,27 +1045,35 @@
                 }
               }
             });
-            let virtual_id_for_bedroom_mode = {
-              '94': 0,
-              '95': 0,
-              '96': 0,
-            };
-            let virtual_id_for_living_mode = {
-              '90': 0,
-              '91': 0,
-              '92': 0,
-            };
+            //get the virtual id for the bedroom mode and the living mode
+            let [virtual_id_for_bedroom_mode, virtual_id_for_living_mode] = this.getVirtualIdForBedroomAndLivingMode();
+
+            // let virtual_id_for_living_mode = {
+            //   '90': 0,
+            //   '91': 0,
+            //   '92': 0,
+            // };
+
+            // let virtual_id_for_bedroom_mode = {
+            //   '94': 0,
+            //   '95': 0,
+            //   '96': 0,
+            // };
+            // let virtual_id_for_living_mode = {
+            //   '90': 0,
+            //   '91': 0,
+            //   '92': 0,
+            // };
             //if the device have two room list
             let mutiway_room_status = false;
             if(this.roomList.length == 2){
               mutiway_room_status = true;
               //13, 14 ,15 +86
-              virtual_id_for_bedroom_mode = {
-                '99': 0,
-                '100': 0,
-                '101': 0,
-              }
-
+              // virtual_id_for_bedroom_mode = {
+              //   '99': 0,
+              //   '100': 0,
+              //   '101': 0,
+              // }
             }
             this.anthorDeviceList.forEach((item) => {
               if (item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')) {
@@ -1070,26 +1083,31 @@
                 console.log('gang', gang);
                 let thisStatus = status[0][gang];
                 item.device_status = thisStatus;
-                if(mutiway_room_status){
-                  if([99,100,101].indexOf(parseInt(gang)) != -1){
-                    virtual_id_for_bedroom_mode[gang] = thisStatus;
-                  }
-                  if([90,91,92].indexOf(parseInt(gang)) != -1){
-                    virtual_id_for_living_mode[gang] = thisStatus;
-                  }
-                }else{
-                  if([94,95,96].indexOf(parseInt(gang)) != -1){
-                    virtual_id_for_bedroom_mode[gang] = thisStatus;
-                  }
+                if(isset(virtual_id_for_bedroom_mode) && isset(virtual_id_for_bedroom_mode[gang])){
+                  virtual_id_for_bedroom_mode[gang].device_status = thisStatus;
                 }
+                if(isset(virtual_id_for_living_mode) && isset(virtual_id_for_living_mode[gang])){
+                  virtual_id_for_living_mode[gang].device_status = thisStatus;
+                }
+                // if(mutiway_room_status){
+                //   if([99,100,101].indexOf(parseInt(gang)) != -1){
+                //     virtual_id_for_bedroom_mode[gang] = thisStatus;
+                //   }
+                //   if([90,91,92].indexOf(parseInt(gang)) != -1){
+                //     virtual_id_for_living_mode[gang] = thisStatus;
+                //   }
+                // }else{
+                //   if([94,95,96].indexOf(parseInt(gang)) != -1){
+                //     virtual_id_for_bedroom_mode[gang] = thisStatus;
+                //   }
+                // }
               }
             });
             //check if the virtual id is 94(100%),(95)50%,(96)25%
             let is_change_bedroom_mode_index = 0
             for(let key in virtual_id_for_bedroom_mode){
-              is_change_bedroom_mode_index+=parseInt(virtual_id_for_bedroom_mode[key]);
+              is_change_bedroom_mode_index+=parseInt(virtual_id_for_bedroom_mode[key].device_status);
             }
-            debugger
             if(is_change_bedroom_mode_index == 2 || is_change_bedroom_mode_index == 3){
               //check the date
               const now = dayjs();
@@ -1102,15 +1120,33 @@
                   if(item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')){
                     let gang = this.getVirtualIdForPeripheral(item.config);
                     let status = this.findLatestStatus(window.peripheral[guid].prop.status);
-                    if(gang == '94'){
-                      item.device_status = 1;
+                    if(isset(virtual_id_for_bedroom_mode[gang])){
+                      if(virtual_id_for_bedroom_mode[gang].device_button_group.includes('SCENE VIRTUAL 25')){
+                        item.device_status = 0;
+                      }else if(virtual_id_for_bedroom_mode[gang].device_button_group.includes('SCENE VIRTUAL 50')){
+                        item.device_status = 0;
+                      }else if(virtual_id_for_bedroom_mode[gang].device_button_group.includes('SCENE VIRTUAL 100')){
+                        item.device_status = 1;
+                      }
                     }
-                    if(gang == '95'){
-                      item.device_status = 0;
+                    if(isset(virtual_id_for_living_mode[gang])){
+                      if(virtual_id_for_living_mode[gang].device_button_group.includes('SCENE VIRTUAL 25')){
+                        item.device_status = 0;
+                      }else if(virtual_id_for_living_mode[gang].device_button_group.includes('SCENE VIRTUAL 50')){
+                        item.device_status = 0;
+                      }else if(virtual_id_for_living_mode[gang].device_button_group.includes('SCENE VIRTUAL 100')){
+                        item.device_status = 1;
+                      }
                     }
-                    if(gang == '96'){
-                      item.device_status = 0;
-                    }
+                    // if(gang == '94'){
+                    //   item.device_status = 1;
+                    // }
+                    // if(gang == '95'){
+                    //   item.device_status = 0;
+                    // }
+                    // if(gang == '96'){
+                    //   item.device_status = 0;
+                    // }
                   }
                 })
               }else{
@@ -1118,14 +1154,23 @@
                   if(item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')){
                     let gang = this.getVirtualIdForPeripheral(item.config);
                     let status = this.findLatestStatus(window.peripheral[guid].prop.status);
-                    if(gang == '94'){
-                      item.device_status = 0;
+                    if(isset(virtual_id_for_bedroom_mode[gang])){
+                      if(virtual_id_for_bedroom_mode[gang].device_button_group.includes('SCENE VIRTUAL 25')){
+                        item.device_status = 0;
+                      }else if(virtual_id_for_bedroom_mode[gang].device_button_group.includes('SCENE VIRTUAL 50')){
+                        item.device_status = 1;
+                      }else if(virtual_id_for_bedroom_mode[gang].device_button_group.includes('SCENE VIRTUAL 100')){
+                        item.device_status = 0;
+                      }
                     }
-                    if(gang == '95'){
-                      item.device_status = 1;
-                    }
-                    if(gang == '96'){
-                      item.device_status = 0;
+                    if(isset(virtual_id_for_living_mode[gang])){
+                      if(virtual_id_for_living_mode[gang].device_button_group.includes('SCENE VIRTUAL 25')){
+                        item.device_status = 0;
+                      }else if(virtual_id_for_living_mode[gang].device_button_group.includes('SCENE VIRTUAL 50')){
+                        item.device_status = 1;
+                      }else if(virtual_id_for_living_mode[gang].device_button_group.includes('SCENE VIRTUAL 100')){
+                        item.device_status = 0;
+                      }
                     }
                   }
                 })
@@ -1281,19 +1326,19 @@
                   item.device_status = isset(item.status) ? item.status : 0;
                   item.show_title = 'R';
                 } else if (item.device_button_group.startsWith('SCENE VIRTUAL L READING LIGHT')) {
-                  // debugger
+
                   item.buttonType = 'toggle';
                   item.width = '24%';
                   item.device_status = isset(item.status) ? item.status : 0;
                   item.show_title = 'L';
                 } else if (item.device_button_group.startsWith('SCENE VIRTUAL SLEEP LEFT')) {
-                  // debugger
+
                   item.buttonType = 'toggle';
                   item.width = '24%';
                   item.device_status = isset(item.status) ? item.status : 0;
                   item.show_title = 'L';
                 } else if (item.device_button_group.startsWith('SCENE VIRTUAL SLEEP RIGHT')) {
-                  // debugger
+
                   item.buttonType = 'toggle';
                   item.width = '24%';
                   item.device_status = isset(item.status) ? item.status : 0;
@@ -1414,7 +1459,7 @@
                   })
                   if(!checkIfExist){
                     if(!isset(item.group_index)){
-                      debugger
+                      // debugger
                     }
                     //check if the roomlist > 1
                     if(this.roomList.length > 1){
@@ -1482,7 +1527,6 @@
             return subdevice ? subdevice : null;
           },
           renderRcuScene(trigger_data, guid) {
-            debugger;
             let obj_map = {
               'control_source': 'MobMob',
               'command_type': 'rcu_scene_trigger',
@@ -1609,7 +1653,7 @@
                   resolve(); // 无任务直接完成
                   return;
                 }
-
+                
                 this.rangeBarDeviceList.forEach((item) => {
                   if (item.buttonType === 'dimming' || item.buttonType === 'opclose') {
                     const key = `range_box_${item.device}_${item.device_button_group}`;
@@ -1895,7 +1939,6 @@
             let hexModel = p.hexModel;
             if (hexModel == '021B' || hexModel == '0363' || hexModel == '0375') {
               //thermostat
-              debugger
               if (s['click_status']) {
                 return
                 // s['device_attachment_status'] = peripheral[p.guid].getAttachmentStatus(s.device_button_group, true).join(',');
@@ -2064,7 +2107,6 @@
               } else {
                 checkhash = `will/${md5(md5(p.gateway))}`;
                 if (checkhash == data.topic) {
-                  //debugger
                   is_mobile_gateway = 1;
                 }
               }
@@ -2159,7 +2201,6 @@
                   let hexModel = deviceItem.hexModel;
                   if (hexModel == '0361' || hexModel == '0351') {
                     //curtain motor
-                    //debugger
                     if (isset(peripheral[guid])) {
                       peripheral[guid].onChangeGateway(deviceInfo);
                     }
@@ -2201,11 +2242,13 @@
                       window.peripheral[guid].prop.status.mobmob[0][gang] = item;
                     });
                     const originalDate = this.parseDateSafe(deviceInfo.date);
-                    const modifiedDate = new Date(originalDate.getTime() + 30000);
+                    const modifiedDate = new Date(originalDate.getTime() - 30000);
                     let date_str = this.formatDateWithMillis(modifiedDate);
                     window.peripheral[guid].prop.status.mobmob[1] = date_str;
-                    window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
-                    this.updateListVirtualIdStatus(guid);
+                    if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]){
+                      window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
+                      this.updateListVirtualIdStatus(guid);
+                    }
                     // this.topDeviceList.forEach((item) => {
                     //   if (item.device == guid) {
                     //     //item.device_status = statusByteList[item.config - 1];
@@ -2259,11 +2302,14 @@
                       });
                       //if rcu mqtt
                       const originalDate = this.parseDateSafe(deviceInfo.date);
-                      const modifiedDate = new Date(originalDate.getTime() + 30000);
+                      const modifiedDate = new Date(originalDate.getTime() - 30000);
                       let date_str = this.formatDateWithMillis(modifiedDate);
                       window.peripheral[guid].prop.status.mobmob[1] = date_str;
-                      window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
-                      window.peripheral[guid].onPropChanged();
+                      if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]){
+                        window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
+                        window.peripheral[guid].onPropChanged();
+                      }
+                      
                     }
                     let rcuDataList = this.tindyRcuData(manufacturing_data);
                     //tindy the scene
@@ -2312,7 +2358,6 @@
                       }
                       if (item.type === '01' && item.index in indexMap) {
                         let this_ref = parseInt(item.data, 16).toString(2).pad('0000');
-                        //debugger
                         const [firstIndex, secondIndex, thirdIndex, flourIndex] = indexOnoffMap[item.index];
                         deviceItem.status['mobmob'][0][firstIndex] = this_ref[3];
                         deviceItem.status['mobmob'][0][secondIndex] = this_ref[2];
@@ -2666,6 +2711,8 @@
                       const futureDate = currentDate.add(days, 'day');
                       let list = [currentDate.format('YYYY-MM-DD HH:mm:ss'), futureDate.format('YYYY-MM-DD HH:mm:ss')];
                       let this_password = this.getRandomNumbers().join('');
+                      // let this_password = '1234';
+
                       try {
                         //await window.peripheral[props.kitem.device].doConnect();
                         //get the years and months and the days and the hours and the seconds
@@ -2676,7 +2723,15 @@
                         let this_hour = this_time_list[3];
                         let this_minute = this_time_list[4];
                         let this_second = this_time_list[5];
+                        // let this_year = 2099;
+                        // let this_month = 12;
+                        // let this_day = 31;
+                        // let this_hour = 23;
+                        // let this_minute = 59;
+                        // let this_second = 59;
+                        
                         let data = `9800000008${this_password.convertToHex()}${this_second.toString(16).pad('00')}${this_minute.toString(16).pad('00')}${this_hour.toString(16).pad('00')}${this_day.toString(16).pad('00')}${this_month.toString(16).pad('00')}${iot_utils_to_little_endian_hex(this_year, 2)}`;
+                        
                         await window.peripheral[guid].doMusicPlayer([
                           {
                             service: 'ff80',
@@ -2785,7 +2840,6 @@
             if (subdevice) {
               guid = subdevice.device;
             }
-            debugger;
             window.peripheral[guid]
               .doHdmiCec([
                 {
@@ -2864,7 +2918,6 @@
             let command_type = '';
             let gang = 42;
             let post_value = '';
-            debugger
             if (type == 1) {
               command = `9404000001${parseInt(mode_value).toString(16).pad('00')}`;
               command_type = 'mode';
@@ -3247,7 +3300,7 @@
                 },
               ]);
               //update the profile subdevice
-              await this.updateProfileSubdevice(name, subdevice);
+              // await this.updateProfileSubdevice(name, subdevice);
             } catch (error) {
               console.log('error', error);
             }
@@ -3260,6 +3313,44 @@
               let gang = parseInt(v_id, 16);
               return gang + 86;
             }
+          },
+          getVirtualIdForBedroomAndLivingMode(){
+            //type 1 for bedroom mode 2 for living mode
+            //check the button group 
+            let virtual_id_for_bedroom_mode = {};
+            let virtual_id_for_living_mode = {};
+            let this_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let virtual_list = this_subdevices.filter((item) => item.device_button_group.includes('SCENE VIRTUAL 25'));
+            this_subdevices.forEach((item) => {
+              if(item.device_button_group.includes('SCENE VIRTUAL 25') || item.device_button_group.includes('SCENE VIRTUAL 50') || item.device_button_group.includes('SCENE VIRTUAL 100')){
+                //check the title
+                if(virtual_list.length == 1){
+                  let virtual_id = item.config;
+                  let gang = this.getVirtualIdForPeripheral(virtual_id);
+                  virtual_id_for_bedroom_mode[`${gang}`] = {
+                    device_button_group: item.device_button_group,
+                    device_status: 0
+                  }
+                }else if(virtual_list.length == 2){
+                  //check the title
+                  let virtual_id = item.config;
+                  let gang = this.getVirtualIdForPeripheral(virtual_id);
+                  if(item.title.toLowerCase().includes('bed')){
+                    virtual_id_for_bedroom_mode[`${gang}`] = {
+                      device_button_group: item.device_button_group,
+                      device_status: 0
+                    }
+                  }else{
+                    virtual_id_for_living_mode[`${gang}`] = {
+                      device_button_group: item.device_button_group,
+                      device_status: 0
+                    }
+                  }
+                }
+              }
+                
+            })
+            return [virtual_id_for_bedroom_mode, virtual_id_for_living_mode];
           },
           async changeDndParent(obj) {
             console.log('obj', obj);
@@ -3282,7 +3373,6 @@
                   item.clean_status = 0;
                   let clean_gang = this.getVirtualIdForPeripheral(item.clean_virtual_id);
                   let gang = this.getVirtualIdForPeripheral(v_id);
-                  debugger;
                   window.peripheral[guid].prop.status.control[0][gang] = status ? 1 : 0;
                   window.peripheral[guid].prop.status.control[0][clean_gang] = 0;
                 } else {
@@ -3291,7 +3381,6 @@
                   item.device_status = 0;
                   let clean_gang = this.getVirtualIdForPeripheral(item.clean_virtual_id);
                   let gang = this.getVirtualIdForPeripheral(item.config);
-                  debugger;
                   window.peripheral[guid].prop.status.control[0][gang] = 0;
                   window.peripheral[guid].prop.status.control[0][clean_gang] = status ? 1 : 0;
                 }

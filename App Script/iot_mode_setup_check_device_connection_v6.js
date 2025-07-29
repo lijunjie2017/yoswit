@@ -13,17 +13,22 @@ window.iot_mode_setup_check_device_connection = function(params) {
     rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".toggle").addClass("disabled");
     //check if bluethooth is connect
     console.log("window.peripheral[guid].getProp()",window.peripheral[guid].getProp());
-    if(window.peripheral[guid].getProp().connected){
-        $(".bluetooth-icons").attr("ref", 1);
-        page_el.find('.iot-tip').remove();
-        //page_el.find('.ptr-preloader').css('opacity', 0);
-        rootEl.find(".button").removeClass("disabled");
-        rootEl.find(".toggle").removeClass("disabled");
-        setTimeout(()=>{
-            rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".button").removeClass("disabled");
-            rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".toggle").removeClass("disabled");
-        },1000)
-    }else{
+    debugger
+    if(isset(window.peripheral[guid].getProp().rssi) && window.peripheral[guid].getProp().rssi != 0){
+        window.peripheral[guid].prop.firmwareNo = '';
+        window.peripheral[guid].prop.firmware = '';
+    }
+    // if(window.peripheral[guid].getProp().connected){
+    //     $(".bluetooth-icons").attr("ref", 1);
+    //     page_el.find('.iot-tip').remove();
+    //     //page_el.find('.ptr-preloader').css('opacity', 0);
+    //     rootEl.find(".button").removeClass("disabled");
+    //     rootEl.find(".toggle").removeClass("disabled");
+    //     setTimeout(()=>{
+    //         rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".button").removeClass("disabled");
+    //         rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".toggle").removeClass("disabled");
+    //     },1000)
+    // }else{
         peripheral[guid].connect().then((rs)=>{
             // ignore
             $(".bluetooth-icons").attr("ref", 1);
@@ -34,6 +39,7 @@ window.iot_mode_setup_check_device_connection = function(params) {
             setTimeout(()=>{
                 rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".button").removeClass("disabled");
                 rootE2.find(`.card[dependencies="Network and Bluetooth"]`).find(".toggle").removeClass("disabled");
+                $('.read-firmware-box-text').text(window.peripheral[guid].prop.firmware);
             },1000)
         }).catch((error)=>{
             $(".bluetooth-icons").attr("ref", 0);
@@ -73,5 +79,5 @@ window.iot_mode_setup_check_device_connection = function(params) {
         //     </div>`);
         //     //app.dialog.alert(_("Device is not here!"), runtime.appInfo.name, () => {});
         // });
-    }
+    // }
 }
