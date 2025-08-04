@@ -53,6 +53,18 @@ window.iot_device_repair = async (params) => {
       }
     });
   };
+
+  //check the device setting acc
+  const check_wifi_device_email_setting = ()=>{
+    //if all the wifi device have different email,then return false
+    let profile_device = cloneDeep(erp.info.profile.profile_device);
+    let wifi_device_list = profile_device.filter((item)=>item.device_model.includes('YO103') || item.device_model.includes('YO121') || item.device_model.includes('M360s'));
+    let email_list = [];
+    // wifi_device_list.forEach((item)=>{
+    //   let email = item.settings.find((item)=>item.setting_type == 'email')?.setting;
+    //   if(email){}
+    // })
+  }
   const sleep_for_repair = (ms) => {
     return new Promise((resolve) => setTimeout(resolve, ms));
   };
@@ -308,6 +320,12 @@ window.iot_device_repair = async (params) => {
           commandList.push({
             guid: rcuGuid,
             command: actionMap[rcuGuid].toLocaleLowerCase(),
+          });
+        }
+        if (isset(actionMap[rcuGuid]['triggerCommand']) && actionMap[rcuGuid]['triggerCommand']) {
+          commandList.push({
+            guid: rcuGuid,
+            command: actionMap[rcuGuid]['triggerCommand'].toLocaleLowerCase(),
           });
         }
         if (isset(actionMap[rcuGuid]['actionCommand']) && actionMap[rcuGuid]['actionCommand']) {
@@ -603,6 +621,32 @@ window.iot_device_repair = async (params) => {
     let groupList = await initGroupList(guid);
     debugger;
     console.log('groupList', groupList);
+    //if android should open the mtu
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        app.dialog.preloader(_('Connecting...'));
+        await window.peripheral[guid].connect();
+        app.dialog.close();
+        
+        ble.requestMtu(
+          window.peripheral[guid].prop.id,
+          512,
+          () => {
+            console.log('request mtu success');
+          },
+          (error) => {
+            if (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+          }
+        );
+      } catch (error) {
+        app.dialog.close();
+        app.dialog.alert(_(erp.get_log_description(error)));
+        return;
+      }
+    }
     let settingBleList = [];
     settingList.forEach((item) => {
       settingBleList.push({
@@ -628,11 +672,14 @@ window.iot_device_repair = async (params) => {
           }
         } catch (error) {
           console.log('error', error);
-          // if(!error.includes('window.this_dialog')){
-          //     app.dialog.close();
-          //     app.dialog.alert(erp.get_log_description(error));
-          //     settingUpdateStatus = false;
-          // }
+          console.log(typeof(error));
+          if(typeof(error) !== 'object'){
+              app.dialog.close();
+              app.dialog.alert(erp.get_log_description(error));
+              settingUpdateStatus = false;
+          }else{
+            window.this_dialog = app.dialog.progress(`${_('Restore Device Setting')}`, parseInt((settingIndex / totalSettingCount) * 100));
+          }
         }
       }
     }
@@ -726,6 +773,8 @@ window.iot_device_repair = async (params) => {
       app.dialog.close();
       app.dialog.alert(erp.get_log_description(error));
     }
+
+    //if 
     try {
       app.dialog.preloader(`${_('Restart Device...')}`);
       await window.peripheral[guid].write([

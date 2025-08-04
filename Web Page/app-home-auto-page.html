@@ -832,6 +832,8 @@ const renderSwipeRightPanel = (props, {
 				<a
 					class="link color-cust-purple ${engineerModeStatus?'':'device-none'}"
 					guid="${kitem.device}"
+					profile-device-name="${kitem.profile_device}"
+					profile-subdevice-name="${kitem.name}"
 					ref="${kitem.device}|${kitem.mac_address}|${kitem.device_model}|${''}|${''}|${''}|${kitem.device_model}|${'YO0012'}|${kitem.profile_device}"
 					func="iot_check_all_settings"
 					><i class="icon material-icons">construction</i></a
@@ -4844,6 +4846,7 @@ export default async (props, ctx) => {
 							<span class="device-title">${list[i].device_model}</span>
 							<span class="device-title">-</span>
 							<span class="device-title">${list[i].device_name}</span>
+							<span class="device-title firmware-version">(${isset(window.peripheral[list[i].device]) && window.peripheral[list[i].device].getProp().firmwareNo?window.peripheral[list[i].device].getProp().firmwareNo:''})</span>
 							<p>
 								<span class="room-title text-color-gray">${tran(list[i].roomNameList[0])}</span>
 								<span class="room-title text-color-gray">/</span>
@@ -5400,6 +5403,11 @@ export default async (props, ctx) => {
 			try{
 				refreshDeviceUi(device_name,'sync');
         //get the device gateway
+				if(!guid){
+					refreshDeviceUi(device_name,'error','Device not found.');
+					reject('Device not found.');
+					return;
+				}
         let gateway = '';
         let profile_device = cloneDeep(erp.info.profile.profile_device);
         profile_device.forEach((item)=>{
@@ -5488,6 +5496,10 @@ export default async (props, ctx) => {
             console.log('开始固件升级...');
             await otaInstance.fullUpgrade();
             console.log('固件升级成功');
+						window.peripheral[guid].prop.firmware = status.latestFirmware;
+						window.peripheral[guid].prop.firmwareNo = status.latestFirmware;
+						//firmware
+						refreshDeviceUi(device_name,'firmware',status.latestFirmware);
 						refreshDeviceUi(device_name,'success');
             resolve(true);
           }else{
@@ -5495,11 +5507,19 @@ export default async (props, ctx) => {
             console.log('开始固件升级...');
             await otaInstance.fullUpgrade();
             console.log('固件升级成功');
+						window.peripheral[guid].prop.firmware = status.latestFirmware;
+						window.peripheral[guid].prop.firmwareNo = status.latestFirmware;
+						//firmware
+						refreshDeviceUi(device_name,'firmware',status.latestFirmware);
 						refreshDeviceUi(device_name,'success');
             resolve(true);
           }
         }else{
           //不需要OTA升级
+					window.peripheral[guid].prop.firmware = status.latestFirmware;
+					window.peripheral[guid].prop.firmwareNo = status.latestFirmware;
+					//firmware
+					refreshDeviceUi(device_name,'firmware',status.latestFirmware);
 					refreshDeviceUi(device_name,'success');
           resolve(true);
         }
@@ -5512,6 +5532,10 @@ export default async (props, ctx) => {
 	const startBatchOta = async(list)=>{
 		for(let i in list){
 			let guid = list[i].device;
+			if(!guid){
+				refreshDeviceUi(list[i].device_name,'error','Device not found.');
+				continue;
+			}
 			await check_device_firmware_version_and_update(guid,list[i].device_name);
 		}
 	}
@@ -5528,6 +5552,8 @@ export default async (props, ctx) => {
 			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').text('check');
 			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').addClass('text-color-green');
 			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+		}else if(type == 'firmware'){
+			$(`.manufacturing-steps[deviceName="${device_name}"]`).find('.firmware-version').text(`(${error_log})`);
 		}
 	}
 	const startCheckDevice = async(list)=>{
@@ -5576,6 +5602,14 @@ export default async (props, ctx) => {
 		*/
 		for(let i in list){
 			let guid = list[i].device;
+			if(!guid){
+				list[i].device_status = 'Connect Error';
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(erp.get_log_description(6300))}`);
+				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+				continue;
+			}
 			let settings = initSettingList(guid);
 			console.log("settings",settings);
 			let sceneList = await initSceneList(guid);
@@ -5632,52 +5666,52 @@ export default async (props, ctx) => {
 				}
 			}
 			//check the device firmare
-			try{
-				let firmwareInfo = await checkDeviceFirmware(guid);
-			}catch(errorMap){
-				console.log("error",errorMap);
-				list[i].firmware_status = _(erp.get_log_description(errorMap.error));
-				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
-				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
-				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(errorMap.error)}`);
-				$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
-				//continue;
-				app.dialog.close();
-				let shouldUpdate = await showUpdateConfirm(_('The device firmware is not the latest version, do you want to update the firmware?'));
-				if (!shouldUpdate) continue;
-				try{
-					await updateFirmware(guid,errorMap.firmware);
+			// try{
+			// 	let firmwareInfo = await checkDeviceFirmware(guid);
+			// }catch(errorMap){
+			// 	console.log("error",errorMap);
+			// 	list[i].firmware_status = _(erp.get_log_description(errorMap.error));
+			// 	$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+			// 	$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+			// 	$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(errorMap.error)}`);
+			// 	$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+			// 	//continue;
+			// 	app.dialog.close();
+			// 	let shouldUpdate = await showUpdateConfirm(_('The device firmware is not the latest version, do you want to update the firmware?'));
+			// 	if (!shouldUpdate) continue;
+			// 	try{
+			// 		await updateFirmware(guid,errorMap.firmware);
 
-				}catch(error){
-					console.log("error",error);
-					list[i].firmware_status = _(erp.get_log_description(error));
-					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
-					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
-					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(error)}`);
-					$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
-					//if wifi is not connected, show the connect wifi dialog
-					if(error.includes('Wi-Fi not connected.')){
-						try{
-							let checkWifiStatus = await connectAndCheckWifi();
-						}catch(checkWifiStatusError){
-							continue;
-						}
-						debugger
-						let wifiConnectStatus = await connectWifi(wifiInfoMap.ssid,wifiInfoMap.password,guid);
-							if(wifiConnectStatus){
-								try{
-									await updateFirmware(guid,errorMap.firmware);
-								}catch(wifiUpdateError){
-									console.log("wifiUpdateError",wifiUpdateError);
-									app.dialog.alert(_(wifiUpdateError));
-									continue;
-								}
-							}
-					}else{
-						let confirmStatus = await showUpdateConfirm(_(error));
-					}
-				}
-			}
+			// 	}catch(error){
+			// 		console.log("error",error);
+			// 		list[i].firmware_status = _(erp.get_log_description(error));
+			// 		$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').text('error');
+			// 		$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').addClass('text-color-red');
+			// 		$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.error-log').html(`${_(error)}`);
+			// 		$(`.manufacturing-steps[deviceName="${list[i].device_name}"]`).find('.item-after').find('.icon').removeClass('rotate-animation');
+			// 		//if wifi is not connected, show the connect wifi dialog
+			// 		if(error.includes('Wi-Fi not connected.')){
+			// 			try{
+			// 				let checkWifiStatus = await connectAndCheckWifi();
+			// 			}catch(checkWifiStatusError){
+			// 				continue;
+			// 			}
+			// 			debugger
+			// 			let wifiConnectStatus = await connectWifi(wifiInfoMap.ssid,wifiInfoMap.password,guid);
+			// 				if(wifiConnectStatus){
+			// 					try{
+			// 						await updateFirmware(guid,errorMap.firmware);
+			// 					}catch(wifiUpdateError){
+			// 						console.log("wifiUpdateError",wifiUpdateError);
+			// 						app.dialog.alert(_(wifiUpdateError));
+			// 						continue;
+			// 					}
+			// 				}
+			// 		}else{
+			// 			let confirmStatus = await showUpdateConfirm(_(error));
+			// 		}
+			// 	}
+			// }
 			let sceneCommandList = [];
 			app.dialog.preloader(_('Checking Scene'));
 			try{

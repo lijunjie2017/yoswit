@@ -5,6 +5,8 @@ window.iot_check_all_settings = async (params) => {
   2.show the scene UI
   */
   const guid = params.obj.attr('guid');
+  const profile_device_name = params.obj.attr('profile-device-name');
+  const profile_subdevice_name = params.obj.attr('profile-subdevice-name');
   console.log('guid', guid);
   if (!guid) {
     app.dialog.alert(_('Device not found'));
@@ -264,8 +266,10 @@ window.iot_check_all_settings = async (params) => {
   };
 
   //render the UI
-  const settingList = await initSettingList(guid);
-  const sceneList = await initSceneList(guid);
+  // const settingList = await initSettingList(guid);
+  // const sceneList = await initSceneList(guid);
+  const settingList = [];
+  const sceneList = [];
   console.log('settingList', settingList);
   console.log('sceneList', sceneList);
   let totalCount = settingList.length;
@@ -276,43 +280,6 @@ window.iot_check_all_settings = async (params) => {
       <div class="sheet-modal-inner">
         <div class="swipe-handler"></div>
         <div class="page-content" style="height:600px;">
-        <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Device Settings')}</div>
-          <div class="list list-strong list-outline list-dividers-ios">
-            <ul class="manufacturing-steps-list">
-              <li class="manufacturing-steps manufacturing-step1" deviceName="">
-                <div class="item-content" style="padding-right:15px;">
-                  <div class="item-inner">
-                    <div class="item-title">
-                      <span class="device-title">${_('Checking setting items.')}</span>
-                    </div>
-                  </div>
-                  <div class="item-after">
-                    <i class="icon material-icons checking-item-for-all-settings">watch_later</i>
-                  </div>
-                </div>
-              </li>
-              <li class="manufacturing-steps manufacturing-step2 display-flex justify-content-center align-items-center" style="padding:15px;">
-                <p style="width:100%;"><span data-progress="10" class="progressbar" id="demo-inline-progressbar-check-all-settings"></span></p>
-                <p style="width:100px;text-align:center;">
-                <span class="progressbar-text star_progressbar_text" >0</span>
-                <span class="progressbar-text">/</span>
-                <span class="progressbar-text end_progressbar_text" >${totalCount}</span>
-                </p>
-              </li>
-              <li class="manufacturing-steps manufacturing-step1" deviceName="">
-                <div class="item-content" style="padding-right:15px;">
-                  <div class="item-inner">
-                    <div class="item-title">
-                      <span class="device-title">${_('Checking STA/LAN/AP Mac Address.')}</span>
-                    </div>
-                  </div>
-                  <div class="item-after">
-                    <i class="icon material-icons checking-item-for-sta-lan-ap-mac-address">watch_later</i>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
           <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Device Firmware')}</div>
           <div class="list list-strong list-outline list-dividers-ios">
             <ul class="manufacturing-steps-list">
@@ -336,36 +303,6 @@ window.iot_check_all_settings = async (params) => {
                   </div>
                 </div>
               </li>
-            </ul>
-          </div>
-          <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Device Scenes')}</div>
-          <div class="list list-strong list-outline list-dividers-ios">
-            <ul class="manufacturing-steps-list">
-              <li class="manufacturing-steps manufacturing-step1" deviceName="">
-                <div class="item-content" style="padding-right:15px;">
-                  <div class="item-inner">
-                    <div class="item-title">
-                      <span class="device-title">${_('Checking scene items.')}</span>
-                    </div>
-                  </div>
-                  <div class="item-after">
-                    <i class="icon material-icons checking-item-for-all-settings-scene">watch_later</i>
-                  </div>
-              </li>
-              <li class="manufacturing-steps manufacturing-step2 display-flex justify-content-center align-items-center" style="padding:15px;">
-                <p style="width:100%;"><span data-progress="10" class="progressbar" id="demo-inline-progressbar-check-all-settings-scene"></span></p>
-                <p style="width:100px;text-align:center;">
-                <span class="progressbar-text star_progressbar_text_scene" >0</span>
-                <span class="progressbar-text">/</span>
-                <span class="progressbar-text end_progressbar_text_scene" >${sceneTotalCount}</span>
-                </p>
-              </li>
-            </ul>
-          </div>
-          <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Problematic Scenario')}</div>
-          <div class="list list-strong list-outline list-dividers-ios">
-            <ul class="manufacturing-steps-list problematic-scenario-list" style="padding:0 15px;">
-              
             </ul>
           </div>
           <div class="block-title" style="font-weight:bold;line-height: 20px;color: #000;">${_('Wifi Info')}</div>
@@ -416,7 +353,7 @@ window.iot_check_all_settings = async (params) => {
           <div class="block block-strong">
             <p class="row">
               <div class="col">
-                <div class="button button-raised button-fill button-save start-check-all-settings" func="startCheckAllSettings">${_('Start')}</div>
+                <div class="button button-raised button-fill button-save start-check-all-settings" ref="${guid}" profile-device-name="${profile_device_name}" profile-subdevice-name="${profile_subdevice_name}" func="iot_device_repair">${_('Repair')}</div>
                 <div class="button button-raised button-fill button-save start-check-all-scene device-none" func="startCheckAllScene">${_('Fixed Scene')}</div>
               </div>
             </p>
@@ -734,8 +671,17 @@ window.iot_check_all_settings = async (params) => {
       $('.start-check-all-settings').html(_('Start'));
     }
   };
+  const check_device_firmware_version_and_update = async (guid)=>{
+    return new Promise(async(resolve,reject)=>{
+      const self = this;
+      const oldResolve = resolve;
+      const oldReject = reject;
+
+    });
+  }
   //start function
   window.startCheckAllSettings = async () => {
+    //update the the device firmware
     $('.start-check-all-settings').addClass('disabled');
     $('.start-check-all-settings').html(_('Checking Setting...'));
     $('.checking-item-for-all-settings').html('sync');

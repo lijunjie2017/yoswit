@@ -350,6 +350,45 @@
                 </div>
               </div>
             </div>
+            <!-- device restart and return  -->
+            <div id="step-7" class="view tab view-main" :class="[index == 7 ? 'tab-active' : '']" v-if="index == 7">
+              <!-- show the device info -->
+              <div class="card">
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_('Restart And Return')}}</div>
+              <div class="card-content card-content-padding">
+                <div class="list media-list" style="margin-top: 0px">
+                  <ul>
+                    <li>
+                      <div class="item-content" style="padding-left: 15px">
+                        <div
+                          class="item-media"
+                          :style="{'width' : '75px','background-image' : 'url('+imageUrl+')','height' : '75px','background-size' : 'contain','background-position' : 'center','position' : 'relative','background-repeat' : 'no-repeat'}"
+                        ></div>
+                        <div class="item-inner" style="padding-top: 0px;">
+                          <div class="item-title-row" style="width: 100%;">
+                            <div class="item-title" style="width: 100%;"><b>{{device_map_model}}</b></div>
+                          </div>
+                          <div class="item-subtitle" style="width: 100%;">{{core_utils_get_mac_address_from_guid(targetGuid)}}</div>
+                          <div class="signal-panel item-text height-21" style="width: 120%" :bluetooth="isConnected?1:0">
+                            <div class="signal"></div>
+                            <div class="bluetooth"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              </div>
+              <div class="row" style="margin-bottom: 15px; margin-top: 15px; position: fixed; bottom: 10px; z-index: 999">
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("previous")}}</div>
+                </div>
+                <div class="col">
+                  <div class="button button-fill button-save" v-on:click="restartDevice()">{{_("Complete")}}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -392,6 +431,7 @@
             { id: 4, name: 4, isActive: false, isShow: true },
             { id: 5, name: 5, isActive: false, isShow: true },
             { id: 6, name: 4, isActive: false, isShow: true },
+            { id: 7, name: 6, isActive: false, isShow: true },
           ],
           index: 1,
           deviceList: [],
@@ -440,6 +480,7 @@
           sta_mac_address: '',
           ap_mac_address: '',
           lan_mac_address: '',
+          isConnected : false, //target device connect status
         },
         watch: {},
         async mounted() {
@@ -498,7 +539,6 @@
                 let rcu_device = profile_device.find(
                   (item) => item.device_model.includes('RCU Controller') || item.device_model.includes('YO780')
                 );
-                debugger;
                 if (!rcu_device.device) {
                   resolve();
                 } else {
@@ -593,6 +633,17 @@
             } catch (error) {
               console.log('error', error);
             }
+          },
+          initDeviceImage(thisGuid){
+            let imageUrl = 'https://my.yoswit.com/files/products/YO2086-1G.svg';
+            //this.device_map_model
+            const hexid = thisGuid.substring(thisGuid.length - 6, thisGuid.length - 2);
+            const model = erp.doctype.device_model[hexid.toUpperCase()];
+            debugger
+            if (model && model.image) {
+              imageUrl = model.image;
+            }
+            this.imageUrl = imageUrl;
           },
           async initSceneList() {
             let thisGuid = '';
@@ -987,6 +1038,7 @@
               return;
             }
             this.toTab(2);
+            this.initDeviceImage(this.targetGuid);
             this.initMeshNetwork();
             this.initDeviceNetwork();
             //this.initSettingList(item);
@@ -3562,6 +3614,10 @@
               // });
               await ha_profile_ready();
               this.clearAllDialogs();
+              if(!this.updateSceneStatus){
+                this.toDeviceRestart();
+                return
+              }
               app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
                 window.globalUpdate = true;
                 if(!this.updateSceneStatus){
@@ -3574,6 +3630,44 @@
                 mainView.router.back();
               });
             } catch (error) {
+              this.clearAllDialogs();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          toDeviceRestart(){
+            //check the bluetooth connect
+            let isConnected = false;
+            if(window.peripheral[this.targetGuid]){
+              isConnected = window.peripheral[this.targetGuid].prop.connected;
+            }
+            debugger
+            this.isConnected = isConnected;
+            this.toTab(7);
+          },
+          async restartDevice(){
+            //restart the device
+            app.dialog.preloader(_('Restarting...'));
+            try{
+              window.peripheral[this.targetGuid].write([{
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: '810e',
+              }]);
+              await this.sleep(6000);
+              this.isConnected = false;
+              this.clearAllDialogs();
+              app.dialog.confirm(`${_('Replace successfully,return?')}`, () => {
+                window.globalUpdate = true;
+                if(!this.updateSceneStatus){
+                  window.peripheral[this.targetGuid].write([{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '810e',
+                  }]);
+                }
+                mainView.router.back();
+              });
+            }catch(error){
               this.clearAllDialogs();
               app.dialog.alert(_(erp.get_log_description(error)));
             }

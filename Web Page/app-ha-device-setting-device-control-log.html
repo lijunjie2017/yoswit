@@ -77,7 +77,7 @@
                     ></span>
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px;line-height: 24px"
+                      style="margin-left: 5px; line-height: 24px"
                       v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && (log_item.command_type == 'add' || log_item.command_type == 'reduce')"
                     >
                       {{log_item.temperature}}°C
@@ -88,7 +88,7 @@
                     ></span>
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px;line-height: 24px"
+                      style="margin-left: 5px; line-height: 24px"
                       v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'mode'"
                     >
                       {{_(getModeInfo(log_item.mode))}}
@@ -99,7 +99,7 @@
                     ></span>
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px;line-height: 24px"
+                      style="margin-left: 5px; line-height: 24px"
                       v-if="(log_item.device_model == 'YO360' || log_item.device_model == 'm360s') && log_item.command_type == 'fan'"
                     >
                       {{_(getSpeedInfo(log_item.speed))}}
@@ -107,7 +107,7 @@
                     <!-- onoff status log start  -->
                     <span
                       class="text-muted size-12"
-                      style="margin-left: 5px; text-align: center;line-height: 24px"
+                      style="margin-left: 5px; text-align: center; line-height: 24px"
                       v-if="log_item.command_type == 'device_status_log_onoff'"
                     >
                       {{log_item.gang_1 > 0 ? _('ON'):_('OFF')}}
@@ -167,8 +167,7 @@
                       style="margin-left: 5px; line-height: 24px"
                       v-if="log_item.command_type == 'rcu_scene_trigger' && log_item.scene_title"
                     >
-                      {{log_item.scene_title?log_item.scene_title:parseInt(item.scene_id,16) }}
-                      {{(_('Play'))}}
+                      {{log_item.scene_title?log_item.scene_title:parseInt(item.scene_id,16) }} {{(_('Play'))}}
                     </span>
                     <!-- scene status log end  -->
                     <!-- thermosta status log  -->
@@ -212,7 +211,7 @@
           <h3>{{_('Thats it, no more data available.')}}</h3>
         </div>
       </div>
-      
+
       ${hasMoreItems && $h`
       <div class="preloader infinite-scroll-preloader"></div>
       `} {% endraw %}
@@ -393,7 +392,6 @@
                 responseType: 'json',
               })
               .then((log_data) => {
-                debugger;
                 // console.log(log_data);
                 let list = log_data.data.data;
                 //check if the device is attached
@@ -413,11 +411,12 @@
                     //compare the device details
                     // console.log(device_type_map);
                     if (isset(device_type_map.Info)) {
-                      console.log("device_type_map.Info",device_type_map.Info)
+                      console.log('device_type_map.Info', device_type_map.Info);
                       //this is the device status log
                       let this_guid = device_type_map.Device.guid;
                       let deviceMap = peripheral[this_guid];
                       device_map = device_type_map.Device;
+                      debugger
                       let gangList = isset(this.analysisDeviceStatus(this_guid, device_map))
                         ? this.analysisDeviceStatus(this_guid, device_map)
                         : null;
@@ -427,8 +426,8 @@
                       }
                       if (isset(device_map['trigger_data']) && device_map['trigger_data']) {
                         let trigger_data = device_map['trigger_data'];
-                        console.log("trigger_data",trigger_data)
-                        let obj_map = this.renderRcuScene(trigger_data,device_map.guid);
+                        console.log('trigger_data', trigger_data);
+                        let obj_map = this.renderRcuScene(trigger_data, device_map.guid);
                         if (obj_map) {
                           item.is_show_status = false;
                           item = Object.assign(item, obj_map);
@@ -443,7 +442,7 @@
                         device_default_template_list =
                           erp.doctype.device_model[deviceMap.prop.hexModel.toUpperCase()]['device_default_template'];
                       }
-                      debugger;
+                      // debugger;
                       device_default_template_list.forEach((kitem) => {
                         let device_button_group = kitem.device_button_group;
                         let device_mode = kitem.mode;
@@ -455,7 +454,8 @@
                           item.command_type = 'device_status_log_onoff';
                           this_gang = device_button_group.replace('ONOFF GANG', '') * 1;
                           //this only show the subdevice button group
-                          item[`gang_${this.button_gang}`] = gangList[this.button_gang];
+                          debugger
+                          item[`gang_1`] = gangList[this.button_gang];
                         } else if (device_button_group.startsWith('DIMMING')) {
                           item.is_show_status = false;
                           item.control_source = 'MobMob';
@@ -465,7 +465,10 @@
                           item.is_show_status = false;
                           item.command_type = 'device_status_log_curtain_switch';
                           return;
-                        }else if(device_button_group.startsWith('OPENCLOSE UART') || device_button_group.startsWith('OPENCLOSE WIFI UART')){
+                        } else if (
+                          device_button_group.startsWith('OPENCLOSE UART') ||
+                          device_button_group.startsWith('OPENCLOSE WIFI UART')
+                        ) {
                           item.is_show_status = false;
                           item.command_type = 'device_status_log_curtain_motor';
                           item.control_source = 'MobMob';
@@ -486,8 +489,8 @@
                           item.command_type = 'device_status_log_hdmicec';
                           item.control_source = 'MobMob';
                           item.hdmicec = 0;
-                          console.log("device_type_map.Info.ctrl_data",device_type_map.Info.ctrl_data)
-                          if(device_type_map.Device.ctrl_data != '8000'){
+                          console.log('device_type_map.Info.ctrl_data', device_type_map.Info.ctrl_data);
+                          if (device_type_map.Device.ctrl_data != '8000') {
                             item.hdmicec = 1;
                           }
                         }
@@ -540,7 +543,7 @@
                       if (item.device_mode == 'Hdmicec') {
                         item.is_show_status = false;
                         item.hdmicec = 0;
-                        if(device_type_map.command_type == 'ON'){
+                        if (device_type_map.command_type == 'ON') {
                           item.hdmicec = 1;
                         }
                       }
@@ -623,14 +626,14 @@
             };
             return speed_map[speed];
           },
-          renderRcuScene(trigger_data,guid) {
+          renderRcuScene(trigger_data, guid) {
             let obj_map = {
               'control_source': 'MobMob',
               'command_type': 'rcu_scene_trigger',
               'scene_template': '',
               'scene_title': '',
               'scene_id': '',
-              'trigger_data' : '',
+              'trigger_data': '',
               'scene_status': 0,
             };
             //"trigger_data": "8f0b002101",
@@ -645,12 +648,28 @@
                   obj_map.scene_id = scene_id;
                   obj_map.scene_status = list[4];
                   obj_map.scene_template = scene_map[i].scene_template;
-                  obj_map.trigger_data = scene_map[i].trigger_data
+                  obj_map.trigger_data = scene_map[i].trigger_data;
                   break;
                 }
               }
             }
             return obj_map;
+          },
+          hexTo8BitBinary(hexStr) {
+            // 移除可能的0x前缀
+            const cleanHex = hexStr.replace(/^0x/i, '');
+
+            // 确保至少有一个字符，并取最后两位（处理多字符情况）
+            const hexByte = cleanHex.slice(-2);
+
+            // 处理单字符情况（前面补0）
+            const paddedHex = hexByte.padStart(2, '0');
+
+            // 转换为十进制整数
+            const decimal = parseInt(paddedHex, 16);
+
+            // 转换为二进制字符串并填充到8位
+            return decimal.toString(2).padStart(8, '0');
           },
           fliterThermostatData(str) {
             if (!str) {
@@ -727,6 +746,14 @@
               gangs[45] = thermostat.temp;
               gangs[46] = thermostat.room_temp;
               gangs[47] = thermostat.humidity;
+            }else if(manufactureData && manufactureData.startsWith('9700')){
+              io = manufactureData.substring(10, 12);
+              let io_list = this.hexTo8BitBinary(io);
+              gangs[1] = io_list[0];
+              gangs[2] = io_list[1];
+              gangs[3] = io_list[2];
+              return gangs;
+
             } else if (manufactureData && manufactureData.startsWith('85')) {
               if (manufactureData.length == 26) {
                 io = parseInt(manufactureData.substring(manufactureData.length - 8, manufactureData.length - 6), 16);
@@ -769,7 +796,7 @@
             let sensor_ref = parseInt(manufactureData.substring(16, 18), 16);
             gangs[49] = sensor_ref;
             let curtain_io = parseInt(manufactureData.substring(4, 6), 16);
-            if(manufactureData.length == 4){
+            if (manufactureData.length == 4) {
               curtain_io = parseInt(manufactureData.substring(2, 4), 16);
             }
             if (curtain_io > 100) {
@@ -818,7 +845,7 @@
   .empty-box + .list ul::after {
     content: none;
   }
-  .no-more-data{
+  .no-more-data {
     font-size: 12px;
     color: #999;
     text-align: center;

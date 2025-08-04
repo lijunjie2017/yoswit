@@ -485,7 +485,6 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       }
     });
     let data = '9402000013';
-    debugger
     if (window.peripheral && isset(window.peripheral[guid])) {
       if (window.peripheral[guid].prop.firmware >= 12.3) {
         data = '9402000015';
@@ -980,13 +979,13 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
   //change ble name
   const get_change_ble_name_command = (value) => {
     let thisName = cloneDeep(value);
+    debugger
     let thisFlatName = erp.info.profile.flat?erp.info.profile.flat.replace(/^0+/, ''):'';
     let oldFlatName = '';
     let nameList = thisName.split('/');
     oldFlatName = nameList[1];
     let newName = nameList[0];
     thisName = newName.replace(`${oldFlatName}`,`${thisFlatName}`);
-    debugger
     let nameHex = convertToFileHex(`${thisName}`, 63);
     let data = `98060000${(nameHex.length / 2).toString(16)}${nameHex}`;
     return data;
@@ -1227,6 +1226,13 @@ window.iot_ble_device_setting_type_init = (type, value, guid, oldGuid) => {
       });
       break;
     case 'Ble Name':
+      commandList.push({
+        command: get_change_ble_name_command(value),
+        title: type,
+        value: value,
+      });
+      break;
+    case 'BLE Name':
       commandList.push({
         command: get_change_ble_name_command(value),
         title: type,

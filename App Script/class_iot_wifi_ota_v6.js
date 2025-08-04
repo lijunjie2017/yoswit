@@ -259,6 +259,45 @@ window.iotWifiOta = (function () {
       return version;
     }
 
+    // 版本号比较函数 - 返回 1: v1 > v2, -1: v1 < v2, 0: v1 = v2
+    compareVersions(version1, version2) {
+      if (!version1 || !version2) {
+        if (!version1 && !version2) return 0;
+        if (!version1) return -1;
+        if (!version2) return 1;
+      }
+
+      // 将版本号转换为数字数组
+      const v1Parts = version1.split('.').map(part => parseInt(part, 10) || 0);
+      const v2Parts = version2.split('.').map(part => parseInt(part, 10) || 0);
+
+      // 确保两个版本号数组长度一致
+      const maxLength = Math.max(v1Parts.length, v2Parts.length);
+      while (v1Parts.length < maxLength) v1Parts.push(0);
+      while (v2Parts.length < maxLength) v2Parts.push(0);
+
+      // 逐个比较版本号的每个部分
+      for (let i = 0; i < maxLength; i++) {
+        if (v1Parts[i] > v2Parts[i]) {
+          return 1;
+        } else if (v1Parts[i] < v2Parts[i]) {
+          return -1;
+        }
+      }
+
+      return 0;
+    }
+
+    // 检查当前版本是否已经是最新或更高版本
+    isCurrentVersionLatestOrHigher(currentVersion, latestVersion) {
+      if (!latestVersion || latestVersion === '') {
+        return true; // 没有最新版本信息时，认为是最新
+      }
+      
+      const comparison = this.compareVersions(currentVersion, latestVersion);
+      return comparison >= 0; // 当前版本大于等于最新版本
+    }
+
     // 睡眠工具
     sleep(time = 1000) {
       return new Promise((resolve) => {
@@ -748,11 +787,18 @@ window.iotWifiOta = (function () {
         await self.getCurrentFirmware();
         console.log(`设备${self.prop.guid}当前固件版本: ${self.prop.currentFirmware}`);
         
-        // 检查是否是最新版本
-        if (self.prop.currentFirmware === self.prop.latestFirmware || !self.prop.latestFirmware) {
-          self.isLatest = true;
+        // 检查是否是最新版本或更高版本
+        self.isLatest = self.utils.isCurrentVersionLatestOrHigher(self.prop.currentFirmware, self.prop.latestFirmware);
+        
+        if (self.isLatest) {
+          const versionComparison = self.utils.compareVersions(self.prop.currentFirmware, self.prop.latestFirmware);
+          if (versionComparison > 0) {
+            console.log(`设备${self.prop.guid}当前版本(${self.prop.currentFirmware})高于最新版本(${self.prop.latestFirmware})，无需升级`);
+          } else if (versionComparison === 0) {
+            console.log(`设备${self.prop.guid}已是最新版本(${self.prop.currentFirmware})，无需升级`);
+          }
         } else {
-          self.isLatest = false;
+          console.log(`设备${self.prop.guid}需要升级: ${self.prop.currentFirmware} -> ${self.prop.latestFirmware}`);
         }
         self.utils.closeAllDialogs();
         self.utils.showPreloader(_('Checking Wi-Fi connectivity...'));
@@ -967,6 +1013,27 @@ window.iotWifiOta = (function () {
           } catch (retryError) {
             reject(retryError);
           }
+          return;
+        }
+
+        // 在开始升级前再次检查版本
+        const isAlreadyLatest = self.utils.isCurrentVersionLatestOrHigher(self.prop.currentFirmware, self.prop.latestFirmware);
+        if (isAlreadyLatest) {
+          const versionComparison = self.utils.compareVersions(self.prop.currentFirmware, self.prop.latestFirmware);
+          let message;
+          if (versionComparison > 0) {
+            message = `Current firmware (${self.prop.currentFirmware}) is newer than available firmware (${self.prop.latestFirmware})`;
+            console.log(`设备${self.prop.guid}当前版本更高，无需升级: ${self.prop.currentFirmware} > ${self.prop.latestFirmware}`);
+          } else {
+            message = `Current firmware (${self.prop.currentFirmware}) is already the latest version`;
+            console.log(`设备${self.prop.guid}已是最新版本，无需升级: ${self.prop.currentFirmware}`);
+          }
+          
+          self.updateStatus('success');
+          if (self.onSuccess) {
+            self.onSuccess(message);
+          }
+          resolve(_('The firmware is the latest.'));
           return;
         }
 
@@ -1220,12 +1287,18 @@ window.iotWifiOta = (function () {
           // 更新实例中的当前固件版本
           self.prop.currentFirmware = currentFirmware;
           
-          // 比较版本号
-          if (currentFirmware === self.prop.latestFirmware) {
-            console.log('✅ 固件版本匹配，升级成功');
+          // 比较版本号 - 如果当前版本大于等于目标版本，则认为升级成功
+          const isUpgradeSuccess = self.utils.isCurrentVersionLatestOrHigher(currentFirmware, self.prop.latestFirmware);
+          if (isUpgradeSuccess) {
+            const versionComparison = self.utils.compareVersions(currentFirmware, self.prop.latestFirmware);
+            if (versionComparison > 0) {
+              console.log(`✅ 固件版本升级成功，当前版本(${currentFirmware})高于目标版本(${self.prop.latestFirmware})`);
+            } else {
+              console.log(`✅ 固件版本升级成功，版本匹配: ${currentFirmware}`);
+            }
             resolve(true);
           } else {
-            console.log(`❌ 固件版本不匹配: ${currentFirmware} !== ${self.prop.latestFirmware}`);
+            console.log(`❌ 固件版本升级失败: ${currentFirmware} < ${self.prop.latestFirmware}`);
             resolve(false);
           }
         } else {
