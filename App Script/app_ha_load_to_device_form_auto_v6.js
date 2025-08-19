@@ -91,7 +91,12 @@ window._ble_load_to_device_form_perform_auto = async(loading_config) => {
     let connected = peripheral[guid].getProp().connected;
     if(connected){
         if(loading_config.button_group=='IR Setup'){
-            mainView.router.navigate(`/mobile-app/device-type-ir?guid=${guid}&model=${model_name}`, {history:true});
+            let device_hex_model = peripheral[guid].getProp().hexModel.toUpperCase();
+            if(device_hex_model == '0407'){
+                mainView.router.navigate(`/mobile-app/ir-device-configuration?guid=${guid}&model=${model_name}`, {history:true});
+            }else{
+                mainView.router.navigate(`/mobile-app/device-type-ir?guid=${guid}&model=${model_name}`, {history:true});
+            }
         }else{
             mainView.router.navigate(`/mobile-app/general-setting?page_type=${loading_config.page_type}`, {history:true});
         }

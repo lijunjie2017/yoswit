@@ -22,6 +22,8 @@ window.lan_mac_address = "";
 window.ap_mac_address = "";
 window.manufacturing_scan_timer = null;
 window.manufacturing_new_guid = "";
+window.manufacturing_time_list_for_music_player = [];
+window.manufacturing_time_password_for_music_player = "";
 window.controller_toggle_manufacturing = function(params){
     let batch = $("select[name='manufacturing-batch']").val();
     let model = $("select[name='manufacturing-model']").val();
@@ -313,6 +315,27 @@ window.manufacturing_start_produce = (params) => {
                 cmd.push({action:"write",data:ble_model[model.toLowerCase()]['default'][k].toLowerCase()});
                 cmd.push({action:"write",data:("810e").toLowerCase()}); 
                 cmd.push({action:"connect"});
+            }else if(ble_model[model.toLowerCase()]['default'][k].startsWith('9800000008')){
+                //790DC time and password
+                // window.manufacturing_time_list_for_music_player = [];
+                // window.manufacturing_time_password_for_music_player = "";
+                //get the time list
+                const currentDate = dayjs();
+                const futureDate = currentDate.add(1, 'day');
+                let list = [currentDate.format('YYYY-MM-DD HH:mm:ss'), futureDate.format('YYYY-MM-DD HH:mm:ss')];
+                let this_password = getRandomNumbersForManufacturing().join("");
+                window.manufacturing_time_list_for_music_player = list;
+                window.manufacturing_time_password_for_music_player = this_password;
+                //get command
+                let this_time_list = calculateFutureTimeForManufacturing(1);
+                let this_year = this_time_list[0];
+                let this_month = this_time_list[1];
+                let this_day = this_time_list[2];
+                let this_hour = this_time_list[3];
+                let this_minute = this_time_list[4];
+                let this_second = this_time_list[5];
+                let data = `9800000008${this_password.convertToHex()}${this_second.toString(16).pad('00')}${this_minute.toString(16).pad('00')}${this_hour.toString(16).pad('00')}${this_day.toString(16).pad('00')}${this_month.toString(16).pad('00')}${iot_utils_to_little_endian_hex(this_year,2)}`;
+                cmd.push({action:"write",data:data.toLowerCase()});
             }else{
                 cmd.push({action:"write",data:ble_model[model.toLowerCase()]['default'][k].toLowerCase()});
             
@@ -627,12 +650,35 @@ window.manufacturing_upload_to_my_mobmob = (id, args) => {
 	});
 };
 window.formatMAC = (input, separator = ':') => {
+    if(!input){
+        return ""; 
+    }
     const cleaned = input.toLowerCase().replace(/[^0-9a-f]/g, '');
     if (cleaned.length !== 12) throw new Error('Invalid input');
     return Array.from({length: 6})
         .map((_, i) => cleaned.substr(10 - i*2, 2))
         .join(separator);
     
+}
+window.getRandomNumbersForManufacturing = () => {
+    let numbers = new Set();
+    while (numbers.size < 4) {
+        const randomNum = Math.floor(Math.random() * 10);
+        numbers.add(randomNum);
+    }
+    return Array.from(numbers);
+}
+window.calculateFutureTimeForManufacturing = (days) => {
+    const futureDate = dayjs().add(days, 'day');
+    const futureTimeArray = [
+        futureDate.year(),
+        futureDate.month() + 1,
+        futureDate.date(),
+        futureDate.hour(),
+        futureDate.minute(),
+        futureDate.second()
+    ];
+    return futureTimeArray;
 }
 window.manufacturing_upload_to_erp = (id, args) => {
     manufacturing_update_step(id, 'start', null);
@@ -646,24 +692,39 @@ window.manufacturing_upload_to_erp = (id, args) => {
         model = $("select[name='manufacturing-model']").val(),
         batchText = $("select[name='manufacturing-batch'] option[value='" + batch + "']").text(),
         modelText = $("select[name='manufacturing-model'] option[value='" + model + "']").text();
+    //get the mode
+    let device_mode = $("select[name='manufacturing-model'] option[value='" + model + "']").attr('mode');
 	
 	console.log("Manufacturing: manufacturing_password = "+manufacturing_password);
 	console.log("Manufacturing: manufacturing_default_password = "+manufacturing_default_password);
+    let settingsList = [];
+    settingsList.push({
+        setting_type:'default_password',
+        setting:manufacturing_default_password
+    });
+    if(modelText == "YO790DC"){
+        settingsList.push({
+            setting_type:'TimeStream',
+            setting:JSON.stringify(manufacturing_time_list_for_music_player)
+        });
+        settingsList.push({
+            setting_type:'ConnectKey',
+            setting:manufacturing_time_password_for_music_player
+        });
+    }
 	let deviceData = {
 	    guid:manufacturing_new_guid,
 	    mac_address:p.mac_address.toLowerCase(),
 	    password:manufacturing_password,
 	    device_model:modelText,
+	    device_mode : device_mode,
 	    batch:batchText,
 	    firmware:p.firmware,
         wifi_mac_address:formatMAC(window.sta_mac_address),
         lan_mac_address:formatMAC(window.lan_mac_address),
         ap_mac_address:formatMAC(window.ap_mac_address),
 	    manufacture_date:p.lastDiscoverDate,
-	    settings:[{
-	        setting_type:'default_password',
-	        setting:manufacturing_default_password
-	    }]
+	    settings:settingsList
 	};
         
 	return new Promise(function(resolve, reject) {

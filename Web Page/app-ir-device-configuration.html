@@ -1,0 +1,2477 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('IR-Configuration') }}</div>
+        <div class="right">
+          <a class="link icon-only manufacturing-btn-refresh" @click="${()=>toStudyIR()}">
+            <i class="icon material-icons">model_training</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div
+          class="list medium-inset no-chevron virtual-list searchbar-found search-list device-type-list"
+          style="margin-top: 0px; margin-bottom: 0px"
+          v-if="!activeStatus"
+        >
+          <ul>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(2)">
+                <img src="https://erp.lincogn.com/files/ir_tv.png" />
+                <span>{{_('Television')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(1)">
+                <img src="https://erp.lincogn.com/files/ir_arc.png" />
+                <span>{{_('Air Conditioner')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(3)">
+                <img src="https://erp.lincogn.com/files/ir_stb.png" />
+                <span>{{_('Set-top boxes')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(9)">
+                <img src="https://erp.lincogn.com/files/ir_dvd.png" />
+                <span>{{_('Audio')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(8)">
+                <img src="https://erp.lincogn.com/files/ir_projector.png" />
+                <span>{{_('Projector')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(7)">
+                <img src="https://erp.lincogn.com/files/ir_fan.png" />
+                <span>{{_('Fan')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(5)">
+                <img src="https://erp.lincogn.com/files/ir_iptv.png" />
+                <span>{{_('IPTV')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(13)">
+                <img src="https://erp.lincogn.com/files/ir_air.png" />
+                <span>{{_('Air Purifier')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(15)">
+                <img src="https://erp.lincogn.com/files/ir_slr.png" />
+                <span>{{_('Camera')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(12)">
+                <img src="https://erp.lincogn.com/files/ir_vacuum.png" />
+                <span>{{_('Robot Vacuum')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(10)">
+                <svg
+                  t="1726641207142"
+                  style="margin-bottom: 10px"
+                  class="icon"
+                  viewBox="0 0 1024 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="2753"
+                  width="46"
+                  height="30"
+                >
+                  <path
+                    d="M281.674 253.424c11.553-14.585 24.288-28.14 38.208-40.267l-68.978-69.013c-10.828-10.867-28.404-10.867-39.275 0-10.831 10.831-10.831 28.404 0 39.235l70.046 70.043zM506.013 142.469c0.268 0 0.494 0 0.802 0 9.109 0 18.109 0.571 26.955 1.487l0-93.986c0-15.327-12.432-27.757-27.76-27.757s-27.721 12.429-27.721 27.757l0 93.968c8.846-0.895 17.842-1.469 26.956-1.469 0.27 0 0.534 0 0.762 0zM730.414 253.388l69.971-70.007c10.866-10.831 10.866-28.404 0-39.235-10.794-10.867-28.405-10.867-39.277 0l-69.018 69.013c13.958 12.123 26.695 25.664 38.324 40.227zM213.494 450.225c0-13.403 1.07-26.519 2.633-39.483l-98.682 0c-15.289 0-27.722 12.432-27.722 27.757 0 15.328 12.434 27.757 27.722 27.757l96.393 0c-0.229-5.28-0.345-10.581-0.345-16.033zM894.563 410.745l-98.643 0c1.6 12.964 2.633 26.082 2.633 39.483 0 5.45-0.115 10.753-0.305 16.033l96.315 0c15.332 0 27.722-12.429 27.722-27.757s-12.39-27.757-27.722-27.757zM745.017 638.262c-11.286 16.547-23.218 30.843-34.695 43.77l50.787 50.829c10.868 10.831 28.483 10.831 39.277 0 10.866-10.867 10.866-28.404 0-39.275l-55.37-55.324zM211.627 693.585c-10.831 10.867-10.831 28.404 0 39.275 10.868 10.831 28.448 10.831 39.275 0l50.83-50.863c-11.475-12.889-23.412-27.222-34.699-43.731l-55.403 55.324zM760.039 450.225c0.037-57.556-19.138-110.785-51.438-153.414-28.33-37.442-66.806-66.802-111.379-84.036l0.229-1.222-19.026-5.586c-14.798-4.29-30.051-7.265-45.605-8.867l-2.211-0.246-0.075 0-0.079-0.019c-7.623-0.724-15.557-1.279-23.83-1.279l-1.218 0c-8.276 0-16.207 0.557-23.833 1.279l-0.115 0.019-2.286 0.246c-15.535 1.6-30.791 4.575-45.549 8.867l-18.416 5.374 0.19 1.222c-44.802 17.214-83.505 46.651-111.99 84.244-32.258 42.628-51.438 95.854-51.438 153.414 0 41.274 7.132 75.207 18.227 103.29 16.661 42.114 42.094 70.559 62.533 92.138 10.22 10.754 19.22 19.941 25.317 27.795 6.254 7.892 9.265 13.995 10.141 18.837 4.459 23.565 4.917 53.306 4.917 60.854l0 2.174c0 34.085 27.609 61.617 61.659 61.655l142.51 0c34.092-0.037 61.659-27.609 61.659-61.655l0-2.097c-0.037-7.474 0.458-37.291 4.919-60.893 0.608-3.278 2.058-7.017 4.917-11.591 4.88-7.97 14.11-17.883 25.548-29.819 17.083-17.959 38.815-40.604 56.091-72.805 17.312-32.161 29.703-73.706 29.626-127.882zM701.813 537.676c-13.614 34.336-34.053 57.575-53.763 78.391-9.841 10.411-19.487 20.095-27.911 30.812-8.311 10.562-15.745 22.65-18.606 37.481-5.377 28.94-5.607 59.978-5.638 68.862 0 1.181 0 1.828 0 2.096-0.037 10.295-8.314 18.606-18.608 18.606l-142.51 0c-5.223 0-9.761-2.059-13.194-5.45-3.391-3.434-5.412-7.934-5.412-13.154 0-0.268 0-0.953 0-2.172-0.037-8.957-0.306-39.921-5.682-68.783-1.828-9.797-5.834-18.571-10.674-26.348-8.579-13.612-19.559-24.819-30.889-36.832-17.116-17.842-35.232-37.119-49.341-63.41-14.07-26.309-24.517-59.745-24.557-107.54 0.037-47.947 15.862-91.95 42.706-127.427 26.845-35.442 64.595-62.209 108.175-75.246l5.377-1.638c10.524-2.708 21.315-4.861 32.429-6.026l0.075 0 2.06-0.229c6.519-0.627 12.847-1.03 19.103-1.066l1.105 0.115 1.106-0.076c6.212 0 12.579 0.42 19.063 1.03l-0.079 0 2.137 0.229 0.037 0c11.093 1.163 21.887 3.277 32.372 6.026l5.451 1.638c43.582 13.037 81.329 39.807 108.175 75.246 26.801 35.478 42.666 79.482 42.666 127.427 0.003 36.409-6.094 64.511-15.169 87.446zM532.782 197.107l0.079 0zM479.17 197.107l0 0c0 0 0.037 0 0.075 0l-0.075 0zM576.706 833.825l-141.369 0c-14.604 0-26.499 11.822-26.499 26.539 0 14.564 11.899 26.465 26.499 26.465l141.369 0c14.604 0 26.499-11.899 26.499-26.465 0-14.721-11.899-26.539-26.499-26.539zM576.706 900.704l-141.369 0c-14.604 0-26.499 11.857-26.499 26.464 0 14.678 11.899 26.539 26.499 26.539l141.369 0c14.604 0 26.499-11.857 26.499-26.539 0-14.605-11.899-26.464-26.499-26.464zM518.406 968.116l-72.805 0c0 0.801-0.154 1.561-0.154 2.404 0 14.643 22.498 26.499 43.297 26.499l34.546 0c20.818 0 43.277-11.857 43.277-26.499 0-0.837-0.115-1.6-0.115-2.404l-48.044 0z"
+                    fill="#8a8a8a"
+                    p-id="2754"
+                  ></path>
+                </svg>
+                <span>{{_('Remote Light')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(16)">
+                <svg
+                  t="1726641748189"
+                  style="margin-bottom: 10px"
+                  class="icon"
+                  viewBox="0 0 1448 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="7648"
+                  width="46"
+                  height="30"
+                >
+                  <path
+                    d="M978.669268 986.661463a36.539317 36.539317 0 1 1-73.078634 0v-219.260878H576.686829v219.285854a36.539317 36.539317 0 1 1-73.078634 0v-219.285854H94.682537A73.078634 73.078634 0 0 1 21.978537 701.589854l-11.688586-116.885854A1923.746341 1923.746341 0 0 1 8.641561 219.111024l13.886439-152.650926A73.078634 73.078634 0 0 1 95.281951 0H1350.43122a73.078634 73.078634 0 0 1 72.778926 66.460098l13.886439 152.650926c11.03922 121.63122 10.489756 244.061659-1.64839 365.592976l-11.688585 116.885854a73.078634 73.078634 0 0 1-72.728976 65.810731h-372.386341v219.285854z m338.419512-913.582829H128.649366c-18.906537 0-34.691122 14.435902-36.389464 33.267512l-10.86439 119.383415a1850.667707 1850.667707 0 0 0-1.348683 319.762732l2.922147 31.918829 8.41678 84.017951A36.539317 36.539317 0 0 0 127.77522 694.321951h302.754341v-146.182244a73.078634 73.078634 0 0 1 73.078634-73.078634h475.061073a73.078634 73.078634 0 0 1 73.10361 73.078634V694.321951H1317.962927c18.756683 0 34.466341-14.236098 36.364488-32.892878l8.391805-84.017951a1850.442927 1850.442927 0 0 0 4.195902-319.737756l-2.622439-31.968781-10.86439-119.383414a36.539317 36.539317 0 0 0-36.389464-33.217561zM942.104976 548.139707H540.147512c-20.180293 0-36.539317 16.359024-36.539317 36.564293V694.321951h475.061073v-109.642927c0-20.180293-16.359024-36.539317-36.539317-36.539317zM229.525854 182.721561a54.821463 54.821463 0 1 1 0 109.642927 54.821463 54.821463 0 0 1 0-109.642927z m182.721561 0a54.821463 54.821463 0 1 1 0 109.642927 54.821463 54.821463 0 0 1 0-109.642927z"
+                    fill="#515151"
+                    p-id="7649"
+                  ></path>
+                </svg>
+                <span>{{_('Water Heater')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(6)">
+                <svg
+                  t="1726641890777"
+                  style="margin-bottom: 10px"
+                  class="icon"
+                  viewBox="0 0 1024 1024"
+                  version="1.1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  p-id="12214"
+                  width="46"
+                  height="30"
+                >
+                  <path
+                    d="M618.016 442.016q34.016 0 56.992-23.008t23.008-56-23.008-56.992-56-24-56.992 24-24 56.992 24 56 56 23.008z m0-400q88 0 160.992 43.008t116 116.992 43.008 160q0 68-27.008 128.992t-75.008 107.008H401.984q-48-46.016-76-107.008t-28-128.992q0-86.016 43.008-160t116.992-116.992 160-43.008zM256 896v42.016H169.984V896H85.984v-256h852v256h-84v42.016h-86.016V896h-512z m-85.984-128v42.016h384V768h-384zM640 726.016v84h86.016v-84H640z m170.016 0q-18.016 0-30.016 12t-12 30.016 12 30.016 30.016 12 31.008-12 12.992-30.016-12.992-30.016-31.008-12z"
+                    p-id="12215"
+                    fill="#515151"
+                  ></path>
+                </svg>
+                <span>{{_('DVD')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(6)">
+                <svg 
+                t="1754992099268" 
+                style="margin-bottom: 10px"
+                class="icon" 
+                viewBox="0 0 2705 1024" 
+                version="1.1" 
+                xmlns="http://www.w3.org/2000/svg" 
+                p-id="1483" 
+                width="46"
+                height="30"
+                >
+                  <path 
+                  d="M2569.877993 508.139039a120.571026 120.571026 0 0 0-241.398043 0v244.981895h-135.162424v-244.981895a255.98944 255.98944 0 0 1 511.978881 0v244.981895h-131.578573c-3.839842 0-3.839842-211.959257-3.839841-244.981895z m-947.16093 0a255.98944 255.98944 0 1 1 255.98944 255.989441 255.98944 255.98944 0 0 1-255.477461-255.989441z m255.98944 120.571027a124.410868 124.410868 0 1 0-124.410868-124.410868c3.583852 69.373138 58.365592 127.99472 124.410868 124.410868z m-570.088483-211.959257c-18.17525-14.591398-14.591398-36.60649 18.17525-43.774194a276.980575 276.980575 0 0 1 171.768914 25.598944l65.789287-87.804378a307.187329 307.187329 0 0 0-175.352767-58.365593s-146.16997-18.17525-208.375405 94.972083a134.394456 134.394456 0 0 0 51.197888 171.768914c62.205434 40.190342 175.352767 54.78174 208.375405 73.21298s18.943219 47.614036-21.759103 54.78174a296.435772 296.435772 0 0 1-193.784006-47.614035l-65.789286 87.804378a398.06358 398.06358 0 0 0 186.360312 76.796832S1484.738755 789.727424 1561.535587 691.171489a133.114509 133.114509 0 0 0-22.015092-186.360312 91.64422 91.64422 0 0 0-25.598944-14.591399c-69.885117-36.862479-172.280893-51.453878-205.303531-73.468969z m-632.293918 438.765901a288.24411 288.24411 0 0 0 127.99472 47.614036c146.16997 3.583852 157.177516-150.009812 157.177516-186.360313a185.336355 185.336355 0 0 1-120.571026 47.614036 255.98944 255.98944 0 0 1-255.989441-248.565747v-255.98944h135.162425V511.978881a120.571026 120.571026 0 1 0 241.398042 0v-252.405588h135.162425V511.978881c0 222.966803 11.007546 449.773447-204.791553 504.555187A337.394082 337.394082 0 0 1 606.950963 947.16093zM515.562733 0h-135.418414v248.565747H255.98944a255.98944 255.98944 0 1 0 0 511.978881 254.197514 254.197514 0 0 0 255.989441-255.989441v-255.98944z m-135.418414 508.139039A122.362953 122.362953 0 1 1 255.98944 383.984161h120.571027z" 
+                  p-id="1484" fill="#8a8a8a">
+                </path>
+                </svg>
+                <span>{{_('Dyson')}}</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <!-- 选择设备类型后，显示设备列表 -->
+        <div v-if="activeStatus">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in stepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                >
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card brand-selection-container">
+                <!-- 搜索框 - 固定在顶部 -->
+                <div class="search-container">
+                  <div class="search-input-custom">
+                    <i class="icon material-icons search-icon">search</i>
+                    <input type="search" :placeholder="_('Search Brand')" v-model="brandSearchKeyword" v-on:input="searchBrand" style="padding-left: 10px;" />
+                    <span class="custom-clear-button" v-on:click="clearBrandSearch" v-if="brandSearchKeyword && brandSearchKeyword.trim()">
+                      <i class="material-icons">close</i>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 品牌列表容器 - 固定高度，可滚动 -->
+                <div class="brand-list-container">
+                  <div class="block no-padding-horizontal">
+                    <!-- 空状态 -->
+                    <div class="empty-state-container" v-if="!brandList.length && !brandSearchKeyword">
+                      <div class="text-align-center">
+                        <i class="material-icons empty-state-icon">devices</i>
+                        <p class="text-color-gray empty-state-text">{{_('No brands available')}}</p>
+                      </div>
+                    </div>
+
+                    <!-- 无搜索结果状态 -->
+                    <div class="empty-state-container" v-if="!getFilteredBrandList().length && brandSearchKeyword">
+                      <div class="text-align-center">
+                        <i class="material-icons empty-state-icon">search_off</i>
+                        <p class="text-color-gray empty-state-text">{{_('No matching brands found')}}</p>
+                        <p class="text-color-gray empty-state-subtext">{{_('Try different keywords')}}</p>
+                      </div>
+                    </div>
+
+                    <!-- 品牌网格 - 一行三个 -->
+                    <div class="row brand-search-list" v-if="getFilteredBrandList().length">
+                      <div
+                        class="col-33 tablet-50 phone-50"
+                        v-for="(brand, index) in getFilteredBrandList()"
+                        :key="index"
+                      >
+                        <div class="card card-outline searchbar-found brand-grid-item elevation-2" 
+                        style="margin: 10px 0px;"
+                        v-on:click="selectBrand(brand)">
+                          <div :class="brand.isChecked ? 'active-brand-button card-content no-padding' : 'card-content no-padding'">
+                            <div
+                              class="display-flex align-items-center justify-content-center text-align-center"
+                              style="min-height: 40px; padding: 8px 8px"
+                            >
+                              <div :class="brand.isChecked ? 'active-font-color text-color-black brand-name-text' : 'text-color-black brand-name-text'">{{brand.name_en?brand.name_en:brand.name_tw}}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="block">
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <button class="button button-fill button-large" v-on:click="toTab(0)">{{_("Previous")}}</button>
+                    </div>
+                    <div class="col">
+                      <button class="button button-fill button-large" v-on:click="toSelectModel">{{_("Next")}}</button>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="deviceType != 1">
+                    <div class="col">
+                      <button class="button button-fill button-large" v-on:click="toMatchPage()">{{_("Start Matching")}}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+              <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+                <div class="card">
+                  <div class="card-content card-content-padding">
+                    <!-- 匹配界面 -->
+                    <div v-if="!isStep3Testing">
+                      <div class="block text-align-center" style="margin-top: 4px;">
+                        <div class="ir-match-hero">
+                          <div class="ir-match-wave" :class="{ 'is-listening': isMatching && !isMatched }">
+                            <div class="ring ring-1"></div>
+                            <div class="ring ring-2"></div>
+                            <div class="ring ring-3"></div>
+                          </div>
+                          <div class="ir-match-remote elevation-3">
+                            <i class="icon material-icons color-theme">settings_remote</i>
+                          </div>
+                        </div>
+
+                        <div class="padding-horizontal">
+                          <p class="text-color-theme" style="font-size: 16px; margin: 12px 0 6px 0;">{{_('Press your physical remote power button once')}}</p>
+                          <p class="text-color-gray" style="margin: 0 0 12px 0;">{{_('Point the original remote at the device, short press the power key. The system will listen and match the IR code library automatically.')}}</p>
+                        </div>
+
+                        <div class="row no-gap" style="margin-top: 6px;">
+                          <div class="col-100" v-if="!isMatching && !isSearching && !isMatched">
+                            <a class="button button-fill button-large color-green ripple" v-on:click="startSmartMatch">
+                              <i class="icon material-icons" style="margin-right: 6px;">play_arrow</i>{{_('Start Matching')}}
+                            </a>
+                          </div>
+                          <div class="col-100" v-if="isMatched">
+                            <div class="ir-success-banner elevation-2">
+                              <i class="icon material-icons">check_circle</i>
+                              <div class="ir-success-text">{{_('IR signal detected. You can proceed to testing.')}}</div>
+                            </div>
+                          </div>
+                          <div class="col-100" v-if="isMatched" style="margin-top: 8px; display:flex; gap:8px;">
+                            <a class="button button-outline button-large color-gray ripple ir-rematch-btn" v-on:click="rematch">{{_('Rematch')}}</a>
+                            <a class="button button-fill button-large bg-theme ripple" style="min-width: 60px;" v-on:click="toggleStep3View(true)">{{_('Test')}}</a>
+                          </div>
+                        </div>
+
+                        <transition name="ir-fade-slide">
+                          <div class="block" style="margin-top: 14px;" v-if="isMatching && !isMatched">
+                            <p class="ir-phase-title text-color-theme">{{_('Listening for IR signal')}}</p>
+                            <div class="preloader color-multi" style="margin-bottom: 8px;"></div>
+                            <div class="progressbar color-green" :data-progress="matchProgress"></div>
+                            <p class="text-color-gray" style="margin-top: 8px;">{{_('Press the physical power button within 20 seconds.')}}</p>
+                          </div>
+                        </transition>
+
+                        <transition name="ir-fade-slide">
+                          <div class="block" style="margin-top: 14px;" v-if="isSearching && !isMatched">
+                            <p class="ir-phase-title text-color-theme">{{_('Matching IR code library')}}</p>
+                            <div class="chip chip-outline color-green ir-captured-chip" v-if="irLearnedCode">
+                              <div class="chip-media"><i class="icon material-icons">check_circle</i></div>
+                              <div class="chip-label">{{_('Signal captured')}}</div>
+                            </div>
+                            <div class="ir-codebox" v-if="irLearnedCode">{{irLearnedCode}}</div>
+                            <div class="preloader color-multi" style="margin: 10px 0 8px 0;"></div>
+                            <div class="progressbar color-blue" :data-progress="searchProgress"></div>
+                            <p class="text-color-gray" style="margin-top: 8px;">{{_('Searching IR code library based on captured signal...')}}</p>
+                          </div>
+                        </transition>
+
+                        <div class="list media-list ir-tips-list" style="margin-top: 10px;">
+                          <ul>
+                            <li>
+                              <div class="item-content ">
+                                <div class="item-media no-padding"><div class="ir-tip-badge">1</div></div>
+                                <div class="item-inner">
+                                  <div class="item-text ir-tip-text text-align-left">{{_('Keep within 10-30 cm from the device IR receiver.')}}</div>
+                                </div>
+                              </div>
+                            </li>
+                            <li>
+                              <div class="item-content">
+                                <div class="item-media no-padding"><div class="ir-tip-badge">2</div></div>
+                                <div class="item-inner">
+                                  <div class="item-text ir-tip-text text-align-left">{{_('Use short press for the power key.')}}</div>
+                                </div>
+                              </div>
+                            </li>
+                            <li>
+                              <div class="item-content">
+                                <div class="item-media no-padding"><div class="ir-tip-badge">3</div></div>
+                                <div class="item-inner">
+                                  <div class="item-text ir-tip-text text-align-left">{{_('If failed multiple times, try a different angle.')}}</div>
+                                </div>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 测试界面（参考 Step-2） -->
+                    <div v-else>
+                      <div class="block text-color-theme padding" style="font-size: 18px; text-align: center;">
+                        <p>{{_('Please point the IR device at the air conditioner, click the remote button, and then confirm whether the air conditioner responds.')}}</p>
+                      </div>
+                      <div class="block no-padding text-align-center">
+                        <p class="color-theme" style="margin-bottom: 8px;">{{_('Trying the remote control model.')}}</p>
+                        <div class="text-color-theme ir-counter">{{matchIndex}}<span style="margin:0 4px;">/</span>{{matchTotal}}</div>
+                      </div>
+                      <div class="block no-padding ir-test-wrap">
+                        <a
+                          class="button button-fill button-round color-green ripple elevation-3 ir-power-btn"
+                          :class="{ 'is-on': isPowerOn, 'is-switching': isSwitching }"
+                          v-on:click="togglePowerForStep3"
+                        >
+                          <i class="icon material-icons" style="font-size: 52px;">power_settings_new</i>
+                        </a>
+                        <a
+                          class="button button-round button-outline color-gray ripple ir-prev-btn"
+                          v-if="matchIndex > 1"
+                          v-on:click="prevIrModelForStep3"
+                        >
+                          <i class="icon material-icons">chevron_left</i>
+                        </a>
+                        <a
+                          class="button button-round button-outline color-gray ripple ir-next-btn"
+                          v-if="matchIndex < matchTotal"
+                          v-on:click="nextIrModelForStep3"
+                        >
+                          <i class="icon material-icons">chevron_right</i>
+                        </a>
+                      </div>
+                      <p class="text-align-center text-color-gray ir-caption">{{_('Power')}}</p>
+                      <div class="row" style="margin-top: 10px;">
+                        <div class="col-100">
+                          <a class="button button-outline button-large color-blue ripple" v-on:click="toggleStep3View(false)">{{_('Back to Matching')}}</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="previousStep(2)">{{_("Previous")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toFullPanel">{{_("Next")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+                <div class="card">
+                  <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Full Panel")}}</div>
+                  <div class="card-content card-content-padding">
+                    <div class="air-show-panel" v-if="deviceType == 1">
+                      <div class="air-lcd elevation-2">
+                        <div class="air-topbar">
+                          <div class="air-top-item air-power">
+                            <i class="icon material-icons" :class="[isPowerOn ? 'text-color-theme' : 'text-color-red']">power_settings_new</i>
+                          </div>
+                          <div class="air-top-item" v-if="isPowerOn">
+                            <img :src="airDefaultValue.mode == 0 ? 'style/img/air_condition/icon-mode-2.png' : (airDefaultValue.mode == 1 ? 'style/img/air_condition/icon-mode-5.png' : (airDefaultValue.mode == 2 ? 'style/img/air_condition/icon-mode-1.png' : 'style/img/air_condition/icon-mode-4.png'))" alt="mode" />
+                            <span class="air-label">{{ airDefaultValue.mode == 0 ? _('Cool') : (airDefaultValue.mode == 1 ? _('Heat') : (airDefaultValue.mode == 2 ? _('Auto') : _('Fan'))) }}</span>
+                          </div>
+                          <div class="air-top-item" v-if="isPowerOn">
+                            <img :src="airDefaultValue.fan == 0 ? 'style/img/air_condition/icon-speed-1.png' : (airDefaultValue.fan == 1 ? 'style/img/air_condition/icon-speed-2.png' : (airDefaultValue.fan == 2 ? 'style/img/air_condition/icon-speed-3.png' : 'style/img/air_condition/icon-speed-4.png'))" alt="fan" />
+                            <span class="air-label">{{ _('Fan') }}</span>
+                          </div>
+                          <div class="air-top-item" v-if="isPowerOn">
+                            <img :src="airDefaultValue.swing ? 'style/img/air_condition/icon-swing-1.png' : 'style/img/air_condition/icon-swing-0.png'" alt="swing" />
+                            <span class="air-label">{{ _('Swing') }}</span>
+                          </div>
+                        </div>
+                        <div class="air-divider"></div>
+                        <div class="air-temp">
+                          <span class="air-temp-value">{{ airDefaultValue.temp }}</span>
+                          <span class="air-temp-unit">°C</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="display-flex justify-content-space-between" style="flex-wrap: wrap">
+                      <div
+                        :class="{'ir-item':true}"
+                        v-for="(configItem,configIndex) in panelConfig['button']"
+                        :key="configItem.id"
+                        :style="{'position':'relative','width' : 'calc('+configItem.width+'%)','margin-top' : '15px'}"
+                        v-on:click="testIrCode(configItem)"
+                      >
+                      <a
+                          href="#"
+                          :class="{'button':true,'button-large':true,'button-raised':configItem.key != ''}"
+                          style="padding: 30px 0px"
+                        >
+                          <i class="icon material-icons" style="font-size: 30px" v-if="configItem.icon">{{configItem.icon}}</i>
+                          <span v-else>{{configItem.name}}</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("Next")}}</div>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="deviceType != 1">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toDetail()">{{_("Edit")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="step-5" class="view tab view-main" :class="[index == 5 ? 'tab-active' : '']" v-if="index == 5">
+                <div class="card">
+                  <div class="card-header">
+                    <div class="row">
+                      <div class="col-100">
+                        <h5>{{ _('Profile Settings') }}</h5>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-content card-content-padding">
+                    <div class="list no-hairlines-md">
+                      <ul>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">bed</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{ _('Room')}}</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                              <select name="profile_room" placeholder="" lang="en">
+                                <option :value="roomItem.name" selected="selected" v-for="roomItem in profileRoom" :key="roomItem.name">
+                                  {{tran(roomItem.title)}}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{ _('Name')}}</div>
+                            <div class="item-input-wrap">
+                              <input class="init-input" name="title" v-model="postTitle" type="text" placeholder="Device Name" />
+                              <span class="input-clear-button"></span>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i
+                              class="icon material-icons setting-list-icon p-1 text-color-theme"
+                              v-if="hideStatus"
+                              v-on:click="hideStatus = !hideStatus"
+                              >check_box</i
+                            >
+                            <i class="icon material-icons setting-list-icon p-1" v-if="!hideStatus" v-on:click="hideStatus = !hideStatus"
+                              >check_box_outline_blank</i
+                            >
+                          </div>
+                          <div class="item-inner">
+                            <div class="" style="line-height: 30px">{{ _('Hide IR Device') }}</div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="backToStep4">{{_("Previous")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="saveErp">{{_("Compelte")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <!-- 测试卡片 -->
+                <div class="card-content card-content-padding">
+                  <!-- 说明文字 -->
+                  <div class="block text-color-theme padding" style="font-size: 18px; text-align: center;">
+                    <p>
+                      {{_('Please point the IR device at the')}} {{_(postTitle)}} {{_('click the remote button, and then confirm whether the ')}} {{_(postTitle)}} {{_('responds.')}}
+                    </p>
+                  </div>
+
+                  <!-- 型号计数 -->
+                  <div class="block no-padding text-align-center">
+                    <p class="color-theme" style="margin-bottom: 8px;">{{_('Trying the remote control model.')}}</p>
+                    <div class="text-color-theme ir-counter">{{testingIndex}}<span style="margin:0 4px;">/</span>{{testingTotal}}</div>
+                  </div>
+
+                  <!-- 中央图片按钮 + 切换箭头 -->
+                  <div class="block no-padding ir-test-wrap">
+                    <a
+                      class="button button-fill button-round color-green ripple elevation-3 ir-power-btn"
+                      :class="{ 'is-on': isPowerOn, 'is-switching': isSwitching }"
+                      v-on:click="togglePower"
+                    >
+                      <i class="icon material-icons" style="font-size: 52px;">power_settings_new</i>
+                    </a>
+                    <a
+                      class="button button-round button-outline color-gray ripple ir-prev-btn"
+                      v-if="testingIndex > 1"
+                      v-on:click="prevIrModel"
+                    >
+                      <i class="icon material-icons">chevron_left</i>
+                    </a>
+                    <a
+                      class="button button-round button-outline color-gray ripple ir-next-btn"
+                      v-if="testingIndex < testingTotal"
+                      v-on:click="nextIrModel"
+                    >
+                      <i class="icon material-icons">chevron_right</i>
+                    </a>
+                  </div>
+                  <p class="text-align-center text-color-gray ir-caption">{{_('Power')}}</p>
+                </div>
+
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTestPage">{{_("Next")}}</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="deviceType != 1">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Smart Search")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let showIrLearnIcon = false;
+    let vueApp = null;
+    let { guid, sub_name } = $f7route.query;
+    //let { guid, subdevice_name } = $f7route.query;
+
+    const toStudyIR = ()=>{
+      vueApp.$toStudyIR()
+    }
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1, // control the step-content
+          activeStatus: false, //if choose the template, show the step-content
+          deviceType: 1,
+          // step-2 测试用状态
+          isPowerOn: false,
+          isSwitching: false,
+          testingIndex: 1,
+          testingTotal: 38,
+          stepList: [
+            {
+              id: 1,
+              name: '1',
+              isActive: true,
+              relatedIndex: 1,
+            },
+            {
+              id: 2,
+              name: '2',
+              isActive: false,
+              relatedIndex: 2,
+            },
+            {
+              id: 3,
+              name: '3',
+              isActive: false,
+              relatedIndex: 3,
+            },
+            {
+              id: 4,
+              name: '4',
+              isActive: false,
+              relatedIndex: 4,
+            },
+            {
+              id: 5,
+              name: '5',
+              isActive: false,
+              relatedIndex: 5,
+            },
+          ],
+          dbMap : null,
+          // 品牌搜索相关数据
+          brandSearchKeyword: '',
+          selectedBrand: null,
+          brandList: [],
+          modelList : [],
+          zipUrl: '',
+          fileName: '',
+          fileContent: null,
+          airDefaultValue:{
+            temp: 26,//default temp
+            mode: 0,//default mode 
+            wind: 0,//default wind
+            fan: 0,//default fan
+            swing: 0,//default swing
+            light: 1,//default light
+            sleep: 1,//default sleep
+            turbo: 1,//default turbo
+          },
+          // step-3 一键匹配状态
+          isMatching: false,
+          isSearching: false,
+          isMatched: false,
+          matchProgress: 0,
+          matchInterval: null,
+          searchProgress: 0,
+          searchInterval: null,
+          matchTimeoutTimer: null,
+          irLearnedCode: '',
+          // step-3 视图切换与候选
+          isStep3Testing: false,
+          step3MatchList: [],
+          matchTotal: 0,
+          matchIndex: 0,
+          panelConfig : {},
+          profileRoom : [],
+          postTitle : '',
+          hideStatus: true,
+          fileCode : '',
+          normalType : 1, // 1 选择品牌切正常测试, 2 智能匹配
+          learnStatus: false,
+          lastIndex:1
+        },
+        computed: {
+          // 过滤后的品牌列表
+          filteredBrandList: function () {
+            if (!this.brandSearchKeyword || !this.brandSearchKeyword.trim()) {
+              return this.brandList || [];
+            }
+            if (!this.brandList || !Array.isArray(this.brandList)) {
+              return [];
+            }
+            return [brand.name, brand.name_tw, brand.name_en].some(name =>
+              name && name.toLowerCase().includes(this.brandSearchKeyword.toLowerCase())
+            )
+          },
+        },
+        watch: {},
+        components: {},
+        mounted() {
+          Vue.prototype.$toStudyIR = this.toStudyIR;
+          this.getDbInfo();
+          this.initEmiterEvent();
+          this.initProfileData();
+        },
+        methods: {
+          initEmiterEvent(){
+            console.log('initEmiterEvent');
+            if (!this._irPanelConfigChange) {
+              this._irPanelConfigChange = (data) => {
+                console.log('ir_panel_config_change', data);
+                Vue.set(this.panelConfig, "button", data);
+              };
+            }
+            emitter.off(`ir_panel_config_change`, this._irPanelConfigChange);
+            emitter.on(`ir_panel_config_change`, this._irPanelConfigChange);
+            if (!this._irPanelConfigLearnR2W) {
+              this._irPanelConfigLearnR2W = (data) => {
+                console.log('ir_panel_config_learn_r2w', data);
+                Vue.set(this.panelConfig, "button", data);
+                this.learnStatus = true;
+                this.panelConfig['button'] = data;
+                this.toTab(5);
+              };
+            }
+            emitter.off(`ir_panel_config_learn_r2w`, this._irPanelConfigLearnR2W);
+            emitter.on(`ir_panel_config_learn_r2w`, this._irPanelConfigLearnR2W);
+          },
+          initProfileData() {
+            this.profileRoom = cloneDeep(erp.info.profile.profile_room);
+          },
+          initPostTitle(){
+            if(this.deviceType == 1){
+              this.postTitle = 'Air Conditioner';
+            }else if(this.deviceType == 2){
+              this.postTitle = 'TV';
+            }else if(this.deviceType == 3){
+              this.postTitle = 'STB';
+            }else if(this.deviceType == 4){
+              this.postTitle = 'BOX';
+            }else if(this.deviceType == 5){
+              this.postTitle = 'IPTV';
+            }else if(this.deviceType == 6){
+              this.postTitle = 'DVD';
+            }else if(this.deviceType == 7){
+              this.postTitle = 'FAN';
+            }else if(this.deviceType == 8){
+              this.postTitle = 'PROJECTOR';
+            }else if(this.deviceType == 9){
+              this.postTitle = 'STEREO';
+            }else if(this.deviceType == 10){
+              this.postTitle = 'LIGHT';
+            }else if(this.deviceType == 12){
+              this.postTitle = 'CLEAN-ROBOT';
+            }else if(this.deviceType == 13){
+              this.postTitle = 'AIR-CLEANER';
+            }else if(this.deviceType == 14){
+              this.postTitle = 'DYSON';
+            }else if(this.deviceType == 15){
+              this.postTitle = 'CAMERA';
+            }else if(this.deviceType == 16){
+              this.postTitle = 'HEATER';
+            }
+          },
+          // step-3: 开始一键匹配
+          async startSmartMatch() {
+            if (this.isMatching) return;
+            this.isMatched = false;
+            this.isSearching = false;
+            this.isMatching = true;
+            this.matchProgress = 0;
+            this.searchProgress = 0;
+            if (this.matchInterval) {
+              clearInterval(this.matchInterval);
+              this.matchInterval = null;
+            }
+            if (this.searchInterval) {
+              clearInterval(this.searchInterval);
+              this.searchInterval = null;
+            }
+            if (this.matchTimeoutTimer) {
+              clearTimeout(this.matchTimeoutTimer);
+              this.matchTimeoutTimer = null;
+            }
+            // 模拟进度与监听动画
+            this.matchInterval = setInterval(() => {
+              if (!this.isMatching) return;
+              // 进度缓慢推进到 95%，等待用户按键确认
+              if (this.matchProgress < 95) {
+                this.matchProgress = Math.min(95, this.matchProgress + Math.floor(Math.random() * 6 + 2));
+              }
+              // 同步到 F7 进度条
+              this.$nextTick(() => {
+                const pb = this.$el && this.$el.querySelector('#step-3 .progressbar');
+                if (pb && app && app.progressbar && app.progressbar.set) {
+                  try { app.progressbar.set(pb, this.matchProgress); } catch (e) {}
+                }
+              });
+            }, 500);
+
+            // 20s 超时监听期
+            this.matchTimeoutTimer = setTimeout(() => {
+              if (this.isMatched || !this.isMatching) return;
+              // 停止监听，提示用户重新按下
+              this.stopSmartMatch();
+              app.dialog.alert(_(`No IR signal detected within 20s. Please press the physical power button again and retry.`));
+            }, 20000);
+
+            //开始发送指令
+            try{
+              if (!this._sendIrCodeFun) {
+                this._sendIrCodeFun = (data) => {
+                  console.log('learneddata', data);
+                  let rs = data.rs;
+                  if (data.guid == guid && rs.length > 8) {
+                    // 获取到数据后立即清除监听器，避免重复处理
+                    emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                    this._sendIrCodeFun = null;
+                    this.irLearnedCode = rs;
+                    this.onIrSignalCaptured();
+                  }
+                };
+              }
+              
+              emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+              emitter.on(`ir_learned_code`, this._sendIrCodeFun);
+              let data = '972107';
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+            }catch(error){
+              console.log('error', error);
+              app.dialog.alert(_(erp.get_log_description(error)))
+            }
+          },
+          // step-3: 停止一键匹配
+          stopSmartMatch() {
+            this.isMatching = false;
+            this.isSearching = false;
+            this.isMatched = false;
+            this.matchProgress = 0;
+            this.searchProgress = 0;
+            if (this.matchInterval) {
+              clearInterval(this.matchInterval);
+              this.matchInterval = null;
+            }
+            if (this.searchInterval) {
+              clearInterval(this.searchInterval);
+              this.searchInterval = null;
+            }
+            if (this.matchTimeoutTimer) {
+              clearTimeout(this.matchTimeoutTimer);
+              this.matchTimeoutTimer = null;
+            }
+            if (this._sendIrCodeFun) {
+              try { emitter.off(`ir_learned_code`, this._sendIrCodeFun); } catch (e) {}
+              this._sendIrCodeFun = null;
+            }
+          },
+
+          // step-3: 设备收到红外信号（由设备事件回调触发）
+          onIrSignalCaptured() {
+            if (!this.isMatching) return;
+            // 停止监听，进入搜索
+            this.isMatching = false;
+            this.matchProgress = 100;
+            if (this.matchInterval) { clearInterval(this.matchInterval); this.matchInterval = null; }
+            if (this.matchTimeoutTimer) { clearTimeout(this.matchTimeoutTimer); this.matchTimeoutTimer = null; }
+            this.$nextTick(() => {
+              const pb = this.$el && this.$el.querySelector('#step-3 .progressbar');
+              if (pb && app && app.progressbar && app.progressbar.set) {
+                try { app.progressbar.set(pb, this.matchProgress); } catch (e) {}
+              }
+            });
+            // 启动搜索流程
+            this.startSearchByCapturedSignal();
+          },
+
+          // step-3: 基于捕获到的信号搜索码库
+          async startSearchByCapturedSignal() {
+            this.isSearching = true;
+            this.searchProgress = 0;
+            if (this.searchInterval) { clearInterval(this.searchInterval); this.searchInterval = null; }
+            this.searchInterval = setInterval(() => {
+              if (!this.isSearching) return;
+              if (this.searchProgress < 99) {
+                this.searchProgress = Math.min(99, this.searchProgress + Math.floor(Math.random() * 5 + 3));
+              }
+              this.$nextTick(() => {
+                const pb = this.$el && this.$el.querySelector('#step-3 .progressbar.color-blue');
+                if (pb && app && app.progressbar && app.progressbar.set) {
+                  try { app.progressbar.set(pb, this.searchProgress); } catch (e) {}
+                }
+              });
+            }, 450);
+            const hasCandidate = await this.searchIrCodeLibrary();
+            this.onSearchCompleted(!!hasCandidate);
+          },
+          //码库搜索算法
+          searchIrCodeLibrary(){
+            /*
+            1.将数据库关于改品牌的码库读出来
+            2.数组每一个元素的上下误差在20%以内的,则数组内的元素为匹配成功
+            3.最终算出每个数组里面的元素匹配成功的数量
+            4.匹配成功的数量最多的为最终匹配成功的码库
+            */
+            return new Promise(async(resolve, reject) => {
+              let sql = '';
+              if(this.selectedBrand){
+                sql = `SELECT remote_index_id,key_value FROM decode_remote WHERE brand_id = ${this.selectedBrand.id} AND key_number = 0;`;
+              }else{
+                sql = `SELECT remote_index_id,key_value FROM decode_remote WHERE key_number = 0;`;
+              }
+              let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+              console.log('learned result', result);
+              let codeList = this.processHexString(this.irLearnedCode);
+              console.log('codeList', codeList);
+              let matchList = [];
+              result.forEach(item=>{
+                item.code_value_list = item.key_value.split(',');
+                if(item.code_value_list.length == codeList.length){
+                  let matchCount = this.compareCodeList(codeList, item.code_value_list);
+                  if(matchCount > parseInt(codeList.length * 0.9)){
+                    matchList.push({
+                      remote_index_id: item.remote_index_id,
+                      code_value_list: item.code_value_list,
+                      match_count: matchCount,
+                    })
+                  }
+                }
+              })
+              matchList = matchList.sort((a, b) => b.match_count - a.match_count);
+              console.log('matchList', matchList);
+              this.step3MatchList = matchList;
+              this.matchTotal = matchList.length;
+              this.matchIndex = 1;
+              resolve(matchList && matchList.length > 0);
+            }).catch((error) => {
+              console.log('error', error);
+              reject(error);
+            })
+          },
+          // Step-3: 切换视图（匹配/测试）
+          async toggleStep3View(toTesting){
+            if(toTesting){
+              this.isStep3Testing = true;
+            }else{
+              this.isStep3Testing = false;
+            }
+          },
+          //compare the codeList and item.code_value_list
+          compareCodeList(codeList, itemCodeList){
+            if (!Array.isArray(codeList) || !Array.isArray(itemCodeList)) {
+              return 0;
+            }
+            const length = Math.min(codeList.length, itemCodeList.length);
+            let matchCount = 0;
+            for (let i = 0; i < length; i++) {
+              const learnedValue = Number(codeList[i]);
+              const dbValue = Number(itemCodeList[i]);
+              if (!isFinite(learnedValue) || !isFinite(dbValue)) continue;
+              const tolerance = Math.abs(dbValue) * 0.2; // ±20%
+              if (Math.abs(learnedValue - dbValue) <= tolerance) {
+                matchCount++;
+              }
+            }
+            return matchCount;
+          },
+          processHexString(str){
+            const trimmedStr = str.substring(8);
+            const result = [];
+            for (let i = 0; i < trimmedStr.length; i += 4) {
+              if (i + 4 > trimmedStr.length) break; // 确保完整4字符
+              const segment = trimmedStr.substring(i, i + 4);
+              // 小端序处理：交换前后两个字节 (0-1位和2-3位互换)
+              const littleEndianHex = segment.substring(2, 4) + segment.substring(0, 2);
+              
+              // 转换为十进制
+              result.push(parseInt(littleEndianHex, 16));
+            }
+            return result;
+          },
+          // step-3: 搜索完成
+          onSearchCompleted(success = true) {
+            if (this.searchInterval) { clearInterval(this.searchInterval); this.searchInterval = null; }
+            this.isSearching = false;
+            if (success) {
+              this.searchProgress = 100;
+              this.isMatched = true;
+              this.$nextTick(() => {
+                const pb = this.$el && this.$el.querySelector('#step-3 .progressbar.color-blue');
+                if (pb && app && app.progressbar && app.progressbar.set) {
+                  try { app.progressbar.set(pb, this.searchProgress); } catch (e) {}
+                }
+              });
+              // 自动切换到测试界面
+              this.toggleStep3View(true);
+            } else {
+              this.isMatched = false;
+              app.dialog.alert(_(`No matching IR library found. Please try again.`));
+            }
+          },
+          // step-3: 重新匹配
+          rematch() {
+            this.stopSmartMatch();
+            // 给一个很短的延时，让 UI 有轻微过渡
+            this.$nextTick(() => {
+              setTimeout(() => {
+                this.startSmartMatch();
+              }, 120);
+            });
+          },
+          toStudyIR(){
+            if(!this.activeStatus){
+              app.dialog.alert(_('Please select the device type first.'));
+              return;
+            }
+            mainView.router.navigate(`/mobile-app/device-ir-learn-for-new?guid=${guid}&device_type=${this.deviceType}&brand=${this.selectedBrand ? this.selectedBrand.id : ''}`);
+          },
+          async getDbInfo() {
+            /*
+
+            should get the download link
+
+            1.check if upload the database 
+            2.upload the database
+            3.init the database 
+
+            */
+            let url = `/api/method/appv6.getFirmwareByType?type=IR`;
+            try {
+              let res = await http2.request(url, {
+                method: 'GET',
+                serializer: 'json',
+                responseType: 'json',
+                timeout: 3,
+              });
+              console.log('res', res);
+              if (res.data) {
+                let firmwareList = res.data.list;
+                firmwareList = firmwareList.sort((a, b) => {
+                  const format = 'YYYY-MM-DD HH:mm:ss.SSSSSS';
+                  const dateA = dayjs(a.modified, format);
+                  const dateB = dayjs(b.modified, format);
+                  if (!dateA.isValid() || !dateB.isValid()) {
+                    return 0;
+                  }
+                  return dateB.valueOf() - dateA.valueOf();
+                });
+                this.zipUrl = firmwareList[0].download_link;
+                this.fileName = firmwareList[0].firmware_id + '.zip';
+              }
+              console.log('this.zipUrl', this.zipUrl);
+              console.log('this.fileName', this.fileName);
+              this.init();
+            } catch (error) {
+              console.log('error', error);
+              app.dialog.alert('error', error);
+            }
+          },
+          //init the file 
+          initTheAirFile(){
+            //Capacitor.Plugins.Filesystem
+            //read all the dile name
+            return new Promise((resolve, reject) => {
+              Capacitor.Plugins.Filesystem.readdir({
+                path : cordova.file.applicationStorageDirectory+'databases/irext_binaries'
+              }, (result) => {
+                console.log('result', result);
+                resolve(result);
+              }, (error) => {
+                reject(error);
+              });
+            });
+          },
+          // step-2: 电源按钮切换动画
+          async togglePower() {
+            if (this.isSwitching) return;
+            this.isSwitching = true;
+            this.isPowerOn = !this.isPowerOn;
+            // 触发一次“发码”动作位置（后续可接入真实发送方法）
+            await this.sendIrCode();
+            this.isSwitching = false;
+          },
+          async togglePowerForStep3(){
+            if (this.isSwitching) return;
+            this.isSwitching = true;
+            this.isPowerOn = !this.isPowerOn;
+            try{
+              await this.sendIrCodeForStep3();
+            }catch(error){
+              console.log('error', error);
+              app.dialog.alert(_(erp.get_log_description(error)))
+            }
+            this.isSwitching = false;
+          },
+          // step-2: 切换到下一个红外型号
+          async nextIrModel() {
+            if (this.isSwitching) return;
+            this.isSwitching = true;
+            this.isPowerOn = false;
+            this.testingIndex = this.testingIndex >= this.testingTotal ? 1 : this.testingIndex + 1;
+            // 轻微过渡
+            await this.sleep(220);
+            this.isSwitching = false;
+          },
+          // step-2: 切换到上一个红外型号
+          async prevIrModel() {
+            if (this.isSwitching) return;
+            this.isSwitching = true;
+            this.testingIndex = this.testingIndex <= 1 ? 1 : this.testingIndex - 1;
+            await this.sleep(220);
+            this.isSwitching = false;
+          },
+          //step-3: 切换到下一个红外型号
+          async nextIrModelForStep3() {
+            if (this.isSwitching) return;
+            this.isSwitching = true;
+            this.isPowerOn = false;
+            this.matchIndex = this.matchIndex >= this.matchTotal ? 1 : this.matchIndex + 1;
+            // 轻微过渡
+            await this.sleep(220);
+            this.isSwitching = false;
+          },
+          //step-3: 切换到上一个红外型号
+          async prevIrModelForStep3() {
+            if (this.isSwitching) return;
+            this.isSwitching = true;
+            this.matchIndex = this.matchIndex <= 1 ? 1 : this.matchIndex - 1;
+            await this.sleep(220);
+            this.isSwitching = false;
+          },
+          requestMtuForBle(){
+            return new Promise(async(resolve, reject) => {
+              if(deviceInfo.operatingSystem === 'ios'){
+                resolve(true);
+              }else{
+                try{
+                  await window.peripheral[guid].connect();
+                }catch(error){
+                  console.log('error', error);
+                  reject(error);
+                  return;
+                }
+                //request mtu
+                ble.requestMtu(
+                  window.peripheral[guid].prop.id,
+                  512,
+                  () => {
+                    console.log('request mtu success');
+                    resolve(true);
+                  },
+                  (error) => {
+                    if(error){
+                      reject(error);
+                    }
+                  }
+                );
+              }
+            })
+          },
+          async initDataBase(){
+            try{
+              let db = await initIrDataBase('irext_db_sqlite.db');
+              this.dbMap = db;
+              let sql = `SELECT * FROM brand where category_id=${this.deviceType};`;
+              let result = await this.irSqliteExecuteSql(db, sql);
+              this.brandList = result;
+              console.log('result', result);
+            }catch(error){
+              throw error;
+            }
+          },
+          async init() {
+            let mkdirFilePath = `databases/`;
+            if (deviceInfo.operatingSystem === 'ios') {
+              mkdirFilePath = `Library/LocalDatabase/`;
+            }
+            //check if exist the file
+            await http2
+              .inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${this.fileName}`)
+              .then(async (entry) => {
+                console.log('entry', entry);
+                //if exit,then init database
+                if (entry) {
+                  this.initDataBase();
+                }
+                //entry.remove();
+              }).catch(async(error) => {
+                console.log('error', error);
+                try{
+                  await this.downloadTheAirFile(mkdirFilePath);
+                  this.initDataBase();
+                }catch(errors){
+                  if(errors == 'Cancel Download'){
+                    app.dialog.close();
+                    mainView.router.back();
+                    return;
+
+                  }else{
+                    console.log('errors', errors);
+                    app.dialog.alert(_(erp.get_log_description(errors)))
+                  }
+                }
+              });
+            try{
+              await  this.requestMtuForBle();
+            }catch(error){
+              console.log('error', error);
+              app.dialog.alert(_(erp.get_log_description(error)))
+            }
+          },
+          unzipFile(from,to){
+            return new Promise((resolve, reject) => {
+              Zeep.unzip({
+                from : from,
+                to : to
+              },resolve,reject);
+            })
+          },
+          async downloadTheAirFile(mkdirFilePath){
+            return new Promise(async(resolve, reject) => {
+              app.dialog.confirm(
+              `${_('The infrared function requires downloading additional matching files. Do you confirm the download?')}`,
+                async () => {
+                  try {
+                    app.dialog.preloader(_('Downloading, please wait...'));
+                    this.irTimer = setTimeout(() => {
+                      app.dialog.close();
+                      app.dialog.alert(_('Download Timed Out'));
+                    }, 1000 * 60);
+                    const resData = await http2.request({
+                      url: this.zipUrl,
+                      method: 'DOWNLOAD',
+                      timeout: 60,
+                      debug: true,
+                      file: {
+                        path: cordova.file.applicationStorageDirectory + mkdirFilePath + this.fileName,
+                        name: `${this.fileName}`,
+                      },
+                    });
+                    app.dialog.close();
+                    clearTimeout(this.irTimer);
+                    app.dialog.preloader(_('Unzipping, please wait...'));
+                    //unzip file
+                    await this.unzipFile(cordova.file.applicationStorageDirectory + mkdirFilePath + this.fileName,cordova.file.applicationStorageDirectory + mkdirFilePath);
+                    app.dialog.close();
+                    app.dialog.alert(_('Unzip Successfully'));
+                    resolve(true);
+                  } catch (errorss) {
+                    console.log("errorss",errorss)
+                    http2.inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${this.fileName}`).then(entry=>{
+                      console.log("entry error",entry);
+                      entry.remove();
+                    });
+                    app.dialog.close();
+                    reject(errorss);
+                  }
+                },
+                () => {
+                  reject(_('Cancel Download'));
+                }
+              );
+            })
+          },
+          irSqliteExecuteSql(db, sql, params = []) {
+            return new Promise((resolve, reject) => {
+              db.executeSql(
+                sql,
+                params,
+                (resultSet) => {
+                  let list = [];
+                  for (let i = 0; i < resultSet.rows.length; i++) {
+                    list.push(Object.assign({isChecked: false}, resultSet.rows.item(i)));
+                  }
+                  resolve(list);
+                },
+                (error) => {
+                  reject(error);
+                }
+              );
+            });
+          },
+          // 品牌搜索方法
+          searchBrand() {
+            // 搜索逻辑已经在computed属性中处理
+            this.$forceUpdate(); // 强制更新组件
+          },
+          clearBrandSearch() {
+            this.brandSearchKeyword = '';
+          },
+          async selectBrand(brand) {
+            this.selectedBrand = brand;
+            this.brandList.forEach(brand => {
+              brand.isChecked = false;
+            });
+            brand.isChecked = true;
+            // 这里可以添加选择品牌后的逻辑，比如跳转到下一步
+            console.log('Selected brand:', brand);
+            // 可能需要调用API获取该品牌下的型号列表
+            await this.getRemoteId();
+            this.toTab(2);
+          },
+          // 获取过滤后的品牌列表的方法
+          getFilteredBrandList() {
+            if (!this.brandSearchKeyword || !this.brandSearchKeyword.trim()) {
+              return this.brandList || [];
+            }
+            if (!this.brandList || !Array.isArray(this.brandList)) {
+              return [];
+            }
+            return this.brandList.filter((brand) => {
+              return [brand.name, brand.name_tw, brand.name_en].some(name =>
+              name && name.toLowerCase().includes(this.brandSearchKeyword.toLowerCase())
+            )
+            });
+          },
+          async sendAirStatus(item){
+            //change the value of the airDefaultValue
+            switch(item.key){
+              case '0':
+                //power
+                this.isPowerOn = !this.isPowerOn;
+                break;
+              case '1':
+                //mode
+                if(this.airDefaultValue.mode == 0){
+                  this.airDefaultValue.mode = 1;
+                }else if(this.airDefaultValue.mode == 1){
+                  this.airDefaultValue.mode = 3;
+                }else if(this.airDefaultValue.mode == 2){
+                  this.airDefaultValue.mode = 0;
+                }else if(this.airDefaultValue.mode == 3){
+                  this.airDefaultValue.mode = 2;
+                }
+                break;
+              case '2':
+                //temp +
+                if(this.airDefaultValue.temp < 30){
+                  this.airDefaultValue.temp = this.airDefaultValue.temp + 1;
+                }
+                break;
+              case '3':
+                //temp -
+                if(this.airDefaultValue.temp > 16){
+                  this.airDefaultValue.temp = this.airDefaultValue.temp - 1;
+                }
+                break;
+              case '9':
+                //wind
+                if(this.airDefaultValue.fan == 0){
+                  this.airDefaultValue.fan = 1;
+                }else if(this.airDefaultValue.fan == 1){
+                  this.airDefaultValue.fan = 2;
+                }else if(this.airDefaultValue.fan == 2){
+                  this.airDefaultValue.fan = 3;
+                }else if(this.airDefaultValue.fan == 3){
+                  this.airDefaultValue.fan = 0;
+                }
+                break;
+              case '10':
+                //swing
+                if(this.airDefaultValue.swing == 0){
+                  this.airDefaultValue.swing = 1;
+                }else if(this.airDefaultValue.swing == 1){
+                  this.airDefaultValue.swing = 0;
+                }
+                break;
+              default:
+                break;
+            }
+            //send the status of the air
+            let command = this.getAirCommand(item);
+            console.log('command', command);
+            try{
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `${command}`,
+                }
+              ]);
+            }catch(error){
+              console.log('error', error);
+              app.dialog.alert(_(erp.get_log_description(error)))
+            }
+          },
+          async testIrCode(item){
+            //if is the air, should send the status of the air
+            if(this.deviceType == 1){
+              //send the status of the air
+              await this.sendAirStatus(item);
+              return
+            }
+            let command = '';
+            if(item.code){
+              command = item.code;
+              try{
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: `${command}`,
+                }
+              ]);
+            }catch(error){
+              console.log('error', error);
+              app.dialog.alert(_(erp.get_log_description(error)))
+            }
+            }
+          },
+          getAirCommand(item={"key":'0'}){
+            //depend on the airDefaultValue
+            //972107+01+sub_category+key_code+ac_power+ac_temp+ac_mode+ac_wind_dir+ac_wind_speed+change_wind_direction+file
+            //972107 01 01               00     00      12      00      00           01                  00
+            /*
+            key_code: 0 电源 1 模式 2 温度+ 3 温度-  7 	温度+ 8 温度- 9 风力 10 扫风 11 固定风
+            ac_power: 0 开启，1 关闭
+            mode(ac_mode): 0 制冷，1 制热，2 自动，3 送风，4 除湿
+            ac_wind_speed : 0 自动，1 弱风，2 中风，3 强风
+            ac_temp: 0-14, 16-30
+            ac_wind_dir: 0,1
+            change_wind_direction: 0 不切换；1 切换
+            1. 空调状态中的电源 power = 0 表示设置为开启状态，power = 1 表示设置为关闭状态，这一点请格外注意。
+            2. 空调支持的模式是有限的，该接口的相应中使用 supportedModes 表示支持的模式，数组大小固定为 5，每个元素用 0 或者 1 表示该模式是否支持，从第 0 个元素起分别代表“制冷”，“制热”，“自动”，“送风”，“除湿”。Request 当中不论 mode 填写何值，supportedMode 总是会返回，但是 mode 的值只能从 0，1，2，3，4，当中选取，分别代表 1 当中说明的 5 种工作模式。
+            3. 除了 supportedMode 之外的其他参数，均表示在给定 Request 的 mode 模式下所支持的功能，例如当 mode = 1 时，supportedWindSpeed 代表制热模式下的风力一共有几档。
+            4. supportedWindSpeed 表示在给定 mode 的工作模式下，支持几档风力，返回值数组大小固定为 4，每个元素用 0 或者 1 表示该风力是否支持，从第 0 个元素起分别代表“自动”,“弱风”，“中风”，“强风”。
+            5. tempMin 和 tempMax 分别代表在给定 mode 的工作模式下，支持的最低温度和最高温度，是一个枚举值，0 代表 16度，1 代表 17度，以此类推，14 代表 30度，-1 代表当前模式不支持温度调节
+            6. supportedSwing 代表在给定模式下支持扫风的模式，返回值数组大小固定为 2，其中第 0 个元素表示是否支持摆风，第 1 个元素表示是否支持固定风。
+            7. supportedWindDirections 代表在给定模式下支持固定风的档位数，是一个整数，表示当前一共有多少种不同方向的固定风。
+            */
+            let command = '';
+            let pre_command = `972107`;
+            let onoff = this.isPowerOn ? '00' : '01';
+            command = `${pre_command}0101${parseInt(item.key).toString(16).padStart(2, '0')}${onoff}${parseInt(this.airDefaultValue.temp - 16).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.mode).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.swing).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.fan).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.wind).toString(16).padStart(2, '0')}${this.fileCode}`;
+            return command;
+          },
+          sendIrCodeForStep3(){
+            return new Promise(async(resolve, reject) => {
+              let command = '';
+              let listIndex = this.matchIndex - 1;
+              let modelMap = this.step3MatchList[listIndex];
+              let list = modelMap.code_value_list;
+              for(let i = 0; i < list.length; i++){
+                let code = list[i];
+                console.log('code', code);
+                if(code){
+                  let hexCode = iot_utils_to_little_endian_hex(code,2);
+                  console.log('hexCode', hexCode);
+                  command = `${command}${hexCode}`;
+                }
+              }
+              console.log('command', command);
+              try{
+                await window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `97210700${command}3075`,
+                  }
+                ]);
+                resolve(true);
+              }catch(error){
+                reject(error)
+              }
+            })
+          },
+          sendIrCode(){
+            //send the ir code
+            return new Promise(async(resolve, reject) => {
+              //get the file name
+              let command = '';
+              let listIndex = this.testingIndex - 1;
+              let modelMap = this.modelList[listIndex];
+              console.log('thisModel', modelMap);
+              let irfileName = `irda_`+modelMap.remote_map+'.bin';
+              //check if read the file
+              let mkdirFilePath = `databases/`;
+              if (deviceInfo.operatingSystem === 'ios') {
+                mkdirFilePath = `Library/LocalDatabase/`;
+              }
+              if(isset(this.fileContent && this.fileContent[irfileName])){
+                console.log('this.fileContent[irfileName]', this.fileContent[irfileName]);
+                command = this.fileContent[irfileName].join('');
+              }else{
+                //read the file
+                const {data} = await Capacitor.Plugins.Filesystem.readFile({
+                  path : cordova.file.applicationStorageDirectory+mkdirFilePath+'/irext_binaries/'+irfileName
+                });
+                console.log('data', this.base64ToUint8Array(data));
+                let hexList = [];
+                let dataArray = this.base64ToUint8Array(data);
+                for(let i = 0; i < dataArray.length; i++){
+                  hexList.push(dataArray[i].toString(16).padStart(2, '0'));
+                }
+                if(isset(this.fileContent)){
+                  this.fileContent[irfileName] = hexList;
+                }else{
+                  this.fileContent = {}
+                  this.fileContent[irfileName] = hexList;
+                }
+                command = hexList.join('');
+              }
+              this.fileCode = command;
+              try{
+                //send the command
+                let pre_command = `972107`;
+                let sendCommand = '';
+                if(this.deviceType == 1){
+                  sendCommand = this.getAirCommand();
+                }else{
+                  sendCommand = `${pre_command}${this.deviceType.toString(16).padStart(2, '0')}${parseInt(modelMap.sub_cate).toString(16).padStart(2, '0')}00${command}`;
+                }
+                console.log('sendCommand', sendCommand);
+                await window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: sendCommand,
+                  }
+                ]);
+                resolve(true);
+              }catch(error){
+                reject(error)
+              }
+            });
+          },
+          base64ToUint8Array(b64){
+            const byteStr = atob(b64);
+            const out = new Uint8Array(byteStr.length);
+            for (let i = 0; i < byteStr.length; i++) out[i] = byteStr.charCodeAt(i);
+            return out;
+          },
+          getRemoteId(){
+            return new Promise(async(resolve, reject) => {
+              //if is the air, should get the file name, otherwise get the remote_id
+              let sql = '';
+              sql = `SELECT * FROM remote_index where brand_id=${this.selectedBrand.id} and category_id =${this.deviceType};`;
+              try{
+                let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+                result.forEach((item, index) => {
+                  console.log('item', item.id);
+                  console.log('index',index)
+                });
+                this.modelList = result;
+                if(result.length > 0){
+                  this.testingTotal = result.length;
+                  this.testingIndex = 1;
+                  this.isPowerOn = false;
+                  this.isSwitching = false;
+                }
+                resolve(true);
+              }catch(error){
+                reject(error)
+              }
+            })
+          },
+          async toTestPage(){
+            //如果是直接选择品牌后，则跳转具体的测试界面
+            if(this.fileCode){
+              this.normalType = 1;
+              //init the code 
+              this.toTab(4);
+            }else{
+              app.dialog.alert(_('Please click the remote button first.'));
+            }
+          },
+          clickDeviceType(type) {
+            this.deviceType = type;
+            this.init();
+            this.activeStatus = true;
+            this.toTab(1);
+            this.initPostTitle();
+          },
+          activeStep() {
+            this.stepList.forEach((item) => {
+              if (item.id == this.index) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          toDetail(){
+            //type 1 is edit, 2 is detail
+            console.log('this.step3MatchList', this.step3MatchList);
+            console.log('this.matchIndex', this.matchIndex);
+            console.log('this.step3MatchList[this.matchIndex-1].remote_index_id', this.step3MatchList[this.matchIndex-1].remote_index_id);
+            mainView.router.navigate('/mobile-app/device-ir-pannel-detail?type=1&device_type='+this.deviceType+'&guid='+guid+'&remote_id='+this.step3MatchList[this.matchIndex-1].remote_index_id);
+            setTimeout(() => {
+              emitter.emit('ir_panel_config_edit', this.panelConfig['button']);
+            }, 500);
+          },
+          backToStep4(){
+            if(this.learnStatus){
+              this.toStudyIR();
+            }else{
+              this.toTab(4);
+            }
+          },
+          async toSelectModel(){
+            //check if select brand
+            if(!this.selectedBrand){
+              postStatus = false;
+              app.dialog.alert(_('Please select a brand.'));
+              return;
+            }else{
+              //get the remote_id
+              await this.getRemoteId();
+            }
+            this.toTab(2);
+          },
+          toMatchPage(){
+            if(this.index == 1){
+              //cancel the select brand
+              this.selectedBrand = null;
+              this.brandList.forEach((item, index) => {
+                item.isChecked = false;
+              });
+            }
+            this.normalType = 2;
+            this.toTab(3);
+          },
+          toFullPanel(){
+            //check if no learn data
+            if(!this.isMatched){
+              app.dialog.alert(_('Please match the remote first.'));
+              return;
+            }
+            this.toTab(4);
+          },
+          async initNormalData(){
+            let list = this.panelConfig['button'];
+            let listIndex = this.testingIndex - 1;
+            let modelMap = this.modelList[listIndex];
+            list.forEach((item, index) => {
+              item.code = '';
+              if(this.deviceType == 1){
+                item.code = `97210700${item.code}3075`;
+              }else{
+                if(item.key){
+                  item.code = `972107${this.deviceType.toString(16).padStart(2, '0')}${parseInt(modelMap.sub_cate).toString(16).padStart(2, '0')}${parseInt(item.key).toString(16).padStart(2, '0')}${this.fileCode}`;
+                }
+              }
+            });
+          },
+          async initLearnData(remote_id){
+            let sql = `SELECT key_number,key_value FROM decode_remote WHERE remote_index_id = ${remote_id}`;
+            let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+            if(result.length > 0){
+              this.panelConfig['button'].forEach((item, index) => {
+                item.code = '';
+                let key_index = item.key;
+                if(key_index != ''){
+                  let key_value_map = result.find(item => item.key_number == key_index);
+                  if(key_value_map){
+                    let key_value_list = key_value_map.key_value.split(',');
+                    for(let i = 0; i < key_value_list.length; i++){
+                      let code = key_value_list[i];
+                      if(code){
+                        let hexCode = iot_utils_to_little_endian_hex(code,2);
+                        item.code += hexCode;
+                      }
+                    }
+                    if(item.code){
+                      item.code = `97210700${item.code}3075`;
+                    }
+                  }
+                }
+              });
+            }
+          },
+          previousStep(index){
+            if(this.lastIndex == 1){
+              this.toTab(1);
+            }else{
+              this.toTab(index);
+            }
+          },
+          toTab(index) {
+            let postStatus = true;
+            this.lastIndex = cloneDeep(this.index);
+            if (index == 0) {
+              this.activeStatus = false;
+            }else if(index == 2){
+              
+            }else if (index == 4) {
+              this.panelConfig = window.ir_for_irext_key_mapping()[this.deviceType.toString()];
+              if(this.normalType == 2){
+                this.initLearnData(this.step3MatchList[this.matchIndex-1].remote_index_id);
+              }else{
+                this.initNormalData()
+              }
+            }
+            if (postStatus) {
+              this.index = index;
+              this.activeStep();
+            }
+          },
+          turnDeviceTypeToStr(){
+            let str = '';
+            if(this.deviceType == 1){
+              str = 'Air Conditioner';
+            }else if(this.deviceType == 2){
+              str = 'Television';
+            }else if(this.deviceType == 3){
+              str = 'Set-top boxes';
+            }else if(this.deviceType == 4){
+              str = 'Box';
+            }else if(this.deviceType == 5){
+              str = 'IPTV';
+            }else if(this.deviceType == 6){
+              str = 'DVD';
+            }else if(this.deviceType == 7){
+              str = 'Fan';
+            }else if(this.deviceType == 8){
+              str = 'Projector';
+            }else if(this.deviceType == 9){
+              str = 'Audio';
+            }else if(this.deviceType == 10){
+              str = 'Light';
+            }else if(this.deviceType == 12){
+              str = 'Robot';
+            }else if(this.deviceType == 13){
+              str = 'Air Purifier';
+            }else if(this.deviceType == 14){
+              str = 'Dyson';
+            }else if(this.deviceType == 15){
+              str = 'Camera';
+            }else if(this.deviceType == 16){
+              str = 'Water Heater';
+            }else{
+              str = this.deviceType.toString();
+            }
+            return str;
+          },
+          async saveErp() {
+            let subDevice = cloneDeep(erp.info.profile.profile_subdevice);
+            console.log('addDeviceToErp');
+            app.dialog.preloader();
+            //get model should pass the device model tabel
+            let hexid = window.peripheral[guid].prop.hexModel;
+            let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
+            let mode = erp.doctype.device_model[`${hexid}`.toUpperCase()].mode;
+            let device_button_group = this.learnStatus ? 'IR-DIY-no_model' : 'IR-ALL-all_model-00001';
+            let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+            let postData = {
+              title: this.postTitle,
+              guid: guid,
+              model: model,
+              device_mode: mode,
+              peripheral: core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
+              device_button_group: device_button_group,
+              parent: erp.info.profile.name,
+              batch: isset(device_batch) ? device_batch.batch_id : 'YO0012',
+              firmware: peripheral[guid].getProp().firmware || 0,
+              profile_room: $('select[name="profile_room"]').val(),
+              password: peripheral[guid].getProp().password,
+              mac_address: core_utils_get_mac_address_from_guid(guid),
+              function: JSON.stringify({
+                "device_type_num" : this.deviceType,
+                "device_type" : this.turnDeviceTypeToStr(),
+                "file_code" : this.fileCode,
+                "button" : this.panelConfig['button']
+              }),
+            };
+            try {
+              let resData = await http2.request('/api/method/save.subdevice', {
+                method: 'POST',
+                serializer: 'json',
+                responseType: 'json',
+                data: postData,
+              });
+              //update the hide setting
+              if (this.hideStatus) {
+                console.log('resData', resData);
+                const profile_device = resData.data.message.profile_device;
+                profile_device.forEach((item) => {
+                  if (item.device == guid) {
+                    item.hidden_scan = 1;
+                  }
+                });
+                //update the profile_subdevice
+                let profile_subdevice = resData.data.message.profile_subdevice;
+                try {
+                  let this_url = '/api/resource/Profile/' + encodeURI(erp.info.profile.name);
+                  await http.request(this_url, {
+                    method: 'PUT',
+                    serializer: 'json',
+                    responseType: 'json',
+                    data: {
+                      'profile_device': profile_device,
+                    },
+                  });
+                } catch (updateError) {
+                  app.dialog.alert(updateError);
+                }
+              }
+              await ha_profile_ready();
+              app.dialog.close();
+              window.globalUpdate = true;
+              mainView.router.back();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+        },
+        computed: {},
+        beforeDestroy() {
+          if (this.matchInterval) {
+            clearInterval(this.matchInterval);
+            this.matchInterval = null;
+          }
+          if (this.searchInterval) {
+            clearInterval(this.searchInterval);
+            this.searchInterval = null;
+          }
+          if (this.matchTimeoutTimer) {
+            clearTimeout(this.matchTimeoutTimer);
+            this.matchTimeoutTimer = null;
+          }
+          if (this._sendIrCodeFun) {
+            try { emitter.off(`ir_learned_code`, this._sendIrCodeFun); } catch (e) {}
+            this._sendIrCodeFun = null;
+          }
+          if (this._irPanelConfigChange) {
+            try { emitter.off(`ir_panel_config_change`, this._irPanelConfigChange); } catch (e) {}
+            this._irPanelConfigChange = null;
+          }
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .autocomplete-dropdown-in {
+    z-index: 10000 !important;
+  }
+  .do-not-find-flat {
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
+    color: #007bff;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .list ul::before,
+  .list ul::after {
+    content: none;
+  }
+  .add-box {
+    height: 70px;
+    padding: 0px 15px;
+    color: var(--f7-theme-color);
+  }
+
+  /* 品牌相关样式 */
+  .brand-grid-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid #e6e6e6;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .brand-grid-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: var(--f7-theme-color);
+  }
+
+  .brand-grid-item:active {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .brand-name-text {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+    text-align: center;
+    color: #333;
+    /* 最多显示2行，超出省略 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* 响应式调整 */
+  @media (max-width: 600px) {
+    .brand-name-text {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .brand-grid-item {
+      border-radius: 10px;
+    }
+  }
+
+  /* 品牌搜索列表特殊样式 */
+  .brand-search-list .searchbar-found {
+    display: block;
+  }
+
+  .brand-search-list .searchbar-not-found {
+    display: none;
+  }
+
+  /* 品牌选择容器样式 */
+  .brand-selection-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 200px); /* 根据页面布局调整高度 */
+    min-height: 500px; /* 最小高度保证 */
+    overflow: hidden;
+  }
+
+  /* 搜索容器 - 固定在顶部 */
+  .search-container {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    padding: 15px 0 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+  }
+
+  /* 品牌列表容器 - 可滚动 */
+  .brand-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0 20px 0;
+    /* 自定义滚动条样式 */
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+    /* 确保滚动时有平滑效果 */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+  }
+
+  .brand-list-container::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .brand-list-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .brand-list-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
+
+  .brand-list-container::-webkit-scrollbar-thumb:hover {
+    background: #999;
+  }
+
+  /* 自定义搜索框样式 */
+  .search-input-custom {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 25px;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    margin: 0 15px;
+  }
+
+  /* 响应式设计 */
+  @media (max-height: 600px) {
+    .brand-selection-container {
+      height: calc(100vh - 150px);
+      min-height: 350px;
+    }
+  }
+
+  @media (max-height: 500px) {
+    .brand-selection-container {
+      height: calc(100vh - 120px);
+      min-height: 300px;
+    }
+  }
+
+  /* 平板和横屏适配 */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .brand-selection-container {
+      height: calc(100vh - 100px);
+      min-height: 250px;
+    }
+  }
+
+  /* 小屏手机适配 */
+  @media (max-width: 360px) {
+    .brand-selection-container {
+      height: calc(100vh - 180px);
+      min-height: 300px;
+    }
+
+    .search-container {
+      padding: 10px 0 5px 0;
+    }
+
+    .search-input-custom {
+      margin: 0 10px;
+      padding: 10px 15px;
+    }
+  }
+
+  .search-input-custom:focus-within {
+    border-color: var(--f7-theme-color);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+  }
+
+  .search-input-custom .search-icon {
+    color: #999;
+    margin-right: 12px;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .search-input-custom input {
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    font-size: 16px;
+    flex: 1;
+    color: #333;
+  }
+
+  .search-input-custom input::placeholder {
+    color: #999;
+  }
+
+  .search-input-custom .custom-clear-button {
+    margin-left: 8px;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+  }
+
+  .search-input-custom .custom-clear-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .search-input-custom .custom-clear-button i {
+    font-size: 20px;
+    color: #666;
+  }
+
+  /* 隐藏Framework7默认的清除按钮，防止重复显示 */
+  .search-input-custom input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    display: none;
+  }
+
+  .search-input-custom .input-clear-button {
+    display: none !important;
+  }
+
+  /* 空状态样式 */
+  .empty-state-container {
+    padding: 40px 20px;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* 在品牌列表容器中的空状态 */
+  .brand-list-container .empty-state-container {
+    min-height: 250px;
+    flex: 1;
+  }
+
+  .empty-state-icon {
+    font-size: 48px !important;
+    color: #ddd !important;
+    display: block !important;
+    margin: 0 auto 15px auto !important;
+    text-align: center !important;
+  }
+
+  .empty-state-text {
+    font-size: 16px !important;
+    margin-bottom: 5px !important;
+    font-weight: 500 !important;
+  }
+
+  .empty-state-subtext {
+    font-size: 14px !important;
+    margin-bottom: 0 !important;
+    opacity: 0.8;
+  }
+
+  .searchbar-found {
+    display: block;
+  }
+
+  .searchbar-not-found {
+    display: none;
+  }
+  .active-brand-button {
+    background-color: var(--f7-theme-color) !important;
+    color: white !important;
+    border-color: var(--f7-theme-color) !important;
+  }
+  .active-font-color {
+    color: white !important;
+  }
+
+  /* Step-2 测试区样式 */
+  .ir-test-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 0 8px 0;
+    min-height: 160px;
+  }
+
+  .ir-power-btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 60px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+  }
+
+  .ir-power-btn.is-on {
+    background: linear-gradient(135deg, #1dd1a1, #10ac84);
+  }
+
+  .ir-power-btn.is-switching {
+    transform: scale(0.96);
+  }
+
+  .ir-next-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ir-prev-btn {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ir-caption {
+    margin-top: 6px;
+  }
+
+  .ir-counter {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  /* Step-3 一键匹配视觉与动效 */
+  .ir-match-hero {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 160px;
+    height: 160px;
+    margin: 4px auto 8px auto;
+  }
+
+  .ir-match-remote {
+    width: 86px;
+    height: 86px;
+    background: #fff;
+    border-radius: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 2;
+  }
+
+  .ir-match-remote .icon {
+    font-size: 42px;
+  }
+
+  .ir-match-wave {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  .ir-match-wave .ring {
+    position: absolute;
+    border: 2px solid var(--f7-theme-color);
+    opacity: 0;
+    border-radius: 50%;
+    transform: scale(0.6);
+  }
+
+  .ir-match-wave.is-listening .ring-1,
+  .ir-match-wave.is-listening .ring-2,
+  .ir-match-wave.is-listening .ring-3 {
+    animation: ir-wave 2.4s ease-out infinite;
+  }
+
+  .ir-match-wave .ring-1 {
+    width: 160px;
+    height: 160px;
+    animation-delay: 0s;
+  }
+
+  .ir-match-wave .ring-2 {
+    width: 120px;
+    height: 120px;
+    animation-delay: 0.35s;
+  }
+
+  .ir-match-wave .ring-3 {
+    width: 80px;
+    height: 80px;
+    animation-delay: 0.7s;
+  }
+
+  @keyframes ir-wave {
+    0% { opacity: 0; transform: scale(0.6); }
+    20% { opacity: 0.25; }
+    50% { opacity: 0.18; }
+    80% { opacity: 0.08; }
+    100% { opacity: 0; transform: scale(1.25); }
+  }
+
+  /* 渐隐+位移动画，用于阶段切换 */
+  .ir-fade-slide-enter-active,
+  .ir-fade-slide-leave-active {
+    transition: all .24s ease;
+  }
+  .ir-fade-slide-enter-from,
+  .ir-fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  /* Step-3 Tips 文案层级和换行优化 */
+  .ir-tips-list ul li { white-space: normal; margin: 0; }
+  .ir-tip-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--f7-theme-color);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12);
+    line-height: 22px; /* 进一步保证数值在圆内垂直居中 */
+  }
+  .ir-tip-title, .ir-tip-text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.5;
+    color: var(--f7-text-color);
+    opacity: 0.9;
+    font-weight: 500;
+  }
+  .ir-tips-list .item-content { align-items: center; min-height: auto; }
+  .ir-tips-list .item-media { padding-top: 0; display: flex; align-items: center; justify-content: center; align-self: center; }
+  .ir-tips-list .item-inner { display: flex; align-items: center; }
+  .ir-tips-list .item-inner .item-text { margin: 0; overflow: visible; text-overflow: initial; }
+
+  /* Step-3 匹配成功提示 */
+  .ir-success-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #eaf9f0;
+    border: 1px solid #bfe9cf;
+    color: #157347;
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .ir-success-banner .icon {
+    color: #198754;
+    font-size: 22px;
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+  .ir-success-text {
+    flex: 1 1 auto;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+
+  .ir-rematch-btn {
+    width: 100%;
+  }
+
+  /* Step-3 分阶段标题与捕获信息 */
+  .ir-phase-title {
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+  .ir-captured-chip .chip-media .icon { color: #198754; }
+  .ir-codebox {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    color: #495057;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  /* 空调 LCD 面板样式 */
+  .air-lcd {
+    background: #f7f9fb;
+    border: 1px solid #dfe6ef;
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .air-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .air-top-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #111;
+  }
+  .air-top-item img { width: 22px; height: 22px; display: block; }
+  .air-label { font-size: 12px; opacity: .75; }
+  .air-divider { height: 1px; background: #e7edf4; margin: 8px 0; }
+  .air-temp { display: flex; align-items: baseline; justify-content: center; padding: 6px 0 2px 0; }
+  .air-temp-value { font-size: 54px; line-height: 1; color: #111; font-weight: 700; letter-spacing: 1px; }
+  .air-temp-unit { font-size: 18px; margin-left: 6px; color: #333; opacity: .8; }
+
+  /* 电源状态以图标呈现：开更醒目，关弱化 */
+  .air-power { border-radius: 6px; padding: 4px; line-height: 1; }
+  .air-power .icon { font-size: 22px; transition: opacity .2s ease, color .2s ease; }
+</style>

@@ -446,7 +446,7 @@ window.device_firmware_upgrade_component = {
       <div style="height: 50px"></div>
       <h3 style="font-weight: bold; padding: 20px; font-size: 16px" v-if="updateStatus == 'Normal' && firmwareDescRef.value && !isLatest && checkingFirmware">${_('Update Logs')}</h3>
       <p class="text-muted" style="padding: 0 20px; font-size: 12px" v-if="updateStatus == 'Normal' && firmwareDescRef.value && !isLatest && checkingFirmware" v-html="firmwareDescRef.value"></p>
-      <div class="row mt-4" style="position: fixed; bottom: calc(10px + var(--f7-safe-area-top))" v-if="isDeveloper && show">
+      <div class="row mt-4" style="position: fixed; bottom: calc(10px + var(--f7-safe-area-top))" v-if="isDeveloper || show">
         <div class="col-100">
           <a href="#" class="upgrade-action button button-fill color-theme button-raised" @click="startUpdateFirmware()">
             <span class="size-16">{{ _('Update Now') }}</span> 

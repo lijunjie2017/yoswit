@@ -35,21 +35,23 @@ batch_update_email_for_mqtt = async () => {
         ];
 
         await window.peripheral[guid].write(bleList);
-        profile_devices.forEach(device => {
-          if(device.device == guid){
-            device.gatewway = `${core_utils_get_mac_address_from_guid(guid)}-${profile_email}`;
+        let profile_device_map = profile_devices.find((item)=>item.device == guid);
+        if(profile_device_map){
+          let gateway = profile_device_map.gateway;
+          if(gateway){
+            let url = `/api/method/appv6.updateProfileDeviceGateway`;
+            await	http2.request(encodeURI(url), {
+              serializer: "json",
+              responseType: "json",
+              method: "POST",
+              data: {
+                device : guid,
+                gateway : `${core_utils_get_mac_address_from_guid(guid)}-${profile_email}`,
+                profile_name : erp.info.profile.name,
+              }
+            });
           }
-        });
-        //update the profile data
-        await http2.request(`/api/resource/Profile/${erp.info.profile.name}`, {
-          method: 'PUT',
-          serializer: 'json',
-          responseType: 'json',
-          debug: true,
-          data: {
-            profile_device : profile_devices
-          },
-        });
+        }
         await iot_device_setting_sync_server(guid,'Email Address',profile_email);
         resolve();
       } catch (error) {
@@ -97,6 +99,8 @@ batch_update_email_for_mqtt = async () => {
       }
     }
   }
-
+  app.dialog.preloader(`${_('Update Gateway...')}`);
+  await ha_profile_ready(2);
+  app.dialog.close();
   console.log(_('All devices processed'));
 };

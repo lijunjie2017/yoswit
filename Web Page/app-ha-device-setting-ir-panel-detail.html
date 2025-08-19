@@ -1,0 +1,493 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Panel Configuration') }}</div>
+        ${type == 2 ? $h`
+          <div class="right" @click="${() => toEdit()}">
+            <i class="icon material-icons">edit_note</i>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="main-box">
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="auto-status-text margin-top" style="text-align: center" v-if="type == 1">
+                    {{ _('Please click the button below to learn the code.') }}
+                  </div>
+                  <div class="auto-status-text margin-top" style="text-align: center" v-if="type == 2">
+                    {{ _('Please click the button below to control the device.') }}
+                  </div>
+                  <div class="display-flex justify-content-space-between" style="flex-wrap: wrap" v-if="panelConfig.length > 0">
+                    <div
+                      :class="{'ir-item':true,'popup-open':true}"
+                      v-for="(configItem,configIndex) in panelConfig"
+                      :key="configItem.id"
+                      :style="{'position':'relative','width' : 'calc('+configItem.width+'%)','margin-top' : '15px'}"
+                      v-on:click="showPopup(configIndex)"
+                      :data-popup="type == 1 ? '.demo-popup-swipe-handler' : ''"
+                      v-if="!configItem.isDelete"
+                    >
+                      <a
+                        href="#"
+                        :class="{'button':true,'button-large':true,'button-raised':configItem.key?true:false,'bg-color-gray':(configItem.code == '' && configItem.code != '')}"
+                        style="padding: 30px 0px"
+                      >
+                        <i class="icon material-icons" style="font-size: 30px" v-if="configItem.icon">{{configItem.icon}}</i>
+                        <span v-else>{{configItem.name}}</span>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 30px" v-if="type == '1'">
+                    <div class="col" v-if="type == '1'">
+                      <div class="button button-fill button-save" v-on:click="addModel()">{{_("ADD MODEL")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="saveButtonGroupAndDeviceCommand()">{{_("APPLY")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- popup -->
+          <div class="popup demo-popup-swipe-handler">
+            <div class="page">
+              <div class="swipe-handler"></div>
+              <div class="page-content">
+                <div class="card">
+                  <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Button And Setting")}}</div>
+                  <div class="card-content card-content-padding">
+                    <div class="list no-hairlines-md" style="margin: 10px 0">
+                      <ul>
+                        <li class="item-content item-input">
+                          <div class="item-inner">
+                            <div
+                              class="item-title item-label"
+                              style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                            >
+                              {{ _("Button Name") }}
+                            </div>
+                            <div class="item-input-wrap">
+                              <input
+                                class="init-input"
+                                name="title"
+                                type="text"
+                                :placeholder="_('Button Name')"
+                                required
+                                v-model="panelConfig[configIndex].name"
+                              />
+                            </div>
+                          </div>
+                        </li>
+                        <!-- width -->
+                        <li class="item-content item-input">
+                          <div class="item-inner">
+                            <div class="item-title item-label"
+                            style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                            >{{ _('Width')}}</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                              <select name="width" placeholder="" lang="en" v-model="panelConfig[configIndex].width">
+                                <option :selected="panelConfig[configIndex].width == 30">30</option>
+                                <option :selected="panelConfig[configIndex].width == 47">47</option>
+                                <option :selected="panelConfig[configIndex].width == 100">100</option>
+                              </select>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input">
+                          <div class="item-inner">
+                            <div
+                              class="item-title item-label"
+                              style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                            >
+                              {{ _("Command") }}
+                            </div>
+                            <div class="item-input-wrap">
+                              <input
+                                class="init-input"
+                                name="title"
+                                type="text"
+                                :placeholder="_('Learn Command')"
+                                required
+                                readonly
+                                v-model="panelConfig[configIndex].code"
+                              />
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toStudy()">{{_("Learn")}}</div>
+                      </div>
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="toTest()">{{_("Test")}}</div>
+                      </div>
+                    </div>
+                    <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="deletePanelItem()">{{_("DELETE")}}</div>
+                      </div>
+                      <div class="col">
+                        <div class="button button-fill button-save" v-on:click="saveConfig()">{{_("SAVE")}}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+           <!-- popup end -->
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let { device_type, guid,type,remote_id,subdevice} = $f7route.query;
+    let vueAppForDetail = null;
+    const toEdit = () => {
+      console.log('toEdit');
+      vueAppForDetail.$toEdit();
+    }
+    $on('pageMounted', (e, page) => {
+      vueAppForDetail = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1,
+          type: type,
+          configIndex: 0,
+          learnCode: '',
+          deviceType: device_type,
+          profileRoom: [],
+          panelConfig: [{'name':''}],
+          popupMap : null
+        },
+        watch: {},
+        computed: {},
+        mounted() {
+          Vue.prototype.$toEdit = this.toEdit;
+          emitter.on('disconnected', (data) => {
+            let thisId = window.peripheral[guid].prop.id;
+            if (data.id == thisId) {
+              //device is disconnected
+              app.dialog.close();
+              app.dialog.alert(`${_('Sorry,device is disconnected,retry please.')}`);
+            }
+          });
+          if(this.type == 1){
+            this.init();
+          }else{
+            this.initFromProfile();
+          }
+          
+        },
+        methods: {
+          init(){
+            if (!this._irPanelConfigEdit) {
+              this._irPanelConfigEdit = (data) => {
+                console.log('ir_panel_config_edit', data);
+                console.log(typeof(data))
+                this.panelConfig = [];
+                data.forEach((item, index) => {
+                  item.isDelete = false;
+                  this.panelConfig.push(item);
+                });
+                console.log('data', data);
+                console.log('this.panelConfig', this.panelConfig);
+                // Vue.set(this.panelConfig, "button", data);
+              };
+            }
+            emitter.off(`ir_panel_config_edit`, this._irPanelConfigEdit);
+            emitter.on(`ir_panel_config_edit`, this._irPanelConfigEdit);
+            this.popupMap = app.popup.create({
+              el: '.demo-popup-swipe-handler',
+              swipeToClose: true,
+              push: true,
+            });
+          },
+          toEdit(){
+            app.dialog.alert(_('Enable Edit Mode'));
+            this.type = 1;
+          },
+          initFromProfile(){
+            let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+            let subMap = profile_subdevice.find(item => item.name == subdevice);
+            if(subMap){
+              guid = subMap.device;
+              try{
+                this.panelConfig = JSON.parse(subMap.function)['button'];
+              }catch(e){
+                console.log('e', e);
+              }
+            }
+          },
+          async initDataBaseCode(remote_id){
+            let db = await initIrDataBase('irext_db_sqlite.db');
+            let sql = `SELECT key_number,key_value FROM decode_remote WHERE remote_index_id = ${remote_id}`;
+            let rs = await this.irSqliteExecuteSql(db, sql);
+            this.panelConfig.forEach((item, index) => {
+              item.code = '';
+              let key_index = item.key;
+              if(key_index != ''){
+                let key_value_map = rs.find(item => item.key_number == key_index);
+                if(key_value_map){
+                  let key_value_list = key_value_map.key_value.split(',');
+                  for(let i = 0; i < key_value_list.length; i++){
+                    let code = key_value_list[i];
+                    if(code){
+                      let hexCode = iot_utils_to_little_endian_hex(code,2);
+                      item.code += hexCode;
+                    }
+                  }
+                  if(item.code){
+                    item.code = `97210700${item.code}3075`;
+                  }
+                }
+              }
+            });
+            console.log('this.panelConfig', this.panelConfig);
+          },
+          irSqliteExecuteSql(db, sql, params = []) {
+            return new Promise((resolve, reject) => {
+              db.executeSql(
+                sql,
+                params,
+                (resultSet) => {
+                  let list = [];
+                  for (let i = 0; i < resultSet.rows.length; i++) {
+                    list.push(Object.assign({isChecked: false}, resultSet.rows.item(i)));
+                  }
+                  resolve(list);
+                },
+                (error) => {
+                  reject(error);
+                }
+              );
+            });
+          },
+          deletePanelItem() {
+            console.log('deletePanelItem', this.configIndex);
+            
+            this.$nextTick(() => {
+              Vue.set(this.panelConfig[this.configIndex], 'isDelete', true);
+              this.popupMap.close();
+            });
+          },
+          showPopup(index){
+            this.configIndex = index;
+            if(this.type == 2){
+              //send the ir code
+              this.toTest();
+            }
+          },
+          async saveButtonGroupAndDeviceCommand() {
+            //check if have item can not learn the code
+            let errorMap = this.panelConfig.find(item => item.code == '' && !item.isDelete && item.key != '');
+            if(errorMap){
+              app.dialog.alert(_('Please learn the code for all buttons.'));
+              return;
+            }
+            if(subdevice){
+              //save to erp 
+              let profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+              let subMap = profile_subdevice.find(item => item.name == subdevice);
+              if(subMap){
+                let function_data = JSON.parse(subMap.function);
+                function_data.button = this.panelConfig.filter(item => !item.isDelete);
+                subMap.function = JSON.stringify(function_data);
+              }
+              try{
+                app.dialog.preloader();
+                await http2.request(`/api/resource/Profile/${erp.info.profile.name}`, {
+                  method: 'PUT',
+                  serializer: 'json',
+                  responseType: 'json',
+                  data: {
+                    'profile_subdevice' : profile_subdevice
+                  },
+                });
+                await ha_profile_ready(2);
+                app.dialog.close();
+                app.dialog.alert(_('Save Successfully'));
+                this.type = 2;
+              }catch(error){
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+            }else{
+              emitter.emit('ir_panel_config_change', this.panelConfig.filter(item => !item.isDelete));
+              mainView.router.back();
+            }
+          },
+          saveConfig() {
+            app.popup.close();
+          },
+          showCode(rs) {
+            Vue.set(this.panelConfig[this.configIndex], "code", rs);
+          },
+          addModel() {
+            this.panelConfig.push({
+              'name' : 'MODEL',
+              'icon' : '',
+              'width' : '30',
+              'key' : '-1',
+              'code' : ''
+            })
+          },
+          async toStudy() {
+            //auto to matching
+            console.log('toStudy');
+            let errorStatus = false;
+            app.dialog.preloader(`${_('Preparing, please wait...')}`);
+            try {
+              await window.peripheral[guid].connect();
+              if (!this._sendIrCodeFun) {
+                this._sendIrCodeFun = (data) => {
+                  console.log('learneddata', data);
+                  let rs = data.rs;
+                  if (data.guid == guid && rs.length > 8) {
+                    // 获取到数据后立即清除监听器，避免重复处理
+                    emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                    this._sendIrCodeFun = null;
+                    app.dialog.close();
+                    rs = rs.substring(0, 3) + '1' + rs.substring(4);
+                    this.showCode(rs);
+                  }
+                };
+              }
+              
+              emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+              emitter.on(`ir_learned_code`, this._sendIrCodeFun);
+              let data = '972107';
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+              app.dialog.close();
+              //check the times of the study
+              let title = `${_('Please press the corresponding remote control button based on the key function.')}`;
+              app.dialog.preloader(title);
+            } catch (err) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+          async toTest() {
+            const TAG = 'iot_ir_test';
+            console.log(TAG);
+            let code = this.panelConfig[this.configIndex].code;
+            if (!code) {
+              app.dialog.alert(_('Sorry, the infrared code has not been learned yet.'));
+              return;
+            }
+            let this_data = code;
+            try {
+              await window.peripheral[guid].sendIrForRw(this_data);
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+        },
+        beforeDestroy() {
+          emitter.off('disconnected');
+          emitter.off(`ir_panel_config_edit`, this._irPanelConfigEdit);
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      console.log('vueAppForDetail', vueAppForDetail);
+      if (vueAppForDetail) {
+        vueAppForDetail.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+  .ir-click-button {
+    display: inline-block;
+    height: 65px;
+    width: 65px;
+    border-radius: 50%;
+    line-height: 35px;
+  }
+  .bg-theme {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .bg-theme a {
+    color: #fff;
+  }
+</style>

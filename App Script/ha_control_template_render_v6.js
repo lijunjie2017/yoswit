@@ -688,6 +688,66 @@ window.ha_control_template_render = (guid, device_model, device_button_group, id
   </div>
   `;
   };
+  //music player template
+  const music_player_template = (device_button_group, title) => {
+    return `
+  <div>
+    <li class="device home-scanned-peripheral swipeout swipeout-delete-manual home-scanned-peripheral-smart">
+    <div class="item-content swipeout-content">
+      <a class="item-link item-content no-chevron no-ripple no-active-state">
+        <div class="priority-thumb device-thumb item-media display-flex justify-content-center flex-direction-row align-content-center" style="background-image: url('${model_map.image}');">
+        </div>
+        <div class="item-inner flex-direction-column flex-start" style="justify-content: flex-start;align-items: flex-start;">
+          <div class="item-title-row">
+            <div class="item-title ellipsis"style="width: 190px">${model_map.model_code} ${title}</div>
+          </div>
+          <div class="item-subtitle" style="margin-top: 3px;margin-bottom: 3px;">${_(core_utils_get_mac_address_from_guid(guid))}</div>
+          <div class="signal-panel-manual item-text height-21" style="width: 120%" signal="5" bluetooth="0" guid="${guid}">
+            <div class="signal-view-main">
+              <div class="signal"></div>
+              <div class="bluetooth"></div>
+              <div class="wifiicon ${model_map.mode_type == 'Wifi' ? '' : 'device-none'}">
+                <i class="material-icons text-color-red" style="font-size:22px;">wifi_off</i>
+              </div>
+            </div>
+          </div>
+        </div>
+        </a>
+        <div class="swipeout-actions-right">
+          <a
+            func="click_gateway_wifi_setting"
+            link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+            class="link color-orange"
+            guid="${guid}"
+            id="${id}"
+            ><i class="icon material-icons" style="line-height: 15px!important;">settings</i></a
+          >
+          <a
+            func="reset_wifi_setting"
+            link="/mobile-app/gateway-wifi-setting?guid=${guid}"
+            class="link color-red"
+            guid="${guid}"
+            id="${id}"
+            ><i class="icon material-icons" style="line-height: 15px!important;">link_off</i></a
+          >
+        </div>
+        <div class="control-panel-right" style="">
+          <a class="right" guid="${guid}" device_button_group="${device_button_group}" id="${id}" func="click_connect_manual">
+            <div class="button button-raised button-big circle">
+                <i class="material-icons" style="line-height: 25px!important;">bluetooth_connected</i>
+            </div>
+          </a>
+          <a class="right" guid="${guid}" device_button_group="${device_button_group}" id="${id}" func="click_get_paw_manual">
+            <div class="button button-raised button-big circle">
+                <i class="material-icons" style="line-height: 25px!important;">key</i>
+            </div>
+          </a>
+        </div>
+      </div>
+    </li>
+  </div>
+  `;
+  };
   //gateway template
   const gateway_template = (device_button_group, title) => {
     return `
@@ -1181,7 +1241,7 @@ window.ha_control_template_render = (guid, device_model, device_button_group, id
         initDimBar(device_default_template[i].device_button_group, 30, 6, 'manual');
       }, 500);
     } else if (device_button_group.includes('ONOFF GANG') && device_default_template[i].mode == 'Music Player') {
-      html += gateway_template(device_button_group, '');
+      html += music_player_template(device_button_group, '');
     } else if (
       device_button_group.includes('ONOFF GANG') &&
       device_default_template[i].mode != 'RCU Controller' &&
@@ -1825,6 +1885,52 @@ window.click_connect_manual = (params) => {
     }
   }
 };
+
+//get the 790DC info
+window.click_get_paw_manual = ()=>{
+  //window.manufacturing_time_list_for_music_player = [];
+  //window.manufacturing_time_password_for_music_player = "";
+  erp.music_player_sheet = app.sheet.create({
+    content: `\
+        <div class="sheet-modal" style="height:370px;">\
+          <div class="toolbar">\
+            <div class="toolbar-inner justify-content-space-between">\
+              <a  class="link sheet-close">Close</a>\
+            </div>\
+          </div>\
+          <div class="sheet-modal-inner" style="height:150px;">\
+            <div class="list list-strong-ios list-dividers-ios inset-ios">\
+              <ul>\
+                <li class="code-block" style="padding: 5px 15px; font-size: 18px">\
+                  <div class="item-content">\
+                    <div class="item-media">${_('Check-in Time')}</div>\
+                    <div class="item-inner">\
+                      <div class="item-after">${manufacturing_time_list_for_music_player[0]}</div>\
+                    </div>\
+                  </div>\
+                </li>\
+                <li class="code-block" style="padding: 5px 15px; font-size: 18px">\
+                  <div class="item-content">\
+                    <div class="item-media">${_('Check-out Time')}</div>\
+                    <div class="item-inner">\
+                      <div class="item-after">${manufacturing_time_list_for_music_player[1]}</div>\
+                    </div>\
+                  </div>\
+                </li>\
+              </ul>\
+            </div>\
+          </div>\
+          <div style="height:170px;" class="sheet-modal-inner display-flex justify-content-center align-content-center align-items-center">\
+            <div class="circle-password">${manufacturing_time_password_for_music_player[0]}</div>\
+            <div class="circle-password">${manufacturing_time_password_for_music_player[1]}</div>\
+            <div class="circle-password">${manufacturing_time_password_for_music_player[2]}</div>\
+            <div class="circle-password">${manufacturing_time_password_for_music_player[3]}</div>\
+          </div>\
+        </div>\
+      `
+  });
+  erp.music_player_sheet.open();
+}
 
 window.reset_wifi_setting = (params) => {
   const guid = params.obj.attr('guid');
