@@ -1,0 +1,1236 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Towngas Configuration') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div
+          class="list medium-inset no-chevron virtual-list searchbar-found search-list device-type-list"
+          style="margin-top: 0px; margin-bottom: 0px"
+          v-if="!activeStatus"
+        >
+          <ul>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(2)">
+                <img src="https://dev.mob-mob.com/files/heatWater.png" />
+                <span>{{_('Smart Water Heater')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(1)">
+                <img src="https://dev.mob-mob.com/files/smartControler.png" />
+                <span>{{_('Smart Controller')}}</span>
+              </a>
+            </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType(3)">
+                <img src="https://dev.mob-mob.com/files/Stove.png" />
+                <span>{{_('Smart Stove')}}</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <!-- 选择设备类型后，显示设备列表 -->
+        <div v-if="activeStatus">
+          <div class="toolbar-box" style="padding: 0; margin-top: 15px; margin-left: 0; margin-right: 0;" v-if="stepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button v-for="(item,index) in stepList" :key="item.id" :class="item.isActive?'button-active button':'button'" v-on:click="toTab(item.id)">
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+              <div class="card">
+                <div class="card-content card-content-padding" style="padding-top: 0">
+                  <!-- 扫码指导界面 -->
+              <div class="scan-instruction-container" v-if="!showConnecting">
+                <!-- 图标区域 -->
+                <div class="instruction-icon">
+                  <div class="qr-icon">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+                      <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+                      <rect x="5" y="5" width="3" height="3" fill="currentColor"/>
+                      <rect x="16" y="5" width="3" height="3" fill="currentColor"/>
+                      <rect x="5" y="16" width="3" height="3" fill="currentColor"/>
+                      <path d="M14 14h7v7h-7z" stroke="currentColor" stroke-width="2"/>
+                      <rect x="16" y="16" width="3" height="3" fill="currentColor"/>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- 标题 -->
+                <div class="instruction-title">
+                  <h2>{{_('Scan Device QR Code')}}</h2>
+                </div>
+                
+                <!-- 说明文字 -->
+                <div class="instruction-text">
+                  <p>{{_('Please confirm the gateway has entered the configuration mode before scanning.')}}</p>
+                  <div class="instruction-steps">
+                    <div class="step-item">
+                      <span class="step-number">1</span>
+                      <span class="step-text">{{_('Long press the gateway Reset button for 2 seconds to WIFI.')}}</span>
+                    </div>
+                    <div class="step-item">
+                      <span class="step-number">2</span>
+                      <span class="step-text">{{_('Put the gateway into configuration mode.')}}</span>
+                    </div>
+                    <div class="step-item">
+                      <span class="step-number">3</span>
+                      <span class="step-text">{{_('Click next to start scanning.')}}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 按钮区域 -->
+                <div class="instruction-actions">
+                  <button class="scan-button" v-on:click="startQrcode()">
+                    <span class="button-text">{{_("Start Scanning")}}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 连接过程界面 -->
+              <div class="connecting-container" v-if="showConnecting">
+                <div class="connecting-animation">
+                  <!-- 手机图标 -->
+                  <div class="device-icon phone-icon">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  
+                  <!-- 连接动画 -->
+                  <div class="connection-line">
+                    <div class="connection-waves">
+                      <div class="wave wave-1"></div>
+                      <div class="wave wave-2"></div>
+                      <div class="wave wave-3"></div>
+                    </div>
+                  </div>
+                  
+                  <!-- 网关图标 -->
+                  <div class="device-icon gateway-icon">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="2" y="8" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+                      <path d="M6 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <path d="M14 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="8" cy="16" r="1" fill="currentColor"/>
+                      <circle cx="12" cy="16" r="1" fill="currentColor"/>
+                      <circle cx="16" cy="16" r="1" fill="currentColor"/>
+                      <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- 连接状态文字 -->
+                <div class="connecting-status">
+                  <h3>{{_('Connecting to Gateway')}}</h3>
+                  <p>{{connectingMessage}}</p>
+                  <div class="loading-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                  </div>
+                </div>
+              </div>
+                </div>
+              </div>
+              
+            </div>
+            
+            <!-- 第二步：智能控制器配对 -->
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+              <div class="card">
+                <div class="card-content card-content-padding" style="padding-top: 0">
+                  <!-- 扫描智能控制器指导 -->
+                  <div class="scan-controller-container" v-if="!showControllerPairing">
+                    <div class="instruction-icon">
+                      <div class="qr-icon">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+                          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+                          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+                          <rect x="5" y="5" width="3" height="3" fill="currentColor"/>
+                          <rect x="16" y="5" width="3" height="3" fill="currentColor"/>
+                          <rect x="5" y="16" width="3" height="3" fill="currentColor"/>
+                          <path d="M14 14h7v7h-7z" stroke="currentColor" stroke-width="2"/>
+                          <rect x="16" y="16" width="3" height="3" fill="currentColor"/>
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    <div class="instruction-title">
+                      <h2>{{_('Scan Smart Controller')}}</h2>
+                    </div>
+                    
+                    <div class="instruction-text">
+                      <p>{{_('Please scan the QR code on the smart controller to continue pairing.')}}</p>
+                    </div>
+                    
+                    <div class="instruction-actions">
+                      <button class="scan-button" v-on:click="scanController()">
+                        <span class="button-text">{{_("Scan Controller")}}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 智能控制器配对指导 -->
+                  <div class="controller-pairing-container" v-if="showControllerPairing">
+                    <!-- 图标区域 -->
+                    <div class="instruction-icon">
+                      <div class="controller-icon">
+                        <svg width="100" height="100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="4" y="6" width="16" height="12" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                          <rect x="6" y="8" width="4" height="3" rx="1" fill="currentColor" opacity="0.3"/>
+                          <rect x="14" y="8" width="4" height="3" rx="1" fill="currentColor" opacity="0.3"/>
+                          <circle cx="12" cy="14" r="2" stroke="currentColor" stroke-width="1.5"/>
+                          <circle cx="12" cy="14" r="1" fill="currentColor"/>
+                          <path d="M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    <!-- 标题 -->
+                    <div class="instruction-title">
+                      <h2>{{_('Smart Controller Pairing Mode')}}</h2>
+                    </div>
+                    
+                    <!-- 说明文字 -->
+                    <div class="instruction-text">
+                      <p>{{_('Please follow the steps below to put the smart controller into pairing mode.')}}</p>
+                      <div class="instruction-steps">
+                        <div class="step-item">
+                          <span class="step-number">1</span>
+                          <span class="step-text">{{_('Connect the smart controller to power. If the blue indicator shows green flashing, unplug and reconnect the power.')}}</span>
+                        </div>
+                        <div class="step-item">
+                          <span class="step-number">2</span>
+                          <span class="step-text">{{_('After reconnecting power, press [SET] when the green indicator flashes golden yellow.')}}</span>
+                        </div>
+                        <div class="step-item">
+                          <span class="step-number">3</span>
+                          <span class="step-text">{{_('If pairing is successful, the smart controller indicator will show blue.')}}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 按钮区域 -->
+                    <div class="instruction-actions">
+                      <div class="action-buttons">
+                        <button class="retry-button" v-on:click="retryPairing()">
+                          {{_("Retry")}}
+                        </button>
+                        <button class="continue-button" v-on:click="continuePairing()">
+                          {{_("Continue")}}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+              <div class="card">
+                <div class="card-content card-content-padding" style="padding-top: 0">
+                  <div>
+                    <div class="list">
+                      <ul>
+                        <li class="item-content item-input no-padding-left">
+                          <div class="item-inner no-padding-right">
+                            <div class="item-title item-label" lang="en" style="font-size: 16px;">Ssid <span class="text-color-red" style="font-size: 12px;">( {{_(wifi_tip)}} )</span></div>
+                            <div class="item-input-wrap">
+                              <input type="text" name="ssid" v-model="setting.ssid" :placeholder="_('SSID')" required validate />
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input no-padding-left">
+                          <div class="item-inner no-padding-right">
+                            <div class="item-title item-label" lang="en" style="font-size: 16px;">{{_('Password')}}</div>
+                            <div class="item-input-wrap">
+                              <input
+                                type="text"
+                                name="password"
+                                v-model="setting.ssid_password"
+                                :placeholder="_('Password')"
+                                required
+                                validate
+                              />
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("Previous")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTab(4)">{{_("Next")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+              <div class="card">
+                <div class="card-content card-content-padding" style="padding-top: 0">
+                  <div>
+                    <div class="list">
+                      <ul>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">bed</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{ _('Room')}}</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                              <select name="profile_room" placeholder="" lang="en">
+                                <option :value="roomItem.name" selected="selected" v-for="roomItem in profileRoom" :key="roomItem.name">
+                                  {{tran(roomItem.title)}}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input">
+                          <div class="item-media align-self-flex-start">
+                            <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                          </div>
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{ _('Device Name')}}</div>
+                            <div class="item-input-wrap">
+                              <input class="init-input" name="title" v-model="postTitle" type="text" :placeholder="_('Device Name')" />
+                              <span class="input-clear-button"></span>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
+                    </div>
+                    <div class="col">
+                      <div class="button button-fill button-save" v-on:click="saveErp">{{_("Complete")}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let showIrLearnIcon = false;
+    let vueApp = null;
+    let { guid, sub_name } = $f7route.query;
+    //let { guid, subdevice_name } = $f7route.query;
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          index: 1, // control the step-content
+          activeStatus: false, //if choose the template, show the step-content
+          deviceType: 1,
+          showConnecting: false, // 是否显示连接过程
+          connectingMessage: '', // 连接状态信息
+          showControllerPairing: false, // 是否显示智能控制器配对界面
+          stepList: [
+            {
+              id: 1,
+              name: '1',
+              isActive: true,
+              relatedIndex: 1,
+            },
+            {
+              id: 2,
+              name: '2',
+              isActive: false,
+              relatedIndex: 2,
+            },
+            {
+              id: 3,
+              name: '3',
+              isActive: false,
+              relatedIndex: 3,
+            },
+            {
+              id: 4,
+              name: '4',
+              isActive: false,
+              relatedIndex: 4,
+            },
+          ],
+          setting: {
+            ssid: '',
+            ssid_password: '',
+          },
+          ssid: 'SSID',
+          password_name: 'Password',
+          wifi_tip: 'Device supports 2.4 GHz Wi-Fi only',
+          postTitle : '',
+          profileRoom : [],
+          deviceId : ''
+        },
+        computed: {},
+        watch: {},
+        components: {},
+        mounted() {
+          this.initProfileData();
+        },
+        methods: {
+          initProfileData() {
+            this.profileRoom = cloneDeep(erp.info.profile.profile_room);
+          },
+          clickDeviceType(type) {
+            this.deviceType = type;
+            this.activeStatus = true;
+            this.toTab(1);
+          },
+          toTab(index) {
+            let postStatus = true;
+            this.lastIndex = cloneDeep(this.index);
+            if (index == 0) {
+              this.activeStatus = false;
+            }
+            
+            // 重置第二步的状态
+            if (index == 2) {
+              this.showControllerPairing = false;
+            }
+            
+            if (postStatus) {
+              this.index = index;
+              this.activeStep();
+            }
+          },
+          activeStep() {
+            this.stepList.forEach((item) => {
+              if (item.id == this.index) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          async sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          },
+          //开始业务逻辑
+          startQrcode(){
+            // 显示加载状态
+            const toast = app.toast.create({
+              text: _('Starting scanner...'),
+              position: 'center',
+              closeTimeout: 2000
+            });
+            toast.open();
+
+            window.app_core_qrcode_start_scan({
+              keepScan: false,
+              onScan:async({ result, stop })=>{
+                if (result.format !== 'QR_CODE') {
+                  app.dialog.alert(_('Invalid QR Code format. Please scan a valid QR code.'));
+                  return;
+                }
+                
+                console.log('Scanned QR Code:', result);
+                const rawValue = result.rawValue;
+                
+                // 显示扫描成功提示
+                const successToast = app.toast.create({
+                  text: _('QR Code scanned successfully!'),
+                  position: 'center',
+                  closeTimeout: 2000,
+                  cssClass: 'color-green'
+                });
+                successToast.open();
+                
+                // 停止扫描
+                stop();
+                
+                // 这里可以添加扫描成功后的业务逻辑
+                // 例如：发送数据到服务器、跳转到下一步等
+                this.handleScanSuccess(rawValue);
+              },
+              onError: (error) => {
+                console.error('QR Scan Error:', error);
+                app.dialog.alert(_('Failed to start scanner. Please try again.'));
+              }
+            })
+          },
+          async saveErp() {
+            let subDevice = cloneDeep(erp.info.profile.profile_subdevice);
+            console.log('addDeviceToErp');
+            app.dialog.preloader();
+            let postData = {
+              title: this.postTitle,
+              guid: this.deviceId,
+              model: this.deviceType == 1 ? 'TGT-001' : this.deviceType == 2 ? 'TGT-002' : 'TGT-003',
+              device_mode: 'TGT Smart Control',
+              peripheral: md5(this.deviceId),
+              device_button_group: this.deviceType == 1 ?'TGT ONOFF GANG1' : this.deviceType == 2 ? 'TGT WATER HEATER' : 'TGT STOVE',
+              parent: erp.info.profile.name,
+              batch: 'YO0012',
+              firmware: 0,
+              profile_room: $('select[name="profile_room"]').val(),
+              password: '000000',
+              mac_address: md5(this.deviceId),
+            };
+            try {
+              let resData = await http2.request('/api/method/save.subdevice', {
+                method: 'POST',
+                serializer: 'json',
+                responseType: 'json',
+                data: postData,
+              });
+              await ha_profile_ready();
+              app.dialog.close();
+              window.globalUpdate = true;
+              mainView.router.back();
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(error);
+            }
+          },
+          // 处理扫描成功的逻辑
+          async handleScanSuccess(qrValue) {
+            console.log('Processing QR value:', qrValue);
+            
+            // 显示连接过程界面
+            this.showConnecting = true;
+            this.connectingMessage = _('Establishing connection with gateway...');
+            
+            // 模拟连接过程
+            await this.simulateConnection();
+          },
+
+          // 模拟连接过程
+          async simulateConnection() {
+            const connectionSteps = [
+              { message: _('Establishing connection with gateway...'), delay: 1000 },
+              { message: _('Verifying device credentials...'), delay: 1500 },
+              { message: _('Configuring network settings...'), delay: 1200 },
+              { message: _('Connection established successfully!'), delay: 800 }
+            ];
+
+            for (let step of connectionSteps) {
+              this.connectingMessage = step.message;
+              await this.sleep(step.delay);
+            }
+
+            // 连接成功，跳转到第二步
+            setTimeout(() => {
+              this.showConnecting = false;
+              this.toTab(2);
+              
+              // 显示成功提示
+              const successToast = app.toast.create({
+                text: _('Gateway connected successfully!'),
+                position: 'center',
+                closeTimeout: 2000,
+                cssClass: 'color-green'
+              });
+              successToast.open();
+            }, 500);
+          },
+
+          // 完成配置
+          completeConfiguration() {
+            // 这里可以添加完成配置后的逻辑
+            // 例如：返回主页、保存配置等
+            
+            const toast = app.toast.create({
+              text: _('Setup completed successfully!'),
+              position: 'center',
+              closeTimeout: 2000,
+              cssClass: 'color-green'
+            });
+            toast.open();
+
+            // 可以返回上级页面或主页
+            setTimeout(() => {
+              $f7.views.current.router.back();
+            }, 1500);
+          },
+
+          // 扫描智能控制器
+          scanController() {
+            const toast = app.toast.create({
+              text: _('Starting controller scanner...'),
+              position: 'center',
+              closeTimeout: 2000
+            });
+            toast.open();
+
+            window.app_core_qrcode_start_scan({
+              keepScan: false,
+              onScan: async({ result, stop }) => {
+                if (result.format !== 'QR_CODE') {
+                  app.dialog.alert(_('Invalid QR Code format. Please scan a valid QR code.'));
+                  return;
+                }
+                
+                console.log('Scanned Controller QR Code:', result);
+                const rawValue = result.rawValue;
+                this.deviceId = md5(rawValue);
+                this.postTitle = rawValue.split(",")[0];
+                // 显示扫描成功提示
+                const successToast = app.toast.create({
+                  text: _('Controller QR Code scanned successfully!'),
+                  position: 'center',
+                  closeTimeout: 2000,
+                  cssClass: 'color-green'
+                });
+                successToast.open();
+                
+                // 停止扫描
+                stop();
+                
+                // 显示配对指导界面
+                this.showControllerPairing = true;
+              },
+              onError: (error) => {
+                console.error('Controller QR Scan Error:', error);
+                app.dialog.alert(_('Failed to start scanner. Please try again.'));
+              }
+            })
+          },
+
+          // 重试配对
+          retryPairing() {
+            // 重置到扫描状态
+            this.showControllerPairing = false;
+            
+            const toast = app.toast.create({
+              text: _('Please scan the controller QR code again.'),
+              position: 'center',
+              closeTimeout: 2000
+            });
+            toast.open();
+          },
+
+          // 继续配对（确认按钮）
+          continuePairing() {
+            const toast = app.toast.create({
+              text: _('Pairing completed successfully!'),
+              position: 'center',
+              closeTimeout: 2000,
+              cssClass: 'color-green'
+            });
+            toast.open();
+
+            // 跳转到第三步或完成配置
+            setTimeout(() => {
+              if (this.stepList.length > 2) {
+                this.toTab(3);
+              } else {
+                // 如果没有第三步，直接完成配置
+                this.completeConfiguration();
+              }
+            }, 1500);
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list {
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
+
+  .device-type-list-item {
+    float: left;
+    width: 50%;
+    overflow: hidden;
+    display: block;
+    border-bottom: solid 1px #e6e6e6;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    padding: 30px 0px;
+    background-color: #fff;
+  }
+
+  .device-type-list-item a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device-type-list-item img {
+    height: 30px;
+    background-repeat: no-repeat;
+    background-size: auto 30px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .device-type-list-item span {
+    color: #676767;
+    text-align: center;
+  }
+
+  .device-type-list-item:nth-child(odd) {
+    border-right: solid 1px #e6e6e6;
+  }
+
+  /* 扫码指导页面样式 */
+  .scan-instruction-container {
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .instruction-icon {
+    margin-bottom: 30px;
+  }
+
+  .qr-icon {
+    color: var(--f7-theme-color);
+    opacity: 0.8;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+  }
+
+  .instruction-title {
+    margin-bottom: 25px;
+  }
+
+  .instruction-title h2 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .instruction-text {
+    margin-bottom: 40px;
+    max-width: 350px;
+  }
+
+  .instruction-text p {
+    font-size: 16px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 30px;
+  }
+
+  .instruction-steps {
+    text-align: left;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 12px 16px;
+    background: rgba(var(--f7-theme-color-rgb), 0.05);
+    border-radius: 12px;
+    border-left: 3px solid var(--f7-theme-color);
+  }
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--f7-theme-color);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .step-text {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+  }
+
+  .instruction-actions {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .scan-button {
+    width: 100%;
+    background: var(--f7-theme-color);
+    border: none;
+    border-radius: 16px;
+    padding: 16px 24px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(var(--f7-theme-color-rgb), 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .scan-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(var(--f7-theme-color-rgb), 0.4);
+  }
+
+  .scan-button:active {
+    transform: translateY(0);
+  }
+
+  .button-icon {
+    font-size: 18px;
+  }
+
+  .button-text {
+    font-weight: 600;
+  }
+
+  /* 优化设备类型选择的样式 */
+  .device-type-list-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .device-type-list-item:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .device-type-list-item img {
+    transition: transform 0.3s ease;
+  }
+
+  .device-type-list-item:hover img {
+    transform: scale(1.1);
+  }
+
+  .device-type-list-item span {
+    font-weight: 500;
+    transition: color 0.3s ease;
+  }
+
+  .device-type-list-item:hover span {
+    color: var(--f7-theme-color);
+  }
+
+  .scene-toolbar-inner {
+    padding: 0 15px;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .button-active {
+    background: var(--f7-theme-color) !important;
+    color: white !important;
+    border-radius: 8px;
+  }
+
+  .button {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    margin: 8px 5px;
+    padding: 8px 16px;
+    min-width: auto;
+  }
+
+  .scene-toolbar-inner .button:first-child {
+    margin-left: 0;
+  }
+
+  .scene-toolbar-inner .button:last-child {
+    margin-right: 0;
+  }
+
+  /* 连接过程界面样式 */
+  .connecting-container {
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .connecting-animation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .device-icon {
+    color: var(--f7-theme-color);
+    opacity: 0.9;
+  }
+
+  .phone-icon {
+    animation: devicePulse 2s ease-in-out infinite;
+  }
+
+  .gateway-icon {
+    animation: devicePulse 2s ease-in-out infinite 0.5s;
+  }
+
+  @keyframes devicePulse {
+    0%, 100% { 
+      transform: scale(1); 
+      opacity: 0.9; 
+    }
+    50% { 
+      transform: scale(1.05); 
+      opacity: 1; 
+    }
+  }
+
+  .connection-line {
+    width: 120px;
+    height: 40px;
+    margin: 0 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .connection-waves {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .wave {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--f7-theme-color);
+    animation: waveAnimation 1.5s ease-in-out infinite;
+  }
+
+  .wave-1 {
+    animation-delay: 0s;
+  }
+
+  .wave-2 {
+    animation-delay: 0.2s;
+  }
+
+  .wave-3 {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes waveAnimation {
+    0%, 100% {
+      transform: scale(0.8);
+      opacity: 0.6;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+  }
+
+  .connecting-status {
+    max-width: 300px;
+  }
+
+  .connecting-status h3 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 15px 0;
+    letter-spacing: -0.3px;
+  }
+
+  .connecting-status p {
+    font-size: 16px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 25px;
+    min-height: 24px;
+  }
+
+  .loading-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--f7-theme-color);
+    animation: dotAnimation 1.4s ease-in-out infinite both;
+  }
+
+  .dot:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+
+  .dot:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+
+  .dot:nth-child(3) {
+    animation-delay: 0s;
+  }
+
+  @keyframes dotAnimation {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+  }
+
+  /* 连接成功后的过渡动画 */
+  .connecting-container.success {
+    background: linear-gradient(135deg, #e8f5e8 0%, #ffffff 100%);
+  }
+
+  .connecting-container.success .device-icon {
+    color: #4caf50;
+  }
+
+  .connecting-container.success .wave {
+    background: #4caf50;
+  }
+
+  /* 成功页面样式 */
+  .success-container {
+    padding: 60px 20px 40px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .success-icon {
+    color: #22c55e;
+    margin-bottom: 30px;
+    animation: successPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes successPulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.9;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 1;
+    }
+  }
+
+  .success-title {
+    margin-bottom: 20px;
+  }
+
+  .success-title h2 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .success-text {
+    margin-bottom: 40px;
+    max-width: 300px;
+  }
+
+  .success-text p {
+    font-size: 16px;
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .success-actions {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .complete-button {
+    width: 100%;
+    background: #22c55e;
+    border: none;
+    border-radius: 16px;
+    padding: 16px 24px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+  }
+
+  .complete-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(34, 197, 94, 0.4);
+    background: #16a34a;
+  }
+
+  .complete-button:active {
+    transform: translateY(0);
+  }
+
+  /* 扫描智能控制器样式 */
+  .scan-controller-container {
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* 智能控制器配对界面样式 */
+  .controller-pairing-container {
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .controller-icon {
+    color: var(--f7-theme-color);
+    opacity: 0.8;
+    animation: pulse 2s infinite;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    width: 100%;
+    max-width: 320px;
+    margin-top: 20px;
+  }
+
+  .retry-button,
+  .continue-button {
+    flex: 1;
+    padding: 16px 24px;
+    border: none;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .retry-button {
+    background: #f8f9fa;
+    color: #666;
+    border: 2px solid #e9ecef;
+  }
+
+  .retry-button:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .continue-button {
+    background: var(--f7-theme-color);
+    color: white;
+    box-shadow: 0 4px 20px rgba(var(--f7-theme-color-rgb), 0.3);
+  }
+
+  .continue-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(var(--f7-theme-color-rgb), 0.4);
+  }
+
+  .retry-button:active,
+  .continue-button:active {
+    transform: translateY(0);
+  }
+</style>

@@ -1,4 +1,5 @@
 window.iot_switch_profile = async(params)=>{
+    console.log(params)
     const TAG = "ERP >>> window.iot_switch_profile";
 	if(!isset(params.ref)) return;
 	
@@ -51,11 +52,13 @@ window.iot_switch_profile = async(params)=>{
 	let prev_profile_id = erp.info.profile.name;
 	let prev_topic_id = `profile_subdevice_${erp.info.profile.name}`
 	try{
+	    window.app_guest_registration_comelit_is_activated = false;
 		http.request("/api/resource/User%20Settings", {
 			method:"POST",
 				serializer: 'json',
 			data:{"data": {active_profile:params.ref,owner:users[users.current].usr,app_id:appInfo.id}}
-		}).then((rs)=>{
+		}).then(async (rs)=>{
+		   
 	}, ()=>{
 	    return http.request("/api/resource/User%20Settings/"+encodeURIComponent(appInfo.id+"-"+users[users.current].usr), {
     		method:"PUT",

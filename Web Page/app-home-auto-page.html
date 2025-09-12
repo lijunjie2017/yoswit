@@ -1429,7 +1429,13 @@ const renderMainButton = (props, {
 								value: props.kitem.device_status
 							}]).then(async()=>{
 								let control_source = await bleHelper.getControlSource(kitem.device);
-								window.upload_device_control_log(kitem.device,props.kitem.device_status,control_source,kitem.name);
+								let device_type_map = {
+									command_type : 'DIMMING',
+									device_type : props.kitem.device_model,
+									command : data,
+									device_button_group : props.kitem.device_button_group
+								}
+								window.upload_device_control_log(kitem.device,props.kitem.device_status,control_source,kitem.name,device_type_map);
 							}).catch(error=>{
 								if(error == 7200){
 									erp.script.iot_entry_class_password_verify(props.kitem.device,props.kitem.name).then(()=>{
@@ -1545,6 +1551,16 @@ const renderMainButton = (props, {
 			}
 		}, 1);
 	};
+	//this is the TGT Smart Control flow
+	const tgt_smart_control_click_onoff = (kitem)=>{
+		console.log("tgt_smart_control_click_onoff",kitem);
+		if(kitem.device_status == 0){
+			kitem.device_status = 1;
+		}else{
+			kitem.device_status = 0; 
+		} 
+		$update();
+	}
 	//this bacnet flow
 	const bacnet_click_onoff = (kitem)=>{
 		let configString = kitem.config;
@@ -1707,6 +1723,16 @@ const renderMainButton = (props, {
 				app.dialog.alert(_(erp.get_log_description(error)));
 				//app.dialog.alert(error)
 			});
+		}else if(kitem.device_button_group.toLowerCase().includes('gpio')){
+			// peripheral[kitem.device].write([{
+			// 	service: 'ff80',
+			// 	characteristic: 'ff81',
+			// 	data: kitem.function
+			// }])
+			window.peripheral[kitem.device].rcuDoScene([{
+				gang : 1,
+				command: kitem.function,
+			}])
 		} else {
 			kitem.device_status = 1;
 			peripheral[kitem.device].onoff([{
@@ -1737,6 +1763,8 @@ const renderMainButton = (props, {
 			}).catch((error) => {
 				//app.dialog.alert(error)
 			});
+		}else if(kitem.device_button_group.toLowerCase().includes('gpio')){
+			return;
 		} else {
 			peripheral[kitem.device].onoff([{
 				gang: bleHelper.getGangId(kitem.device_button_group),
@@ -1749,7 +1777,7 @@ const renderMainButton = (props, {
 			});
 		}
 	}
-	const click_ir = (kitem)=>{
+	const click_ir = async(kitem)=>{
 		//let { device_button_group, guid, id, device_command, password, name, network_id,device } = kitem;
 // 		let irConfig = peripheral[kitem.device].prop.config;//{}
 // 		let configStr = 'ir|0|25,1,2,1,0,1'; //ir|0|tem,speed,direction,swing,onoff,mode
@@ -1783,7 +1811,19 @@ const renderMainButton = (props, {
 			let ref_command = iot_ble_generate_ir_code_for_rw(kitem['function'],0,configStr.substring(5,configStr.length));
 			console.log("ref_command",ref_command) 
 			try{
-				peripheral[kitem.device].sendIrForRw(ref_command);
+				//check if the ble,should send to ff85
+				if(ref_command.length > 1008){
+					//Bluetooth,MobMob,
+					let control_source = await bleHelper.getControlSource(kitem.device);
+					if(control_source == 'Bluetooth'){
+						//send long command to ff85
+						await bleHelper.sendLongCommand(ref_command,kitem.device);
+					}else{
+						peripheral[kitem.device].sendIrForRw(ref_command);
+					}
+				}else{
+					peripheral[kitem.device].sendIrForRw(ref_command);
+				}
 			}catch(error){
 				console.log("error",error)
 				if(error == 7200){
@@ -2373,6 +2413,22 @@ const renderMainButton = (props, {
 				</div>
 				`;
 		}
+	}else if(props.kitem.device_mode === 'Device Access' && props.kitem.device_button_group != 'Device Access'){
+		return () => $h`
+				<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
+					<a class="iot-connect" @click="${()=>click_connect(props.kitem)}">
+						<div class="button button-raised button-big circle">
+								<i class="material-icons">bluetooth_connected</i>
+						</div>
+					</a>
+					<a class="on_flag off_flag touch-button-group" ref="${props.kitem.device_status}" @pointerdown="${() => click_onoff_start(props.kitem)}" @pointerup="${() => click_onoff_end(props.kitem)}">
+							<div class="button button-raised button-big circle" style="border-radius:50%;">
+								<div class="" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-left:1px;margin-top:1px;">touch_app</i></div>
+							</div>
+					</a>
+				</div>
+				`;
+
 	} else if (props.kitem.device_button_group.startsWith('RCU OUTPUT')) {
 		return () => $h`
         <div class="control-panel-right">
@@ -2429,6 +2485,40 @@ const renderMainButton = (props, {
 						</a>
 					</div>
 				`;
+	}else if(props.kitem.device_button_group.startsWith('TGT ONOFF GANG1')){
+		return () => $h`
+        <div class="control-panel-right">
+					<a class="iot-connect" href="/mobile-app/tgt-device-count?type=1&subdevice=${props.kitem.name}&title=${encodeURIComponent(props.kitem.title)}">
+						<div class="button button-raised button-big circle">
+							<i class="material-icons">bar_chart</i>
+						</div>
+					</a>
+					<a class="on_flag off_flag" ref="${isset(props.kitem.device_status)?props.kitem.device_status:0}" @click="${() => tgt_smart_control_click_onoff(props.kitem)}">
+							<div class="button button-raised button-big onoff"></div>
+						</a>
+        </div>
+        `;
+	}else if(props.kitem.device_button_group.startsWith('TGT WATER HEATER')){
+		return () => $h`
+      <div class="control-panel-right">
+          <a class="right" href="/mobile-app/tgt-device-control?type=1&subdevice=${props.kitem.name}&title=${encodeURIComponent(props.kitem.title)}" command-type="Bluetooth">
+              <div class="button button-raised button-big circle">
+                  <i class="material-icons" style="line-height: 25px !important;">view_sidebar</i>
+              </div>
+          </a>
+					
+      </div>
+      `;
+	}else if(props.kitem.device_button_group.startsWith('TGT STOVE')){
+		return () => $h`
+      <div class="control-panel-right">
+          <a class="right" href="/mobile-app/tgt-device-control?type=2&subdevice=${props.kitem.name}&title=${encodeURIComponent(props.kitem.title)}" command-type="Bluetooth">
+              <div class="button button-raised button-big circle">
+                  <i class="material-icons" style="line-height: 25px !important;">view_sidebar</i>
+              </div>
+          </a>
+      </div>
+      `;
 	}else if(props.kitem.device_button_group.startsWith('BACNET AIR CONDITIONER')){
 		let configString = props.kitem.config;
 		if(configString){
@@ -2714,11 +2804,17 @@ const renderBottomButton = (props, {
 				})
 			} else if (device_button_group.startsWith("RCU DIMMING")) {
 				// debugger
-				peripheral[props.kitem.device].rcuDimming([{
+				peripheral[props.kitem.device].rcuDimming([{ 
 					gang: bleHelper.getGangId(props.kitem.device_button_group),
 					value: range_value
 				}]).then(async()=>{
 					let control_source = await bleHelper.getControlSource(props.kitem.device);
+					let device_type_map = {
+						command_type : 'DIMMING',
+						device_type : props.kitem.device_model,
+						command : data,
+						device_button_group : props.kitem.device_button_group
+					}
 					window.upload_device_control_log(props.kitem.device,props.kitem.device_status,control_source,props.kitem.name);
 				}).catch(error=>{
 					if(error == 7200){
@@ -2977,7 +3073,19 @@ const renderBottomButton = (props, {
 		// let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
 		// console.log('ref', ref);
 		try {
-			await window.peripheral[props.kitem.device].sendIrForRw(code);
+		    //check if the ble,should send to ff85
+				if(code.length > 1008){
+					//Bluetooth,MobMob,
+					let control_source = await bleHelper.getControlSource(props.kitem.device);
+					if(control_source == 'Bluetooth'){
+						//send long command to ff85
+						await bleHelper.sendLongCommand(code,props.kitem.device);
+					}else{
+						await window.peripheral[props.kitem.device].sendIrForRw(code);
+					}
+				}else{
+					await window.peripheral[props.kitem.device].sendIrForRw(code);
+				}
 			} catch (err) {
 				app.dialog.alert(_(erp.get_log_description(err)));
 			}
@@ -3225,7 +3333,7 @@ const renderBottomButton = (props, {
 		$update();
 		window.lastClickTime[props.kitem.device] = currentTime;
 	}
-	const click_ir_change = (kitem, click_type)=>{
+	const click_ir_change = async(kitem, click_type)=>{
 // 		let configStr = peripheral[kitem.device].prop.config[kitem.name];
 		let configStr = kitem.device_config;
 		if(!isset(configStr)){
@@ -3334,7 +3442,19 @@ const renderBottomButton = (props, {
 			let ref_command = iot_ble_generate_ir_code_for_rw(kitem['function'],click_type,newConfigStr.substring(5,configStr.length));
 			console.log("ref_command",ref_command)
 			try{
-				peripheral[kitem.device].sendIrForRw(ref_command);
+			    if(ref_command.length > 1008){
+					//Bluetooth,MobMob,
+					let control_source = await bleHelper.getControlSource(kitem.device);
+					if(control_source == 'Bluetooth'){
+						//send long command to ff85
+						await bleHelper.sendLongCommand(ref_command,kitem.device);
+					}else{
+						await window.peripheral[kitem.device].sendIrForRw(ref_command);
+					}
+				}else{
+					await peripheral[kitem.device].sendIrForRw(ref_command);
+				}
+				
 			}catch(error){
 				console.log("error",error)
 				if(error == 7200){
@@ -4430,7 +4550,7 @@ export default async (props, ctx) => {
 		const selfgatewayhash = md5(md5(deviceInfo.getDeviceGateway()));
 		const gatewayMap = {};
 		for (let i in profile_device) {
-			if (!profile_device[i].gateway || profile_device[i].gateway.trim() == "") continue;
+			if (!profile_device[i].gateway || profile_device[i].gateway.trim() == "" || !profile_device[i].device) continue;
 
 			const gatewayhash = md5(md5(profile_device[i].gateway));
 			if (selfgatewayhash == gatewayhash) { // self gateway, need to listen to cmd

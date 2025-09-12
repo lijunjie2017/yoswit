@@ -14,6 +14,9 @@
           <a class="link icon-only manufacturing-btn-refresh" @click="${()=>toStudyIR()}">
             <i class="icon material-icons">model_training</i>
           </a>
+          <a href="/mobile-app/device-ir-collect-code?guid=${guid}" class="link icon-only ir-btn-collect device-none">
+            <i class="icon material-icons">add_box</i>
+          </a>
         </div>
       </div>
     </div>
@@ -257,9 +260,9 @@
                       <button class="button button-fill button-large" v-on:click="toSelectModel">{{_("Next")}}</button>
                     </div>
                   </div>
-                  <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="deviceType != 1">
+                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                     <div class="col">
-                      <button class="button button-fill button-large" v-on:click="toMatchPage()">{{_("Start Matching")}}</button>
+                      <button class="button button-fill button-large" v-on:click="toMatchPage()">{{_("Smart Search")}}</button>
                     </div>
                   </div>
                 </div>
@@ -460,7 +463,7 @@
                   </div>
                   <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                     <div class="col">
-                      <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
+                      <div class="button button-fill button-save" v-on:click="toTab(normalType == 1 ? 2 : 3)">{{_("Previous")}}</div>
                     </div>
                     <div class="col">
                       <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("Next")}}</div>
@@ -593,7 +596,7 @@
                     <div class="button button-fill button-save" v-on:click="toTestPage">{{_("Next")}}</div>
                   </div>
                 </div>
-                <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="deviceType != 1">
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
                     <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Smart Search")}}</div>
                   </div>
@@ -619,7 +622,7 @@
     let vueApp = null;
     let { guid, sub_name } = $f7route.query;
     //let { guid, subdevice_name } = $f7route.query;
-
+    $update();
     const toStudyIR = ()=>{
       vueApp.$toStudyIR()
     }
@@ -634,7 +637,7 @@
           isPowerOn: false,
           isSwitching: false,
           testingIndex: 1,
-          testingTotal: 38,
+          testingTotal: 1,
           stepList: [
             {
               id: 1,
@@ -706,9 +709,15 @@
           postTitle : '',
           hideStatus: true,
           fileCode : '',
-          normalType : 1, // 1 选择品牌切正常测试, 2 智能匹配
+          collectRemoteId: 0,
+          collectKeyList: [],
+          normalType : 1, // 1 选择品牌切正常测试, 2 智能匹配 3,从学码库匹配
           learnStatus: false,
-          lastIndex:1
+          lastIndex:1,
+          longCommand : '', //长指令的处理
+          iotAttempt : 0,
+          isTestMatched: false,
+          thisPage : true,//防止打开其他页面占用
         },
         computed: {
           // 过滤后的品牌列表
@@ -731,6 +740,7 @@
           this.getDbInfo();
           this.initEmiterEvent();
           this.initProfileData();
+          
         },
         methods: {
           initEmiterEvent(){
@@ -755,7 +765,8 @@
             emitter.off(`ir_panel_config_learn_r2w`, this._irPanelConfigLearnR2W);
             emitter.on(`ir_panel_config_learn_r2w`, this._irPanelConfigLearnR2W);
           },
-          initProfileData() {
+          async initProfileData() {
+            await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
             this.profileRoom = cloneDeep(erp.info.profile.profile_room);
           },
           initPostTitle(){
@@ -794,6 +805,7 @@
           // step-3: 开始一键匹配
           async startSmartMatch() {
             if (this.isMatching) return;
+            this.irLearnedCode = '';
             this.isMatched = false;
             this.isSearching = false;
             this.isMatching = true;
@@ -842,11 +854,16 @@
                   console.log('learneddata', data);
                   let rs = data.rs;
                   if (data.guid == guid && rs.length > 8) {
-                    // 获取到数据后立即清除监听器，避免重复处理
-                    emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                    
                     this._sendIrCodeFun = null;
-                    this.irLearnedCode = rs;
-                    this.onIrSignalCaptured();
+                    if(rs.substring(6, 8) == '00'){
+                      // 获取到数据后立即清除监听器，避免重复处理
+                      emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                      this.irLearnedCode = `97210700${this.irLearnedCode?this.irLearnedCode:''}${rs.substring(8,rs.length)}`;
+                      this.onIrSignalCaptured();
+                    }else{
+                      this.irLearnedCode += rs.substring(8,rs.length);
+                    }
                   }
                 };
               }
@@ -940,22 +957,40 @@
             return new Promise(async(resolve, reject) => {
               let sql = '';
               if(this.selectedBrand){
-                sql = `SELECT remote_index_id,key_value FROM decode_remote WHERE brand_id = ${this.selectedBrand.id} AND key_number = 0;`;
+                if(this.deviceType == 1){
+                  sql = `SELECT remote_index_id,key_value FROM ac_remote WHERE brand_id = ${this.selectedBrand.id} AND key_number = 0;`;
+                }else{
+                  sql = `SELECT remote_index_id,key_value FROM decode_remote WHERE brand_id = ${this.selectedBrand.id} AND key_number = 0;`;
+                }
               }else{
-                sql = `SELECT remote_index_id,key_value FROM decode_remote WHERE key_number = 0;`;
+                if(this.deviceType == 1){
+                  sql = `SELECT remote_index_id,key_value FROM ac_remote WHERE key_number = 0;`;
+                }else{
+                  sql = `SELECT remote_index_id,key_value FROM decode_remote WHERE key_number = 0;`;
+                }
               }
               let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+              //优化逻辑，当无法从decode_remote表中获取到数据时，需要组合学码库的内容一起匹配(仅限非空调设备)
+              if(this.deviceType != 1){
+                let learnSql = `SELECT collect_remote_id,key_value FROM collect_key WHERE key_id=0 AND key_value IS NOT NULL AND key_value != '' AND key_value != '0';`;
+                let learnResult = await this.irSqliteExecuteSql(this.dbMap, learnSql);
+                result = result.concat(learnResult);
+              }
               console.log('learned result', result);
-              let codeList = this.processHexString(this.irLearnedCode);
+              let codeList = this.processHexString(this.irLearnedCode); 
+              //codeList = [4523,4483,576,554,576,1673,590,1677,590,1687,593,560,594,561,593,560,592,559,590,558,590,1677,590,1678,591,1680,590,557,591,558,590,557,590,557,590,557,590,557,590,1677,590,1677,590,559,591,557,590,557,590,557,590,1677,591,1680,591,559,591,557,591,1680,590,1677,590,1677,590,1677,591,45997,4525,4478,623,1673,571,95884,4525,4478,623,1673,571,95884,4525,4478,623,1673,571,95884,30000]
+              //codeList = [4010,3952,532,1956,506,1984,530,1958,530,1958,506,994,530,968,532,1956,532,966,534,1956,532,968,530,1958,532,968,532,966,532,968,530,968,532,968,530,1956,532,1960,530,966,508,1982,530,972,530,1982,506,970,530,1958,532,8890,4010,3980,506,1956,532,1958,532,1958,530,1960,528,970,530,968,530,1958,532,966,534,1958,530,968,532,1958,530,968,506,994,530,970,528,970,530,968,532,1958,530,1958,530,970,530,1958,530,968,532,1956,532,968,532,1956,532,8888,4010,3952,532,1956,532,1958,530,1958,530,1958,530,968,530,970,530,1958,530,968,530,1958,530,968,532,1958,530,968,530,968,530,968,532,968,532,968,530,1956,532,1958,530,970,530,1958,532,968,530,1958,530,968,532,1958,530]
               console.log('codeList', codeList);
               let matchList = [];
               result.forEach(item=>{
                 item.code_value_list = item.key_value.split(',');
-                if(item.code_value_list.length == codeList.length){
+                if(item.code_value_list.length == codeList.length || item.code_value_list.length == codeList.length - 1){
                   let matchCount = this.compareCodeList(codeList, item.code_value_list);
-                  if(matchCount > parseInt(codeList.length * 0.9)){
+                  console.log('matchCount', matchCount);
+                  if(matchCount > parseInt(codeList.length * 0.85)){
                     matchList.push({
                       remote_index_id: item.remote_index_id,
+                      collect_remote_id: item.collect_remote_id,
                       code_value_list: item.code_value_list,
                       match_count: matchCount,
                     })
@@ -1048,6 +1083,7 @@
               app.dialog.alert(_('Please select the device type first.'));
               return;
             }
+            this.thisPage = false;
             mainView.router.navigate(`/mobile-app/device-ir-learn-for-new?guid=${guid}&device_type=${this.deviceType}&brand=${this.selectedBrand ? this.selectedBrand.id : ''}`);
           },
           async getDbInfo() {
@@ -1154,6 +1190,7 @@
             // 轻微过渡
             await this.sleep(220);
             this.isSwitching = false;
+            this.isTestMatched = false;
           },
           //step-3: 切换到上一个红外型号
           async prevIrModelForStep3() {
@@ -1162,6 +1199,7 @@
             this.matchIndex = this.matchIndex <= 1 ? 1 : this.matchIndex - 1;
             await this.sleep(220);
             this.isSwitching = false;
+            this.isTestMatched = false;
           },
           requestMtuForBle(){
             return new Promise(async(resolve, reject) => {
@@ -1169,7 +1207,37 @@
                 resolve(true);
               }else{
                 try{
+                  let that = this;
                   await window.peripheral[guid].connect();
+                  //开启ff85的通知
+                  await new Promise(async(resolve, reject) => {
+                    ble.startNotification(
+                      window.peripheral[guid].prop.id,
+                      'ff80',
+                      'ff85',
+                      (data) => {
+                        console.log('ff85 data', data);
+                        if(data && that.iotAttempt == 0 && that.thisPage){
+                          app.dialog.preloader(_('Sending, please wait...'));
+                          this.sendLongCommandAction();
+                          that.iotAttempt++;
+                        }else if(data && that.iotAttempt > 0 && that.thisPage){
+                          let status = parseInt(data.substring(10, 12), 16);
+                          console.log('status', status);
+                          if(status > 100){ 
+                            app.dialog.close();
+                            app.dialog.alert('Write Data Failed');
+                          }else if(status == 100){
+                            app.dialog.close();
+                          }
+                        }
+                      },
+                      (error) => {
+                        reject(error);
+                      }
+                    )
+                    resolve(true);
+                  });
                 }catch(error){
                   console.log('error', error);
                   reject(error);
@@ -1205,6 +1273,19 @@
             }
           },
           async init() {
+            //check if the plugin is not ready
+            try{
+              if(!Zeep){
+                app.dialog.alert(_('The plugin is not ready. Please download the latest version of the app.'));
+                mainView.router.back();
+                return;
+              }
+            }catch(error){
+              app.dialog.alert(_('The plugin is not ready. Please download the latest version of the app.'));
+              mainView.router.back();
+              return;
+            }
+            
             let mkdirFilePath = `databases/`;
             if (deviceInfo.operatingSystem === 'ios') {
               mkdirFilePath = `Library/LocalDatabase/`;
@@ -1259,9 +1340,13 @@
                   try {
                     app.dialog.preloader(_('Downloading, please wait...'));
                     this.irTimer = setTimeout(() => {
+                      http2.inspectFileStat(cordova.file.applicationStorageDirectory, `${mkdirFilePath}${this.fileName}`).then(entry=>{
+                        console.log("entry error",entry);
+                        entry.remove();
+                      });
                       app.dialog.close();
                       app.dialog.alert(_('Download Timed Out'));
-                    }, 1000 * 60);
+                    }, 1000 * 60*5);
                     const resData = await http2.request({
                       url: this.zipUrl,
                       method: 'DOWNLOAD',
@@ -1406,13 +1491,17 @@
             let command = this.getAirCommand(item);
             console.log('command', command);
             try{
-              await window.peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: `${command}`,
-                }
-              ]);
+              if(command.length > 1008){
+                await this.sendLongCommandReady(command);
+              }else{
+                await window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `${command}`,
+                  }
+                ]);
+              }
             }catch(error){
               console.log('error', error);
               app.dialog.alert(_(erp.get_log_description(error)))
@@ -1429,13 +1518,17 @@
             if(item.code){
               command = item.code;
               try{
-              await window.peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: `${command}`,
+                if(command.length > 1008){
+                  await this.sendLongCommandReady(command);
+                }else{
+                  await window.peripheral[guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: `${command}`,
+                    }
+                  ]);
                 }
-              ]);
             }catch(error){
               console.log('error', error);
               app.dialog.alert(_(erp.get_log_description(error)))
@@ -1468,6 +1561,142 @@
             command = `${pre_command}0101${parseInt(item.key).toString(16).padStart(2, '0')}${onoff}${parseInt(this.airDefaultValue.temp - 16).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.mode).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.swing).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.fan).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.wind).toString(16).padStart(2, '0')}${this.fileCode}`;
             return command;
           },
+          sendLongCommandReady(command){
+            return new Promise(async(resolve, reject) => {
+              try{
+                this.iotAttempt = 0;
+                // 统一按原始字节计算 MD5，避免字符串编码造成的不一致
+                const binaryBuffer = hexToBuffer(command);
+                const md5str = SparkMD5.ArrayBuffer.hash(binaryBuffer);
+                console.log('md5str1',md5str)
+                let sizeHex = iot_utils_to_little_endian_hex(command.length / 2, 4);
+                let nameHex = convertToFixedSizeHex(`ir_command`, 31);
+                let readyData = `933300003403${sizeHex}${md5str}${nameHex}`;
+                console.log('readyData', readyData);
+                this.longCommand = command;
+                try{
+                  ble.writeWithoutResponse(
+                    window.peripheral[guid].prop.id,
+                    'ff80',
+                    'ff85',
+                    readyData.convertToBytes(),
+                    function (response) {
+                      console.log(response);
+                      resolve(true)
+                    },
+                    function (error) {
+                      reject(error);
+                    }
+                  );
+                }catch(error){
+                  reject(error)
+                }
+              }catch(error){
+                reject(error)
+              }
+            })
+          },
+          sendLongCommandAction(){
+            return new Promise(async(resolve, reject) => {
+              try{
+                let mainChunkSizeInBytes = 4096;
+                let negotiatedMTU = 180;
+                console.log('this.longCommand',this.longCommand)
+                let data = this.longCommand.convertToBytes();
+                console.log('data', data);
+                let newArray = [];
+                for(let i = 0; i < data.byteLength; i += mainChunkSizeInBytes){
+                  let subChunk = data.slice(i, Math.min(i + mainChunkSizeInBytes, data.byteLength));
+                  let hexString = arrayBufferToHex(subChunk);
+                  // 直接基于原始字节计算 MD5，避免字符串编码问题
+                  let md5str = SparkMD5.ArrayBuffer.hash(subChunk);
+                  let newData = hexToBuffer(hexString + md5str);
+                  console.log('newData',hexString + md5str)
+                  console.log('md5str2',md5str)
+                  newArray.push(newData);
+                }
+                console.log('newArray', newArray);
+                let this_index = 0;
+                let subChunks = [];
+                let postBleDataList = [];
+                for(let j in newArray){
+                  let obj = {
+                    index: j,
+                    subChunks: [],
+                    sendStatus: false,
+                  };
+                  const subChunkSizeInBytes = negotiatedMTU;
+                  let offsetItem = 0;
+                  for(let i = 0; i < newArray[j].byteLength; i += subChunkSizeInBytes){
+                    const subChunk = newArray[j].slice(i, Math.min(i + subChunkSizeInBytes, newArray[j].byteLength));
+                    subChunks.push(subChunk);
+                    obj.subChunks.push({
+                      item: subChunk,
+                      index: this_index,
+                      status: false,
+                      offsetItem: offsetItem,
+                    });
+                    offsetItem += 502;
+                  }
+                  if(this_index > j){
+                    subChunks.push(false);
+                  }
+                  postBleDataList.push(obj);
+                  this_index++;
+                }
+                console.log('postBleDataList', postBleDataList);
+                console.log('subChunks', subChunks);
+                let offset = 0;
+                let postIndex = 0;
+                for (let i in postBleDataList) {
+                  let list = postBleDataList[i].subChunks;
+                  let offsetItem = 0;
+                  for(let j in list){
+                    let hexString = arrayBufferToHex(list[j].item);
+                    let commandLength = (hexString.length / 2 + 4).toString(16);
+                    commandLength = commandLength.padStart(4, '0');
+                    let command = `933400${commandLength}${iot_utils_to_little_endian_hex(offsetItem, 4)}${hexString}`;
+                    console.log('command', command);
+                    await ble.writeWithoutResponse(
+                      window.peripheral[guid].prop.id,
+                      'ff80',
+                      'ff85',
+                      command.convertToBytes(),
+                      function (response) {
+                        console.log('response', response);
+                      },
+                      function (error) {
+                        reject(error);
+                      }
+                    );
+                    await this.sleep(500);
+                    if(postIndex == postBleDataList.length - 1 && j == list.length - 1){
+                      console.log('9335');
+                      setTimeout(() => {
+                        ble.writeWithoutResponse(
+                          window.peripheral[guid].prop.id,
+                          'ff80',
+                          'ff85',
+                          '9335'.convertToBytes(),
+                          function (response) {
+                            console.log('response', response);
+                          },
+                          function (error) {
+                            reject(error);
+                          }
+                        );
+                        resolve(true);
+                      }, 500);
+                    }
+                    offsetItem += negotiatedMTU;
+                  }
+                  postIndex++;
+                }
+              }catch(error){
+                reject(error)
+              }
+            })
+          },
           sendIrCodeForStep3(){
             return new Promise(async(resolve, reject) => {
               let command = '';
@@ -1479,22 +1708,91 @@
                 console.log('code', code);
                 if(code){
                   let hexCode = iot_utils_to_little_endian_hex(code,2);
-                  console.log('hexCode', hexCode);
                   command = `${command}${hexCode}`;
                 }
               }
               console.log('command', command);
+              console.log('command length', command.length);
               try{
-                await window.peripheral[guid].write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: `97210700${command}3075`,
+                let postCommand = `97210700${command}3075`;
+                //check if the command is long command
+                if(postCommand.length > 1008){
+                  await this.sendLongCommandReady(postCommand);
+                }else{
+                  await window.peripheral[guid].write([ 
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: postCommand,
+                    }
+                  ]);
+                }
+                //判断是不是学码库的内容
+                if(modelMap.collect_remote_id){
+                  this.normalType = 3;
+                }else{
+                  if(this.deviceType == 1){
+                    this.normalType = 1;
+                  }else{
+                    this.normalType = 2
                   }
-                ]);
+                  ;
+                }
+                this.isTestMatched = true;
                 resolve(true);
               }catch(error){
                 reject(error)
+              }
+            })
+          },
+          sendCollectCommand(id){
+            return new Promise(async(resolve, reject) => {
+              let sql = `SELECT * FROM collect_key where collect_remote_id = ${id};`;
+              let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+              if(result.length > 0){
+                this.collectRemoteId = id;
+                this.collectKeyList = result;
+                //find the power code
+                let key_value = '';
+                result.forEach((item, index) => {
+                  if(item.key_id == '0'){
+                    key_value = item.key_value;
+                  }
+                });
+                if(key_value){
+                  //send the command to the air
+                  let command = '';
+                  let key_value_list = key_value.split(',');
+                  for(let i = 0; i < key_value_list.length; i++){
+                    let code = key_value_list[i];
+                    if(code){
+                      let hexCode = iot_utils_to_little_endian_hex(code,2);
+                      command = `${command}${hexCode}`;
+                    }
+                  }
+                  command = `${command}3075`;
+                  try{
+                    //send the command
+                    let pre_command = `972107`;
+                    let sendCommand = '';
+                    if(this.deviceType == 1){
+                      sendCommand = this.getAirCommand();
+                    }else{
+                      sendCommand = `${pre_command}0001${command}`;
+                    }
+                    console.log('sendCommand', sendCommand);
+                    await window.peripheral[guid].write([
+                      {
+                        service: 'ff80',
+                        characteristic: 'ff81',
+                        data: sendCommand,
+                      }
+                    ]);
+                    resolve(true);
+                  }catch(error){
+                    reject(error)
+                  }
+                }
               }
             })
           },
@@ -1506,6 +1804,16 @@
               let listIndex = this.testingIndex - 1;
               let modelMap = this.modelList[listIndex];
               console.log('thisModel', modelMap);
+              if(modelMap.is_collect){
+                //should send the command to the air
+                try{
+                  await this.sendCollectCommand(modelMap.id);
+                  resolve(true);
+                }catch(error){
+                  reject(error)
+                }
+                return;
+              }
               let irfileName = `irda_`+modelMap.remote_map+'.bin';
               //check if read the file
               let mkdirFilePath = `databases/`;
@@ -1537,7 +1845,7 @@
               this.fileCode = command;
               try{
                 //send the command
-                let pre_command = `972107`;
+                let pre_command = `97210700`;
                 let sendCommand = '';
                 if(this.deviceType == 1){
                   sendCommand = this.getAirCommand();
@@ -1545,13 +1853,19 @@
                   sendCommand = `${pre_command}${this.deviceType.toString(16).padStart(2, '0')}${parseInt(modelMap.sub_cate).toString(16).padStart(2, '0')}00${command}`;
                 }
                 console.log('sendCommand', sendCommand);
-                await window.peripheral[guid].write([
-                  {
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: sendCommand,
-                  }
-                ]);
+                console.log('sendCommand length', sendCommand.length);
+                if(sendCommand.length > 1008){
+                  debugger
+                  await this.sendLongCommandReady(sendCommand);
+                }else{
+                  await window.peripheral[guid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: sendCommand,
+                    }
+                  ]);
+                }
                 resolve(true);
               }catch(error){
                 reject(error)
@@ -1572,8 +1886,9 @@
               try{
                 let result = await this.irSqliteExecuteSql(this.dbMap, sql);
                 result.forEach((item, index) => {
-                  console.log('item', item.id);
-                  console.log('index',index)
+                  item.is_collect = false;
+                  // console.log('item', item.id);
+                  // console.log('index',index)
                 });
                 this.modelList = result;
                 if(result.length > 0){
@@ -1581,6 +1896,23 @@
                   this.testingIndex = 1;
                   this.isPowerOn = false;
                   this.isSwitching = false;
+                }else{
+                  this.modelList = [];
+                  //should find the collect_remote
+                  sql = `SELECT * FROM collect_remote where brand_id=${this.selectedBrand.id} and category_id =${this.deviceType};`;
+                  let collectResult = await this.irSqliteExecuteSql(this.dbMap, sql);
+                  if(collectResult.length > 0){
+                    collectResult.forEach((item, index) => {
+                      item.is_collect = true;
+                    });
+                    this.modelList = collectResult;
+                    this.testingTotal = collectResult.length;
+                    this.testingIndex = 1;
+                    this.isPowerOn = false;
+                    this.isSwitching = false;
+                  }else{
+                    reject(new Error('No remote found.'));
+                  }
                 }
                 resolve(true);
               }catch(error){
@@ -1595,7 +1927,13 @@
               //init the code 
               this.toTab(4);
             }else{
-              app.dialog.alert(_('Please click the remote button first.'));
+              //check if is collect
+              if(this.collectRemoteId){
+                this.normalType = 3;
+                this.toTab(4);
+              }else{
+                app.dialog.alert(_('Please click the remote button first.'));
+              }
             }
           },
           clickDeviceType(type) {
@@ -1604,6 +1942,11 @@
             this.activeStatus = true;
             this.toTab(1);
             this.initPostTitle();
+            if(type == 1){
+              $('a.ir-btn-collect').removeClass('device-none');
+            }else{
+              $('a.ir-btn-collect').addClass('device-none');
+            }
           },
           activeStep() {
             this.stepList.forEach((item) => {
@@ -1616,10 +1959,23 @@
           },
           toDetail(){
             //type 1 is edit, 2 is detail
+            /*
+            let listIndex = this.testingIndex - 1;
+            let modelMap = this.modelList[listIndex];
+            */
             console.log('this.step3MatchList', this.step3MatchList);
             console.log('this.matchIndex', this.matchIndex);
-            console.log('this.step3MatchList[this.matchIndex-1].remote_index_id', this.step3MatchList[this.matchIndex-1].remote_index_id);
-            mainView.router.navigate('/mobile-app/device-ir-pannel-detail?type=1&device_type='+this.deviceType+'&guid='+guid+'&remote_id='+this.step3MatchList[this.matchIndex-1].remote_index_id);
+            console.log("this normalType", this.normalType);
+            let modelMap = null;
+            if(!this.irLearnedCode){ 
+              modelMap = this.modelList[this.testingIndex - 1] 
+            }else{
+              modelMap = this.step3MatchList[this.matchIndex-1]; 
+            }
+            let id = isset(modelMap.remote_index_id)?modelMap.remote_index_id:modelMap.id;
+            console.log('this.step3MatchList[this.matchIndex-1].remote_index_id', id);
+            debugger
+            mainView.router.navigate('/mobile-app/device-ir-pannel-detail?type=1&device_type='+this.deviceType+'&guid='+guid+'&remote_id='+modelMap.id+'&isMatch='+(this.irLearnedCode?'1':'0'));
             setTimeout(() => {
               emitter.emit('ir_panel_config_edit', this.panelConfig['button']);
             }, 500);
@@ -1660,7 +2016,85 @@
               app.dialog.alert(_('Please match the remote first.'));
               return;
             }
+            if(!this.isTestMatched){
+              app.dialog.alert(_('Please test the remote first.'));
+              return;
+            }
             this.toTab(4);
+          },
+          async initCollectData(){
+            if(this.isTestMatched){
+              let collectMap = this.step3MatchList[this.matchIndex-1];
+              let id = collectMap.collect_remote_id;
+              console.log('id', id);
+              let sql = `SELECT * FROM collect_key where collect_remote_id = ${id};`;
+              let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+              this.collectKeyList = result;
+            }
+            console.log('this.collectKeyList', this.collectKeyList);
+            let list = this.panelConfig['button'];
+            list.forEach((item, index) => {
+              item.code = '';
+            });
+            this.collectKeyList.forEach((item, index) => {
+              list.forEach((keyItem, keyIndex) => {
+                if(keyItem.key == item.key_id){
+                  let key_value_list = item.key_value ? item.key_value.split(',') : [];
+                  if(key_value_list.length == 0){
+                    keyItem.code = '';
+                  }else{
+                    for(let i = 0; i < key_value_list.length; i++){
+                      let code = key_value_list[i];
+                      if(code){
+                        let hexCode = iot_utils_to_little_endian_hex(code,2);
+                        keyItem.code += hexCode;
+                      }
+                    }
+                  }
+                  if(keyItem.code){
+                    keyItem.code = `97210700${keyItem.code}3075`;
+                  }
+                }
+              });
+            });
+            console.log('this.panelConfig', this.panelConfig);
+          },
+          async initAirData(){
+            let command = '';
+            let collectMap = this.step3MatchList[this.matchIndex-1];
+            console.log('collectMap', collectMap);
+            let sql = `SELECT * FROM remote_index where id = ${collectMap.remote_index_id};`;
+            let result = await this.irSqliteExecuteSql(this.dbMap, sql);
+            if(result.length > 0){
+              let modelMap = result[0];
+              let irfileName = `irda_`+modelMap.remote_map+'.bin';
+              let mkdirFilePath = `databases/`;
+              if (deviceInfo.operatingSystem === 'ios') {
+                mkdirFilePath = `Library/LocalDatabase/`;
+              }
+              if(isset(this.fileContent && this.fileContent[irfileName])){
+                console.log('this.fileContent[irfileName]', this.fileContent[irfileName]);
+                command = this.fileContent[irfileName].join('');
+              }else{
+                const {data} = await Capacitor.Plugins.Filesystem.readFile({
+                  path : cordova.file.applicationStorageDirectory+mkdirFilePath+'/irext_binaries/'+irfileName
+                });
+                console.log('data', this.base64ToUint8Array(data));
+                let hexList = [];
+                let dataArray = this.base64ToUint8Array(data);
+                for(let i = 0; i < dataArray.length; i++){
+                  hexList.push(dataArray[i].toString(16).padStart(2, '0'));
+                }
+                if(isset(this.fileContent)){
+                  this.fileContent[irfileName] = hexList;
+                }else{
+                  this.fileContent = {}
+                  this.fileContent[irfileName] = hexList;
+                }
+                command = hexList.join('');
+              }
+              this.fileCode = command;
+            }
           },
           async initNormalData(){
             let list = this.panelConfig['button'];
@@ -1715,14 +2149,24 @@
             this.lastIndex = cloneDeep(this.index);
             if (index == 0) {
               this.activeStatus = false;
+              $('a.ir-btn-collect').addClass('device-none');
+            }else if(index == 1){
+              this.collectRemoteId = 0;
+              this.collectKeyList = [];
             }else if(index == 2){
               
             }else if (index == 4) {
               this.panelConfig = window.ir_for_irext_key_mapping()[this.deviceType.toString()];
               if(this.normalType == 2){
                 this.initLearnData(this.step3MatchList[this.matchIndex-1].remote_index_id);
+              }else if(this.normalType == 3){
+                this.initCollectData();
               }else{
-                this.initNormalData()
+                if(this.deviceType == 1){
+                  this.initAirData()
+                }else{
+                  this.initNormalData()
+                }
               }
             }
             if (postStatus) {
@@ -1869,7 +2313,10 @@
     });
 
     $on('pageBeforeRemove', (e, page) => {});
-
+    $on('pageBeforeIn', (e, page) => {
+      console.log('pageBeforeIn',vueApp.thisPage);
+      vueApp.thisPage = true;
+    });
     $onUnmounted(() => {
       if (vueApp) {
         vueApp.$destroy();
@@ -2474,4 +2921,7 @@
   /* 电源状态以图标呈现：开更醒目，关弱化 */
   .air-power { border-radius: 6px; padding: 4px; line-height: 1; }
   .air-power .icon { font-size: 22px; transition: opacity .2s ease, color .2s ease; }
+  .device-none{ 
+    display: none!important;
+  }
 </style>

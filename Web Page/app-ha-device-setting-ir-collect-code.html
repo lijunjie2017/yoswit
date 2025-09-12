@@ -1,0 +1,1160 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Collect Code') }}</div>
+        <div class="right">
+          <a class="link icon-only manufacturing-btn-refresh collect-code-box" @click="${()=>saveErp()}">
+            <i class="icon material-icons">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <!-- Main List Page -->
+        <div v-if="pageMode === 'list'" class="main-box">
+          <!-- Review List -->
+          <div class="card" v-if="reviewList.length > 0">
+            <div class="card-header">
+              <div class="card-header-title">{{ _('IR Code Collections') }}</div>
+            </div>
+            <div class="list">
+              <ul>
+                <li v-for="(item, index) in reviewList" :key="index" class="item-content item-link" v-on:click="viewDetails(item)">
+                  <div class="item-media" style="min-height: 55px">
+                    <i class="icon f7-icons color-orange" style="font-size: 28px">clock_fill</i>
+                  </div>
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title">{{ item.acBrand || _('Unknown Brand') }}</div>
+                      <div class="item-after">
+                        <span class="badge color-orange">{{ _('Under Review') }}</span>
+                      </div>
+                    </div>
+                    <div class="item-subtitle">
+                      {{ formatDate(item.collectionDate) }} • {{ item.completedCount || 0 }}/{{ item.totalCount || 30 }} {{ _('codes') }}
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+              <div class="col">
+                <button class="button button-fill button-large" v-on:click="startNewCollection()">{{_("Add")}}</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div class="card" v-else>
+            <div class="card-content card-content-padding text-align-center">
+              <i class="icon f7-icons color-gray margin-bottom" style="font-size: 48px">tray</i>
+              <h3 class="margin-bottom-half">{{ _('No Collections Yet') }}</h3>
+              <p class="text-color-gray">{{ _('Start by creating your first IR code collection') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail/Collection Page -->
+        <div v-else-if="pageMode === 'detail'" class="main-box">
+          <!-- Brand Input -->
+          <div class="card">
+            <div class="card-header display-flex justify-content-between" v-if="pageMode === 'detail'" v-on:click="backToList()">
+              <i class="icon material-icons">reply</i>
+              <i class="icon material-icons" v-on:click="downloadCode()">download</i>
+            </div>
+            <div class="card-content card-content-padding">
+              <div class="block-title">{{ _('Air Conditioner Brand') }}</div>
+              <div class="list simple-list no-hairlines-md">
+                <ul>
+                  <li class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-input-wrap">
+                        <input type="text" :placeholder="_('Enter AC brand name')" v-model="acBrand" class="brand-input" />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="card">
+            <div class="card-content card-content-padding">
+              <div class="block-title">{{ _('Collection Progress') }}: {{ completedCount }}/{{ totalCount }}</div>
+              <div class="progressbar" :data-progress="progressPercentage">
+                <span></span>
+              </div>
+              <p class="text-align-center margin-top">{{ progressText }}</p>
+            </div>
+          </div>
+
+          <!-- IR Code Collection List -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">{{ _('Air Conditioner IR Codes') }}</div>
+            </div>
+            <div class="card-content card-content-padding-0">
+              <div class="list">
+                <ul>
+                  <li
+                    v-for="(item, index) in irCodeItems"
+                    :key="index"
+                    :class="['item-content', item.status === 'completed' ? 'bg-success-light' : item.status === 'collecting' ? 'bg-warning-light' : '']"
+                  >
+                    <div class="item-media">
+                      <i v-if="item.status === 'completed'" class="icon f7-icons color-green">checkmark_circle_fill</i>
+                      <i v-else-if="item.status === 'collecting'" class="icon f7-icons color-orange">antenna_radiowaves_left_right</i>
+                      <i v-else class="icon f7-icons color-gray">circle</i>
+                    </div>
+                    <div class="item-inner">
+                      <div class="item-content-wrapper">
+                        <div class="item-text-content">
+                          <div class="item-title">{{ item.name }}</div>
+                          <div v-if="item.instruction" class="item-subtitle">{{ item.instruction }}</div>
+                        </div>
+                        <div class="item-action">
+                          <button
+                            v-if="item.status !== 'completed'"
+                            class="button button-small button-fill button-round bg-theme"
+                            :class="item.status === 'collecting' ? 'button-preloader button-loading' : ''"
+                            :disabled="item.status === 'collecting' || isCollecting"
+                            v-on:click="startCollecting(index)"
+                          >
+                            <span class="preloader preloader-white" v-if="item.status === 'collecting'"></span>
+                            {{ item.status === 'collecting' ? _('Collecting...') : _('Collect') }}
+                          </button>
+                          <button
+                            v-if="item.status === 'completed'"
+                            class="button button-small button-round button-outline bg-theme"
+                            v-on:click="testCode(index)"
+                          >
+                            {{ _('Test') }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let { device_type, guid } = $f7route.query;
+    let vueApp = null;
+    const saveErp = () => {
+      vueApp.$saveErp();
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          pageMode: 'list', // list, detail
+          acBrand: '',
+          isCollecting: false,
+          currentCollectingIndex: -1,
+          reviewList: [], // 审核项目列表
+          currentItem: null, // 当前查看的项目
+          irCodeItems: [
+            // Basic Power Controls
+            {
+              id: 'power_on_1',
+              name: _('AC Power On'),
+              instruction: _('Please press the power button on your AC remote control'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'power_on_2',
+              name: _('AC Power Off'),
+              instruction: _('Please press the power button on your AC remote control again (confirmation)'),
+              status: 'pending',
+              code: null,
+            },
+
+            // Mode Controls
+            {
+              id: 'mode_auto',
+              name: _('AC Mode: Auto'),
+              instruction: _('Please press the auto mode button on your AC remote control'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'mode_cool',
+              name: _('AC Mode: Cool'),
+              instruction: _('Please press the cooling mode button on your AC remote control'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'mode_heat',
+              name: _('AC Mode: Heat'),
+              instruction: _('Please press the heating mode button on your AC remote control'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'mode_fan',
+              name: _('AC Mode: Fan'),
+              instruction: _('Please press the fan mode button on your AC remote control'),
+              status: 'pending',
+              code: null,
+            },
+
+            // Cooling Mode Temperature Settings 16-30°C
+            {
+              id: 'cool_16',
+              name: _('AC Cool Mode: 16°C'),
+              instruction: _('Please switch to cooling mode first, then set temperature to 16°C'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_17',
+              name: _('AC Cool Mode: 17°C'),
+              instruction: _('Please set temperature to 17°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_18',
+              name: _('AC Cool Mode: 18°C'),
+              instruction: _('Please set temperature to 18°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_19',
+              name: _('AC Cool Mode: 19°C'),
+              instruction: _('Please set temperature to 19°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_20',
+              name: _('AC Cool Mode: 20°C'),
+              instruction: _('Please set temperature to 20°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_21',
+              name: _('AC Cool Mode: 21°C'),
+              instruction: _('Please set temperature to 21°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_22',
+              name: _('AC Cool Mode: 22°C'),
+              instruction: _('Please set temperature to 22°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_23',
+              name: _('AC Cool Mode: 23°C'),
+              instruction: _('Please set temperature to 23°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_24',
+              name: _('AC Cool Mode: 24°C'),
+              instruction: _('Please set temperature to 24°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_25',
+              name: _('AC Cool Mode: 25°C'),
+              instruction: _('Please set temperature to 25°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_26',
+              name: _('AC Cool Mode: 26°C'),
+              instruction: _('Please set temperature to 26°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_27',
+              name: _('AC Cool Mode: 27°C'),
+              instruction: _('Please set temperature to 27°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_28',
+              name: _('AC Cool Mode: 28°C'),
+              instruction: _('Please set temperature to 28°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_29',
+              name: _('AC Cool Mode: 29°C'),
+              instruction: _('Please set temperature to 29°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'cool_30',
+              name: _('AC Cool Mode: 30°C'),
+              instruction: _('Please set temperature to 30°C in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+
+            // Fan Speed Settings
+            {
+              id: 'fan_speed_5',
+              name: _('AC Cool Mode Fan: Level 5'),
+              instruction: _('Please set fan speed to level 5 (highest) in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_speed_4',
+              name: _('AC Cool Mode Fan: Level 4'),
+              instruction: _('Please set fan speed to level 4 in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_speed_3',
+              name: _('AC Cool Mode Fan: Level 3'),
+              instruction: _('Please set fan speed to level 3 in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_speed_2',
+              name: _('AC Cool Mode Fan: Level 2'),
+              instruction: _('Please set fan speed to level 2 in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_speed_1',
+              name: _('AC Cool Mode Fan: Level 1'),
+              instruction: _('Please set fan speed to level 1 (lowest) in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_speed_auto',
+              name: _('AC Cool Mode Fan: Auto'),
+              instruction: _('Please set fan speed to auto in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+
+            // Fan Direction Settings
+            {
+              id: 'fan_direction_up',
+              name: _('AC Cool Mode Direction: Up/Left'),
+              instruction: _('Please set fan direction to up (or left) in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_direction_middle',
+              name: _('AC Cool Mode Direction: Middle'),
+              instruction: _('Please set fan direction to middle position in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+            {
+              id: 'fan_direction_down',
+              name: _('AC Cool Mode Direction: Down/Right'),
+              instruction: _('Please set fan direction to down (or right) in cooling mode'),
+              status: 'pending',
+              code: null,
+            },
+          ],
+        },
+        mounted() {
+          Vue.prototype.$saveErp = this.saveErp;
+          this.init();
+        },
+
+        computed: {
+          totalCount() {
+            return this.irCodeItems.length;
+          },
+          completedCount() {
+            return this.irCodeItems.filter((item) => item.status === 'completed').length;
+          },
+          progressPercentage() {
+            return this.totalCount > 0 ? Math.round((this.completedCount / this.totalCount) * 100) : 0;
+          },
+          progressText() {
+            if (this.completedCount === this.totalCount && this.totalCount > 0) {
+              return _('All infrared codes have been collected successfully!');
+            } else if (this.completedCount === 0) {
+              return _('Ready to start collecting infrared codes');
+            } else {
+              return _(`${this.completedCount} codes collected, ${this.totalCount - this.completedCount} remaining`);
+            }
+          },
+        },
+        methods: {
+          init() {
+            this.loadReviewList();
+          },
+
+          loadReviewList() {
+            // Load existing IR code collections
+            try {
+              if (erp.info.profile && erp.info.profile.mesh_config) {
+                const meshConfig = JSON.parse(erp.info.profile.mesh_config);
+
+                if (meshConfig && meshConfig.irCodeItems && Array.isArray(meshConfig.irCodeItems) && meshConfig.irCodeItems.length > 0) {
+                  // Has existing data - add to review list
+                  $('.collect-code-box').addClass('device-none');
+                  this.reviewList = [
+                    {
+                      id: 'main_collection',
+                      acBrand: meshConfig.acBrand || '',
+                      collectionDate: meshConfig.collectionDate || new Date().toISOString(),
+                      completedCount: meshConfig.completedCount || this.getCompletedCount(meshConfig.irCodeItems),
+                      totalCount: meshConfig.totalCount || meshConfig.irCodeItems.length,
+                      irCodeItems: meshConfig.irCodeItems,
+                      status: 'under_review',
+                    },
+                  ];
+                } else {
+                  this.startNewCollection();
+                }
+              } else {
+                this.startNewCollection();
+              }
+            } catch (error) {
+              console.error('Error loading review list:', error);
+              // Continue with empty list
+            }
+          },
+
+          getCompletedCount(irCodeItems) {
+            if (!Array.isArray(irCodeItems)) return 0;
+            return irCodeItems.filter((item) => item && item.status === 'completed').length;
+          },
+
+          startNewCollection() {
+            // Reset data for new collection
+            this.acBrand = '';
+            this.currentItem = null;
+            this.resetIrCodeItems();
+            this.setupIrCodeListener();
+            this.pageMode = 'detail';
+            $('.collect-code-box').removeClass('device-none');
+          },
+
+          resetIrCodeItems() {
+            // Reset all items to pending status
+            this.irCodeItems.forEach((item) => {
+              item.status = 'pending';
+              item.code = null;
+            });
+          },
+
+          viewDetails(item) {
+            // View existing collection details
+            this.currentItem = item;
+            this.acBrand = item.acBrand || '';
+            this.irCodeItems = item.irCodeItems || this.getDefaultIrCodeItems();
+            this.setupIrCodeListener();
+            this.pageMode = 'detail';
+            $('.collect-code-box').removeClass('device-none');
+          },
+
+          getDefaultIrCodeItems() {
+            // Return default IR code items structure
+            return [
+              // Basic Power Controls
+              {
+                id: 'power_on_1',
+                name: _('AC Power On'),
+                instruction: _('Please press the power button on your AC remote control'),
+                status: 'pending',
+                code: null,
+              },
+              {
+                id: 'power_on_2',
+                name: _('AC Power Off'),
+                instruction: _('Please press the power button on your AC remote control again (confirmation)'),
+                status: 'pending',
+                code: null,
+              },
+              // ... (keeping existing structure)
+            ];
+          },
+
+          backToList() {
+            // Return to main list
+            this.pageMode = 'list';
+            this.currentItem = null;
+            $('.collect-code-box').addClass('device-none');
+          },
+
+          formatDate(dateString) {
+            if (!dateString) return _('Unknown');
+            try {
+              const date = new Date(dateString);
+              return date.toLocaleDateString();
+            } catch (error) {
+              return _('Unknown');
+            }
+          },
+
+          async saveErp() {
+            // save erp
+            if (!this.acBrand.trim()) {
+              app.dialog.alert(_('Please enter the air conditioner brand first'));
+              return;
+            }
+
+            app.dialog.preloader(`${_('Saving...')}`);
+            let meshConfig = null;
+            const configData = {
+              acBrand: this.acBrand.trim(),
+              irCodeItems: this.irCodeItems,
+              collectionDate: new Date().toISOString(),
+              completedCount: this.completedCount,
+              totalCount: this.totalCount,
+            };
+
+            try {
+              meshConfig = JSON.parse(erp.info.profile.mesh_config);
+              if (isset(meshConfig.irCodeItems)) {
+                meshConfig.irCodeItems = this.irCodeItems;
+                meshConfig.acBrand = this.acBrand.trim();
+                meshConfig.collectionDate = configData.collectionDate;
+                meshConfig.completedCount = configData.completedCount;
+                meshConfig.totalCount = configData.totalCount;
+              } else {
+                meshConfig = configData;
+              }
+            } catch (error) {
+              console.log('error', error);
+              meshConfig = configData;
+            }
+            try {
+              let resData = await http2.request(`/api/resource/Profile/${erp.info.profile.name}`, {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                data: {
+                  mesh_config: JSON.stringify(meshConfig),
+                },
+              });
+              await ha_profile_ready();
+              app.dialog.close();
+
+              // Show success message
+              app.toast
+                .create({
+                  text: _('IR codes saved successfully!'),
+                  position: 'center',
+                  closeTimeout: 2000,
+                  cssClass: 'color-green',
+                })
+                .open();
+
+              // Return to list and refresh
+              this.loadReviewList();
+              this.pageMode = 'list';
+            } catch (error) {
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          setupIrCodeListener() {
+            // Setup IR code learning listener
+            if (!this._sendIrCodeFun) {
+              this._sendIrCodeFun = (data) => {
+                console.log('learneddata', data);
+                let rs = data.rs;
+                let irLearnedCode = '';
+                if (data.guid == guid && rs.length > 8 && this.currentCollectingIndex >= 0) {
+                  if (rs.substring(6, 8) == '00') {
+                    // Clear listener immediately after receiving data to avoid duplicate processing
+                    emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                    irLearnedCode = rs.substring(8, rs.length);
+                    irLearnedCode = '97210700' + irLearnedCode;
+                    this._sendIrCodeFun = null;
+                    app.dialog.close();
+                    this.onCodeReceived(irLearnedCode);
+                    console.log('irLearnedCode', irLearnedCode);
+                    console.log('codeListt', this.processHexString(irLearnedCode));
+                  } else {
+                    irLearnedCode += rs.substring(8, rs.length);
+                  }
+                  // Process IR code data
+                  // rs = rs.substring(0, 3) + '1' + rs.substring(4);
+                  // this.onCodeReceived(rs);
+                }
+              };
+            }
+          },
+
+          async startCollecting(index) {
+            if (this.isCollecting || this.irCodeItems[index].status === 'completed') {
+              return;
+            }
+
+            this.isCollecting = true;
+            this.currentCollectingIndex = index;
+            this.irCodeItems[index].status = 'collecting';
+
+            try {
+              // Connect device
+              app.dialog.preloader(`${_('Connecting device, please wait...')}`);
+              await window.peripheral[guid].connect();
+
+              // Setup listener
+              this.setupIrCodeListener();
+              emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+              emitter.on(`ir_learned_code`, this._sendIrCodeFun);
+
+              // Send learning command
+              let data = '972107';
+              // let data = '8700';
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: data,
+                },
+              ]);
+
+              app.dialog.close();
+
+              // Show user operation prompt
+              const item = this.irCodeItems[index];
+              const title = `${_('Learning IR Code')} (${index + 1}/${this.totalCount})`;
+              const text = item.instruction;
+
+              app.dialog.preloader(title, text);
+
+              // Set timeout handling
+              setTimeout(() => {
+                if (this.currentCollectingIndex === index && this.isCollecting) {
+                  this.onCollectionTimeout(index);
+                }
+              }, 30000); // 30 seconds timeout
+            } catch (err) {
+              app.dialog.close();
+              this.isCollecting = false;
+              this.currentCollectingIndex = -1;
+              this.irCodeItems[index].status = 'pending';
+              app.dialog.alert(_(erp.get_log_description(err)));
+            }
+          },
+
+          onCodeReceived(code) {
+            if (this.currentCollectingIndex >= 0) {
+              const index = this.currentCollectingIndex;
+              Vue.set(this.irCodeItems[index], 'code', code);
+              Vue.set(this.irCodeItems[index], 'status', 'completed');
+
+              this.isCollecting = false;
+              this.currentCollectingIndex = -1;
+
+              // Show success notification
+              const item = this.irCodeItems[index];
+              app.toast
+                .create({
+                  text: `${_('Successfully collected')}: ${item.name}`,
+                  position: 'center',
+                  closeTimeout: 2000,
+                  cssClass: 'color-green',
+                })
+                .open();
+
+              // Check if all completed
+              if (this.completedCount === this.totalCount) {
+                setTimeout(() => {
+                  app.dialog.alert(_('Congratulations! All infrared codes have been successfully collected.'), _('Collection Complete'));
+                }, 500);
+              }
+            }
+          },
+
+          onCollectionTimeout(index) {
+            if (this.currentCollectingIndex === index) {
+              app.dialog.close();
+              this.isCollecting = false;
+              this.currentCollectingIndex = -1;
+              this.irCodeItems[index].status = 'pending';
+
+              app.dialog.confirm(
+                _('Timeout: No infrared signal received. Would you like to try again?'),
+                _('Collection Timeout'),
+                () => {
+                  // User chose to retry
+                  setTimeout(() => this.startCollecting(index), 100);
+                },
+                () => {
+                  // User cancelled
+                }
+              );
+            }
+          },
+
+          async testCode(index) {
+            const item = this.irCodeItems[index];
+            if (!item.code) {
+              app.dialog.alert(_('Sorry, the infrared code has not been learned yet.'));
+              return;
+            }
+
+            try {
+              app.toast
+                .create({
+                  text: `${_('Testing')}: ${item.name}`,
+                  position: 'center',
+                  closeTimeout: 1500,
+                })
+                .open();
+
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: item.code,
+                },
+              ]);
+            } catch (error) {
+              app.dialog.alert(_(erp.get_log_description(error)));
+            }
+          },
+          processHexString(str) {
+            const trimmedStr = str.substring(8);
+            const result = [];
+            for (let i = 0; i < trimmedStr.length; i += 4) {
+              if (i + 4 > trimmedStr.length) break; // 确保完整4字符
+              const segment = trimmedStr.substring(i, i + 4);
+              // 小端序处理：交换前后两个字节 (0-1位和2-3位互换)
+              const littleEndianHex = segment.substring(2, 4) + segment.substring(0, 2);
+
+              // 转换为十进制
+              result.push(parseInt(littleEndianHex, 16));
+            }
+            return result;
+          },
+          downloadCode() {
+            app.dialog.preloader(`${_('Downloading...')}`);
+            let content = '';
+            this.irCodeItems.forEach((item) => {
+              if (item.code) {
+                let code = item.code;
+                debugger
+                let hexArray = this.processHexString(code);
+                content += `${item.name}: ${hexArray.join(',')}\n`;
+              }
+            });
+            const blob = new Blob([content], { type: 'text/plain' });
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = function () {
+                resolve(reader.result);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            })
+              .then((data) => {
+                console.log(data);
+                return Capacitor.Plugins.Filesystem.writeFile({
+                  path: `${this.acBrand}_learned_code.txt`,
+                  data: data,
+                  directory: 'CACHE',
+                  recursive: true,
+                });
+              })
+              .then(() => {
+                return Capacitor.Plugins.Filesystem.getUri({
+                  path: `${this.acBrand}_learned_code.txt`,
+                  directory: 'CACHE',
+                });
+              })
+              .then((rs) => {
+                return new Promise((resolve, _) => {
+                  return Capacitor.Plugins.Share.share({
+                    title: `${this.acBrand}_learned_code.txt`,
+                    dialogTitle: `${this.acBrand}_learned_code.txt`,
+                    url: rs.uri,
+                  }).then(() => {
+                    app.dialog.close();
+                  });
+                });
+              })
+              .catch((err) => {
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(err)));
+              });
+          },
+        },
+        beforeDestroy() {
+          // Clean up listeners
+          if (this._sendIrCodeFun) {
+            emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+            this._sendIrCodeFun = null;
+          }
+          emitter.off('disconnected');
+
+          // Reset status
+          this.isCollecting = false;
+          this.currentCollectingIndex = -1;
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .bg-theme {
+    background-color: var(--f7-theme-color);
+    color: #fff;
+  }
+  .bg-theme a {
+    color: #fff;
+  }
+
+  /* Progress bar styles */
+  .progressbar {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #f4f4f4;
+    margin: 10px 0;
+  }
+  .progressbar span {
+    background-color: var(--f7-theme-color, #007aff);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  /* Framework7 list style overrides */
+  .card .list ul {
+    background: transparent;
+    margin: 0;
+  }
+
+  .card .list .item-content {
+    border-radius: 0;
+    margin: 0;
+    background: #ffffff;
+    border-bottom: 1px solid #f4f4f4;
+    transition: all 0.2s ease;
+    min-height: 64px;
+  }
+
+  .card .list .item-content:last-child {
+    border-bottom: none;
+  }
+
+  .card .list .item-content:hover {
+    background-color: #f8f9fa;
+    transform: none;
+  }
+
+  .card .list .item-content.bg-success-light {
+    background-color: #f8fff9;
+    border-left: 4px solid #28a745;
+  }
+
+  .card .list .item-content.bg-warning-light {
+    background-color: #fffbf0;
+    border-left: 4px solid #ffc107;
+  }
+
+  /* New layout styles */
+  .list .item-inner {
+    padding: 12px 16px 12px 8px;
+  }
+
+  .item-content-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .item-text-content {
+    flex: 1;
+    min-width: 0; /* Allow content compression */
+  }
+
+  .item-action {
+    flex-shrink: 0; /* Prevent button compression */
+    min-width: 80px;
+  }
+
+  .list .item-title {
+    font-weight: 500;
+    font-size: 15px;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+
+  .list .item-subtitle {
+    font-size: 12px;
+    color: #8e8e93;
+    line-height: 1.4;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  .list .item-media {
+    min-width: 32px;
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+
+  /* Button styles */
+  .button-small {
+    min-width: 70px;
+    height: 32px;
+    font-size: 13px;
+    padding: 0 12px;
+    border-radius: 16px;
+    white-space: nowrap;
+  }
+
+  .button-large {
+    height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  /* Theme color button styles */
+  .button.bg-theme {
+    background-color: var(--f7-theme-color) !important;
+    border-color: var(--f7-theme-color) !important;
+    color: #fff !important;
+  }
+
+  .button.bg-theme.button-outline {
+    background-color: transparent !important;
+    color: var(--f7-theme-color) !important;
+    border: 1px solid var(--f7-theme-color) !important;
+  }
+
+  .button.bg-theme.button-outline:hover {
+    background-color: var(--f7-theme-color) !important;
+    color: #fff !important;
+  }
+
+  .button.bg-theme:disabled {
+    opacity: 0.6;
+    background-color: var(--f7-theme-color) !important;
+  }
+
+  /* Special styles for collecting button */
+  .button-small.button-loading {
+    min-width: 85px;
+  }
+
+  /* Icon styles */
+  .icon.f7-icons {
+    font-size: 18px;
+    margin-right: 6px;
+  }
+
+  /* Card spacing */
+  .card {
+    margin: 8px 16px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    .list .item-inner {
+      padding: 10px 12px 10px 6px;
+    }
+
+    .item-content-wrapper {
+      gap: 8px;
+    }
+
+    .item-action {
+      min-width: 70px;
+    }
+
+    .button-small {
+      min-width: 60px;
+      height: 28px;
+      font-size: 12px;
+      padding: 0 8px;
+    }
+
+    .button-small.button-loading {
+      min-width: 75px;
+    }
+
+    .list .item-title {
+      font-size: 14px;
+    }
+
+    .list .item-subtitle {
+      font-size: 11px;
+    }
+
+    .list .item-media {
+      min-width: 28px;
+    }
+
+    .icon.f7-icons {
+      font-size: 16px;
+    }
+  }
+
+  /* Extra small screen optimization */
+  @media (max-width: 360px) {
+    .item-content-wrapper {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .item-action {
+      min-width: auto;
+      align-self: flex-end;
+    }
+
+    .card .list .item-content {
+      min-height: 80px;
+    }
+  }
+
+  /* Animation effects */
+  .card .list .item-content.bg-warning-light {
+    animation: pulse-warning 2s infinite;
+  }
+
+  @keyframes pulse-warning {
+    0% {
+      border-left-color: #ffc107;
+    }
+    50% {
+      border-left-color: #ff9800;
+    }
+    100% {
+      border-left-color: #ffc107;
+    }
+  }
+
+  /* Brand Input Styles */
+  .brand-input {
+    font-size: 16px;
+    color: var(--f7-list-item-text-color);
+  }
+
+  .brand-input::placeholder {
+    color: #999;
+  }
+
+  /* Progress Section Enhancement */
+  .progressbar {
+    background: linear-gradient(90deg, #f4f4f4 0%, #e8e8e8 100%);
+  }
+
+  .progressbar span {
+    background: linear-gradient(90deg, var(--f7-theme-color) 0%, rgba(var(--f7-theme-color-rgb), 0.8) 100%);
+    box-shadow: 0 1px 3px rgba(var(--f7-theme-color-rgb), 0.3);
+  }
+
+  /* Card Spacing Optimization */
+  .main-box .card:first-child {
+    margin-top: 8px;
+  }
+
+  .main-box .card:last-child {
+    margin-bottom: 16px;
+  }
+
+  /* List Page Styles */
+  .item-link {
+    cursor: pointer;
+  }
+
+  .item-link:hover {
+    background-color: #f8f9fa;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  .badge.color-orange {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+  }
+
+  /* Empty State */
+  .card-content .margin-bottom {
+    margin-bottom: 16px;
+  }
+
+  /* Back Button */
+  .button.button-outline {
+    border-color: var(--f7-theme-color);
+    color: var(--f7-theme-color);
+  }
+
+  .button.button-outline:hover {
+    background-color: rgba(var(--f7-theme-color-rgb), 0.1);
+  }
+
+  /* Hide default v-cloak */
+  [v-cloak] {
+    display: none;
+  }
+  .device-none {
+    display: none !important;
+  }
+</style>

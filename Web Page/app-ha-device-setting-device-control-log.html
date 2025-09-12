@@ -61,6 +61,9 @@
                     <div v-else-if="log_item.control_source == 'Google Home'" class="google" style="margin-right: 10px">
                       <i class="material-icons text-color-orange" style="font-size: 20px">home_app_logo</i>
                     </div>
+                    <span class="text-muted size-12" v-if="log_item.control_type" style="line-height: 24px;margin-right: 5px">
+                      {{log_item.control_type}}
+                    </span>
                     <span class="text-muted size-12" v-if="log_item.is_show_status"></span>
                     <span class="text-muted size-12" style="line-height: 24px" v-if="log_item.is_show_status"
                       >{{log_item.status > 0?_('ON'):_("OFF")}}</span
@@ -231,6 +234,7 @@
       $onUpdated = ctx.$onUpdated,
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
+
     let vueApp = null;
     let allowInfinite = true;
     let hasMoreItems = true;
@@ -246,14 +250,13 @@
     const loadMore = () => {
       console.log('loadMore');
       refresh_data = false;
-      debugger;
       if (!allowInfinite) return;
 
       vueApp.$loadMore();
     };
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
-        el: '#device-control-log-box',
+        el: page.el.querySelector('#device-control-log-box'),
         data: {
           log_list: [],
           scene_map: {},
@@ -261,8 +264,12 @@
           page_length: 20,
           guid: guid,
           button_gang: 0,
+          button_group:'',
+          device_model:'',
           more_data: false,
         },
+        computed: {},
+        watch: {},
         mounted() {
           Vue.prototype.$refreshFun = this.refreshFun;
           Vue.prototype.$loadMore = this.loadMore;
@@ -278,7 +285,6 @@
           },
           async loadMore() {
             allowInfinite = false;
-            debugger;
             this.start += this.page_length;
             await this.getData();
 
@@ -367,13 +373,19 @@
           },
           init() {
             let list = cloneDeep(erp.info.profile.profile_subdevice);
+            let profile_device = cloneDeep(erp.info.profile.profile_device);
             let this_button_group = '';
+            let profile_device_map = profile_device.find((item)=>item.device == guid);
+            if(profile_device_map){
+              this.device_model = profile_device_map.device_model;
+            }
             list.forEach((item) => {
               if (item.name == profile_subdevice) {
                 this_button_group = item.device_button_group;
               }
             });
             this.button_gang = bleHelper.getGangId(this_button_group);
+            this.button_group = this_button_group;
             //init the scene list
             let scnenes = cloneDeep(erp.info.scene);
             this.scene_map = scnenes;
@@ -398,11 +410,8 @@
                 list.forEach((item) => {
                   item.is_show_status = true;
                   let deviceMap = peripheral[item.device];
-                  if (isset(deviceMap) && isset(deviceMap.prop.device_mode)) {
-                    item.device_mode = deviceMap.prop.device_mode;
-                    if (item.device_mode == 'Triac Dimming' || item.device_mode == '0-10V Dimming' || item.device_mode == '1-10V Dimming') {
-                      item.status = Math.ceil((item.status / 255) * 100);
-                    }
+                  if (this.button_group.includes('DIMMING')) {
+                    item.status = Math.ceil((item.status / 255) * 100);
                   }
                   if (isset(item.details) && item.details) {
                     let device_type_map = JSON.parse(item.details);
@@ -416,7 +425,6 @@
                       let this_guid = device_type_map.Device.guid;
                       let deviceMap = peripheral[this_guid];
                       device_map = device_type_map.Device;
-                      debugger
                       let gangList = isset(this.analysisDeviceStatus(this_guid, device_map))
                         ? this.analysisDeviceStatus(this_guid, device_map)
                         : null;
@@ -435,6 +443,22 @@
                           return;
                         }
                       }
+                      if(this.device_model == 'YO780'){
+                        console.log('this.button_group',this.button_group);
+                        if(this.button_group == 'ONOFF GANG'){
+                          item.is_show_status = false;
+                          item.control_source = 'MobMob';
+                          item.command_type = 'device_status_log_onoff';
+                        }else{
+                          let obj = this.getGangAndSlotByButtonGroup(this.button_group);
+                          item.is_show_status = false;
+                          item.control_source = 'MobMob';
+                          item.command_type = 'device_status_log_onoff';
+                          item.gang_1 = this.renerRcuStatusForButtonGroup(device_type_map.Device.ctrl_data,this.button_group);
+                          console.log('item.gang_1',item.gang_1);
+                        }
+                        return
+                      }
                       // console.log(gangList);
                       //get the device model info and button group
                       let device_default_template_list = [];
@@ -442,7 +466,6 @@
                         device_default_template_list =
                           erp.doctype.device_model[deviceMap.prop.hexModel.toUpperCase()]['device_default_template'];
                       }
-                      // debugger;
                       device_default_template_list.forEach((kitem) => {
                         let device_button_group = kitem.device_button_group;
                         let device_mode = kitem.mode;
@@ -454,8 +477,15 @@
                           item.command_type = 'device_status_log_onoff';
                           this_gang = device_button_group.replace('ONOFF GANG', '') * 1;
                           //this only show the subdevice button group
-                          debugger
                           item[`gang_1`] = gangList[this.button_gang];
+                          if(device_mode == 'RCU Controller' && !device_button_group.includes("RCU")){
+                            // item.count_num = this.countNumFunc(device_type_map.ctrl_data);
+                          }else if(device_mode == 'RCU Controller' && device_button_group.includes("RCU")){
+                            //getGangAndSlotByButtonGroup
+                            let obj = this.getGangAndSlotByButtonGroup(device_button_group);
+                            item.gang = obj.gang;
+                            item.slot = obj.slot;
+                          }
                         } else if (device_button_group.startsWith('DIMMING')) {
                           item.is_show_status = false;
                           item.control_source = 'MobMob';
@@ -494,7 +524,6 @@
                             item.hdmicec = 1;
                           }
                         }
-                        debugger;
                         if (gang == 42) {
                           //means theomostat
                           let mode_str = 4;
@@ -540,6 +569,12 @@
                         item.temperature = objMap.temperature;
                         item.room_temperature = objMap.room_temperature;
                       }
+                      if(device_model == 'YO780'){
+                        if(device_type_map.command_type){
+                          item.control_type = device_type_map.command_type;
+                        }
+                        item.is_show_status = true;
+                      }
                       if (item.device_mode == 'Hdmicec') {
                         item.is_show_status = false;
                         item.hdmicec = 0;
@@ -558,7 +593,6 @@
                   }
                 });
                 //console.log("list",list);
-                debugger;
                 if (list.length && !allowInfinite) {
                   this.log_list = this.log_list.concat(list);
                   allowInfinite = true;
@@ -586,7 +620,6 @@
                 console.log('this.log_list', this.log_list);
               })
               .catch((e) => {
-                debugger;
                 console.log(e);
               });
           },
@@ -625,6 +658,92 @@
               4: '3 SPEED',
             };
             return speed_map[speed];
+          },
+          countNumFunc(str){
+            //count the light from profile
+
+          },
+          getGangAndSlotByButtonGroup(button_group){
+            //通过分析button group获取对应的gang和slot
+            let obj = {
+              gang: 0,
+              slot: 0,
+              type: ''
+            }
+            if(button_group.includes('ONOFF GANG')){
+              let gang = button_group.replace('RCU ONOFF GANG','').trim();
+              obj.slot = (gang%4)+1;
+              obj.type = '01';
+              obj.gang = parseInt(gang) - parseInt(gang%4)*4;
+            }
+            if(button_group.includes('DIMMING')){
+              let gang = button_group.replace('RCU DIMMING','').trim();
+              obj.slot = (gang%2)+1;
+              obj.type = '02';
+              obj.gang = parseInt(gang) - parseInt(gang%2)*2;
+            }
+            return obj;
+          },
+          renerRcuStatusForButtonGroup(ctrl_data,button_group){
+            //通过分析button group获取对应的gang和slot
+            let ref = 0;
+            const tindyRcuData = (str) => {
+              let result = [];
+              let i = 4;
+              while (i < str.length) {
+                let index = str.substring(i, i + 2);
+                let type = str.substring(i + 2, i + 4);
+                let dataLength = type === '01' ? 2 : type === '02' ? 4 : 0;
+                let data = str.substring(i + 4, i + 4 + dataLength);
+
+                result.push({
+                  index,
+                  type,
+                  data,
+                });
+
+                if (index === '05') break;
+
+                i += 4 + dataLength;
+              }
+              return result;
+            };
+            const indexMap = {
+              '01': [32, 33],
+              '02': [34, 35],
+              '03': [36, 37],
+              '04': [38, 39],
+              '05': [40, 41],
+            };
+            const indexOnoffMap = {
+              '01': [12, 13, 14, 15],
+              '02': [16, 17, 18, 19],
+              '03': [20, 21, 22, 23],
+              '04': [24, 25, 26, 27],
+              '05': [28, 29, 30, 31],
+            };
+            let rcuDataList = tindyRcuData(ctrl_data);
+            let statusMap = Object.assign({'data':''},this.getGangAndSlotByButtonGroup(button_group));
+            rcuDataList.forEach((item) => {
+              if(statusMap.type == item.type && parseInt(statusMap.slot) == parseInt(item.index)){
+                statusMap.data = item.data;
+              }
+            });
+            //分析数据，获取状态信息
+            if(statusMap.type == '01'){
+              let this_ref = parseInt(statusMap.data, 16).toString(2).pad('0000');
+              ref = this_ref[4-statusMap.gang];
+            }
+            if(statusMap.type == '02'){
+              const firstRef = parseInt(statusMap.data.substring(0, 2), 16);
+              const secondRef = parseInt(statusMap.data.substring(2, 4), 16);
+              if(statusMap.gang == 1){
+                ref = firstRef;
+              }else{
+                ref = secondRef;
+              }
+            }
+            return ref;
           },
           renderRcuScene(trigger_data, guid) {
             let obj_map = {
@@ -746,14 +865,13 @@
               gangs[45] = thermostat.temp;
               gangs[46] = thermostat.room_temp;
               gangs[47] = thermostat.humidity;
-            }else if(manufactureData && manufactureData.startsWith('9700')){
+            } else if (manufactureData && manufactureData.startsWith('9700')) {
               io = manufactureData.substring(10, 12);
               let io_list = this.hexTo8BitBinary(io);
               gangs[1] = io_list[0];
               gangs[2] = io_list[1];
               gangs[3] = io_list[2];
               return gangs;
-
             } else if (manufactureData && manufactureData.startsWith('85')) {
               if (manufactureData.length == 26) {
                 io = parseInt(manufactureData.substring(manufactureData.length - 8, manufactureData.length - 6), 16);
@@ -812,30 +930,20 @@
             gangs[83] = battery_ref;
             let dc_ref = parseInt(manufactureData.substring(14, 16), 16) & 0x02;
             gangs[84] = dc_ref;
-            //get the device model info and button group
-            // let device_default_template_list = [];
-            // if(erp.doctype.device_model[deviceMap.prop.hexModel.toUpperCase()]){
-            //   device_default_template_list = erp.doctype.device_model[deviceMap.prop.hexModel.toUpperCase()]['device_default_template'];
-            // }
-            // device_default_template_list.forEach(item=>{
-            //   if(!item.display_in_unassigned){
-            //     return;
-            //   }
-            //   let device_button_group = item.device_button_group;
-            //   if(device_button_group.startsWith("ONOFF GANG")){
-
-            //   }
-            // })
             return gangs;
           },
         },
-        beforeDestroy() {},
       });
     });
-    $on('pageBeforeUnmount', (e, page) => {
-      vueApp.$destroy();
-      vueApp = null;
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
     });
+
     return $render;
   };
 </script>

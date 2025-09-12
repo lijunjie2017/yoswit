@@ -10,11 +10,6 @@
           </a>
         </div>
         <div class="title">{{ _('YO381-Configuration') }}</div>
-        <div class="right">
-          <a href="#" class="link icon-only manufacturing-btn-refresh" func="manufacturing_clean_discovery_list">
-            <i class="icon material-icons">replay</i>
-          </a>
-        </div>
       </div>
     </div>
 
@@ -360,190 +355,6 @@
                 </div>
               </div>
             </div>
-            <!-- <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
-              <div class="card">
-                <div class="card-content card-content-padding">
-                  <div class="list list-strong-ios list-outline-ios list-dividers-ios">
-                    <ul>
-                      <li>
-                        <a class="item-link smart-select smart-select-init" data-open-in="sheet">
-                          <select name="mac-windows" v-model="accessType">
-                            <option value="1" selected>Dynamic QR Code</option>
-                            <option value="2">QR Code</option>
-                            <option value="3">Key Card</option>
-                            <option value="4">Secure Key Card</option>
-                            <option value="5">Octopus Card</option>
-                            <option value="6">Auto Open</option>
-                            <option value="7">Door Blocking Schedule</option>
-                          </select>
-                          <div class="item-content" style="height: 70px">
-                            <div class="item-inner">
-                              <div class="item-title">{{_('Access Type')}}</div>
-                            </div>
-                          </div>
-                        </a>
-                      </li>
-                      <li class="item-content item-input" v-if="accessType == 1 || accessType == 1">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Guest Email")}}</div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="text"
-                              name="guestEmail"
-                              v-model="guestEmail"
-                              :placeholder="_('Please enter the guest email.')"
-                              v-on:blur="checkGuestEmail"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                      <li class="item-content item-input" v-if="accessType == 3 || accessType == 4">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Key Card ID")}}</div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="text"
-                              name="keyCardId"
-                              v-model="keyCardId"
-                              readonly="readonly"
-                              :placeholder="_('Please enter the key card id.')"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                      <li class="item-content item-input" v-if="accessType == 4" style="display: none">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Key Card Secret")}}</div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="text"
-                              name="keyCardSecret"
-                              v-model="keyCardSecret"
-                              :placeholder="_('Please enter the key card secret.')"
-                              readonly="readonly"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                      <li class="item-content item-input" v-if="accessType == 5">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Octopus Card ID")}}</div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="text"
-                              name="octopusCardId"
-                              v-model="octopusCardId"
-                              :placeholder="_('Please enter the octopus card id.')"
-                              readonly="readonly"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                      <li v-if="accessType == 6 || accessType == 1 || accessType == 7">
-                        <div class="item-content item-input">
-                          <div class="item-inner">
-                            <div class="item-input-wrap">
-                              <input type="text" :placeholder="_('Valid From')" readonly="readonly" id="demo-calendar-date-time" />
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                      <li v-if="accessType == 6 || accessType == 1 || accessType == 7">
-                        <div class="item-content item-input">
-                          <div class="item-inner">
-                            <div class="item-input-wrap">
-                              <input type="text" :placeholder="_('Valid To')" readonly="readonly" id="demo-calendar-date-time-to" />
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                      <li class="item-content item-input">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Access Group")}}</div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="number"
-                              name="accessGroup"
-                              v-model="accessGroup"
-                              :placeholder="_('Please enter the access group.')"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                      <li>
-                        <a class="item-link smart-select smart-select-init" data-open-in="sheet">
-                          <select name="mac-windows" v-model="postType">
-                            <option value="1" selected>WIFI</option>
-                            <option value="2">BLE</option>
-                          </select>
-                          <div class="item-content" style="height: 70px">
-                            <div class="item-inner">
-                              <div class="item-title">{{_('Connection Mode')}}</div>
-                            </div>
-                          </div>
-                        </a>
-                      </li>
-                      <li class="item-content item-input" v-if="postType == 1">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">
-                            {{_("Ssid")}}
-                            <span class="text-color-red" style="font-size: 12px"> ({{_('2.4 GHz Wi-Fi Only')}})</span>
-                          </div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="text"
-                              name="ssid"
-                              v-model="ssid"
-                              :placeholder="_('Please enter the wifi ssid.')"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                      <li class="item-content item-input" v-if="postType == 1">
-                        <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Password")}}</div>
-                          <div class="item-input-wrap">
-                            <input
-                              type="text"
-                              name="password"
-                              v-model="password"
-                              :placeholder="_('Please enter the wifi password.')"
-                              required
-                              validate
-                            />
-                          </div>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                <div class="row" style="margin-bottom: 15px; margin-top: 15px" v-if="accessType == 3 || accessType == 4 || accessType == 5">
-                  <div class="col">
-                    <div class="button button-fill button-save" v-on:click="testKey()">{{_("Test")}}</div>
-                  </div>
-                </div>
-                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
-                  <div class="col">
-                    <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
-                  </div>
-                  <div class="col">
-                    <div class="button button-fill button-save" v-on:click="toTab(5)">{{_("Next")}}</div>
-                  </div>
-                </div>
-              </div>
-            </div> -->
             <div id="step-5" class="view tab view-main" :class="[index == 5 ? 'tab-active' : '']" v-if="index == 5">
               <div class="card">
                 <div class="card-content card-content-padding">
@@ -874,6 +685,12 @@
               name: '4',
               isActive: false,
               relatedIndex: 4,
+            },
+            {
+              id: 5,
+              name: '5',
+              isActive: false,
+              relatedIndex: 5,
             },
           ],
           flatList: [],
@@ -1605,34 +1422,12 @@
             );
           },
           getDeviceButtonGroupForDeviceType() {
-            return new Promise(async (resolve, reject) => {
+            if(this.buttonGroupList.length > 0){
               this.toTab(4);
-              // try {
-              //   const res = await http2.request({
-              //     url: encodeURI('/api/method/appv6.getDeviceButtonGroupByDeviceType'),
-              //     responseType: 'json',
-              //     method: 'POST',
-              //     serializer: 'json',
-              //     debug: true,
-              //     data: {
-              //       device_type:
-              //         this.deviceType == 1
-              //           ? 'Door'
-              //           : this.deviceType == 2
-              //             ? 'Lift'
-              //             : this.deviceType == 3
-              //               ? 'Mailbox'
-              //               : this.deviceType == 4
-              //                 ? 'Locker'
-              //                 : '',
-              //     },
-              //   });
-              //   console.log(res.data);
-              //   resolve(res.data);
-              // } catch (err) {
-              //   reject(err);
-              // }
-            });
+            }else{
+              app.dialog.alert(_('Please add button group first.'));
+            }
+            
           },
           removeDuplicates(arr) {
             const seen = new Set();
@@ -1811,11 +1606,48 @@
                 },
               });
               console.log(res);
+              await this.saveProfileDoor(this.deviceName);
+              await ha_profile_ready(2);
+              //save door in the profile
               mainView.router.back();
             } catch (error) {
               console.log(error);
-              app.dialog.alert(_('Save door failed.'));
+              app.dialog.alert(_(error));
             }
+          },
+          saveProfileDoor(title){
+            return new Promise(async (resolve, reject) => {
+              let hexid = window.peripheral[guid].prop.hexModel;
+              let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
+              let mode = erp.doctype.device_model[`${hexid}`.toUpperCase()].mode;
+              let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+              let postData = {
+                title: title,
+                guid: guid,
+                model: model,
+                device_mode: mode,
+                peripheral: core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
+                profile_room:erp.info.profile.profile_room[0].name,
+                password: peripheral[guid].getProp().password,
+                mac_address: core_utils_get_mac_address_from_guid(guid),
+                device_button_group: this.buttonGroupName,
+                parent: erp.info.profile.name,
+                function:this.tindyButtonGroupCommand(this.buttonGroupList[0]),
+                batch: isset(device_batch) ? device_batch.batch_id : 'YO0012',
+                firmware: peripheral[guid].getProp().firmware || 0,
+              };
+              try {
+                await http2.request('/api/method/save.subdevice', {
+                  method: 'POST',
+                  serializer: 'json',
+                  responseType: 'json',
+                  data: postData,
+                });
+                resolve(true);
+              } catch (error) {
+                reject(error);
+              }
+            });
           },
           tindyButtonGroupCommand(item) {
             let commandList = item.button_group_list;

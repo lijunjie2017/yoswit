@@ -202,11 +202,11 @@
                   <div class="guest-mode-item display-flex" style="flex-wrap: wrap">
                     <!-- this show the bar of 4 item -->
                     <div
-                      class="show-item-mira-page"
+                      :class="['show-item-mira-page',!item.roomHidden ? 'hidenForRangeBar' : '']"
                       v-for="item in rangeBarDeviceList"
                       :key="item.index"
                       :style="{width:item.width,height:item.height,'margin-bottom':'6px'}"
-                      v-show="item.roomHidden"
+                      v-if="item.roomHidden || item.buttonType == 'dimming'"
                     >
                       <li class="swipeout display-flex">
                         <div class="iconbtn swipeout-content" style="width: 100%">
@@ -1030,12 +1030,14 @@
             let thisStatus = cloneDeep(status[0][gang]);
             return thisStatus;
           },
-          updateListVirtualIdStatus(guid) {
+          updateListVirtualIdStatus(guid,is_update_by_mqtt = false) {
             this.topDeviceList.forEach((item) => {
               if (item.device == guid && item.config && !item.config.includes('scene_id')) {
                 let gang = this.getVirtualIdForPeripheral(item.config);
                 let status = this.findLatestStatus(window.peripheral[guid].prop.status);
-
+                if(is_update_by_mqtt){
+                  status = window.peripheral[guid].prop.status.mobmob;
+                }
                 let thisStatus = status[0][gang];
                 item.device_status = thisStatus;
                 if (isset(item.clean_status)) {
@@ -1047,7 +1049,8 @@
             });
             //get the virtual id for the bedroom mode and the living mode
             let [virtual_id_for_bedroom_mode, virtual_id_for_living_mode] = this.getVirtualIdForBedroomAndLivingMode();
-
+            console.log('virtual_id_for_bedroom_mode', virtual_id_for_bedroom_mode);
+            console.log('virtual_id_for_living_mode', virtual_id_for_living_mode);
             // let virtual_id_for_living_mode = {
             //   '90': 0,
             //   '91': 0,
@@ -1079,6 +1082,9 @@
               if (item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')) {
                 let gang = this.getVirtualIdForPeripheral(item.config);
                 let status = this.findLatestStatus(window.peripheral[guid].prop.status);
+                if(is_update_by_mqtt){
+                  status = window.peripheral[guid].prop.status.mobmob;
+                }
                 console.log('status', status);
                 console.log('gang', gang);
                 let thisStatus = status[0][gang];
@@ -1555,6 +1561,9 @@
           rangeChangeFun(defaultValue, customParam) {
             let renderStatus = true;
             console.log('customParam', customParam);
+            if(!customParam.roomHidden){
+              return;
+            }
             if (isset(this.deviceControlLimit[customParam.device])) {
               renderStatus = this.deviceControlLimit[customParam.device];
             }
@@ -2247,8 +2256,9 @@
                     window.peripheral[guid].prop.status.mobmob[1] = date_str;
                     if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]){
                       window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
-                      this.updateListVirtualIdStatus(guid);
+                      
                     }
+                    this.updateListVirtualIdStatus(guid,true);
                     // this.topDeviceList.forEach((item) => {
                     //   if (item.device == guid) {
                     //     //item.device_status = statusByteList[item.config - 1];
@@ -3245,6 +3255,7 @@
             let subdevice = this.anthorDeviceList.find((item) => item.name == name);
             let guid = '';
             let sceneId = '';
+            let scene_name = '';
             if (subdevice) {
               let config = subdevice.config;
               //find the scene id
@@ -3257,6 +3268,7 @@
                     let device_location_map = scene_device_location.find((item) => item.device == subdevice.device);
                     sceneId = device_location_map.storage_id;
                     guid = subdevice.device;
+                    scene_name = scenes[i].title;
                     break;
                   }
                 }
@@ -3270,6 +3282,13 @@
                     command: command,
                   },
                 ]);
+                let control_source = await bleHelper.getControlSource(guid);
+                let device_type_map = {
+                  command_type: scene_name,
+                  device_type: 'YO780',
+                  command: command
+                };
+                window.upload_device_control_log(guid, '1', control_source, name, device_type_map);
               }
             }
           },
@@ -3299,6 +3318,14 @@
                   command: command,
                 },
               ]);
+              //update the control log
+              let control_source = await bleHelper.getControlSource(guid);
+              let device_type_map = {
+                command_type: this.getSceneNameByVirtualId(v_id),
+                device_type: 'YO780',
+                command: command
+              };
+              window.upload_device_control_log(guid, status?'1':'0', control_source, name, device_type_map);
               //update the profile subdevice
               // await this.updateProfileSubdevice(name, subdevice);
             } catch (error) {
@@ -3313,6 +3340,21 @@
               let gang = parseInt(v_id, 16);
               return gang + 86;
             }
+          },
+          getSceneNameByVirtualId(v_id){
+            let scenes = cloneDeep(erp.info.scene);
+            let virtual_id = parseInt(v_id, 16);
+            let scene_name = '';
+            for(let i in scenes){
+              let scene_virtual_button = scenes[i].scene_virtual_button;
+              for(let j in scene_virtual_button){
+                if(parseInt(scene_virtual_button[j].virtual_button_id) == virtual_id){
+                  scene_name = scenes[i].title;
+                  break;
+                }
+              }
+            }
+            return scene_name;
           },
           getVirtualIdForBedroomAndLivingMode(){
             //type 1 for bedroom mode 2 for living mode
@@ -3399,6 +3441,14 @@
                   command: command,
                 },
               ]);
+              //update the control log
+              let control_source = await bleHelper.getControlSource(guid);
+              let device_type_map = {
+                command_type: type == 1 ? 'DND' : 'CLEAN',
+                device_type: 'YO780',
+                command: command
+              };
+              window.upload_device_control_log(guid, status?'1':'0', control_source, name, device_type_map);
               //update the profile subdevice
               if (type == 2) {
                 await this.updateMoreProfileSubdevice([
@@ -4258,5 +4308,8 @@
   .pure-title-main {
     position: relative;
     letter-spacing: -0.3px;
+  }
+  .hidenForRangeBar{
+    opacity: 0;
   }
 </style>

@@ -167,7 +167,7 @@
       $f7route = ctx.$f7route,
       $onUnmounted = ctx.$onUnmounted,
       $on = ctx.$on;
-    let { device_type, guid,type,remote_id,subdevice} = $f7route.query;
+    let { device_type, guid,type,remote_id,subdevice,isMatch} = $f7route.query;
     let vueAppForDetail = null;
     const toEdit = () => {
       console.log('toEdit');
@@ -370,12 +370,16 @@
                   console.log('learneddata', data);
                   let rs = data.rs;
                   if (data.guid == guid && rs.length > 8) {
-                    // 获取到数据后立即清除监听器，避免重复处理
-                    emitter.off(`ir_learned_code`, this._sendIrCodeFun);
-                    this._sendIrCodeFun = null;
-                    app.dialog.close();
-                    rs = rs.substring(0, 3) + '1' + rs.substring(4);
-                    this.showCode(rs);
+                    if (rs.substring(6, 8) == '00') {
+                      // 获取到数据后立即清除监听器，避免重复处理
+                      emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                      this._sendIrCodeFun = null;
+                      app.dialog.close();
+                      this.learnCode = `97210700${this.learnCode ? this.learnCode : ''}${rs.substring(8, rs.length)}`;
+                      this.showCode(this.learnCode);
+                    }else{
+                      this.learnCode += rs.substring(8, rs.length);
+                    }
                   }
                 };
               }
@@ -409,7 +413,11 @@
             }
             let this_data = code;
             try {
-              await window.peripheral[guid].sendIrForRw(this_data);
+              if(this_data.length > 1008){
+                await bleHelper.sendLongCommand(this_data,guid);
+              }else{
+                await window.peripheral[guid].sendIrForRw(this_data);
+              }
             } catch (error) {
               app.dialog.alert(_(erp.get_log_description(error)));
             }

@@ -699,10 +699,24 @@ window.Peripheral = (function() {
     					}else{
     					    $('.manual-radar-sensor').find('.material-icons').text('block')
     					}
+    					emitter.emit('radar/notify',{
+    				        rs : data,
+    				        guid : self.prop.guid
+    				    })
     					self.onPropChanged();
     				}else if(data.startsWith('9931')){
     				    emitter.emit('key_card_id',{
     				        rs : data
+    				    })
+    				}else if(data.startsWith('932d000018')){
+    				    emitter.emit('wifi_mac_address',{
+    				        rs : data,
+    				        guid : self.prop.guid
+    				    })
+    				}else if(data.startsWith('972207') || data.startsWith('8900')){
+    				    emitter.emit('ir_learned_code',{
+    				        rs : data,
+    				        guid : self.prop.guid
     				    })
     				}else if(data.startsWith("9380")){
     					let rsList = window.iot_ble_iaq_change_list(data);
@@ -749,6 +763,16 @@ window.Peripheral = (function() {
     				}else if(data.startsWith("8f20") || data.startsWith("8f22") || data.startsWith("8f10") || data.startsWith("8f12") || data.startsWith("972303") || data.startsWith("8f13") ){
     				    emitter.emit('iot/scene/from/ble',{"rs" : data})
     				    emitter.emit('get/device/notification',{"rs" : data})
+    				}else if(data.startsWith('933000') || data.startsWith('932200')){
+    				    emitter.emit('ota/start',{
+    				        rs : data,
+    				        guid : self.prop.guid
+    				    })
+    				}else if(data.startsWith('9500000030') || data.startsWith('950100001f')){
+    				    emitter.emit('radar/notify',{
+    				        rs : data,
+    				        guid : self.prop.guid
+    				    })
     				}else if(data.startsWith("87")){
     				// 	console.log("87 data is",data);
     					let temp_p = parseInt(data.substr(8,2)+data.substr(6,2)+data.substr(4,2)+data.substr(2,2), 16);
@@ -3728,9 +3752,9 @@ return new Promise((resolve, reject) => {
 						commands.push({
 							action: "write",
 							guid: findGuid,
-							mac_address: peripheral[findGuid].getProp().mac_address.toLowerCase(),
+							mac_address: peripheral[findGuid?findGuid:self.prop.guid].getProp().mac_address.toLowerCase(),
 							service_id: "ff80",
-							char_id: peripheral[findGuid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
+							char_id: peripheral[findGuid?findGuid:self.prop.guid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
 							value: `02${self.prop.mac_reverse_key}10${(count_batch - 1 - i).toString(16).pad("00")}${data.substring(i * dateSetLen, i * dateSetLen + len)}`
 						});
 					}
@@ -3831,6 +3855,171 @@ return new Promise((resolve, reject) => {
                 	    break;
                 	case self.route.NA:
 										return bleHelper.openBluetooth();
+                	    break;
+                }
+    		})
+    		.then((result) => {
+				if(!isset(result)){
+					reject(6300);
+				}else{
+					resolve(result);
+				}
+    		})
+    		.catch((error) => {
+    			reject(error);
+    		})
+    		.then(() => {
+    			// Clean up resources
+    			clearTimeout(self.timeout_timer);
+    		});
+    	});
+    };
+    Peripheral.prototype.sendIrForRw = function(data) {
+        const self = this;
+    	return new Promise((resolve, reject) => {
+    		const action = {
+    		    func:'sendIrForRw',
+    		    args:[
+    		        data
+    		    ],
+    		    callback: {
+    		        resolve:resolve,
+    		        reject:reject
+    		    }
+    		}
+    		self.queue.push(action);
+    		if (!self.isExecuting) {
+    			self.isExecuting = true;
+    			self.execute();
+    		}
+    	});
+    };
+    Peripheral.prototype._sendIrForRw = function(data) {
+        const self = this;
+    	
+    	const doBLESendIR = (data) => {
+    		return new Promise((resolve, reject) => {
+    			const commands = [{
+            	    service: "ff80",
+            		characteristic: "ff81",
+            		data: data,
+            	}];
+				console.log("command",commands)
+                self.doMultipleWrite(commands).then((rs)=>{
+                    resolve(1);
+                }).catch((error)=>{
+                    reject(error);
+                });
+    		});
+    	};
+
+
+		const doMESHSendIR = (data) => {
+    		return new Promise((resolve, reject) => {
+				const findGuid = self.findLead();
+
+    			const commands = [{
+            	    service: "ff80",
+            		characteristic: "ff81",
+            		data: `02${self.prop.mac_reverse_key}${data}`,
+            	}];
+
+				peripheral[findGuid].write(commands).then((rs)=>{
+					resolve(2);
+				}).catch((error)=>{
+					reject(error);
+				});
+			});
+		};
+
+
+
+		const doMOBMOBSendIR = (data) => {
+    		return new Promise((resolve, reject) => {
+				const findGuid = self.findDefaultConnect();
+                
+    			const commands = [];
+				if(findGuid != self.prop.guid){
+					commands.push({
+						action: "write",
+						guid: findGuid,
+						mac_address: peripheral[findGuid?findGuid:self.prop.guid].getProp().mac_address.toLowerCase(),
+						service_id: "ff80",
+						char_id: peripheral[findGuid?findGuid:self.prop.guid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
+						value: `02${self.prop.mac_reverse_key}${data}`
+					});
+				}else{
+					commands.push({
+						action: "write",
+						guid: findGuid?findGuid:self.prop.guid,
+						mac_address: peripheral[findGuid?findGuid:self.prop.guid].getProp().mac_address.toLowerCase(),
+						service_id: "ff80",
+						char_id: peripheral[findGuid?findGuid:self.prop.guid].getProp().firmwareNo < 6 ? "ff83" : "ff81",
+						value: `${data}`
+					});
+				}
+                let strList = self.prop.gateway.split('-');
+                let gatewayStr = '';
+                if(strList.length <= 2 ){
+                    gatewayStr = self.prop.gateway.toLowerCase();
+                }else{
+                    gatewayStr = self.prop.gateway;
+                }
+				core_mqtt_publish("cmd/"+md5(md5(gatewayStr)), {
+					command:"Control",
+					function:"bleHelper.perform",
+					params:commands,
+					callback:"",
+					raw:""
+				}, 0, false, false, false).then(() => {
+					resolve(3);
+				}).catch(reject);
+			});
+		};
+
+
+    	return new Promise((resolve, reject) => {
+    		Promise.race([
+    			self.findRoute(),
+    			self.timeout(10000).then(() => {
+    			    self.disconnect();
+    				throw 7001;
+    			})
+    		])
+    		.then((result) => {
+    		    currentRoute = result;
+                switch (currentRoute) {
+                	case self.route.BLUETOOTH:
+                	    if(self.prop.connected){
+                	        return Promise.resolve();
+                	    }else{
+                	        return self.doConnect();
+                	    }
+                	    break;
+                	case self.route.MOBMOB:
+                	    return Promise.resolve();
+                	    break;
+                	case self.route.MESH:
+                	    return Promise.resolve();
+                	    break;
+                	case self.route.NA:
+						return bleHelper.openBluetooth();
+                	    break;
+                }
+    		})
+    		.then(() => {
+                switch (currentRoute) {
+                	case self.route.BLUETOOTH:
+						return doBLESendIR(data);
+                	    break;
+                	case self.route.MOBMOB:
+						return doMOBMOBSendIR(data);
+                	    break;
+                	case self.route.MESH:
+						return doMESHSendIR(data);
+                	    break;
+                	case self.route.NA:
+						return bleHelper.openBluetooth();
                 	    break;
                 }
     		})
@@ -4073,6 +4262,17 @@ return new Promise((resolve, reject) => {
     	
     	if(action.func=="sendIR"){
     	    this._sendIR(action.args[0]).then((rs) => {
+    	        action.callback.resolve(rs);
+    	        this.execute();
+    	    }).catch((error) => {
+    	        action.callback.reject(error);
+    	        this.queue = [];
+    	        this.isExecuting = false;
+    	    }).then(()=>{
+    	        
+    	    })
+    	}else if(action.func=="sendIrForRw"){
+    	    this._sendIrForRw(action.args[0]).then((rs) => {
     	        action.callback.resolve(rs);
     	        this.execute();
     	    }).catch((error) => {
@@ -4805,6 +5005,7 @@ return new Promise((resolve, reject) => {
         		    }else if(self.prop.firmwareNo >= 7){
                         ble.startNotification(self.prop.id, "ff80", "ff82", function(rs){
                             //ble.stopNotification(self.prop.id, "ff80", "ff82");
+                            console.log("password",self.prop.password)
                             if(rs.startsWith("8e")){
                                 let pwd = "";
                                 if(rs.substr(2,2)=="01"){
@@ -4929,12 +5130,31 @@ return new Promise((resolve, reject) => {
         const checkLocationEnabled = () => {
             return new Promise((resolve, reject) => {
                 ble.isLocationEnabled(function(){
-                    resolve();
+                    resolve(true);
                 }, function(){
                     reject(bleError.BLE_MOBILE_LOCATION_SERVICE_NOT_ENABLED);
                 })
             });
         };
+        
+        const enableMtu = ()=>{
+            return new Promise((resolve, reject) => {
+                
+                ble.requestMtu(
+                  self.prop.id,
+                  512,
+                  () => {
+                    console.log('request mtu success');
+                    resolve(true);
+                  },
+                  (error) => {
+                    if(error){
+                      reject(error);
+                    }
+                  }
+                );
+            });
+        }
 
 		return new Promise((resolve, reject) => {
     	    if(!isset(self.prop.rssi)){
@@ -4964,6 +5184,16 @@ return new Promise((resolve, reject) => {
 						enableTry = true;
 						console.log("class.periperal: connect");
 						return connect();
+					}).then((rs)=>{
+						if(deviceInfo.operatingSystem === 'ios'){
+							return new Promise((resolve,reject)=>{
+								resolve()
+							})
+						}else{
+						    console.log("class.periperal: request mtu");
+						    return enableMtu();
+						}
+						
 					}).then((rs)=>{
 						console.log("class.periperal: refreshDeviceCache");
 						return refreshDeviceCache();
@@ -5035,7 +5265,7 @@ return new Promise((resolve, reject) => {
                     //nothing to do, instead, need notify
                     resolve(rs);
                 }, function(rs){
-    				if(data.toLowerCase() == '810e' || data.toLowerCase() == '8110'){
+    				if(data.toLowerCase() == '810e' || data.toLowerCase() == '8110' || data.startsWith("93300000")){
     					resolve();
     				}else{
     					reject(bleError.BLE_PERIPHERAL_WRITE_DATA_FAIL, `Failed to write data ${data} to service ${service} with characteristic ${characteristic} (Error message: ${rs})`);

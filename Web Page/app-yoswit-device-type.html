@@ -1,0 +1,105 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Device') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="list medium-inset no-chevron virtual-list searchbar-found search-list device-type-list" style="margin-top:0px;margin-bottom:0px;">
+        <ul>
+          <!-- Dynamic Brand list -->
+            ${deviceBrands.map((row)=> $h`
+            <li class="device-type-list-item">
+              <a 
+                  class="item-link device-type-list-item-button" 
+                  href="${row.name === 'Miele'?`/mobile-app/miele-login?brand=${row.name}`:row.name === 'Towngas'?'/mobile-app/towngas-model?brand=${row.name}':`/frappe/list/Device Model/App_Yoswit_Device_Type_Device_Brand_Model_V5/Device Model/null/15/brand=${row.name}/`}" 
+                  lang="en"
+              >
+              ${row.image? $h`
+              <img src="${ erp.get_url(row.image) }" height="80px" />
+              `: $h`
+              <a></a>
+              `}
+                  ${ row.name }
+              </a>
+            </li>
+            `)}
+        </ul>
+    </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+    let deviceBrands = [];
+    const getData = async () => {
+      console.log('getData');
+      try {
+        let list = await http.request(
+          encodeURI(
+            `${ erp.settings[erp.appId].app_api_url}/api/resource/Device Brand?fields=["name","image","device_setup"]&filters=[["device_setup","=","1"]]`
+          ),
+          {
+            method: 'GET',
+            serializer: 'json',
+            responseType: 'json',
+            timeout: 3,
+          }
+        );
+        console.log(list);
+        deviceBrands = list.data.data;
+        $update();
+      } catch (e) {
+        console.log(e);
+      }
+    };
+    const init = async () => {
+      getData();
+    };
+    $onMounted(() => {
+      init();
+    });
+    return $render;
+  };
+</script>
+
+<style>
+  .device-type-list { margin-top:0px;margin-bottom:0px; }
+    .device-type-list-item {float:left;width:50%;overflow:hidden;display:block;border-bottom:solid 1px #e6e6e6;overflow:hidden;background-repeat:no-repeat;}
+    .device-type-list-item .device-type-list-item-button {
+        line-height:30px;
+        padding:5px; 
+        height: 120px;  
+        text-align:center;
+        color:#676767;
+        background:url(../../img/ir_arc.png) center no-repeat;
+        background-size:auto 30px;
+        display:block;
+        background-color:#fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+    }
+    .device-type-list-item .device-type-list-item-button:nth-child(odd) {border-right:solid 1px #e6e6e6;}
+</style>

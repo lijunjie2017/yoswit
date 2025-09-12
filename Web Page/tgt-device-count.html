@@ -1,0 +1,1221 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${title}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="top-status">
+          <div
+            class="top-item"
+            :class="{ danger: !wifiConnected }"
+            v-on:click="toggleOffline"
+            :aria-label="wifiConnected ? _('WiFi connected') : _('WiFi disconnected')"
+          >
+            <i class="icon f7-icons">{{ wifiConnected ? 'wifi' : 'wifi_slash' }}</i>
+          </div>
+          <div
+            class="top-item"
+            :class="{ muted: !btConnected }"
+            v-on:click="toggleBt"
+            :aria-label="btConnected ? _('Bluetooth connected') : _('Bluetooth disconnected')"
+          >
+            <i class="material-icons">{{ btConnected ? 'bluetooth' : 'bluetooth_disabled' }}</i>
+          </div>
+        </div>
+        <div class="status-line" v-if="isOffline">{{ offlineStatusText }}</div>
+        <!-- 仅保留图表面板：默认显示 -->
+        <div class="chart-panel card">
+          <div class="card-content card-content-padding">
+            <div class="chart-controls">
+              <div class="granularity">
+                <a class="chip action" :class="{ active: chartGranularity === 'day' }" v-on:click="setGranularity('day')">{{ _('Day') }}</a>
+                <a class="chip action" :class="{ active: chartGranularity === 'month' }" v-on:click="setGranularity('month')">{{ _('Month') }}</a>
+                <a class="chip action" :class="{ active: chartGranularity === 'year' }" v-on:click="setGranularity('year')">{{ _('Year') }}</a>
+              </div>
+              <div class="granularity">
+                <a class="chip action" :class="{ active: metric === 'usage' }" v-on:click="setMetric('usage')">{{ _('Usage') }}</a>
+                <a class="chip action" :class="{ active: metric === 'duration' }" v-on:click="setMetric('duration')">{{ _('Duration') }}</a>
+              </div>
+              <div class="granularity" v-if="chartMode === 'bar'">
+                <a class="chip action" v-on:click="backToPie">
+                  <i class="icon f7-icons">arrow_left</i>
+                  <span>{{ _('Back To Overview') }}</span>
+                </a>
+                <span class="crumb" aria-label="current device">{{ currentDeviceLabel }}</span>
+              </div>
+              <div class="range">
+                <input type="date" v-model="dateStart" v-on:change="onDateChange" />
+                <span class="range-sep">~</span>
+                <input type="date" v-model="dateEnd" v-on:change="onDateChange" />
+              </div>
+            </div>
+            <div class="chart-container larger" ref="chartEl"></div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on,
+      $update = ctx.$update,
+      $f7route = ctx.$f7route;
+    let vueApp = null;
+    let { guid, sub_name, type,title } = $f7route.query;
+    console.log(title);
+    $update();
+    // 按需加载 ECharts
+    await new Promise((resolve) => {
+      if (window['echarts']) {
+        resolve();
+      } else {
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.onload = function () { resolve(true); };
+        script.onerror = function () { console.warn(`Echart load error`); resolve(false); };
+        script.src = 'https://dev.mob-mob.com/files/echarts.min.js';
+        document.head.appendChild(script);
+      }
+    });
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          // 顶部连接状态
+          isOffline: true,
+          btConnected: false,
+          // 图表状态
+          chartMode: 'pie', // 'pie' | 'bar'
+          selectedDeviceType: null, // 'water_heater' | 'stove'
+          metric: 'usage', // 'usage'(m³) | 'duration'(hours)
+          chartGranularity: 'day', // 'day' | 'month' | 'year'
+          dateStart: '',
+          dateEnd: '',
+          chartInstance: null,
+          chartDataSeed: null,
+          viewportWidth: 0,
+          deviceTypes: [
+            { key: 'water_heater', label: _('Smart Water Heater') },
+            { key: 'stove', label: _('Smart Stove') },
+          ],
+        },
+        computed: {
+          wifiConnected() { return !this.isOffline; },
+          currentDeviceLabel() {
+            if (!this.selectedDeviceType) return '';
+            const d = this.deviceTypes.find(x => x.key === this.selectedDeviceType);
+            return d ? d.label : '';
+          },
+          offlineStatusText() {
+            if (!this.isOffline) return '';
+            if (this.chartMode === 'bar') {
+              if (this.selectedDeviceType === 'water_heater') return _('Water Heater Disconnected');
+              if (this.selectedDeviceType === 'stove') return _('Hob Disconnected');
+            }
+            return `${tran(title)} ${_('Disconnected')}`;
+          },
+        },
+        mounted() {
+          // 初始化日期范围（近 3 天）
+          const today = new Date();
+          const past = new Date();
+          past.setDate(today.getDate() - 2);
+          this.dateStart = this.formatDateInput(past);
+          this.dateEnd = this.formatDateInput(today);
+          this.chartDataSeed = Math.floor(Math.random() * 10000);
+          this.viewportWidth = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 0;
+          this.$nextTick(this.renderChart);
+        },
+        methods: {
+          // 顶部状态
+          toggleOffline() { this.isOffline = !this.isOffline; },
+          toggleBt() { this.btConnected = !this.btConnected; },
+
+          // 视图切换
+          backToPie() {
+            if (this.chartMode !== 'pie') {
+              this.chartMode = 'pie';
+              this.selectedDeviceType = null;
+              this.renderChart();
+            }
+          },
+          setGranularity(g) {
+            if (this.chartGranularity === g) return;
+            this.chartGranularity = g;
+            this.updateRangeForGranularity(g);
+            this.renderChart();
+          },
+          setMetric(m) {
+            if (this.metric === m) return;
+            this.metric = m;
+            this.renderChart();
+          },
+          onDateChange() {
+            if (this.dateStart && this.dateEnd && this.dateStart > this.dateEnd) {
+              const t = this.dateStart; this.dateStart = this.dateEnd; this.dateEnd = t;
+            }
+            this.renderChart();
+          },
+          formatDateInput(d) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+          },
+          updateRangeForGranularity(g) {
+            const today = new Date();
+            if (g === 'day') {
+              const start = new Date(today);
+              start.setDate(today.getDate() - 2); // 近3天：含今天与前两天
+              this.dateStart = this.formatDateInput(start);
+              this.dateEnd = this.formatDateInput(today);
+            } else if (g === 'month') {
+              // 从今天起，往前 30 天
+              const end = new Date(today);
+              const start = new Date(today);
+              start.setDate(start.getDate() - 30);
+              this.dateStart = this.formatDateInput(start);
+              this.dateEnd = this.formatDateInput(end);
+            } else if (g === 'year') {
+              // 从今天起，往前 1 年
+              const end = new Date(today);
+              const start = new Date(today);
+              start.setFullYear(start.getFullYear() - 1);
+              this.dateStart = this.formatDateInput(start);
+              this.dateEnd = this.formatDateInput(end);
+            }
+          },
+
+          // 图表
+          disposeChart() {
+            if (this.chartInstance && this.chartInstance.dispose) {
+              try { this.chartInstance.dispose(); } catch(e) {}
+            }
+            this.chartInstance = null;
+          },
+          renderChart() {
+            if (!window.echarts) return;
+            const el = this.$refs.chartEl; if (!el) return;
+            if (!this.chartInstance) {
+              this.chartInstance = window.echarts.init(el);
+              window.addEventListener('resize', this.resizeChart, { passive: true });
+            } else {
+              // 清理旧事件，避免重复绑定
+              try { this.chartInstance.off('click'); } catch(e) {}
+            }
+
+            if (this.chartMode === 'pie') {
+              const option = this.buildPieOption();
+            this.chartInstance.setOption(option, true);
+              // 绑定点击事件：进入条形图
+              this.chartInstance.on('click', (ev) => {
+                if (ev && ev.seriesType === 'pie') {
+                  // 通过名称匹配设备类型
+                  const dev = this.deviceTypes.find(d => d.label === ev.name);
+                  if (dev) {
+                    this.selectedDeviceType = dev.key;
+                    this.chartMode = this.metric === 'usage' ? 'bar' : 'line';
+                    this.renderChart();
+                  }
+                }
+              });
+            } else {
+              const { labels, values } = this.generateSeriesForDevice(this.selectedDeviceType);
+              const option = this.metric === 'usage' ? this.buildBarOption(labels, values) : this.buildLineOption(labels, values);
+              this.chartInstance.setOption(option, true);
+            }
+          },
+          resizeChart() {
+            if (typeof window !== 'undefined') this.viewportWidth = window.innerWidth || 0;
+            if (this.chartInstance && this.chartInstance.resize) this.chartInstance.resize();
+          },
+
+          // 选项构建
+          buildPieOption() {
+            const totalByDevice = this.deviceTypes.map((d) => {
+              const { values } = this.generateSeriesForDevice(d.key);
+              const total = values.reduce((a, b) => a + (Number(b) || 0), 0);
+              return { name: d.label, value: Number(total.toFixed(2)) };
+            });
+            const isSmall = this.viewportWidth && this.viewportWidth <= 360;
+            const totalAll = totalByDevice.reduce((a, b) => a + b.value, 0);
+            const centerText = `${isSmall ? '' : (_('Total') + '\n')}${this.metric === 'usage' ? totalAll.toFixed(1) + ' m³' : totalAll.toFixed(1) + ' h'}`;
+            const centerY = isSmall ? '58%' : '56%';
+            const graphicTop = isSmall ? '56%' : '54%';
+            return {
+              backgroundColor: 'transparent',
+              tooltip: { trigger: 'item', formatter: this.metric === 'usage' ? '{b}: {c} m³ ({d}%)' : '{b}: {c} h ({d}%)' },
+              legend: { type: 'scroll', top: isSmall ? undefined : 8, bottom: isSmall ? 8 : undefined, orient: 'horizontal' },
+              graphic: [
+                {
+                  type: 'text',
+                  left: 'center',
+                  top: graphicTop,
+                  z: 100,
+                  style: {
+                    text: centerText,
+                    textAlign: 'center',
+                    fill: '#333',
+                    fontWeight: 700,
+                    fontSize: isSmall ? 12 : 14,
+                    lineHeight: 18,
+                  },
+                },
+              ],
+              series: [
+                {
+                  type: 'pie',
+                  radius: ['42%', '75%'],
+                  center: ['50%', centerY],
+                  avoidLabelOverlap: true,
+                  itemStyle: { borderColor: '#fff', borderWidth: 2 },
+                  label: { show: !isSmall, formatter: this.metric === 'usage' ? '{b}\n{c} m³' : '{b}\n{c} h' },
+                  labelLine: { show: !isSmall },
+                  data: totalByDevice,
+                },
+              ],
+            };
+          },
+          buildBarOption(labels, values) {
+            const titleMap = { day: _('Daily Gas Usage'), month: _('Monthly Gas Usage'), year: _('Yearly Gas Usage') };
+            const count = labels.length;
+            const small = this.viewportWidth && this.viewportWidth <= 420;
+            const dense = count > (this.chartGranularity === 'day' ? 20 : this.chartGranularity === 'month' ? 18 : 10);
+            const showSlider = dense;
+            const barWidth = small || dense ? 16 : 26;
+            const showLabels = count <= 30;
+            const topMargin = small ? 56 : 52;
+            return {
+              backgroundColor: 'transparent',
+              tooltip: { trigger: 'axis' },
+              grid: { left: 16, right: 16, top: topMargin, bottom: showSlider ? 36 : 14, containLabel: true },
+              xAxis: { type: 'category', boundaryGap: true, data: labels, axisTick: { alignWithLabel: true }, axisLine: { onZero: true }, axisLabel: { interval: 'auto', rotate: dense ? 40 : 0, hideOverlap: true, fontSize: small ? 10 : 12 } },
+              yAxis: { type: 'value', min: 0, name: _('m³'), nameTextStyle: { padding: [0, 0, 0, 6] } },
+              dataZoom: showSlider ? [
+                { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true, throttle: 50 },
+                { type: 'slider', height: 16, bottom: 8, left: 8, right: 8 }
+              ] : [],
+              series: [
+                {
+                  type: 'bar',
+                  name: titleMap[this.chartGranularity] || _('Usage'),
+                  data: values,
+                  barMaxWidth: barWidth,
+                  itemStyle: {
+                    color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      { offset: 0, color: '#56CCF2' },
+                      { offset: 0.5, color: '#6FCF97' },
+                      { offset: 1, color: '#F2994A' },
+                    ]),
+                    borderRadius: [6, 6, 0, 0],
+                  },
+                  label: { show: showLabels, position: 'top', distance: 4, color: '#333', fontWeight: 600, formatter: (p) => `${p.value}` },
+                  emphasis: { focus: 'series' },
+                },
+              ],
+            };
+          },
+          buildLineOption(labels, values) {
+            const titleMap = { day: _('Daily Duration'), month: _('Monthly Duration'), year: _('Yearly Duration') };
+            const count = labels.length;
+            const small = this.viewportWidth && this.viewportWidth <= 420;
+            const dense = count > (this.chartGranularity === 'day' ? 20 : this.chartGranularity === 'month' ? 18 : 10);
+            const showSlider = dense;
+            const topMargin = small ? 56 : 52;
+            return {
+              backgroundColor: 'transparent',
+              tooltip: { trigger: 'axis' },
+              grid: { left: 16, right: 16, top: topMargin, bottom: showSlider ? 36 : 14, containLabel: true },
+              xAxis: { type: 'category', boundaryGap: false, data: labels, axisTick: { alignWithLabel: true }, axisLine: { onZero: true }, axisLabel: { interval: 'auto', rotate: dense ? 40 : 0, hideOverlap: true, fontSize: small ? 10 : 12 } },
+              yAxis: { type: 'value', min: 0, name: _('h'), nameTextStyle: { padding: [0, 0, 0, 6] } },
+              dataZoom: showSlider ? [
+                { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true, throttle: 50 },
+                { type: 'slider', height: 16, bottom: 8, left: 8, right: 8 }
+              ] : [],
+              series: [
+                {
+                  type: 'line',
+                  name: titleMap[this.chartGranularity] || _('Duration'),
+                  data: values,
+                  smooth: true,
+                  showSymbol: false,
+                  lineStyle: { width: 2, color: '#56CCF2' },
+                  areaStyle: {
+                    color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      { offset: 0, color: 'rgba(86, 204, 242, .45)' },
+                      { offset: 1, color: 'rgba(86, 204, 242, 0)' },
+                    ])
+                  },
+                  emphasis: { focus: 'series' },
+                },
+              ],
+            };
+          },
+
+          // 数据生成（模拟）
+          generateSeriesForDevice(deviceKey) {
+            const start = this.dateStart ? new Date(this.dateStart) : null;
+            const end = this.dateEnd ? new Date(this.dateEnd) : null;
+            const labels = [];
+            const values = [];
+            const baseSeed = this.chartDataSeed + (start?.getTime() || 0) + (end?.getTime() || 0);
+            // 区分设备种子，稳定复现
+            const deviceSalt = deviceKey === 'stove' ? 137 : 753;
+            const rng = this.seededRandom(baseSeed + deviceSalt);
+
+            if (this.chartGranularity === 'year') {
+              const endYear = end ? end.getFullYear() : new Date().getFullYear();
+              const startYear = start ? start.getFullYear() : endYear - 6;
+              for (let y = startYear; y <= endYear; y++) {
+                labels.push(String(y));
+                if (this.metric === 'usage') {
+                  // 年用量区间：热水器略高，灶略低（m³）
+                  const range = deviceKey === 'water_heater' ? [220, 480] : [120, 320];
+                  values.push(this.randomUsage(rng, range[0], range[1]));
+                } else {
+                  // 年时长（小时）：热水器略高
+                  const range = deviceKey === 'water_heater' ? [260, 520] : [160, 360];
+                  values.push(this.randomUsage(rng, range[0], range[1]));
+                }
+              }
+            } else if (this.chartGranularity === 'month') {
+              const s = start || new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1);
+              const e = end || new Date();
+              const cur = new Date(s.getFullYear(), s.getMonth(), 1);
+              while (cur <= e) {
+                labels.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+                if (this.metric === 'usage') {
+                  const range = deviceKey === 'water_heater' ? [12, 68] : [6, 42];
+                  values.push(this.randomUsage(rng, range[0], range[1]));
+                } else {
+                  const range = deviceKey === 'water_heater' ? [18, 60] : [10, 40];
+                  values.push(this.randomUsage(rng, range[0], range[1]));
+                }
+                cur.setMonth(cur.getMonth() + 1);
+              }
+            } else {
+              const s = start || new Date(new Date().setDate(new Date().getDate() - 6));
+              const e = end || new Date();
+              const cur = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+              while (cur <= e) {
+                labels.push(`${cur.getMonth() + 1}/${String(cur.getDate()).padStart(2, '0')}`);
+                if (this.metric === 'usage') {
+                  const range = deviceKey === 'water_heater' ? [0.3, 3.2] : [0.1, 1.6];
+                  values.push(this.randomUsage(rng, range[0], range[1]));
+                } else {
+                  const range = deviceKey === 'water_heater' ? [0.4, 2.6] : [0.2, 1.6];
+                  values.push(this.randomUsage(rng, range[0], range[1]));
+                }
+                cur.setDate(cur.getDate() + 1);
+              }
+            }
+            return { labels, values };
+          },
+          seededRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return () => { x = Math.sin(x) * 10000; return x - Math.floor(x); };
+          },
+          randomUsage(rand, min, max) {
+            const v = min + (max - min) * rand();
+            return Number(v.toFixed(2));
+          },
+        },
+      });
+    });
+
+    $onUnmounted(() => { if (vueApp) { vueApp.$destroy(); } });
+    return $render;
+  };
+</script>
+
+<style>
+  /* 半圆温控 - 现代轻拟态风格，强调过渡与阴影 */
+  .top-status {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 8px 12px 2px;
+    background: var(--f7-card-bg-color);
+    height: 44px;
+    border-radius: 22px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    display: grid;
+    grid-template-columns: 56px 56px;
+    justify-content: center;
+    align-items: center;
+    column-gap: 8px;
+  }
+  .top-item {
+    text-align: center;
+    color: var(--f7-text-color);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+  }
+  .top-item .icon,
+  .top-item .material-icons {
+    font-size: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .top-item .material-icons { transform: translateY(1px); }
+  /* 移除图标下方小字 */
+  .top-item .caption { display: none; }
+  .status-line {
+    margin: 6px 12px 0;
+    color: var(--f7-color-red);
+    font-size: 13px;
+    text-align: center;
+  }
+  .top-item.danger {
+    color: var(--f7-color-red);
+  }
+  .top-item.muted {
+    color: var(--f7-color-gray, #9e9e9e);
+  }
+  .device-header {
+    margin: 8px 0 4px;
+    text-align: center;
+  }
+  .status {
+    color: var(--f7-color-red);
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: all 320ms ease;
+  }
+  .status.offline {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section.prefs {
+    padding: 4px 16px 0;
+  }
+  .prefs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section.prefs .label {
+    color: var(--f7-text-color);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .mini-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--f7-card-bg-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .mini-btn .icon {
+    font-size: 18px;
+    color: var(--f7-theme-color);
+  }
+
+  /* 收藏温度列表 */
+  .favorite-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .fav-btn {
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: var(--f7-card-bg-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    color: var(--f7-text-color);
+    font-weight: 600;
+    user-select: none;
+  }
+  .fav-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .dial-card {
+    margin: 12px 12px 8px;
+    border-radius: 16px;
+  }
+  .dial-wrap {
+    position: relative;
+  }
+  .dial-svg {
+    display: block;
+    margin: 0 auto;
+    overflow: visible;
+  }
+  .dial-track {
+    stroke: var(--f7-theme-color-shade, #dde2e7);
+    stroke-width: 16;
+    fill: none;
+    opacity: 0.6;
+  }
+  .dial-progress {
+    stroke: url(#dialGradient);
+    stroke-width: 16;
+    fill: none;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
+    transition: stroke-dashoffset 200ms ease;
+    stroke-linecap: round;
+  }
+  .dial-hit-arc {
+    stroke: transparent;
+    stroke-width: 48;
+    fill: none;
+    cursor: grab;
+    touch-action: none;
+  }
+  .dial-hit-area {
+    fill: transparent;
+    stroke: none;
+    cursor: grab;
+    touch-action: none;
+  }
+  .ticks .tick {
+    stroke: var(--f7-text-color);
+    stroke-opacity: 0.25;
+    stroke-width: 2;
+  }
+  .ticks .tick-label {
+    font-size: 12px;
+    fill: var(--f7-text-color);
+    opacity: 0.6;
+    user-select: none;
+  }
+  .dial-knob {
+    fill: #fff;
+    stroke: var(--f7-theme-color, #3a86ff);
+    stroke-width: 3;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
+    transition: transform 150ms ease;
+  }
+  .dial-knob-hit {
+    fill: transparent;
+    cursor: grab;
+    touch-action: none;
+  }
+  /* 移除脉冲闪烁效果，保持稳定 */
+
+  .dial-center {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 52px;
+    text-align: center;
+  }
+  .dial-center .value {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--f7-text-color);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* 新控制布局 */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .grid-col {
+    display: flex;
+    justify-content: center;
+  }
+  .center-col {
+    transform: translateY(-2px);
+  }
+  .control-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--f7-card-bg-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transition:
+      transform 120ms ease,
+      box-shadow 200ms ease;
+  }
+  .control-circle .icon {
+    font-size: 28px;
+    color: var(--f7-theme-color);
+  }
+  .control-circle:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .control-pill {
+    min-width: 92px;
+    height: 48px;
+    border-radius: 24px;
+    background: var(--f7-card-bg-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.08),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transition:
+      transform 120ms ease,
+      box-shadow 200ms ease;
+  }
+  .control-pill .icon {
+    font-size: 22px;
+    color: var(--f7-text-color);
+  }
+  .control-pill:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .secondary-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .chip.action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 18px;
+    background: var(--f7-card-bg-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  }
+  .chip.action .icon {
+    font-size: 16px;
+  }
+  .chip.action.active {
+    background: var(--f7-theme-color);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+  .chip.action.active .icon { color: #fff; }
+  .chip.action.add {
+    color: var(--f7-theme-color);
+  }
+
+  .tertiary-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 14px;
+  }
+  .tertiary-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--f7-card-bg-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.08),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  .tertiary-circle .icon {
+    font-size: 22px;
+  }
+
+  /* 统一全局留白与卡片内节奏 */
+  .card-content-padding {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  /* --- Hob styles --- */
+  .hob-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 4px 8px 12px;
+    color: var(--f7-text-color);
+  }
+  .hob-header .hob-label {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+  }
+  .hob-header .hob-label.right {
+    justify-self: end;
+  }
+  /* 侧面视角容器：增加透视与倾斜模拟 */
+  .hob-surface.side {
+    position: relative;
+    background: linear-gradient(#f6f7f9, #eaedf2);
+    border-radius: 14px;
+    padding: 22px 16px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    perspective: 900px;
+  }
+  .burner {
+    position: relative;
+    height: 160px;
+    border-radius: 12px;
+    background: #f3f5f8;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.05),
+      0 8px 20px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    overflow: hidden;
+    transform: rotateX(14deg);
+    transform-origin: bottom center;
+  }
+  .burner:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -10px;
+    height: 18px;
+    filter: blur(10px);
+    background: radial-gradient(ellipse at 50% 0, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0) 60%);
+    pointer-events: none;
+  }
+  .stove-base {
+    position: absolute;
+    left: 50%;
+    bottom: 22px;
+    width: 120px;
+    height: 16px;
+    transform: translateX(-50%);
+    background: linear-gradient(#444a55, #262d36);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25) inset;
+  }
+  .nozzle {
+    position: absolute;
+    left: 50%;
+    bottom: 38px;
+    width: 32px;
+    height: 14px;
+    transform: translateX(-50%);
+    background: linear-gradient(#707b88, #4d5661);
+    border-radius: 8px;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.18);
+  }
+  /* 火焰（侧面） */
+  .flame-side {
+    position: absolute;
+    left: 50%;
+    bottom: 38px;
+    width: 120px;
+    height: 86px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    display: none;
+  }
+  .burner.on .flame-side {
+    display: block;
+  }
+  .tongue {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 22px;
+    height: 68px;
+    transform-origin: bottom center;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 240, 150, 0.75) 0%,
+      rgba(0, 168, 255, 0.85) 36%,
+      rgba(0, 120, 255, 0.7) 72%,
+      rgba(0, 100, 220, 0) 100%
+    );
+    filter: blur(0.6px);
+    border-radius: 16px 16px 10px 10px/70% 70% 40% 40%;
+    opacity: 0.95;
+    mix-blend-mode: screen;
+  }
+  .tongue.t1 {
+    --fs1: calc(0.45 + var(--flame-scale, 0) * 0.9);
+    animation: sideWaver1 1.6s ease-in-out infinite;
+  }
+  .tongue.t2 {
+    left: 42%;
+    width: 18px;
+    height: 60px;
+    --fs2: calc(0.42 + var(--flame-scale, 0) * 0.75);
+    animation: sideWaver2 1.9s ease-in-out infinite;
+    opacity: 0.9;
+  }
+  .tongue.t3 {
+    left: 58%;
+    width: 19px;
+    height: 62px;
+    --fs3: calc(0.44 + var(--flame-scale, 0) * 0.8);
+    animation: sideWaver3 2.2s ease-in-out infinite;
+    opacity: 0.88;
+  }
+  .glow {
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    width: 120px;
+    height: 40px;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at 50% 100%, rgba(0, 160, 255, 0.55), rgba(0, 110, 255, 0.18) 60%, rgba(0, 110, 255, 0) 70%);
+    filter: blur(8px);
+    opacity: 0.8;
+  }
+  /* 点火火花 */
+  .sparks {
+    position: absolute;
+    left: 50%;
+    bottom: 42px;
+    width: 54px;
+    height: 40px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    display: none;
+  }
+  .burner.igniting .sparks {
+    display: block;
+  }
+  .sparks i {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: radial-gradient(circle, #fff, #ffd36b);
+    border-radius: 50%;
+    opacity: 0;
+  }
+  .burner.igniting .sparks i:nth-child(1) {
+    left: 10px;
+    bottom: 10px;
+    animation: spark 420ms ease-out 40ms forwards;
+  }
+  .burner.igniting .sparks i:nth-child(2) {
+    left: 26px;
+    bottom: 16px;
+    animation: spark 420ms ease-out 80ms forwards;
+  }
+  .burner.igniting .sparks i:nth-child(3) {
+    left: 38px;
+    bottom: 8px;
+    animation: spark 420ms ease-out 0ms forwards;
+  }
+  @keyframes spark {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-14px) scale(0.4);
+      opacity: 0;
+    }
+  }
+  /* 熄火过渡：高度与透明度衰减 */
+  .burner.extinguish .flame-side .tongue {
+    animation: fadeDown 360ms ease-out forwards;
+  }
+  @keyframes fadeDown {
+    0% {
+      opacity: 1;
+      transform: translateX(-50%) scaleY(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) scaleY(0.1);
+    }
+  }
+  /* 侧面火焰摇曳 */
+  @keyframes sideWaver1 {
+    0% {
+      transform: translateX(-50%) rotate(-3deg) scaleY(var(--fs1, 0.8));
+    }
+    50% {
+      transform: translateX(calc(-50% + 2px)) rotate(3deg) scaleY(calc(var(--fs1, 0.8) * 1.08));
+    }
+    100% {
+      transform: translateX(-50%) rotate(-3deg) scaleY(var(--fs1, 0.8));
+    }
+  }
+  @keyframes sideWaver2 {
+    0% {
+      transform: translateX(-50%) rotate(2deg) scaleY(var(--fs2, 0.78));
+    }
+    50% {
+      transform: translateX(calc(-50% - 1px)) rotate(-4deg) scaleY(calc(var(--fs2, 0.78) * 1.1));
+    }
+    100% {
+      transform: translateX(-50%) rotate(2deg) scaleY(var(--fs2, 0.78));
+    }
+  }
+  @keyframes sideWaver3 {
+    0% {
+      transform: translateX(-50%) rotate(-2deg) scaleY(var(--fs3, 0.82));
+    }
+    50% {
+      transform: translateX(calc(-50% + 1px)) rotate(3deg) scaleY(calc(var(--fs3, 0.82) * 1.08));
+    }
+    100% {
+      transform: translateX(-50%) rotate(-2deg) scaleY(var(--fs3, 0.82));
+    }
+  }
+  /* 档位控制区 */
+  .hob-levels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .level-ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .lv-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--f7-card-bg-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    flex: 0 0 auto;
+  }
+  .lv-value {
+    min-width: 84px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--f7-text-color);
+  }
+  @media (max-width: 360px) {
+    .hob-levels {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* 旋钮样式 */
+  .hob-knobs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .knob-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .knob {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    background: var(--f7-card-bg-color);
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+    position: relative;
+    cursor: default;
+    touch-action: none;
+  }
+  .knob:active {
+    cursor: default;
+  }
+  .knob-face {
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #ffffff, #e9eef5);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  /* 仪表盘弧与刻度 */
+  .gauge-arc {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      from -60deg,
+      var(--f7-theme-color) 0deg,
+      var(--f7-theme-color) calc(var(--arc, 0) * 180deg),
+      rgba(0, 0, 0, 0.14) calc(var(--arc, 0) * 180deg),
+      rgba(0, 0, 0, 0.14) 180deg,
+      transparent 180deg
+    );
+    mask: radial-gradient(circle at 50% 50%, transparent 58%, black 59%);
+    -webkit-mask: radial-gradient(circle at 50% 50%, transparent 58%, black 59%);
+  }
+  .gauge-ticks i {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 2px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    transform-origin: bottom center;
+  }
+  .gauge-ticks .t0 {
+    transform: translate(-50%, -50%) rotate(-60deg) translateY(-34px);
+  }
+  .gauge-ticks .t1 {
+    transform: translate(-50%, -50%) rotate(-24deg) translateY(-34px);
+  }
+  .gauge-ticks .t2 {
+    transform: translate(-50%, -50%) rotate(12deg) translateY(-34px);
+  }
+  .gauge-ticks .t3 {
+    transform: translate(-50%, -50%) rotate(48deg) translateY(-34px);
+  }
+  .gauge-ticks .t4 {
+    transform: translate(-50%, -50%) rotate(84deg) translateY(-34px);
+  }
+  .gauge-ticks .t5 {
+    transform: translate(-50%, -50%) rotate(120deg) translateY(-34px);
+  }
+  .rotor {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 60px;
+    height: 60px;
+    transform: translate(-50%, -50%);
+    transform-origin: center;
+    transition: transform 80ms ease;
+    will-change: transform;
+  }
+  .rotor .pointer {
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 4px;
+    height: 24px;
+    background: var(--f7-theme-color);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+  .knob-label {
+    font-size: 13px;
+    color: var(--f7-text-color);
+    opacity: 0.9;
+  }
+  .knob-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 2px;
+  }
+  .knob-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--f7-card-bg-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  }
+  .knob-btn .icon {
+    font-size: 22px;
+  }
+  .knob-value {
+    width: 48px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+  }
+  @media (max-width: 360px) {
+    .knob-btn {
+      width: 44px;
+      height: 44px;
+    }
+    .knob-value {
+      width: 44px;
+    }
+  }
+
+  /* 品牌铭牌（居中下方） */
+  .hob-brand {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #fafbff, #e6ebf3);
+    color: #4a5565;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    font-size: 12px;
+    box-shadow:
+      0 3px 10px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    user-select: none;
+  }
+  .hob-brand:active {
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  }
+  /* Chart styles */
+  .chart-panel { margin: 8px 12px 16px; border-radius: 16px; }
+  .chart-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  /* 增加控件与图表的间距，避免重叠 */
+  .chart-panel .card-content { padding-top: 18px; }
+  .chart-controls { margin-bottom: 14px; }
+  .chart-controls .granularity { display: flex; gap: 8px; }
+  .chart-controls .range { display: inline-flex; align-items: center; gap: 6px; }
+  .chart-controls .range .range-sep { opacity: .6; }
+  .chart-controls .range input[type="date"] { min-width: 140px; font-variant-numeric: tabular-nums; }
+  .chart-container { width: 100%; height: 240px; }
+  .chart-container.larger { height: 300px; }
+  .chart-controls .crumb { margin-left: 8px; opacity: .8; font-weight: 600; }
+  @media (max-width: 420px) {
+    .chart-container.larger { height: 260px; }
+    .chart-controls { gap: 8px; }
+    .chart-controls .granularity { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .chart-controls .granularity .chip { flex: 0 0 auto; }
+  }
+</style>

@@ -97,6 +97,8 @@ window._ble_load_to_device_form_perform_auto = async(loading_config) => {
             }else{
                 mainView.router.navigate(`/mobile-app/device-type-ir?guid=${guid}&model=${model_name}`, {history:true});
             }
+        }else if(loading_config.button_group == 'Device Access'){
+            mainView.router.navigate(`/mobile-app/esp-active-page?guid=${guid}&model=${model_name}`, {history:true});
         }else{
             mainView.router.navigate(`/mobile-app/general-setting?page_type=${loading_config.page_type}`, {history:true});
         }

@@ -264,7 +264,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="syncToDevice()">{{_("Sync To Device")}}</div>
+                    <div class="button button-fill button-save" v-on:click="syncToDevice()">{{_("Sync To Device")}}({{isSyncSetting?_('Synced') : _('Not Synced')}})</div>
                   </div>
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
@@ -299,15 +299,7 @@
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
-          createFlatStatus: false,
-          flatLabel: 'Flat',
-          deviceName: '', // device name
-          deviceImage: '',
-          flatValue: '',
-          deviceNameTip: 'Please enter the device name', // device name tip
           index: 1, // control the step-content
-          activeStatus: false, //if choose the template, show the step-content
-          deviceType: 1, //1: door, 2: lift, 3: mailbox, 4: locker
           stepList: [
             {
               id: 1,
@@ -322,12 +314,6 @@
               relatedIndex: 2,
             },
           ],
-          flatList: ['1-32H', '1-31H'],
-          buttonGroupList: [],
-          isVia: false, //is 485 command
-          isIo: true, //is gpio command
-          isCom1: true,
-          isCom2: false,
           accessType: 1, //default Dynamic QR Code
           guestEmail: '',
           keyCardId: '',
@@ -351,6 +337,7 @@
           qrcode_random_16: '',
           deviceAccessMap: {},
           wifiConnected: false,
+          isSyncSetting : false,
         },
         watch: {
           postType: function(newVal, oldVal) {
@@ -385,7 +372,7 @@
           // console.log('settings', settings);
         },
         methods: {
-          init() {
+          async init() {
             setTimeout(() => {
               app.calendar.create({
                 inputEl: '#demo-calendar-date-time',
@@ -398,6 +385,12 @@
                 dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' },
               });
             }, 500);
+            try{
+              await this.requestMtuForBle();
+            }catch(error){
+              console.log('error', error);
+              app.dialog.alert(_(erp.get_log_description(error)))
+            }
           },
           generateRandom16() {
             const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
@@ -451,6 +444,14 @@
               _('Align your card (e.g., access card) with the D-card reader. Keep it steady until the device completes recognition.')
             );
           },
+          startQrcodeSetTimer(){
+            if(this.$qrcodeSetTimer){
+              clearInterval(this.$qrcodeSetTimer);
+            }
+            this.$qrcodeSetTimer = setInterval(() => {
+              this.checkGuestEmail();
+            }, 10 * 1000);
+          },
           checkGuestEmail() {
             console.log('checkGuestEmail', this.guestEmail);
             let md_str = md5(md5(this.guestEmail) + this.guestEmail + 'yoswit');
@@ -475,10 +476,6 @@
                 correctLevel: 0,
               }
             );
-          },
-          clickDeviceType(type) {
-            this.deviceType = type;
-            this.activeStatus = true;
           },
           activeStep() {
             this.stepList.forEach((item) => {
@@ -890,6 +887,7 @@
                 console.log('res', res);
                 //tindy the data 
                 let settingMap = res.data.data;
+                settingMap.password = '000000';
                 let settings = settingMap.settings;
                 let haveButtonGroup = false;
                 settings.forEach((item)=>{
@@ -1025,30 +1023,11 @@
                   return;
                 }
               }
+              this.startQrcodeSetTimer();
             }
             if (postStatus) {
               this.index = index;
               this.activeStep();
-            }
-          },
-          onInputFlat(value) {
-            this.flatValue = value;
-          },
-          changeVia() {
-            this.isVia = !this.isVia;
-            this.isIo = false;
-          },
-          changeIo() {
-            this.isIo = !this.isIo;
-            this.isVia = false;
-          },
-          changeCom(com) {
-            if (com == 1) {
-              this.isCom1 = !this.isCom1;
-              this.isCom2 = false;
-            } else if (com == 2) {
-              this.isCom2 = !this.isCom2;
-              this.isCom1 = false;
             }
           },
           formatDateTime(inputStr) {
@@ -1062,63 +1041,40 @@
             const binaryStr = atob(base64);
             return Uint8Array.from(binaryStr, (c) => c.charCodeAt(0)).buffer;
           },
-          async startPostBleData(mainIndex, subChunksIndex) {
-            let subChunkList = this.postBleDataList[mainIndex].subChunks;
-            for (let i in subChunkList) {
-              if (i == subChunksIndex) {
-                let hexString = arrayBufferToHex(subChunksIndex[i].item);
-                let commandLength = (hexString.length / 2 + 4).toString(16);
-                commandLength = commandLength.padStart(4, '0');
-                let command = `933400${commandLength}${iot_utils_to_little_endian_hex(list[j].offsetItem, 4)}${hexString}`;
-                console.log('command', command);
-                try {
-                  await ble.writeWithoutResponse(
-                    this.uuid,
-                    'ff80',
-                    'ff85',
-                    command.convertToBytes(),
-                    function (response) {
-                      console.log('response', response);
-                    },
-                    function (error) {
-                      console.log('error', error);
+          requestMtuForBle(){
+            return new Promise(async(resolve, reject) => {
+              if(deviceInfo.operatingSystem === 'ios'){
+                resolve(true);
+              }else{
+                try{
+                  await window.peripheral[guid].connect();
+                }catch(error){
+                  console.log('error', error);
+                  reject(error);
+                  return;
+                }
+                //request mtu
+                ble.requestMtu(
+                  window.peripheral[guid].prop.id,
+                  512,
+                  () => {
+                    console.log('request mtu success');
+                    resolve(true);
+                  },
+                  (error) => {
+                    if(error){
+                      reject(error);
                     }
-                  );
-                } catch (error) {}
-              }
-            }
-          },
-          checkSendBleIndex() {
-            let mianIndex = this.postBleDataListIndex;
-            //check current chunk index
-            let subChunkList = this.postBleDataList[mianIndex].subChunks;
-            let checkMainIsReady = true;
-            let chunkIndex = 0;
-            for (let i in subChunkList) {
-              if (subChunkList[i].status) {
-                checkMainIsReady = false;
-                chunkIndex = subChunkList[i].index;
-                break;
-              }
-            }
-            if (checkMainIsReady) {
-              this.postBleDataListIndex++;
-              this.postBleDataListChunkIndex = 0;
-            }
-          },
-          changeChunkIndex() {
-            this.postBleDataList.forEach((item) => {
-              if (item.index == this.postBleDataListIndex) {
-                item.subChunks.forEach((subItem) => {
-                  if (subItem.index == this.postBleDataListChunkIndex) {
-                    subItem.status = true;
                   }
-                });
+                );
               }
-            });
+            })
           },
           async postBleData(json, postHead) {
-            app.dialog.preloader(_('Connecting...'));
+            if(postHead == 0){
+              app.dialog.close();
+            }
+            this.postBleDataList = [];
             let uploadTimer = setTimeout(() => {
               app.dialog.close();
               app.dialog.alert(_('Upload Data Failed'));
@@ -1136,15 +1092,74 @@
               console.log('bytestoString', bytestoString);
               const md5str = SparkMD5.hashBinary(bytestoString);
               let sizeHex = iot_utils_to_little_endian_hex(fileData.length / 2, 4);
+              debugger
               let nameHex = convertToFixedSizeHex(`device_access`, 31);
               let readyData = `93330000340${'3'}${sizeHex}${md5str}${nameHex}`;
               let allData = `93330000340${'3'}${sizeHex}${fileData}${nameHex}`;
               try {
-                this.uuid = 'B5A17B2E-233C-F2C8-3C4A-95EDA537E4D5';
-                if (Capacitor.getPlatform() === 'android') {
-                  this.uuid = '24:EC:4A:09:49:CE';
-                }
                 let that = this;
+                this.uuid = window.peripheral[guid].prop.id;
+                app.dialog.preloader();
+                ble.startNotification(
+                  this.uuid,
+                  'ff80',
+                  'ff85',
+                  (rs) => {
+                    console.log('notification', rs);
+                    // debugger
+                    if (rs && that.iot_attempt == 0) {
+                      that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                      that.iot_attempt++;
+                    }
+                    if (rs && that.iot_attempt > 0) {
+                      let status = parseInt(rs.substring(10, 12), 16);
+                      console.log('status', status);
+                      if (status > 0 && status < 100) {
+                        
+                        // this.this_dialog.setProgress(status);
+                        // this.this_dialog.setText(`${_('Upload Data')}: ${status}%`);
+                      }
+                      if (status == 100) {
+                        app.dialog.close();
+                        clearTimeout(uploadTimer);
+                        resolve(true);
+                        window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
+                        if(postHead == 0){
+                          this.isSyncSetting = true;
+                          app.dialog.alert(_('Upload Data Success'));
+                        }
+                      }
+                      //if status > 100?reject error
+                      if (status > 100) {
+                        //disconnect the device
+                        app.dialog.close();
+                        window.peripheral[guid].disconnect();
+                        clearTimeout(uploadTimer);
+                        console.log('disconnect');
+                        reject(_('Upload Data Failed'));
+                        // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
+                      }
+                    }
+                  },
+                  function (error) {
+                    console.log(error);
+                  }
+                );
+                setTimeout(()=>{
+                  ble.writeWithoutResponse(
+                    this.uuid,
+                    'ff80',
+                    'ff85',
+                    readyData.convertToBytes(),
+                    function (response) {
+                      console.log(response);
+                    },
+                    function (error) {
+                      console.log(error);
+                    }
+                  );
+                },1000);
+                return;
                 try {
                   ble.connect(this.uuid, (peripheralData) => {
                     console.log('peripheralData', peripheralData);
@@ -1171,10 +1186,6 @@
                                 if (rs && that.iot_attempt > 0) {
                                   let status = parseInt(rs.substring(10, 12), 16);
                                   console.log('status', status);
-                                  // this.changeChunkIndex();
-                                  // this.startPostBleData(0,0);
-                                  // this.checkSendBleIndex();
-                                  // this.postBleDataListChunkIndex++;
                                   if (status > 0) {
                                     app.preloader.hide();
                                     this.this_dialog.setProgress(status);
@@ -1399,9 +1410,7 @@
           addSchedule() {
             mainView.router.navigate(`/mobile-app/esp-choose-schedule`);
           },
-          addButtonGroup() {
-            mainView.router.navigate(`/mobile-app/esp-device-button-group-list?device_type=${this.deviceType}`);
-          },
+          
           removeDuplicates(arr) {
             const seen = new Set();
             return arr.filter((item) => {
@@ -1414,7 +1423,11 @@
           },
         },
         computed: {},
-        beforeDestroy() {},
+        beforeDestroy() {
+          if(this.$qrcodeSetTimer){
+            clearInterval(this.$qrcodeSetTimer);
+          }
+        },
       });
     });
 
