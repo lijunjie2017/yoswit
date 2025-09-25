@@ -19,8 +19,7 @@
         <div class="top-status">
           <div
             class="top-item"
-            :class="{ danger: !wifiConnected }"
-            v-on:click="toggleOffline"
+            :class="{ danger: !wifiConnected, connected: wifiConnected }"
             :aria-label="wifiConnected ? _('WiFi connected') : _('WiFi disconnected')"
           >
             <i class="icon f7-icons">{{ wifiConnected ? 'wifi' : 'wifi_slash' }}</i>
@@ -287,12 +286,18 @@
             <div class="chart-controls">
               <div class="granularity">
                 <a class="chip action" :class="{ active: chartGranularity === 'day' }" v-on:click="setGranularity('day')">{{ _('Day') }}</a>
-                <a class="chip action" :class="{ active: chartGranularity === 'month' }" v-on:click="setGranularity('month')">{{ _('Month') }}</a>
-                <a class="chip action" :class="{ active: chartGranularity === 'year' }" v-on:click="setGranularity('year')">{{ _('Year') }}</a>
+                <a class="chip action" :class="{ active: chartGranularity === 'month' }" v-on:click="setGranularity('month')"
+                  >{{ _('Month') }}</a
+                >
+                <a class="chip action" :class="{ active: chartGranularity === 'year' }" v-on:click="setGranularity('year')"
+                  >{{ _('Year') }}</a
+                >
               </div>
               <div class="metrics">
                 <a class="chip action" :class="{ active: chartMetric === 'usage' }" v-on:click="setMetric('usage')">{{ _('Usage') }}</a>
-                <a class="chip action" :class="{ active: chartMetric === 'duration' }" v-on:click="setMetric('duration')">{{ _('Duration') }}</a>
+                <a class="chip action" :class="{ active: chartMetric === 'duration' }" v-on:click="setMetric('duration')"
+                  >{{ _('Duration') }}</a
+                >
               </div>
               <div class="range">
                 <input type="date" v-model="dateStart" v-on:change="onDateChange" />
@@ -319,7 +324,7 @@
     let showIrLearnIcon = false;
     let titleDiv = 'Device Control';
     let vueApp = null;
-    let { guid, sub_name, type,title } = $f7route.query;
+    let { guid, subdevice, type, title } = $f7route.query;
     titleDiv = title;
     $update();
     //let { guid, subdevice_name } = $f7route.query;
@@ -452,9 +457,104 @@
           this.setDateRangeForGranularity(this.chartGranularity);
           // 初始数据种子
           this.chartDataSeed = Math.floor(Math.random() * 10000);
-          this.viewportWidth = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 0;
+          this.viewportWidth = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 0;
+          //初始化设备状态
+          this.initDeviceStatus();
         },
         methods: {
+          async initDeviceStatus() {
+            if (this.deviceType == 1) {
+              this.initSmartWaterHeaterStatus();
+            } else if (this.deviceType == 2) {
+              this.initSmartStoveStatus();
+            }
+          },
+          initSmartWaterHeaterStatus() {
+            //
+          },
+          async initSmartStoveStatus() {
+            //get config
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let subdeviceMap = subdevices.find((item) => item.name == subdevice);
+            if (!subdeviceMap) {
+              app.dialog.alert(_('Subdevice not found'));
+              return;
+            }
+            try {
+              let config = JSON.parse(subdeviceMap.config);
+              if (!config) {
+                app.dialog.alert(_('Config not found'));
+                return;
+              }
+              let deviceId = config.DeviceId;
+              if (!deviceId) {
+                app.dialog.alert(_('Device id not found'));
+                return;
+              }
+              if (!window.towngasSoapForDevice) {
+                window.towngasSoapForDevice = new window.towngasSoap();
+              }
+              //get state
+              let state = await window.towngasSoapForDevice.getSmartStoveOnlineStatus(deviceId);
+              console.log('state', state);
+              //通过分析设备状态信息
+              const stateMap = state.data.message.data.decrypted_data;
+              if (!stateMap['Data']) {
+                //空字符串，代表不能获取到信息，直接当做设备不在线
+                this.isOffline = true;
+                return;
+              } else {
+                //核对设备的状态
+                /*
+                AfterCKXHJSQ: 0 后炉长开熄火计时器 固定值：FF
+                AfterCookModal: 0  后炉头烹饪模式 固定值：FF
+                AfterFault: 0 后炉头故障 固定值：FF
+                AfterFireSet: 0 后炉头火力设定 固定值：FF
+                AfterKnobPosition: 0 后炉头旋钮位置 固定值：FF
+                AfterOperState: 0 后炉头操作狀態 固定值：FF
+                AfterRemainder: 0 后炉头计时器剩余时间 固定值：FFFF
+                AfterTemSeting: 0 后炉头温度设定 固定值：FF
+                BBCueCookModal: 0 烧烤炉烹饪模式 01=计时器, 02=煮饭
+                BBCueFault: 0 烧烤炉故障 00～FE ※如果没有故障，应为AA。
+                BBCueFireSet: 0 烧烤炉火力设定 固定值：FF
+                BBCueKnobPosition: 0 烧烤炉旋钮位置 00 =关闭（灭火位置），01 =打开（点火位置）
+                BBCueOperState: 0 烧烤炉操作状态 00 =停止，01 =故障停止，02 =完成并停止，03 =运行中
+                BBCueRemainder: 0 烧烤炉计时器剩余时间 【1秒单位】 0～3600秒 （0x0000～0x0E10）
+                IsCanOper: false
+                IsGuZhang: true
+                LeftCKXHJSQ: 0 左炉长开熄火计时器 单位 秒 0〜10800秒 （0x0000〜0x2A30）
+                LeftCookModal: 1  左炉头烹饪模式  01 =手动（自动判断），02 =计时器，03 =温度设置，04 =温度设置和计时器，05 =煲水，06 =煲水和计时器
+                LeftFault: 255  左炉头故障 00～FE ※如果没有故障，应为AA。
+                LeftFireSet: 255  左炉头火力设定  固定值：FF
+                LeftKnobPosition: 0  左炉头旋钮位置 00 =关闭（灭火位置），01 =打开（点火位置）
+                LeftOperState: 0  左炉头操作状态 00 =停止，01 =故障停止，02 =完成并停止，03 =运行中
+                LeftRemainder: 0 左炉头计时剩余时间 [1秒单位] 0〜14400秒 （0x0000〜0x3840）
+                LeftTemSeting: 255  左炉头温度设定  [1℃单位] 160℃〜200℃（0xA0〜0xC8）
+                MAC: "78020415000000"
+                OnLine: 1 状态 0 =离线，1 =在线
+                RightCKXHJSQ: 0 右炉长开熄火计时器 0〜10800秒 （0x0000〜0x2A30）
+                RightCookModal: 1 右炉头烹饪模式 01 =手动（自动判断），02 =计时器，03 =温度设置，04 =温度设置和计时器，05 =煲水，06 =煲水和计时器
+                RightFault: 255 右炉头故障 00～FE ※如果没有故障，应为AA。
+                RightFireSet: 255  右炉头火力设定 固定值：FF
+                RightKnobPosition: 0 右炉头旋鈕位置 00 =关闭（灭火位置），01 =打开（点火位置）
+                RightOperState: 0  右炉头操作状态 00 =停止，01 =故障停止，02 =完成并停止，03 =运行中
+                RightRemainder: 0 [1秒单位] 0〜14400秒 （0x0000〜0x3840）
+                RightTemSeting: 255 固定值：FF
+                State: 0  状态  00=关, 01= 开
+                UpdateTime: "2025-09-15 15:21:21"
+                VoltageState: 0  电池电压状态  00 =正常，01 =电池更换指示灯（闪烁），02 =電池更換指示燈（長亮）
+                */
+               if(stateMap['Data']['OnLine'] == 1){
+                this.isOffline = false;
+               }else{
+                this.isOffline = true;
+               }
+              }
+            } catch (error) {
+              app.dialog.alert(error);
+              return;
+            }
+          },
           // --- Chart Range Helpers ---
           setDateRangeForGranularity(g) {
             const today = new Date();
@@ -768,7 +868,9 @@
           },
           disposeChart() {
             if (this.chartInstance && this.chartInstance.dispose) {
-              try { this.chartInstance.dispose(); } catch(e) {}
+              try {
+                this.chartInstance.dispose();
+              } catch (e) {}
             }
             this.chartInstance = null;
           },
@@ -798,11 +900,11 @@
             const dense = count > (this.chartGranularity === 'day' ? 20 : this.chartGranularity === 'month' ? 18 : 10);
             const showSlider = dense;
             const barWidth = small || dense ? 16 : 26;
-            const showLabels = (this.chartGranularity === 'day') && count <= 30;
+            const showLabels = this.chartGranularity === 'day' && count <= 30;
             // 主题色（用于强调）
             let themeColor = '#3a86ff';
             try {
-              const root = (typeof document !== 'undefined') ? document.documentElement : null;
+              const root = typeof document !== 'undefined' ? document.documentElement : null;
               const v = root ? getComputedStyle(root).getPropertyValue('--f7-theme-color') : '';
               if (v && v.trim()) themeColor = v.trim();
             } catch (e) {}
@@ -816,11 +918,14 @@
             };
             return {
               backgroundColor: 'transparent',
-              tooltip: { trigger: 'axis', valueFormatter: (v) => {
-                if (isUsage) return `${v}`;
-                const val = Number(v);
-                return `${decimals != null ? val.toFixed(decimals) : val} ${yName}`;
-              } },
+              tooltip: {
+                trigger: 'axis',
+                valueFormatter: (v) => {
+                  if (isUsage) return `${v}`;
+                  const val = Number(v);
+                  return `${decimals != null ? val.toFixed(decimals) : val} ${yName}`;
+                },
+              },
               grid: { left: 16, right: 16, top: 40, bottom: showSlider ? 36 : 14, containLabel: true },
               xAxis: {
                 type: 'category',
@@ -831,10 +936,12 @@
                 axisLabel: { interval: 'auto', rotate: dense ? 40 : 0, hideOverlap: true, fontSize: small ? 10 : 12 },
               },
               yAxis: { type: 'value', min: 0, name: yName, nameTextStyle: { padding: [0, 0, 0, 6] } },
-              dataZoom: showSlider ? [
-                { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true, throttle: 50 },
-                { type: 'slider', height: 16, bottom: 8, left: 8, right: 8 }
-              ] : [],
+              dataZoom: showSlider
+                ? [
+                    { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: true, throttle: 50 },
+                    { type: 'slider', height: 16, bottom: 8, left: 8, right: 8 },
+                  ]
+                : [],
               series: [
                 {
                   type: 'bar',
@@ -968,9 +1075,14 @@
     align-items: center;
     justify-content: center;
   }
-  .top-item .material-icons { transform: translateY(1px); }
+  .top-item .material-icons {
+    transform: translateY(1px);
+  }
   .top-item.danger {
     color: var(--f7-color-red);
+  }
+  .top-item.connected {
+    color: var(--f7-color-green);
   }
   .top-item.muted {
     color: var(--f7-color-gray, #9e9e9e);
@@ -1196,7 +1308,11 @@
     border-radius: 18px;
     background: var(--f7-card-bg-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      box-shadow 160ms ease,
+      transform 120ms ease;
   }
   .chip.action .icon {
     font-size: 16px;
@@ -1689,12 +1805,40 @@
       inset 0 0 0 1px rgba(0, 0, 0, 0.1);
   }
   /* Chart styles */
-  .chart-panel { margin: 8px 12px 16px; border-radius: 16px; }
-  .chart-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .chart-controls .granularity { display: flex; gap: 8px; }
-  .chart-controls .metrics { display: flex; gap: 8px; }
-  .chart-controls .range { display: inline-flex; align-items: center; gap: 6px; }
-  .chart-controls .range .range-sep { opacity: .6; }
-  .chart-controls .range input[type="date"] { min-width: 140px; font-variant-numeric: tabular-nums; }
-  .chart-container { width: 100%; height: 240px; }
+  .chart-panel {
+    margin: 8px 12px 16px;
+    border-radius: 16px;
+  }
+  .chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .chart-controls .granularity {
+    display: flex;
+    gap: 8px;
+  }
+  .chart-controls .metrics {
+    display: flex;
+    gap: 8px;
+  }
+  .chart-controls .range {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-controls .range .range-sep {
+    opacity: 0.6;
+  }
+  .chart-controls .range input[type='date'] {
+    min-width: 140px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-container {
+    width: 100%;
+    height: 240px;
+  }
 </style>

@@ -1552,13 +1552,26 @@ const renderMainButton = (props, {
 		}, 1);
 	};
 	//this is the TGT Smart Control flow
-	const tgt_smart_control_click_onoff = (kitem)=>{
+	const tgt_smart_control_click_onoff = async(kitem)=>{
 		console.log("tgt_smart_control_click_onoff",kitem);
 		if(kitem.device_status == 0){
 			kitem.device_status = 1;
 		}else{
 			kitem.device_status = 0; 
 		} 
+		if(!window.towngasSoapForDevice){
+		    window.towngasSoapForDevice = new window.towngasSoap();
+		}
+		try{
+		    let config = kitem.config;
+		    configMap = JSON.parse(config);
+		    let id = configMap['DeviceId'];
+		    let onlineCode = configMap['OnlineCode'];
+		   await window.towngasSoapForDevice.controlSmartController(id,onlineCode,kitem.device_status) 
+		}catch(error){
+		    console.log("error",error);
+		    app.dialog.alert(error)
+		}
 		$update();
 	}
 	//this bacnet flow

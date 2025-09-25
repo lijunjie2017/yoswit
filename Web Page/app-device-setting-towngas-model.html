@@ -23,19 +23,19 @@
         >
           <ul>
             <li class="device-type-list-item">
-              <a v-on:click="clickDeviceType(2)">
+              <a v-on:click="clickDeviceType(2,_('Smart Water Heater'),75)">
                 <img src="https://dev.mob-mob.com/files/heatWater.png" />
                 <span>{{_('Smart Water Heater')}}</span>
               </a>
             </li>
             <li class="device-type-list-item">
-              <a v-on:click="clickDeviceType(1)">
+              <a v-on:click="clickDeviceType(1,_('Smart Controller'),75)">
                 <img src="https://dev.mob-mob.com/files/smartControler.png" />
                 <span>{{_('Smart Controller')}}</span>
               </a>
             </li>
             <li class="device-type-list-item">
-              <a v-on:click="clickDeviceType(3)">
+              <a v-on:click="clickDeviceType(3,_('Smart Stove'),78)">
                 <img src="https://dev.mob-mob.com/files/Stove.png" />
                 <span>{{_('Smart Stove')}}</span>
               </a>
@@ -54,111 +54,8 @@
             </div>
           </div>
           <div class="tabs">
-            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
-              <div class="card">
-                <div class="card-content card-content-padding" style="padding-top: 0">
-                  <!-- 扫码指导界面 -->
-              <div class="scan-instruction-container" v-if="!showConnecting">
-                <!-- 图标区域 -->
-                <div class="instruction-icon">
-                  <div class="qr-icon">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                      <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                      <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                      <rect x="5" y="5" width="3" height="3" fill="currentColor"/>
-                      <rect x="16" y="5" width="3" height="3" fill="currentColor"/>
-                      <rect x="5" y="16" width="3" height="3" fill="currentColor"/>
-                      <path d="M14 14h7v7h-7z" stroke="currentColor" stroke-width="2"/>
-                      <rect x="16" y="16" width="3" height="3" fill="currentColor"/>
-                    </svg>
-                  </div>
-                </div>
-                
-                <!-- 标题 -->
-                <div class="instruction-title">
-                  <h2>{{_('Scan Device QR Code')}}</h2>
-                </div>
-                
-                <!-- 说明文字 -->
-                <div class="instruction-text">
-                  <p>{{_('Please confirm the gateway has entered the configuration mode before scanning.')}}</p>
-                  <div class="instruction-steps">
-                    <div class="step-item">
-                      <span class="step-number">1</span>
-                      <span class="step-text">{{_('Long press the gateway Reset button for 2 seconds to WIFI.')}}</span>
-                    </div>
-                    <div class="step-item">
-                      <span class="step-number">2</span>
-                      <span class="step-text">{{_('Put the gateway into configuration mode.')}}</span>
-                    </div>
-                    <div class="step-item">
-                      <span class="step-number">3</span>
-                      <span class="step-text">{{_('Click next to start scanning.')}}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- 按钮区域 -->
-                <div class="instruction-actions">
-                  <button class="scan-button" v-on:click="startQrcode()">
-                    <span class="button-text">{{_("Start Scanning")}}</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- 连接过程界面 -->
-              <div class="connecting-container" v-if="showConnecting">
-                <div class="connecting-animation">
-                  <!-- 手机图标 -->
-                  <div class="device-icon phone-icon">
-                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                      <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                  
-                  <!-- 连接动画 -->
-                  <div class="connection-line">
-                    <div class="connection-waves">
-                      <div class="wave wave-1"></div>
-                      <div class="wave wave-2"></div>
-                      <div class="wave wave-3"></div>
-                    </div>
-                  </div>
-                  
-                  <!-- 网关图标 -->
-                  <div class="device-icon gateway-icon">
-                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="2" y="8" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
-                      <path d="M6 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      <path d="M14 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="8" cy="16" r="1" fill="currentColor"/>
-                      <circle cx="12" cy="16" r="1" fill="currentColor"/>
-                      <circle cx="16" cy="16" r="1" fill="currentColor"/>
-                      <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                  </div>
-                </div>
-                
-                <!-- 连接状态文字 -->
-                <div class="connecting-status">
-                  <h3>{{_('Connecting to Gateway')}}</h3>
-                  <p>{{connectingMessage}}</p>
-                  <div class="loading-dots">
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                  </div>
-                </div>
-              </div>
-                </div>
-              </div>
-              
-            </div>
-            
             <!-- 第二步：智能控制器配对 -->
-            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
               <div class="card">
                 <div class="card-content card-content-padding" style="padding-top: 0">
                   <!-- 扫描智能控制器指导 -->
@@ -179,16 +76,16 @@
                     </div>
                     
                     <div class="instruction-title">
-                      <h2>{{_('Scan Smart Controller')}}</h2>
+                      <h2>{{_('Scan ')}} {{deviceTitle}}</h2>
                     </div>
                     
                     <div class="instruction-text">
-                      <p>{{_('Please scan the QR code on the smart controller to continue pairing.')}}</p>
+                      <p>{{_('Please scan the QR code on the ')}} {{deviceTitle}} {{_('to continue pairing.')}}</p>
                     </div>
                     
                     <div class="instruction-actions">
                       <button class="scan-button" v-on:click="scanController()">
-                        <span class="button-text">{{_("Scan Controller")}}</span>
+                        <span class="button-text">{{_("Scan Device")}}</span>
                       </button>
                     </div>
                   </div>
@@ -216,11 +113,11 @@
                     
                     <!-- 说明文字 -->
                     <div class="instruction-text">
-                      <p>{{_('Please follow the steps below to put the smart controller into pairing mode.')}}</p>
+                      <p>{{_('Please follow the steps below to put the ')}} {{deviceTitle}} {{_('into pairing mode.')}}</p>
                       <div class="instruction-steps">
                         <div class="step-item">
                           <span class="step-number">1</span>
-                          <span class="step-text">{{_('Connect the smart controller to power. If the blue indicator shows green flashing, unplug and reconnect the power.')}}</span>
+                          <span class="step-text">{{_('Connect the ')}} {{deviceTitle}} {{_('to power. If the blue indicator shows green flashing, unplug and reconnect the power.')}}</span>
                         </div>
                         <div class="step-item">
                           <span class="step-number">2</span>
@@ -228,7 +125,7 @@
                         </div>
                         <div class="step-item">
                           <span class="step-number">3</span>
-                          <span class="step-text">{{_('If pairing is successful, the smart controller indicator will show blue.')}}</span>
+                          <span class="step-text">{{_('If pairing is successful, the ')}} {{deviceTitle}} {{_('indicator will show blue.')}}</span>
                         </div>
                       </div>
                     </div>
@@ -236,9 +133,6 @@
                     <!-- 按钮区域 -->
                     <div class="instruction-actions">
                       <div class="action-buttons">
-                        <button class="retry-button" v-on:click="retryPairing()">
-                          {{_("Retry")}}
-                        </button>
                         <button class="continue-button" v-on:click="continuePairing()">
                           {{_("Continue")}}
                         </button>
@@ -248,50 +142,7 @@
                 </div>
               </div>
             </div>
-            <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
-              <div class="card">
-                <div class="card-content card-content-padding" style="padding-top: 0">
-                  <div>
-                    <div class="list">
-                      <ul>
-                        <li class="item-content item-input no-padding-left">
-                          <div class="item-inner no-padding-right">
-                            <div class="item-title item-label" lang="en" style="font-size: 16px;">Ssid <span class="text-color-red" style="font-size: 12px;">( {{_(wifi_tip)}} )</span></div>
-                            <div class="item-input-wrap">
-                              <input type="text" name="ssid" v-model="setting.ssid" :placeholder="_('SSID')" required validate />
-                            </div>
-                          </div>
-                        </li>
-                        <li class="item-content item-input no-padding-left">
-                          <div class="item-inner no-padding-right">
-                            <div class="item-title item-label" lang="en" style="font-size: 16px;">{{_('Password')}}</div>
-                            <div class="item-input-wrap">
-                              <input
-                                type="text"
-                                name="password"
-                                v-model="setting.ssid_password"
-                                :placeholder="_('Password')"
-                                required
-                                validate
-                              />
-                            </div>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div class="row" style="margin-bottom: 15px; margin-top: 15px">
-                    <div class="col">
-                      <div class="button button-fill button-save" v-on:click="toTab(2)">{{_("Previous")}}</div>
-                    </div>
-                    <div class="col">
-                      <div class="button button-fill button-save" v-on:click="toTab(4)">{{_("Next")}}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <div class="card">
                 <div class="card-content card-content-padding" style="padding-top: 0">
                   <div>
@@ -329,7 +180,7 @@
                   </div>
                   <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                     <div class="col">
-                      <div class="button button-fill button-save" v-on:click="toTab(3)">{{_("Previous")}}</div>
+                      <div class="button button-fill button-save" v-on:click="toTab(1)">{{_("Previous")}}</div>
                     </div>
                     <div class="col">
                       <div class="button button-fill button-save" v-on:click="saveErp">{{_("Complete")}}</div>
@@ -361,9 +212,11 @@
       vueApp = new Vue({
         el: page.el.querySelector('#vue-app'),
         data: {
+          deviceTitle : '',
           index: 1, // control the step-content
           activeStatus: false, //if choose the template, show the step-content
           deviceType: 1,
+          eqType: '',//smart controller 77  热水器75  wifi灶 78  ccu灶 76    烟机74
           showConnecting: false, // 是否显示连接过程
           connectingMessage: '', // 连接状态信息
           showControllerPairing: false, // 是否显示智能控制器配对界面
@@ -379,19 +232,7 @@
               name: '2',
               isActive: false,
               relatedIndex: 2,
-            },
-            {
-              id: 3,
-              name: '3',
-              isActive: false,
-              relatedIndex: 3,
-            },
-            {
-              id: 4,
-              name: '4',
-              isActive: false,
-              relatedIndex: 4,
-            },
+            }
           ],
           setting: {
             ssid: '',
@@ -402,7 +243,10 @@
           wifi_tip: 'Device supports 2.4 GHz Wi-Fi only',
           postTitle : '',
           profileRoom : [],
-          deviceId : ''
+          deviceId : '',
+          deviceList : [],
+          rawValueList : [],
+          deviceConfigMap : {}
         },
         computed: {},
         watch: {},
@@ -414,9 +258,11 @@
           initProfileData() {
             this.profileRoom = cloneDeep(erp.info.profile.profile_room);
           },
-          clickDeviceType(type) {
+          clickDeviceType(type,title,eqType) {
             this.deviceType = type;
             this.activeStatus = true;
+            this.deviceTitle = title;
+            this.eqType = eqType;
             this.toTab(1);
           },
           toTab(index) {
@@ -468,7 +314,7 @@
                 
                 console.log('Scanned QR Code:', result);
                 const rawValue = result.rawValue;
-                
+                this.rawValue = rawValue.split(",");
                 // 显示扫描成功提示
                 const successToast = app.toast.create({
                   text: _('QR Code scanned successfully!'),
@@ -497,13 +343,14 @@
             app.dialog.preloader();
             let postData = {
               title: this.postTitle,
-              guid: this.deviceId,
+              guid: this.deviceId, 
               model: this.deviceType == 1 ? 'TGT-001' : this.deviceType == 2 ? 'TGT-002' : 'TGT-003',
               device_mode: 'TGT Smart Control',
               peripheral: md5(this.deviceId),
               device_button_group: this.deviceType == 1 ?'TGT ONOFF GANG1' : this.deviceType == 2 ? 'TGT WATER HEATER' : 'TGT STOVE',
               parent: erp.info.profile.name,
               batch: 'YO0012',
+              config: JSON.stringify(this.deviceConfigMap),
               firmware: 0,
               profile_room: $('select[name="profile_room"]').val(),
               password: '000000',
@@ -605,6 +452,7 @@
                 
                 console.log('Scanned Controller QR Code:', result);
                 const rawValue = result.rawValue;
+                this.rawValueList = rawValue.split(",");
                 this.deviceId = md5(rawValue);
                 this.postTitle = rawValue.split(",")[0];
                 // 显示扫描成功提示
@@ -618,12 +466,18 @@
                 
                 // 停止扫描
                 stop();
-                
-                // 显示配对指导界面
-                this.showControllerPairing = true;
+                try{
+                  //获取在线设备
+                  await this.getOnlineDevice();
+                  // 显示配对指导界面
+                  this.showControllerPairing = true;
+                }catch(error){
+                  console.error('Device QR Scan Error:', error);
+                  app.dialog.alert(_(error));
+                }
               },
               onError: (error) => {
-                console.error('Controller QR Scan Error:', error);
+                console.error('Device QR Scan Error:', error);
                 app.dialog.alert(_('Failed to start scanner. Please try again.'));
               }
             })
@@ -641,9 +495,37 @@
             });
             toast.open();
           },
-
+          async getOnlineDevice() {
+            return new Promise(async (resolve, reject) => {
+              try{
+                const towngasSoap = new window.towngasSoap();
+                await towngasSoap.login();
+                const deviceList = await towngasSoap.getDeviceList();
+                console.log(deviceList);
+                this.deviceList = [];
+                deviceList.forEach(item => {
+                  let list = item.EquList;
+                  list.forEach(deviceItem => {
+                    this.deviceList.push(deviceItem);
+                  });
+                });
+                console.log("this.deviceList", this.deviceList);
+                resolve(true);
+              }catch(error){
+                reject(error)
+                return;
+              }
+            });
+          },
           // 继续配对（确认按钮）
-          continuePairing() {
+          async continuePairing() {
+            //配对设备，需要通过xuliehao配对是否已经在线，如果不在线，需要提示用户，否则，下一步
+            let device = this.deviceList.find(item => item.xuliehao == this.rawValueList[1] && item.huohao == this.rawValueList[2] && item.EquType == this.eqType);
+            if(!device){
+              app.dialog.alert(_('Device not found. Please scan the device QR code again.'));
+              return;
+            }
+            this.deviceConfigMap = device;
             const toast = app.toast.create({
               text: _('Pairing completed successfully!'),
               position: 'center',
@@ -654,10 +536,10 @@
 
             // 跳转到第三步或完成配置
             setTimeout(() => {
-              if (this.stepList.length > 2) {
-                this.toTab(3);
+              if (this.stepList.length > 1) {
+                this.toTab(2);
               } else {
-                // 如果没有第三步，直接完成配置
+                // 如果没有第2步，直接完成配置
                 this.completeConfiguration();
               }
             }, 1500);

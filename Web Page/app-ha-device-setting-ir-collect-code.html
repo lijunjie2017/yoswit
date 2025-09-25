@@ -55,6 +55,96 @@
             </div>
           </div>
 
+          <!-- Combination Rules & Filters -->
+          <div class="card">
+            <div class="card-content card-content-padding">
+              <div class="block-title">{{ _('Rule Generator & Filters') }}</div>
+              <div class="list no-hairlines-md">
+                <ul>
+                  <li class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title">{{ _('Modes') }}</div>
+                      </div>
+                      <div class="chips">
+                        <label class="chip"><input type="checkbox" v-model="rules.modes.cool" /><div class="chip-label">Cool</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.modes.heat" /><div class="chip-label">Heat</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.modes.fan" /><div class="chip-label">Fan</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.modes.auto" /><div class="chip-label">Auto</div></label>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title">{{ _('Temperature Range (°C)') }}</div>
+                      </div>
+                      <div class="item-input-wrap display-flex align-items-center" style="gap:8px">
+                        <input type="number" v-model.number="rules.temp.min" min="16" max="30" style="width:80px"/>
+                        <span>-</span>
+                        <input type="number" v-model.number="rules.temp.max" min="16" max="30" style="width:80px"/>
+                        <span class="text-color-gray">{{ _('Applied to Cool & Heat') }}</span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title">{{ _('Fan Speeds') }}</div>
+                      </div>
+                      <div class="chips">
+                        <label class="chip"><input type="checkbox" v-model="rules.fan.auto" /><div class="chip-label">Auto</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.fan.l1" /><div class="chip-label">1</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.fan.l2" /><div class="chip-label">2</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.fan.l3" /><div class="chip-label">3</div></label>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content">
+                    <div class="item-inner">
+                      <div class="item-title-row">
+                        <div class="item-title">{{ _('Swing (Auto oscillation)') }}</div>
+                      </div>
+                      <div class="chips">
+                        <label class="chip"><input type="checkbox" v-model="rules.swing.on" /><div class="chip-label">On</div></label>
+                        <label class="chip"><input type="checkbox" v-model="rules.swing.off" /><div class="chip-label">Off</div></label>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div class="row" style="margin-top:8px">
+                <div class="col-50">
+                  <button class="button button-fill" v-on:click="generateByRules()">{{ _('Generate List') }}</button>
+                </div>
+                <div class="col-50">
+                  <button class="button button-outline" v-on:click="clearTemp()">{{ _('Clear Temp') }}</button>
+                </div>
+              </div>
+
+              <div class="list simple-list" style="margin-top:8px">
+                <ul>
+                  <li>
+                    <div class="segmented segmented-strong">
+                      <button class="button button-outline" :class="{'button-active': filters.mode==='all'}" v-on:click="setModeFilter('all')">All</button>
+                      <button class="button button-outline" :class="{'button-active': filters.mode==='cool'}" v-on:click="setModeFilter('cool')">Cool</button>
+                      <button class="button button-outline" :class="{'button-active': filters.mode==='heat'}" v-on:click="setModeFilter('heat')">Heat</button>
+                      <button class="button button-outline" :class="{'button-active': filters.mode==='fan'}" v-on:click="setModeFilter('fan')">Fan</button>
+                      <button class="button button-outline" :class="{'button-active': filters.mode==='auto'}" v-on:click="setModeFilter('auto')">Auto</button>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="segmented segmented-strong">
+                      <button class="button button-outline" :class="{'button-active': filters.status==='all'}" v-on:click="setStatusFilter('all')">{{ _('All') }}</button>
+                      <button class="button button-outline" :class="{'button-active': filters.status==='pending'}" v-on:click="setStatusFilter('pending')">{{ _('Pending') }}</button>
+                      <button class="button button-outline" :class="{'button-active': filters.status==='completed'}" v-on:click="setStatusFilter('completed')">{{ _('Completed') }}</button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <!-- Empty State -->
           <div class="card" v-else>
             <div class="card-content card-content-padding text-align-center">
@@ -71,7 +161,10 @@
           <div class="card">
             <div class="card-header display-flex justify-content-between" v-if="pageMode === 'detail'" v-on:click="backToList()">
               <i class="icon material-icons">reply</i>
-              <i class="icon material-icons" v-on:click="downloadCode()">download</i>
+              <div class="display-flex align-items-center" @click.stop>
+                <i class="icon material-icons" style="margin-right:8px" v-on:click="exportJson()">save</i>
+                <i class="icon material-icons" v-on:click="downloadCode()">download</i>
+              </div>
             </div>
             <div class="card-content card-content-padding">
               <div class="block-title">{{ _('Air Conditioner Brand') }}</div>
@@ -110,8 +203,8 @@
               <div class="list">
                 <ul>
                   <li
-                    v-for="(item, index) in irCodeItems"
-                    :key="index"
+                    v-for="(item, index) in filteredIrCodeItems"
+                    :key="item.id || index"
                     :class="['item-content', item.status === 'completed' ? 'bg-success-light' : item.status === 'collecting' ? 'bg-warning-light' : '']"
                   >
                     <div class="item-media">
@@ -122,7 +215,7 @@
                     <div class="item-inner">
                       <div class="item-content-wrapper">
                         <div class="item-text-content">
-                          <div class="item-title">{{ item.name }}</div>
+                          <div class="item-title ir-title" :title="item.name">{{ item.name }}</div>
                           <div v-if="item.instruction" class="item-subtitle">{{ item.instruction }}</div>
                         </div>
                         <div class="item-action">
@@ -131,7 +224,7 @@
                             class="button button-small button-fill button-round bg-theme"
                             :class="item.status === 'collecting' ? 'button-preloader button-loading' : ''"
                             :disabled="item.status === 'collecting' || isCollecting"
-                            v-on:click="startCollecting(index)"
+                            v-on:click="startCollectingById(item.id)"
                           >
                             <span class="preloader preloader-white" v-if="item.status === 'collecting'"></span>
                             {{ item.status === 'collecting' ? _('Collecting...') : _('Collect') }}
@@ -139,7 +232,7 @@
                           <button
                             v-if="item.status === 'completed'"
                             class="button button-small button-round button-outline bg-theme"
-                            v-on:click="testCode(index)"
+                            v-on:click="testCodeById(item.id)"
                           >
                             {{ _('Test') }}
                           </button>
@@ -400,6 +493,15 @@
               code: null,
             },
           ],
+          // 组合规则与过滤器
+          rules: {
+            modes: { cool: true, heat: true, fan: true, auto: true },
+            temp: { min: 16, max: 30 },
+            fan: { auto: true, l1: true, l2: true, l3: true },
+            swing: { on: true, off: true },
+          },
+          filters: { mode: 'all', status: 'all' },
+          irLearnedCode: '',
         },
         mounted() {
           Vue.prototype.$saveErp = this.saveErp;
@@ -412,6 +514,15 @@
           },
           completedCount() {
             return this.irCodeItems.filter((item) => item.status === 'completed').length;
+          },
+          filteredIrCodeItems() {
+            const modeFilter = this.filters.mode;
+            const statusFilter = this.filters.status;
+            return this.irCodeItems.filter((it) => {
+              const modeOk = modeFilter === 'all' ? true : (it.meta && it.meta.mode === modeFilter) || (it.meta && it.meta.type === 'power' && modeFilter === 'all');
+              const statusOk = statusFilter === 'all' ? true : it.status === statusFilter;
+              return modeOk && statusOk;
+            });
           },
           progressPercentage() {
             return this.totalCount > 0 ? Math.round((this.completedCount / this.totalCount) * 100) : 0;
@@ -452,10 +563,10 @@
                     },
                   ];
                 } else {
-                  this.startNewCollection();
+                  if (!this.loadTemp()) this.startNewCollection();
                 }
               } else {
-                this.startNewCollection();
+                if (!this.loadTemp()) this.startNewCollection();
               }
             } catch (error) {
               console.error('Error loading review list:', error);
@@ -472,7 +583,7 @@
             // Reset data for new collection
             this.acBrand = '';
             this.currentItem = null;
-            this.resetIrCodeItems();
+            this.generateByRules();
             this.setupIrCodeListener();
             this.pageMode = 'detail';
             $('.collect-code-box').removeClass('device-none');
@@ -494,6 +605,7 @@
             this.setupIrCodeListener();
             this.pageMode = 'detail';
             $('.collect-code-box').removeClass('device-none');
+            this.saveTemp();
           },
 
           getDefaultIrCodeItems() {
@@ -517,6 +629,96 @@
               // ... (keeping existing structure)
             ];
           },
+
+          // 规则生成
+          generateByRules() {
+            const next = [];
+            const modes = Object.entries(this.rules.modes).filter(([k, v]) => v).map(([k]) => k);
+            const speeds = [];
+            if (this.rules.fan.auto) speeds.push('auto');
+            if (this.rules.fan.l1) speeds.push('1');
+            if (this.rules.fan.l2) speeds.push('2');
+            if (this.rules.fan.l3) speeds.push('3');
+            const swings = [];
+            if (this.rules.swing.on) swings.push('on');
+            if (this.rules.swing.off) swings.push('off');
+
+            const pushItem = (meta) => {
+              const id = this.buildId(meta);
+              const exist = this.irCodeItems.find((x) => x.id === id);
+              next.push({
+                id,
+                name: this.buildName(meta),
+                instruction: this.buildInstruction(meta),
+                status: exist ? exist.status : 'pending',
+                code: exist ? exist.code : null,
+                meta,
+              });
+            };
+
+            modes.forEach((mode) => {
+              const withTemp = mode === 'cool' || mode === 'heat';
+              const temps = withTemp ? this.rangeInclusive(this.rules.temp.min, this.rules.temp.max) : [null];
+              temps.forEach((temp) => {
+                speeds.forEach((fan) => {
+                  swings.forEach((swing) => pushItem({ mode, temp, fan, swing }));
+                });
+              });
+            });
+
+            // 基础电源 on/off
+            ['on', 'off'].forEach((power) => {
+              const id = `power_${power}`;
+              const exist = this.irCodeItems.find((x) => x.id === id);
+              next.unshift({
+                id,
+                name: power === 'on' ? _('AC Power On') : _('AC Power Off'),
+                instruction: _('Please press the power button on your AC remote control'),
+                status: exist ? exist.status : 'pending',
+                code: exist ? exist.code : null,
+                meta: { type: 'power', power },
+              });
+            });
+
+            this.irCodeItems = next;
+            this.saveTemp();
+          },
+          buildId(meta) {
+            if (meta && meta.type === 'power') return `power_${meta.power}`;
+            const parts = [meta.mode];
+            if (meta.temp != null) parts.push(String(meta.temp));
+            parts.push(`f${meta.fan}`);
+            parts.push(`sw_${meta.swing}`);
+            return parts.join('_');
+          },
+          buildName(meta) {
+            if (meta && meta.type === 'power') return meta.power === 'on' ? _('AC Power On') : _('AC Power Off');
+            const modeText = `Mode: ${meta.mode.toUpperCase()}`;
+            const tempText = meta.temp != null ? ` • ${meta.temp}°C` : '';
+            const fanText = ` • Fan: ${meta.fan}`;
+            const swingText = ` • Swing: ${meta.swing}`;
+            return `AC ${modeText}${tempText}${fanText}${swingText}`;
+          },
+          buildInstruction(meta) {
+            if (meta && meta.type === 'power') return _('Please press the power button on your AC remote control');
+            const parts = [
+              `Mode=${meta.mode}`,
+              meta.temp != null ? `Temp=${meta.temp}°C` : null,
+              `Fan=${meta.fan}`,
+              `Swing=${meta.swing}`,
+            ].filter(Boolean);
+            return `${_('Please set your AC to the following:')} ${parts.join(', ')}`;
+          },
+          rangeInclusive(a, b) {
+            const s = Math.max(16, Math.min(a, b));
+            const e = Math.min(30, Math.max(a, b));
+            const r = [];
+            for (let i = s; i <= e; i++) r.push(i);
+            return r;
+          },
+
+          setModeFilter(mode) { this.filters.mode = mode; },
+          setStatusFilter(status) { this.filters.status = status; },
 
           backToList() {
             // Return to main list
@@ -592,6 +794,7 @@
               // Return to list and refresh
               this.loadReviewList();
               this.pageMode = 'list';
+              this.saveTemp();
             } catch (error) {
               app.dialog.close();
               app.dialog.alert(_(erp.get_log_description(error)));
@@ -603,20 +806,20 @@
               this._sendIrCodeFun = (data) => {
                 console.log('learneddata', data);
                 let rs = data.rs;
-                let irLearnedCode = '';
                 if (data.guid == guid && rs.length > 8 && this.currentCollectingIndex >= 0) {
                   if (rs.substring(6, 8) == '00') {
                     // Clear listener immediately after receiving data to avoid duplicate processing
                     emitter.off(`ir_learned_code`, this._sendIrCodeFun);
-                    irLearnedCode = rs.substring(8, rs.length);
-                    irLearnedCode = '97210700' + irLearnedCode;
+                    this.irLearnedCode += rs.substring(8, rs.length);
+                    this.irLearnedCode = '97210700' + this.irLearnedCode;
                     this._sendIrCodeFun = null;
                     app.dialog.close();
-                    this.onCodeReceived(irLearnedCode);
-                    console.log('irLearnedCode', irLearnedCode);
-                    console.log('codeListt', this.processHexString(irLearnedCode));
+                    console.log('irLearnedCode', this.irLearnedCode);
+                    console.log('codeListt', this.processHexString(this.irLearnedCode));
+                    this.onCodeReceived(this.irLearnedCode);
+                    
                   } else {
-                    irLearnedCode += rs.substring(8, rs.length);
+                    this.irLearnedCode += rs.substring(8, rs.length);
                   }
                   // Process IR code data
                   // rs = rs.substring(0, 3) + '1' + rs.substring(4);
@@ -679,8 +882,13 @@
               app.dialog.alert(_(erp.get_log_description(err)));
             }
           },
+          startCollectingById(id) {
+            const idx = this.irCodeItems.findIndex((x) => x.id === id);
+            if (idx >= 0) this.startCollecting(idx);
+          },
 
           onCodeReceived(code) {
+            this.irLearnedCode = '';
             if (this.currentCollectingIndex >= 0) {
               const index = this.currentCollectingIndex;
               Vue.set(this.irCodeItems[index], 'code', code);
@@ -688,6 +896,9 @@
 
               this.isCollecting = false;
               this.currentCollectingIndex = -1;
+
+              // 临时保存
+              this.saveTemp();
 
               // Show success notification
               const item = this.irCodeItems[index];
@@ -757,6 +968,10 @@
               app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
+          testCodeById(id) {
+            const idx = this.irCodeItems.findIndex((x) => x.id === id);
+            if (idx >= 0) this.testCode(idx);
+          },
           processHexString(str) {
             const trimmedStr = str.substring(8);
             const result = [];
@@ -771,15 +986,83 @@
             }
             return result;
           },
+          // 导出公共 JSON（含组合规则与元信息）
+          exportJson() {
+            const payload = {
+              brand: this.acBrand.trim() || 'unknown',
+              generatedAt: new Date().toISOString(),
+              rules: this.rules,
+              items: this.irCodeItems.map((x) => ({ id: x.id, meta: x.meta || {}, status: x.status, code: x.code || null })),
+            };
+            const content = JSON.stringify(payload, null, 2);
+            const blob = new Blob([content], { type: 'application/json' });
+            app.dialog.preloader(`${_('Preparing file...')}`);
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = function () { resolve(reader.result); };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            })
+              .then((data) => {
+                return Capacitor.Plugins.Filesystem.writeFile({
+                  path: `${this.acBrand || 'ac'}_ir_codes.json`,
+                  data: data,
+                  directory: 'CACHE',
+                  recursive: true,
+                });
+              })
+              .then(() => {
+                return Capacitor.Plugins.Filesystem.getUri({
+                  path: `${this.acBrand || 'ac'}_ir_codes.json`,
+                  directory: 'CACHE',
+                });
+              })
+              .then((rs) => {
+                return Capacitor.Plugins.Share.share({
+                  title: `${this.acBrand || 'ac'}_ir_codes.json`,
+                  dialogTitle: `${this.acBrand || 'ac'}_ir_codes.json`,
+                  url: rs.uri,
+                }).then(() => app.dialog.close());
+              })
+              .catch((err) => {
+                app.dialog.close();
+                app.dialog.alert(_(erp.get_log_description(err)));
+              });
+          },
+          // 本地临时存储
+          saveTemp() {
+            try {
+              const key = this.tempKey();
+              const snapshot = { acBrand: this.acBrand, rules: this.rules, irCodeItems: this.irCodeItems, updatedAt: Date.now() };
+              localStorage.setItem(key, JSON.stringify(snapshot));
+            } catch (e) { console.warn('saveTemp error', e); }
+          },
+          loadTemp() {
+            try {
+              const raw = localStorage.getItem(this.tempKey());
+              if (!raw) return false;
+              const data = JSON.parse(raw);
+              this.acBrand = data.acBrand || this.acBrand;
+              if (data.rules) this.rules = data.rules;
+              if (Array.isArray(data.irCodeItems) && data.irCodeItems.length) this.irCodeItems = data.irCodeItems;
+              this.pageMode = 'detail';
+              $('.collect-code-box').removeClass('device-none');
+              return true;
+            } catch (e) { console.warn('loadTemp error', e); return false; }
+          },
+          clearTemp() {
+            try { localStorage.removeItem(this.tempKey()); } catch (e) {}
+            app.toast.create({ text: _('Temporary data cleared'), position: 'center', closeTimeout: 1500 }).open();
+          },
+          tempKey() { return `ac_ir_temp_${this.acBrand || 'default'}`; },
           downloadCode() {
             app.dialog.preloader(`${_('Downloading...')}`);
             let content = '';
             this.irCodeItems.forEach((item) => {
               if (item.code) {
                 let code = item.code;
-                debugger
                 let hexArray = this.processHexString(code);
-                content += `${item.name}: ${hexArray.join(',')}\n`;
+                content += `${item.name}: ${hexArray.join(',')}` + (item.meta ? ` | ${JSON.stringify(item.meta)}` : '') + `\n`;
               }
             });
             const blob = new Blob([content], { type: 'text/plain' });
@@ -933,6 +1216,20 @@
     font-size: 15px;
     line-height: 1.3;
     margin-bottom: 2px;
+    /* 默认保持一行省略，由更具体类控制覆盖 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: break-word;
+  }
+
+  /* IR 采集项标题：优先完整展示，多行自动折行，不做省略 */
+  .ir-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    display: block;
+    word-break: break-word;
   }
 
   .list .item-subtitle {

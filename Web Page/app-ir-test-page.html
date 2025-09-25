@@ -23,24 +23,29 @@
                 <div class="row" style="margin: 20px 0">
                   <div class="col">
                     <a href="#" v-on:click="postCommand(1)" class="button button-large button-raised" style="padding: 30px 0px"
-                      ><span>ON</span></a
+                      ><span>ON(18)</span></a
                     >
                   </div>
                   <div class="col">
                     <a href="#" v-on:click="postCommand(2)" class="button button-large button-raised" style="padding: 30px 0px"
-                      ><span>OFF</span></a
+                      ><span>ON(26)</span></a
                     >
                   </div>
                 </div>
                 <div class="row" style="margin: 20px 0">
                   <div class="col">
                     <a href="#" v-on:click="postCommand(3)" class="button button-large button-raised" style="padding: 30px 0px"
-                      ><span>Swing-ON</span></a
+                      ><span>Mode(Heat)</span></a
                     >
                   </div>
                   <div class="col">
                     <a href="#" v-on:click="postCommand(4)" class="button button-large button-raised" style="padding: 30px 0px"
                       ><span>Swing-ON</span></a
+                    >
+                  </div>
+                  <div class="col">
+                    <a href="#" v-on:click="postCommand(5)" class="button button-large button-raised" style="padding: 30px 0px"
+                      ><span>Swing-OFF</span></a
                     >
                   </div>
                 </div>
@@ -196,22 +201,53 @@
             */
             let command = '';
             if (type == 1) {
-              command = `87003001034d17040101010102030000ffa4`;
+              //007df100341700fcff17001a004e00180000001400ffffffffffffffffffffffffffffffff0111111111212111211111121221121112221112112221111111112211111111111111112121111112211121121111112221111222211111111212213f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000057601
+              command_str = `00410300346700d0001a0017004f00170000001300ffffffffffffffffffffffffffffffff0111111211111111111212111211111121221121112221112112221111111112211111111111111112121111112211121121111112221111222211111111212213f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005763e`;
+              let this_data = `3003${command_str.substring(2, command_str.length)}`;
+              let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+              let handle_data = iot_ir_learned_init(this_data);
+              let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+              command = ref;
             } else if (type == 2) {
               command = `87003001034d17040201000102030000ffa4`;
+              //00410300346500d20018001a004d00190000001300ffffffffffffffffffffffffffffffff0111111211111111111212111211111121221121111221112112212111111112211111111111111112121111121211121121111112221111222211111122112213f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077600
+              command_str = `00410300346500d20018001a004d00190000001300ffffffffffffffffffffffffffffffff0111111211111111111212111211111121221121111221112112212111111112211111111111111112121111121211121121111112221111222211111122112213f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077600`;
+              let this_data = `3003${command_str.substring(2, command_str.length)}`;
+              let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+              let handle_data = iot_ir_learned_init(this_data);
+              let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+              command = ref;
             } else if (type == 3) {
-              command = `87003001034d17040201010502030000ffa9`;
+              command_str = `00410300346800cf001b0017004f00170000001300ffffffffffffffffffffffffffffffff0111111211111111111212111211111121221121112221121111122111111112211111111111111111211111121212211121111112221111222211111212121213f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000047681`;
+              let this_data = `3003${command_str.substring(2, command_str.length)}`;
+              let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+              let handle_data = iot_ir_learned_init(this_data);
+              let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+              command = ref;
             } else if (type == 4) {
-              command = `87003001034d17040200010502030000ffa8`;
+              command_str = `0042050034053507006500d600180019004d00190000001300ffffffffffffffffffffffff01222222322222222222323222322222232332232222332223223323222222223322222222222222222222222222222232232222223332222333322222223332324f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000087600`;
+              let this_data = `3003${command_str.substring(2, command_str.length)}`;
+              let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+              let handle_data = iot_ir_learned_init(this_data);
+              let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+              command = ref;
+            }else if (type == 5) {
+              command_str = `00420500346500d20018001a004f001700653f180000000400ffffffffffffffffffffffff01111112111111111112121112111111212211211112211121122121111111122111111111111111122211111222111211211111122211112222111111212122134f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027600`;
+              let this_data = `3003${command_str.substring(2, command_str.length)}`;
+              let count_string = `${this_data}${addChecksum(iotConvertHexToData(this_data))}`;
+              let handle_data = iot_ir_learned_init(this_data);
+              let ref = `${handle_data}${count_string.toString(16).pad('00')}`;
+              command = ref;
             }
             try{
-              await window.peripheral[guid].write([
-                {
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: command,
-                },
-              ]);
+              // await window.peripheral[guid].write([
+              //   {
+              //     service: 'ff80',
+              //     characteristic: 'ff81',
+              //     data: command,
+              //   },
+              // ]);
+              await window.peripheral[guid].sendIR(command)
             }catch(error){
               console.log(error);
                 if (error == 7200) {

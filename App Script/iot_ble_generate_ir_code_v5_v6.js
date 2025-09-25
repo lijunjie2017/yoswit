@@ -80,23 +80,43 @@ window.iot_ble_generate_ir_code = function(code, button_signal, data){
 		}else{
 		    //if click the arc_auto_wind
 		    // debugger
-		    if(arc_auto_wind == 1){
-		        if(arc_on_off == 1){
-		            action_no = 5;
-		        } 
-		    }
+		    // if(arc_auto_wind == 1){
+		    //     if(arc_on_off == 1){
+		    //         action_no = 5;
+		    //     } 
+		    // }
+				//如果开启自动风速，默认打开手动风速
+				if(arc_auto_wind == 1){
+					arc_menu_wind = 1;
+				}else{
+					arc_menu_wind = 3;
+				}
+				// if(action_no == 1){
+				// 	//需要读取当前状态？
+				// 	arc_menu_wind = 3;
+				// 	arc_auto_wind = 0;
+				// }
+			// alert(`arc_menu_wind=${arc_menu_wind}, arc_auto_wind=${arc_auto_wind}, action_no=${action_no}`);
 			l(TAG, "checkSum2="+checkSum);
 			//7B0
 			checkSum += arc_temp;
-			l(TAG, "checkSum3="+checkSum);
+			l(TAG, "checkSum3="+checkSum);	
 			ircode += (arc_temp).toString(16).pad("00");
 			l(TAG, "checkSum4="+checkSum);
 			//7B1
 			checkSum += arc_volumn;
 			ircode += (arc_volumn).toString(16).pad("00");
-			//7B2
+			//7B2（手动风速，如果开启自动风速，需要默认打开手动风速）
+			/*
+			0x01 向上（打开上下扫风）
+			0x02 中
+			0x03 向下（停止上下扫风）
+			默认02
+			*/
 			checkSum += arc_menu_wind;
 			ircode += (arc_menu_wind).toString(16).pad("00");
+            // checkSum += 1;
+            // ircode += '01';
 			//7B3
 			checkSum += arc_auto_wind;
 			ircode += (arc_auto_wind).toString(16).pad("00");
@@ -119,7 +139,8 @@ window.iot_ble_generate_ir_code = function(code, button_signal, data){
 				ircode += '00';
 			}
 			//7B9
-			ircode += '00';
+			checkSum += 1;
+			ircode += '01';
 			//7B10
 			ircode += '00';
 			// for(var i=9; i<d_data.length; i++){

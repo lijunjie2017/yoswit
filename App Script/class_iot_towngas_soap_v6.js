@@ -172,6 +172,150 @@ window.towngasSoap = (function () {
         }
       });
     };
+    //控制smart controller
+    towngasSoap.prototype.controlSmartController = (id,onlineCode, action, delayTime='0') => {
+      return new Promise(async (resolve, reject) => {
+        this.utils.showPreloader(_('Control smart controller...'));
+        const userToken = await this.getValidUserToken();
+        if (!userToken) {
+          this.utils.hidePreloader();
+          reject(new Error('User token is not valid'));
+        }
+        try {
+          const controlSmartControllerRes = await http2.request(this.props.domian + this.props.loginApi, {
+            method: 'POST',
+            headers: {
+              'Authorization': this.props.appToken,
+            },
+            data: {
+              'service_type': this.props.equAppService,
+              'method_name': 'WriteSmartValveState',
+              'user_token': this.props.userToken,
+              'json_params': {
+                'DeviceId': id,
+                'ControlValve': `${action}`,//0:关闭,1:打开
+                'GatewayDeviceId': onlineCode,
+                'DelayTime': delayTime,//延时时间,单位分钟
+              },
+            },
+          });
+          console.log('controlSmartControllerRes', controlSmartControllerRes);
+          if (controlSmartControllerRes && controlSmartControllerRes.data && controlSmartControllerRes.data.message && controlSmartControllerRes.data.message.log_id) {
+            try {
+              const logResult = await this.pollResponsePool(controlSmartControllerRes.data.message.log_id, { intervalMs: 500, timeoutMs: 120000 });
+              console.log('logResult', logResult);
+            } catch (err) {
+              this.utils.hidePreloader();
+              reject(err);
+            }
+          }
+          this.utils.hidePreloader();
+          resolve(true);
+        }catch(error){
+          this.utils.hidePreloader();
+          reject(error);
+        }
+      });
+    };
+    //控制smart water heater
+    towngasSoap.prototype.controlSmartWaterHeater = (xuliehao, action) => {
+      return new Promise(async (resolve, reject) => {
+        this.utils.showPreloader(_('Control smart water heater...'));
+        const userToken = await this.getValidUserToken();
+        if (!userToken) {
+          this.utils.hidePreloader();
+          reject(new Error('User token is not valid'));
+        }
+      });
+    };
+    //获取smart stove的状态
+    towngasSoap.prototype.getSmartStoveOnlineStatus = (id) => {
+      return new Promise(async (resolve, reject) => {
+        this.utils.showPreloader(_('Get smart stove online status...'));
+        const userToken = await this.getValidUserToken();
+        if (!userToken) {
+          this.utils.hidePreloader();
+          reject(new Error('User token is not valid'));
+        }
+        try {
+          const getSmartStoveOnlineStatusRes = await http2.request(this.props.domian + this.props.loginApi, {
+            method: 'POST',
+            headers: {
+              'Authorization': this.props.appToken,
+            },
+            data: {
+              'service_type': this.props.equAppService,
+              'method_name': 'ReadWifiZaoState',
+              'user_token': this.props.userToken,
+              'json_params': {
+                'DeviceId': id
+              },
+            },
+          });
+          console.log('getSmartStoveOnlineStatusRes', getSmartStoveOnlineStatusRes);
+          let result = null;
+          if (getSmartStoveOnlineStatusRes && getSmartStoveOnlineStatusRes.data && getSmartStoveOnlineStatusRes.data.message && getSmartStoveOnlineStatusRes.data.message.log_id) {
+            try {
+              const logResult = await this.pollResponsePool(getSmartStoveOnlineStatusRes.data.message.log_id, { intervalMs: 500, timeoutMs: 120000 });
+              console.log('logResult', logResult);
+              result = logResult;
+            } catch (err) {
+              this.utils.hidePreloader();
+              reject(err);
+            }
+          }
+          this.utils.hidePreloader();
+          resolve(result);
+        }catch(error){
+          this.utils.hidePreloader();
+          reject(error);
+        }
+      });
+    };
+    //控制smart stove
+    towngasSoap.prototype.controlSmartStove = (id,onlineCode, controlType='1',delayTime='0') => {
+      return new Promise(async (resolve, reject) => {
+        this.utils.showPreloader(_('Control smart stove...'));
+        const userToken = await this.getValidUserToken();
+        if (!userToken) {
+          this.utils.hidePreloader();
+          reject(new Error('User token is not valid'));
+        }
+        try {
+          const controlSmartControllerRes = await http2.request(this.props.domian + this.props.loginApi, {
+            method: 'POST',
+            headers: {
+              'Authorization': this.props.appToken,
+            },
+            data: {
+              'service_type': this.props.equAppService,
+              'method_name': 'WriteWifiZaoState',
+              'user_token': this.props.userToken,
+              'json_params': {
+                'DeviceId': id,
+                'ControlType': controlType,//0:关闭,1:打开
+                'ControlParam': delayTime
+              },
+            },
+          });
+          console.log('controlSmartControllerRes', controlSmartControllerRes);
+          if (controlSmartControllerRes && controlSmartControllerRes.data && controlSmartControllerRes.data.message && controlSmartControllerRes.data.message.log_id) {
+            try {
+              const logResult = await this.pollResponsePool(controlSmartControllerRes.data.message.log_id, { intervalMs: 500, timeoutMs: 120000 });
+              console.log('logResult', logResult);
+            } catch (err) {
+              this.utils.hidePreloader();
+              reject(err);
+            }
+          }
+          this.utils.hidePreloader();
+          resolve(true);
+        }catch(error){
+          this.utils.hidePreloader();
+          reject(error);
+        }
+      });
+    };
     //从响应池中获取数据
     towngasSoap.prototype.getDataFromResponsePool = (logId) => {
       return http2.request(this.props.domian + this.props.logApi, {
@@ -224,6 +368,7 @@ window.towngasSoap = (function () {
               return;
             }
             if (status === 'Failed' || status === 'Fail' || status === 'Error') {
+              console.log('logResult', logResult);
               handleReject(new Error('Operation failed: ' + status));
               return;
             }
