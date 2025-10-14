@@ -1,0 +1,824 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Plugin Template') }}</div>
+        <div class="right">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44" func="init_eruda">
+            <i class="icon material-icons">bug_report</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div id="vue-app" v-cloak></div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $ref = ctx.$ref,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    // ---------------------------------------------------------------------------------
+    // ----------------------------- 插件测试代码编写 -------------------------------------
+    // ---------------------------------------------------------------------------------
+
+    /**
+     * 配置对象，key为方法名，value为方法配置，符合 Capacitor Plugins设计的配置
+     * 例 https://capacitorjs.com/docs/apis/camera
+     *
+     * 如果不需要填写请清空，例如空对象{}，避免大老板扣问号
+     */
+    const defaultJSONConfig = {
+      getPhoto: {
+        quality: 60,
+        allowEditing: false,
+        resultType: 'uri',
+        saveToGallery: false,
+        source: 'CAMERA',
+      },
+      pickImages: {
+        quality: 60,
+        limit: 9,
+      },
+    };
+
+    /**
+     * 插件方法测试配置，每个Action拥有三个参数，
+     * method: 方法名，会对应获取配置
+     * description: 方法描述
+     * onClick: 方法执行函数
+     */
+    const pluginActions = [
+      {
+        method: 'getPhoto',
+        description: 'Prompt the user to pick a photo from an album, or take a new photo with the camera.',
+        /**
+         * @param config: 配置对象
+         * @param allConfig: 所有配置对象
+         * @param applyCfg: 用于合并配置对象的函数
+         */
+        onClick: async (config, allConfig, applyCfg) => {
+          console.log(config);
+          const ret = await Capacitor.Plugins.Camera.getPhoto(config);
+          console.log(ret);
+          applyCfg('getPhotoRet', ret);
+        },
+      },
+      {
+        method: 'pickImages',
+        description:
+          'Allows the user to pick multiple pictures from the photo gallery. On iOS 13 and older it only allows to pick one picture.',
+        onClick: async (config, allConfig) => {
+          console.log(config);
+          const ret = await Capacitor.Plugins.Camera.pickImages(config);
+          console.log(ret);
+        },
+      },
+    ];
+
+    /**
+     * 页面初始化时调用，插件如需初始化可在这里执行
+     */
+    async function init() {
+      // TODO
+    }
+
+    /**
+     * 页面销毁时调用，插件如需销毁可在这里执行
+     */
+    async function deinit() {
+      // TODO
+    }
+
+    // ---------------------------------------------------------------------------------
+    // ------------------- 以下UI模版无需更改，如有更新则直接覆盖以下代码即可 -------------------
+    // ---------------------------------------------------------------------------------
+
+    let globalVueApp = null;
+    const formSetting = {
+      web_form_fields: [
+        {
+          'fieldname': 'section_1',
+          'fieldtype': 'Column Break',
+          'label': 'Configuration',
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': '',
+        },
+        {
+          'fieldname': 'config',
+          'fieldtype': 'HTML',
+          'label': 'Configuration',
+          'allow_read_on_all_link_options': 0,
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': JSON.stringify(defaultJSONConfig, null, 2),
+        },
+        {
+          'fieldname': 'section_2',
+          'fieldtype': 'Column Break',
+          'label': 'Actions',
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': '',
+        },
+        {
+          'fieldname': 'action',
+          'fieldtype': 'HTML',
+          'label': 'Actions',
+          'allow_read_on_all_link_options': 0,
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': '',
+        },
+      ],
+      button_label: 'Test',
+    };
+
+    ctx.$on('pageMounted', async (e, page) => {
+      globalVueApp = erp.script.core_app_basic_form_render(
+        {
+          web_form: formSetting,
+        },
+        page.el.querySelector('#vue-app'),
+        {},
+        {
+          'web_form.after_load': function () {
+            this.web_form.set_show_next_button(false);
+          },
+          'web_form.submit': function () {
+            /* Submit logic */
+          },
+          '$ui.config.$vnode': {
+            template: `
+            <div class="position-relative" style="width: 100%">
+              <!-- Segmented View Switch -->
+              <div class="segmented segmented-strong" style="margin-bottom: 16px">
+                <button class="button" :class="{ 'button-active': viewMode === 'form' }" @click="viewMode = 'form'" :title="_('Form View')">
+                  <i class="icon f7-icons">square_list</i>
+                </button>
+                <button class="button" :class="{ 'button-active': viewMode === 'json' }" @click="viewMode = 'json'" :title="_('JSON View')">
+                  <i class="icon f7-icons">doc_text</i>
+                </button>
+              </div>
+
+              <!-- Form View -->
+              <div v-if="viewMode === 'form'">
+                <!-- Configuration Overview Card -->
+                <div class="card">
+                  <div class="card-header">
+                    {{ _('Configuration Overview') }}
+                    <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+                      <button class="button button-small button-fill" @click="showAddMethodDialog" :title="_('Add Method')">
+                        <i class="icon f7-icons" style="font-size: 14px">plus</i>
+                      </button>
+                      <div class="segmented segmented-strong" style="width: auto">
+                        <button class="button button-small" :class="{ 'button-active': previewMode === 'table' }" @click="previewMode = 'table'" :title="_('Table View')">
+                          <i class="icon f7-icons" style="font-size: 14px">square_grid_2x2</i>
+                        </button>
+                        <button class="button button-small" :class="{ 'button-active': previewMode === 'json' }" @click="previewMode = 'json'" :title="_('JSON View')">
+                          <i class="icon f7-icons" style="font-size: 14px">doc_text</i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Table View -->
+                  <div class="card-content card-content-padding" v-if="previewMode === 'table'">
+                    <!-- Empty State -->
+                    <div v-if="methods.length === 0" class="text-align-center" style="padding: 40px 0">
+                      <p class="text-color-gray">{{ _('No methods yet, click + to add') }}</p>
+                    </div>
+                    
+                    <!-- Methods List -->
+                    <div v-for="(method, index) in methods" :key="method" :style="{ marginBottom: index < methods.length - 1 ? '32px' : '0' }">
+                      <div class="display-flex justify-content-space-between align-items-center" style="margin-bottom: 12px">
+                        <div class="block-title" style="margin: 0">
+                          {{ method }}
+                          <span class="badge color-blue" style="margin-left: 8px">
+                            {{ Object.keys(configData[method] || {}).length }}
+                          </span>
+                        </div>
+                        <div class="display-flex" style="gap: 6px">
+                          <button class="button button-small button-fill" @click="showAddFieldDialog(method)" :title="_('Add Field')">
+                            <i class="icon f7-icons" style="font-size: 12px">plus</i>
+                          </button>
+                          <button class="button button-small button-fill color-red" @click="deleteMethod(method)" :title="_('Delete Method')">
+                            <i class="icon f7-icons" style="font-size: 12px">trash</i>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <!-- Editable Fields Table -->
+                      <table class="config-list-table" v-if="Object.keys(configData[method] || {}).length > 0">
+                        <thead>
+                          <tr>
+                            <th style="width: 30%">{{ _('Field Name') }}</th>
+                            <th style="width: 55%">{{ _('Value') }}</th>
+                            <th style="width: 15%; text-align: center">{{ _('Actions') }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(fieldValue, fieldKey) in configData[method]" :key="fieldKey">
+                            <td class="field-name-cell">
+                              <strong>{{ fieldKey }}</strong>
+                              <div style="font-size: 11px; color: #8e8e93; margin-top: 2px">{{ getFieldType(fieldValue) }}</div>
+                            </td>
+                            <td class="field-value-cell">
+                              <!-- Boolean -->
+                              <label v-if="typeof fieldValue === 'boolean'" class="toggle toggle-init" style="display: inline-block">
+                                <input 
+                                  type="checkbox" 
+                                  :checked="configData[method][fieldKey]"
+                                  @change="updateFieldDirect(method, fieldKey, $event.target.checked)"
+                                />
+                                <span class="toggle-icon"></span>
+                              </label>
+                              
+                              <!-- Number -->
+                              <input 
+                                v-else-if="typeof fieldValue === 'number'"
+                                type="number"
+                                :value="configData[method][fieldKey]"
+                                @input="updateFieldDirect(method, fieldKey, Number($event.target.value))"
+                                :placeholder="_('Enter number')"
+                                style="width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px"
+                              />
+                              
+                              <!-- String -->
+                              <input 
+                                v-else-if="typeof fieldValue === 'string'"
+                                type="text"
+                                :value="configData[method][fieldKey]"
+                                @input="updateFieldDirect(method, fieldKey, $event.target.value)"
+                                :placeholder="_('Enter text')"
+                                style="width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px"
+                              />
+                              
+                              <!-- Complex types -->
+                              <textarea 
+                                v-else
+                                :value="JSON.stringify(configData[method][fieldKey], null, 2)"
+                                @input="updateFieldJSON(method, fieldKey, $event.target.value)"
+                                placeholder="JSON"
+                                style="width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-family: monospace; font-size: 12px; min-height: 60px; resize: vertical"
+                              ></textarea>
+                            </td>
+                            <td style="text-align: center">
+                              <button class="button button-small button-fill color-red" @click="deleteFieldDirect(method, fieldKey)" :title="_('Delete')">
+                                <i class="icon f7-icons" style="font-size: 14px">trash</i>
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div v-else class="text-align-center" style="padding: 20px; background: #f7f7f8; border-radius: 8px">
+                        <p class="text-color-gray" style="margin: 0">{{ _('No fields yet') }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- JSON Preview -->
+                  <div class="card-content" v-else>
+                    <pre class="code-block">{{ formattedJSON }}</pre>
+                    <div style="text-align: center; margin-top: 12px">
+                      <a href="#" class="link" @click.prevent="copyJSON">
+                        <i class="icon f7-icons">doc_on_doc</i>
+                        {{ _('Copy JSON') }}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="block">
+                  <div class="display-flex" style="gap: 8px">
+                    <button class="button button-fill color-orange" @click="resetConfig" :title="_('Reset to Default')">
+                      <i class="icon f7-icons">arrow_counterclockwise</i>
+                    </button>
+                    <button class="button button-fill color-green" @click="save" :title="_('Save')">
+                      <i class="icon f7-icons">floppy_disk</i>
+                    </button>
+                    <button class="button button-fill color-blue" @click="load" :title="_('Load')">
+                      <i class="icon f7-icons">folder</i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- JSON View -->
+              <div v-else>
+                <div class="card">
+                  <div class="card-header">
+                    {{ _('JSON Editor') }}
+                    <span v-if="invalid" class="badge color-red" style="margin-left: 8px">{{ _('Invalid Format') }}</span>
+                    <span v-else class="badge color-green" style="margin-left: 8px">{{ _('Valid Format') }}</span>
+                  </div>
+                  <div class="card-content card-content-padding">
+                    <textarea
+                      class="resizable"
+                :value="value"
+                      :style="{ 
+                        border: invalid ? 'solid 1px var(--f7-color-red)' : 'solid 1px var(--f7-input-outline-color)',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        fontFamily: 'monospace',
+                        fontSize: '13px',
+                        width: '100%',
+                        minHeight: '60vh'
+                      }"
+                @input="$emit('input', $event.target.value)"
+                      :placeholder="_('Enter JSON configuration...')"
+              ></textarea>
+                  </div>
+                </div>
+                
+                <div class="block">
+                  <div class="display-flex" style="gap: 8px">
+                    <button class="button button-fill" @click="format" :title="_('Format')">
+                      <i class="icon f7-icons">wand_stars</i>
+                    </button>
+                    <button class="button button-fill color-green" @click="save" :title="_('Save')">
+                      <i class="icon f7-icons">floppy_disk</i>
+                    </button>
+                    <button class="button button-fill color-blue" @click="load" :title="_('Load')">
+                      <i class="icon f7-icons">folder</i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            `,
+            props: ['value', 'reqd'],
+            data() {
+              return {
+                invalid: false,
+                viewMode: 'form',
+                previewMode: 'table', // 'table' or 'json'
+                methods: [],
+                configData: {},
+                addFieldTargetMethod: '',
+                newFieldName: '',
+                newFieldType: 'string',
+              };
+            },
+            computed: {
+              formattedJSON() {
+                return JSON.stringify(this.configData, null, 2);
+              }
+            },
+            watch: {
+              value: {
+                immediate: true,
+                handler(v) {
+                try {
+                    const parsed = v ? JSON.parse(v) : {};
+                    this.configData = parsed;
+                    this.methods = Object.keys(this.configData);
+                  this.invalid = false;
+                    
+                    if (this.selectedMethod && this.configData[this.selectedMethod]) {
+                      this.currentConfig = this.configData[this.selectedMethod];
+                    }
+                } catch (err) {
+                  this.invalid = true;
+                    this.configData = {};
+                    this.methods = [];
+                  }
+                }
+              },
+              configData: {
+                deep: true,
+                handler(newData) {
+                  this.$emit('input', JSON.stringify(newData, null, 2));
+                }
+              }
+            },
+            methods: {
+              getFieldType(value) {
+                if (Array.isArray(value)) return _('Array');
+                if (value === null) return _('Null');
+                const type = typeof value;
+                const typeMap = {
+                  'string': _('String'),
+                  'number': _('Number'),
+                  'boolean': _('Boolean'),
+                  'object': _('Object')
+                };
+                return typeMap[type] || type;
+              },
+              
+              formatCellValue(value) {
+                // 格式化单元格值，包括所有类型的完整展示
+                if (value === null) return 'null';
+                if (value === undefined) return 'undefined';
+                if (typeof value === 'string') return value;
+                if (typeof value === 'number') return value.toString();
+                if (typeof value === 'boolean') return value.toString();
+                // 对象和数组显示完整的JSON
+                return JSON.stringify(value);
+              },
+              
+              showAddMethodDialog() {
+                const self = this;
+                app.dialog.prompt(_('Please enter method name'), _('Add New Method'), function(methodName) {
+                  if (!methodName || !methodName.trim()) {
+                    app.toast.create({ text: _('Method name cannot be empty'), closeTimeout: 2000 }).open();
+                    return;
+                  }
+                  
+                  if (self.configData[methodName]) {
+                    app.toast.create({ text: _('Method already exists'), closeTimeout: 2000 }).open();
+                    return;
+                  }
+                  
+                  self.$set(self.configData, methodName, {});
+                  self.methods = Object.keys(self.configData);
+                  
+                  app.toast.create({ text: _('Method added successfully'), closeTimeout: 2000 }).open();
+                });
+              },
+              
+              deleteMethod(methodName) {
+                const self = this;
+                app.dialog.confirm(
+                  _('Are you sure to delete method "' + methodName + '"?'),
+                  _('Delete Confirmation'),
+                  function() {
+                    self.$delete(self.configData, methodName);
+                    self.methods = Object.keys(self.configData);
+                    
+                    app.toast.create({ text: _('Method deleted'), closeTimeout: 2000 }).open();
+                  }
+                );
+              },
+              
+              showAddFieldDialog(methodName) {
+                const self = this;
+                self.addFieldTargetMethod = methodName;
+                
+                app.dialog.create({
+                  title: _('Add Field to') + ' ' + methodName,
+                  content: '<div class="list no-hairlines"><ul>' +
+                    '<li class="item-content item-input"><div class="item-inner"><div class="item-title item-label">' + _('Field Name') + '</div><div class="item-input-wrap"><input type="text" id="field-name-input" placeholder="' + _('e.g: quality') + '"></div></div></li>' +
+                    '<li class="item-content item-input"><div class="item-inner"><div class="item-title item-label">' + _('Type') + '</div><div class="item-input-wrap"><select id="field-type-select">' +
+                    '<option value="string">' + _('String') + '</option>' +
+                    '<option value="number">' + _('Number') + '</option>' +
+                    '<option value="boolean">' + _('Boolean') + '</option>' +
+                    '<option value="array">' + _('Array') + '</option>' +
+                    '<option value="object">' + _('Object') + '</option>' +
+                    '</select></div></div></li>' +
+                    '</ul></div>',
+                  buttons: [
+                    { text: _('Cancel') },
+                    { 
+                      text: _('Add'),
+                      bold: true,
+                      onClick: function() {
+                        const fieldName = document.getElementById('field-name-input').value;
+                        const fieldType = document.getElementById('field-type-select').value;
+                        
+                        if (!fieldName || !fieldName.trim()) {
+                          app.toast.create({ text: _('Please enter field name'), closeTimeout: 2000 }).open();
+                          return false;
+                        }
+                        
+                        if (self.configData[self.addFieldTargetMethod].hasOwnProperty(fieldName)) {
+                          app.toast.create({ text: _('Field already exists'), closeTimeout: 2000 }).open();
+                          return false;
+                        }
+
+                        let defaultValue;
+                        switch (fieldType) {
+                          case 'string': defaultValue = ''; break;
+                          case 'number': defaultValue = 0; break;
+                          case 'boolean': defaultValue = false; break;
+                          case 'array': defaultValue = []; break;
+                          case 'object': defaultValue = {}; break;
+                          default: defaultValue = '';
+                        }
+
+                        self.updateFieldDirect(self.addFieldTargetMethod, fieldName, defaultValue);
+                        app.toast.create({ text: _('Field added successfully'), closeTimeout: 2000 }).open();
+                      }
+                    }
+                  ]
+                }).open();
+              },
+              
+              updateFieldDirect(methodName, fieldKey, value) {
+                if (!this.configData[methodName]) {
+                  this.$set(this.configData, methodName, {});
+                }
+                this.$set(this.configData[methodName], fieldKey, value);
+              },
+              
+              updateFieldJSON(methodName, fieldKey, jsonString) {
+                try {
+                  const value = JSON.parse(jsonString);
+                  this.updateFieldDirect(methodName, fieldKey, value);
+                } catch (err) {
+                  // 用户可能正在输入
+                }
+              },
+              
+              deleteFieldDirect(methodName, fieldKey) {
+                const self = this;
+                app.dialog.confirm(
+                  _('Are you sure to delete field "' + fieldKey + '"?'),
+                  _('Delete Confirmation'),
+                  function() {
+                    self.$delete(self.configData[methodName], fieldKey);
+                    app.toast.create({ text: _('Field deleted'), closeTimeout: 2000 }).open();
+                  }
+                );
+              },
+              
+              resetConfig() {
+                const self = this;
+                app.dialog.confirm(
+                  _('Are you sure to reset all configurations to default?'),
+                  _('Reset Confirmation'),
+                  function() {
+                    self.configData = JSON.parse(JSON.stringify(defaultJSONConfig));
+                    self.methods = Object.keys(self.configData);
+                    app.toast.create({ text: _('Reset to default configuration'), closeTimeout: 2000 }).open();
+                  }
+                );
+              },
+              
+              format() {
+                try {
+                  const json = JSON.parse(this.value);
+                  this.$emit('input', JSON.stringify(json, null, 2));
+                  app.toast.create({ text: _('Formatted successfully'), closeTimeout: 2000 }).open();
+                } catch (err) {
+                  app.toast.create({ text: _('Format failed: ') + err.message, closeTimeout: 2000 }).open();
+                }
+              },
+              
+              async save() {
+                try {
+                  await db.set($f7route.path, this.value);
+                  app.toast.create({ text: _('Saved successfully'), closeTimeout: 2000 }).open();
+                } catch (err) {
+                  app.toast.create({ text: _('Save failed: ') + err.message, closeTimeout: 2000 }).open();
+                }
+              },
+              
+              async load() {
+                try {
+                  const json = await db.get($f7route.path);
+                  if (json) {
+                  this.$emit('input', json);
+                    app.toast.create({ text: _('Loaded successfully'), closeTimeout: 2000 }).open();
+                  } else {
+                    app.toast.create({ text: _('No saved configuration'), closeTimeout: 2000 }).open();
+                  }
+                } catch (err) {
+                  app.toast.create({ text: _('Load failed: ') + err.message, closeTimeout: 2000 }).open();
+                }
+              },
+              
+              copyJSON() {
+                try {
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(this.formattedJSON);
+                    app.toast.create({ text: _('Copied to clipboard'), closeTimeout: 2000 }).open();
+                  } else {
+                    app.toast.create({ text: _('Browser does not support copy'), closeTimeout: 2000 }).open();
+                  }
+                } catch (err) {
+                  app.toast.create({ text: _('Copy failed'), closeTimeout: 2000 }).open();
+                }
+              }
+            },
+            mounted() {
+              // 初始化时如果没有配置，提示用户
+              if (Object.keys(this.configData).length === 0 && this.viewMode === 'form') {
+                setTimeout(() => {
+                  app.toast.create({ 
+                    text: _('Configuration is empty, please click "Add Method" to start'), 
+                    closeTimeout: 3000 
+                  }).open();
+                }, 500);
+              }
+              
+              // 初始化Smart Select
+              this.$nextTick(() => {
+                const smartSelects = this.$el.querySelectorAll('.smart-select-init');
+                smartSelects.forEach(el => {
+                  if (!el.f7SmartSelect) {
+                    app.smartSelect.create({
+                      el: el,
+                      openIn: 'popup',
+                      closeOnSelect: true
+                    });
+                  }
+                });
+              });
+            },
+            updated() {
+              // 更新时重新初始化Smart Select
+              this.$nextTick(() => {
+                const smartSelects = this.$el.querySelectorAll('.smart-select-init');
+                smartSelects.forEach(el => {
+                  if (!el.f7SmartSelect) {
+                    app.smartSelect.create({
+                      el: el,
+                      openIn: 'popup',
+                      closeOnSelect: true
+                    });
+                  }
+                });
+              });
+            }
+          },
+          '$ui.action.$vnode': {
+            template: `
+            <div class="position-relative" style="width: 100%">
+              <div v-if="actions.length === 0" class="text-color-gray">No actions define.</div>
+              <div class="display-flex flex-direction-column justify-content-center align-items-center" style="width: 100%" v-else>
+                <div v-for="action in actions" style="margin: 10px 0; width: 100%">
+                  <div class="button button-fill" style="text-transform: none !important" @click="callMethod(action)">{{ action.method }}</div>
+                  <div class="description" v-if="action.description" style="background-color: rgb(249, 250, 251); padding: 1rem 0; color: rgb(75, 85, 99)" v-html="action.description"></div>
+                </div>
+              </div>
+            </div>
+            `,
+            inject: ['getFrappe'],
+            data() {
+              return {
+                actions: pluginActions,
+              };
+            },
+            methods: {
+              async callMethod(act) {
+                const clickFn = act.onClick;
+                if (typeof clickFn === 'function') {
+                  const config = this.getFrappe().web_form.get_value('config');
+                  debugger
+                  try {
+                    const configObj = JSON.parse(config);
+
+                    const applyCfg = (key, newCfg) => {
+                      // merge
+                      configObj[key] = window.lodash.merge(configObj[key] || {}, newCfg || {});
+                      this.getFrappe().web_form.set_value('config', JSON.stringify(configObj, null, 2));
+                    };
+
+                    clickFn(configObj[act.method] || defaultJSONConfig[act.method] || {}, configObj, applyCfg);
+                  } catch (err) {
+                    app.dialog.alert('Config parse error: ' + err);
+                  }
+                } else {
+                  app.dialog.alert('Method not implemented.');
+                }
+              },
+            },
+          },
+        }
+      );
+
+      try {
+        await init();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    ctx.$onUnmounted(async () => {
+      globalVueApp && globalVueApp.$destroy();
+
+      try {
+        await deinit();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .code-block {
+    background: #1e293b;
+    color: #10b981;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    line-height: 1.6;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  .button i.icon {
+    margin: 0;
+  }
+  
+  .button.button-fill {
+    min-width: 44px;
+    height: 44px;
+  }
+  
+  .card-header .segmented {
+    display: flex;
+  }
+  
+  .card-header .segmented .button {
+    min-width: 40px;
+    padding: 4px 8px;
+  }
+  
+  .block-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+  }
+  
+  .config-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  
+  .config-list-table th,
+  .config-list-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .config-list-table thead th {
+    background-color: #f7f7f8;
+    color: #374151;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .config-list-table tbody tr:hover {
+    background-color: #f9fafb;
+  }
+  
+  .config-list-table .field-name-cell {
+    vertical-align: top;
+  }
+  
+  .config-list-table .field-name-cell strong {
+    color: #007aff;
+  }
+  
+  .config-list-table .field-value-cell {
+    vertical-align: middle;
+  }
+</style>
