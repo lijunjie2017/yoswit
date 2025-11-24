@@ -10,6 +10,11 @@
           </a>
         </div>
         <div class="title">{{ _('Device Status Log') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only" @click="${openTimeFilterPopup}">
+            <i class="icon f7-icons" style="font-size: 25px">calendar</i>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -26,6 +31,21 @@
       </div>
       {% raw %}
       <div id="device-control-log-box" v-cloak>
+        <!-- Time Filter Status Bar -->
+        <div class="block time-filter-status" v-if="is_time_filtered" style="background-color: var(--f7-theme-color-bg); padding: 8px 16px; margin: 0; border-radius: 0;">
+          <div class="display-flex justify-content-space-between align-items-center">
+            <div>
+              <span class="text-color-theme">{{ _('Filter Active:') }}</span>
+              <span class="text-muted" style="margin-left: 10px;">
+                <span v-if="start_time">{{ _('From') }} {{ start_time }}</span>
+                <span v-if="end_time"> {{ _('To') }} {{ end_time }}</span>
+              </span>
+            </div>
+            <a href="#" class="link" @click="clearTimeFilter" style="color: var(--f7-theme-color);">
+              <i class="icon f7-icons">xmark_circle_fill</i>
+            </a>
+          </div>
+        </div>
         <div class="list p-2">
           <div class="timeline">
             <div
@@ -213,8 +233,68 @@
         <div class="no-more-data" v-if="more_data">
           <h3>{{_('Thats it, no more data available.')}}</h3>
         </div>
+      <!-- Time Filter Popup -->
+      <div class="popup">
+        <div class="view">
+          <div class="page">
+            <div class="navbar">
+              <div class="navbar-bg"></div>
+              <div class="navbar-inner">
+                <div class="left">
+                  <a href="#" class="link popup-close">
+                    <i class="icon icon-back"></i>
+                    <span class="if-not-md">{{ _('Cancel') }}</span>
+                  </a>
+                </div>
+                <div class="title">{{ _('Filter By Time') }}</div>
+                <div class="right">
+                  <a href="#" class="link" v-on:click="applyTimeFilter"><i class="icon f7-icons" style="font-size: 25px">checkmark</i></a>
+                </div>
+              </div>
+            </div>
+            <div class="page-content">
+              <div class="block">
+                <div class="list no-hairlines-md">
+                  <ul>
+                    <li>
+                      <div class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Start Time') }}</div>
+                          <div class="item-input-wrap">
+                            <input type="text" id="start-time-input" :placeholder="_('Select start time')" readonly />
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="item-content item-input">
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('End Time') }}</div>
+                          <div class="item-input-wrap">
+                            <input type="text" id="end-time-input" :placeholder="_('Select end time')" readonly />
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="block">
+                <div class="row">
+                  <div class="col-50">
+                    <a href="#" class="button button-outline button-round" v-on:click="clearTimeFilter">{{ _('Clear') }}</a>
+                  </div>
+                  <div class="col-50">
+                    <a href="#" class="button button-fill button-round" v-on:click="quickFilterToday">{{ _('Today') }}</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
+      </div>
+      
       ${hasMoreItems && $h`
       <div class="preloader infinite-scroll-preloader"></div>
       `} {% endraw %}
@@ -254,6 +334,11 @@
 
       vueApp.$loadMore();
     };
+
+    const openTimeFilterPopup = ()=>{
+      vueApp.$openTimeFilterPopup();
+
+    }
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
         el: page.el.querySelector('#device-control-log-box'),
@@ -267,16 +352,121 @@
           button_group:'',
           device_model:'',
           more_data: false,
+          // Time filter related data
+          start_time: '',
+          end_time: '',
+          is_time_filtered: false,
         },
         computed: {},
         watch: {},
         mounted() {
           Vue.prototype.$refreshFun = this.refreshFun;
           Vue.prototype.$loadMore = this.loadMore;
+          Vue.prototype.$openTimeFilterPopup = this.openTimeFilterPopup;
           this.init();
           this.getData();
         },
         methods: {
+          // Time filter methods
+          openTimeFilterPopup() {
+            $f7.popup.open('.popup');
+            this.initDatePicker();
+          },
+
+          initDatePicker() {
+            const self = this;
+            $f7.calendar.create({
+              inputEl: '#start-time-input',
+              openIn: 'sheet',
+              dateFormat: 'yyyy-mm-dd HH:mm',
+              timePicker: true,
+              closeOnSelect: false,
+              on: {
+                change: function(calendar, value) {
+                  console.log('value', value);
+                  self.start_time = value;
+                }
+              }
+            });
+
+            $f7.calendar.create({
+              inputEl: '#end-time-input',
+              openIn: 'sheet',
+              dateFormat: 'yyyy-mm-dd HH:mm',
+              timePicker: true,
+              closeOnSelect: false,
+              on: {
+                change: function(calendar, value) {
+                  self.end_time = value;
+                }
+              }
+            });
+
+            // Set initial values if they exist
+            if (self.start_time) {
+              document.getElementById('start-time-input').value = self.start_time;
+            }
+            if (self.end_time) {
+              document.getElementById('end-time-input').value = self.end_time;
+            }
+          },
+
+          applyTimeFilter() {
+            if (!this.start_time && !this.end_time) {
+              $f7.dialog.alert(_('Please select at least start or end time'));
+              return;
+            }
+
+            this.is_time_filtered = true;
+            this.start = 0;
+            this.log_list = [];
+            allowInfinite = true;
+            hasMoreItems = true;
+            this.more_data = false;
+
+            $f7.popup.close('.popup');
+            this.getData();
+          },
+
+          clearTimeFilter() {
+            this.start_time = '';
+            this.end_time = '';
+            this.is_time_filtered = false;
+            document.getElementById('start-time-input').value = '';
+            document.getElementById('end-time-input').value = '';
+
+            // Reset pagination and fetch new data
+            this.start = 0;
+            this.log_list = [];
+            allowInfinite = true;
+            hasMoreItems = true;
+            this.more_data = false;
+
+            $f7.popup.close('.popup');
+            this.getData();
+          },
+
+          quickFilterToday() {
+            const today = new Date();
+            const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0);
+            const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59);
+
+            this.start_time = this.formatDateTime(startDate);
+            this.end_time = this.formatDateTime(endDate);
+            document.getElementById('start-time-input').value = this.start_time;
+            document.getElementById('end-time-input').value = this.end_time;
+          },
+
+          formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+
+            return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes;
+          },
+
           async refreshFun() {
             this.start = 0;
             //this.log_list = [];
@@ -395,13 +585,24 @@
             // let reqUrl = encodeURI(
             //   '/api/resource/Device Control Log?fields=["*"]&filters=[["profile_subdevice","=","' + profile_subdevice + '"]]'
             // );
+
+            // Build URL with time filter parameters
+            let apiUrl = `/api/method/appv6.geControlAndStatusList?device=${this.guid}&start=${this.start}&page_length=${this.page_length}`;
+
+            // Add time filter parameters if they exist
+            if (this.start_time) {
+              apiUrl += `&start_time=${encodeURIComponent(this.start_time)}`;
+            }
+            if (this.end_time) {
+              apiUrl += `&end_time=${encodeURIComponent(this.end_time)}`;
+            }
+
             http2
               .request({
-                url: encodeURI(
-                  `/api/method/appv6.geControlAndStatusList?device=${this.guid}&start=${this.start}&page_length=${this.page_length}`
-                ),
+                url: encodeURI(apiUrl),
                 method: 'GET',
                 responseType: 'json',
+                timeout: 60
               })
               .then((log_data) => {
                 // console.log(log_data);
@@ -414,7 +615,12 @@
                     item.status = Math.ceil((item.status / 255) * 100);
                   }
                   if (isset(item.details) && item.details) {
-                    let device_type_map = JSON.parse(item.details);
+                    let device_type_map = {}
+                    try{
+                        device_type_map = JSON.parse(item.details);
+                    }catch(error){
+                        return
+                    }
                     let device_model = device_type_map.device_type;
                     item.command_type = device_type_map.command_type;
                     //compare the device details

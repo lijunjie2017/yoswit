@@ -386,6 +386,78 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Panel Config";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">key</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">${_(setting_label)}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                            ref="{{ device }}" 
+                            device-name="{{ profile_device_name }}" 
+                            href="/mobile-app/app-pannel-setting?guid={{guid}}"
+                            class="button button-fill button-44 color-theme button-raised "
+                        >
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Close Ble Broadcasting";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            button-group="{{device_button_group }}"
+            device-mode="{{device_mode }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            slot-index="{{slot_index}}"
+        >
+           
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">screen_lock_landscape</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        <p class="setting-value text-muted size-12">{{self_setting_data.setting}}</p>
+                    </div>
+                    <div class="col-auto">
+                        <label class="toggle toggle-init">
+                            <input 
+                                type="checkbox"
+                                button-group="{{device_button_group }}"
+                                setting-type="{{ self_setting_data.setting_type }}"
+                                setting-name="{{ self_setting_data.name }}"
+                                device-mode="{{device_mode }}"
+                                ref="{{ device }}"
+                                slot-index="{{slot_index}}"
+                                changefunc="iot_mode_setup_ble_scan"
+                                {% if self_setting_data.setting != 'Off' and self_setting_data.setting !="" %}checked{% endif %}
+                            />
+                            <span class="toggle-icon"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Toggle Sound Notification";
     setting_label_template[setting_label] = `
         <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">

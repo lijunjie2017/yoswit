@@ -44,14 +44,14 @@
               </div>
               <device-network-list-component
                 :guid="guid"
-                :type="1"
+                :type="2"
                 v-if="index == 1"
                 @child-event="handleChildEvent"
               ></device-network-list-component>
               <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                 <div class="col">
                   <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("NEXT STEP")}}</div>
-                </div>
+                </div> 
               </div>
             </div>
             <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-else-if="index == 2">

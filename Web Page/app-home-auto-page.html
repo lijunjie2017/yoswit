@@ -1561,6 +1561,7 @@ const renderMainButton = (props, {
 		} 
 		if(!window.towngasSoapForDevice){
 		    window.towngasSoapForDevice = new window.towngasSoap();
+		    await window.towngasSoapForDevice.login();
 		}
 		try{
 		    let config = kitem.config;
@@ -1736,7 +1737,27 @@ const renderMainButton = (props, {
 				app.dialog.alert(_(erp.get_log_description(error)));
 				//app.dialog.alert(error)
 			});
-		}else if(kitem.device_button_group.toLowerCase().includes('gpio')){
+		}else if(kitem.device_button_group.toLowerCase() == 'ir-rf433'){
+      let commandMap = null;
+      try{
+        commandMap = JSON.parse(kitem.function);
+      }catch(error){
+        commandMap = null;
+      }
+      try{
+        if(!commandMap){
+          app.dialog.alert(_('Command is not valid'));
+          return;
+        }
+        let command = commandMap.command_code;
+        window.peripheral[kitem.device].rcuDoScene([{
+          gang : 1,
+          command: command,
+        }])
+      }catch(error){
+        app.dialog.alert(_(erp.get_log_description(error)));
+      }
+    }else if(kitem.device_button_group.toLowerCase().includes('gpio')){
 			// peripheral[kitem.device].write([{
 			// 	service: 'ff80',
 			// 	characteristic: 'ff81',
@@ -2385,7 +2406,7 @@ const renderMainButton = (props, {
 						</div>
 					</a>
 					`;
-	}else if(props.kitem.device_button_group.startsWith('RCU INPUT')){
+	}else if(props.kitem.device_button_group.startsWith('RCU INPUT')){ 
 		//cable block
 		//this ui can not be change by the ble
 		let input_status = props.kitem['input']?props.kitem['input']:0;
@@ -2393,9 +2414,9 @@ const renderMainButton = (props, {
 			<a class="control-panel-right">
 				<div class="left button button-raised button-big circle rcu-output" guid="${props.kitem.device}" device_button_group="${props.kitem.device_button_group}">
 						<i class="material-icons">${input_status?'cable':'block'}</i>
-				</div>
+				</div> 
 			</a>
-		`;
+		`; 
 	} else if (props.kitem.device_button_group.startsWith('RCU DIMMING') || props.kitem.device_button_group.startsWith('DIMMING') || props.kitem.device_button_group.startsWith('GV DIMMING')) {
 		return () => $h`
 					<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}" mesh="${props.kitem.network_id>0?1:0}">
@@ -2409,7 +2430,22 @@ const renderMainButton = (props, {
 						</a>
 					</div>
 				`;
-	} else if (props.kitem.device_mode === 'Access Controller') {
+	}else if(props.kitem.device_button_group == 'IR-RF433'){
+    return () => $h`
+				<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
+					<a class="iot-connect" @click="${()=>click_connect(props.kitem)}">
+						<div class="button button-raised button-big circle">
+								<i class="material-icons">bluetooth_connected</i>
+						</div>
+					</a>
+					<a class="on_flag off_flag touch-button-group" ref="${props.kitem.device_status}" @pointerdown="${() => click_onoff_start(props.kitem)}">
+							<div class="button button-raised button-big circle" style="border-radius:50%;"> 
+								<div class="" style="height:100%;width:100%;"><i class="material-icons" style="font-size:24px!important;margin-left:1px;margin-top:1px;">touch_app</i></div>
+							</div>
+					</a>
+				</div>
+				`;
+  } else if (props.kitem.device_mode === 'Access Controller') {
 		if (props.kitem.device_button_group == 'TOGGLE GANG1') {
 			return () => $h`
 				<div class="control-panel-right" type-box="Dimming" gateway="${props.kitem.gateway}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}">
@@ -2699,7 +2735,7 @@ const renderMainButton = (props, {
 	}else {
 		return () => $h`
 				<div class="control-panel-right" style="">
-					<a href="#" func="ble_load_to_device_form_auto" class="right" >
+					<a href="/mobile-app/setting-page?title=${_('Edit')} ${encodeURIComponent(tran(props.kitem.title))}&guid=${ props.kitem.device }&name=${props.kitem.name}&profile_device_name=${props.kitem.profile_device}&device_mode=${props.kitem.device_mode}&slot_index=${props.kitem.config?props.kitem.config:''}" class="right" >
 						<div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">settings</i></div></div>
 					</a>
 				</div>
@@ -4422,7 +4458,13 @@ export default async (props, ctx) => {
 						peripheral[guid].update(storedPeripheral[guid]);
 					}
 			}
-			await db.set('peripheral', JSON.stringify(storedPeripheral));
+			if(window.peripheralStoreQueue){
+				await window.peripheralStoreQueue.enqueue(async () => {
+					await db.set('peripheral', JSON.stringify(storedPeripheral));
+				}, { skipDuringSwitch: false });
+			}else{
+				await db.set('peripheral', JSON.stringify(storedPeripheral));
+			}
 	}
 
 	const initPage = async (pageType) => {
@@ -6532,6 +6574,14 @@ export default async (props, ctx) => {
 				})
 			}
 		}
+		//如果是ir，需要同步刪除device setting的index記錄
+		if(sudevice_item.device_mode == 'IR R2W'){
+		    //获取index_id
+		    let json_map = JSON.parse(sudevice_item['function'])
+		    if(json_map && json_map.index_id){
+		        await iot_device_setting_sync_server(sudevice_item.device, `Index_${json_map.index_id}`, 0);
+		    }
+		}
 		//init();
 		$update();
 		mainView.router.refreshPage();
@@ -8226,7 +8276,7 @@ export default async (props, ctx) => {
 		//check if the wifi device is compelte
 		window.iot_check_profile_device('rcu').then((is_check)=>{
 			//check if scene all have been write the rcu device
-			if(is_check && erp.info.profile.location != '1 write' && erp.info.profile.location != ''){
+			if(is_check && erp.info.profile.location != '1 write' && erp.info.profile.copy_from){
 				//find the rcu device
 				let rcu_device = erp.info.profile.profile_device.find((item)=>{
 					return (item.device_mode == 'RCU Controller' || item.device_model == 'YO780') && item.device;
@@ -8360,7 +8410,9 @@ export default async (props, ctx) => {
 		mobileAsHubStatus = false;
 		//clear the timer
 		console.log("erp.peripheral_timer_settimeout",erp.peripheral_timer_settimeout);
-		if(erp.peripheral_timer_settimeout.length){
+		if(typeof erp.cancelPeripheralTimers === 'function'){
+			erp.cancelPeripheralTimers();
+		}else if(erp.peripheral_timer_settimeout.length){
 			for(const timeoutId of erp.peripheral_timer_settimeout){
 				clearTimeout(timeoutId);
 			}

@@ -16,7 +16,12 @@ window.ble_load_to_device_form_auto = (params) => {setTimeout(function(){
         return
     }
     if(!isset(uuid)){
-        uuid = window.peripheral[guid].prop.id
+        try{
+            uuid = window.peripheral[guid].prop.id
+        }catch(error){
+            uuid = '';
+        }
+        
     }
     _ble_load_to_device_form_perform_auto({guid:guid,uuid:uuid, button_group:button_group,display_name : display_name,subdevice_name : subdevice_name,"page_type":page_type});
 }, 10);};
@@ -24,7 +29,7 @@ window.ble_load_to_device_form_auto = (params) => {setTimeout(function(){
 window._ble_load_to_device_form_perform_auto = async(loading_config) => {
     const guid = loading_config.guid;
     const button_group = loading_config.button_group;
-    console.log(peripheral[guid].getProp());
+    // console.log(peripheral[guid].getProp());
     try{
         loading_timer = setTimeout(function(){
             app.preloader.hide();
@@ -105,6 +110,9 @@ window._ble_load_to_device_form_perform_auto = async(loading_config) => {
         //if is IAQ model
         let new_cmd = [];
         if(button_group == 'IAQ'){
+            if(!uuid){
+                return;
+            }
             if(window.device.platform.toLowerCase()=='android'){
                 ble.requestMtu(
                     peripheral.id,

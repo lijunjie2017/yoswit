@@ -166,17 +166,17 @@
                   `: $h` 
                   <a></a>
                   `}
-                  ${kitem.param == "tvoc-sgp"? $h`
+                  ${kitem.param == "tvoc"? $h`
                   <!-- TVOCs -->
                   <div class="main-btn" style="width: 33.3%;">
                       <div class="box-btn display-flex justify-content-center align-content-center align-items-center box-left">
                           <div class="VOC display-flex flex-direction-column justify-content-center align-content-center align-items-center">
-                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('VOC',parseInt(kitem.points[0].value)).bgcolor};">
+                              <div class="box-btn-img display-flex justify-content-center align-content-center align-items-center" style="width: 30px;height:30px;border-radius: 50%;padding:5px;background-color: ${iaq_evaluate_rule('TVOC',parseInt(kitem.points[0].value)).bgcolor};">
                                   <img class="" src="${'https://my.yoswit.com/'}/files/app/VOC_1.svg" alt="" style="width: 25px;height:25px;"/>
                               </div>
                               <div class="title-btn display-flex justify-content-center align-items-center">
-                                  <span class="iaq-title-big">${parseInt(kitem.points[0].value) }</span>
-                                  <span class="unit">${kitem.units}</span>
+                                  <span class="iaq-title-big">${parseInt(convertTVOC(kitem.points[0].value)) }</span>
+                                  <span class="unit">µg/m³</span>
                               </div>
                           </div>
                       </div>
@@ -229,6 +229,25 @@
         $(`li[field="${key}"]`).show();
       }
       $update();
+    }
+    window.convertTVOC = (ppbValue, molecularWeight = 100)=>{
+      // 参数验证
+      if (typeof ppbValue !== 'number' || ppbValue < 0) {
+          throw new Error('TVOC值必须为非负数');
+      }
+      if (typeof molecularWeight !== 'number' || molecularWeight <= 0) {
+          throw new Error('分子量必须为正数');
+      }
+      // 标准摩尔体积（25°C, 1 atm）
+      const molarVolume = 24.45;
+      
+      // 计算换算因子
+      const conversionFactor = molecularWeight / molarVolume;
+      
+      // 进行换算
+      const result = ppbValue * conversionFactor;
+      // 返回结果，保留两位小数
+      return parseFloat(result.toFixed(2));
     }
     const returnScoreColor = (value)=>{
       const intValue = parseInt(value, 10);

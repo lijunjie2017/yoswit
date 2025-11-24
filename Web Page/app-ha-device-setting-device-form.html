@@ -1,0 +1,421 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${title}</div>
+        <div class="right">
+          <a href="#" class="link icon-only" ref="${guid}" @click="${()=>check_iot_connection()}">
+            <i class="icon material-icons bluetooth-icons" ref="${bleStatus}">bluetooth</i>
+          </a>
+          <a href="#" class="link icon-only sortable-toggle" @click="${()=>saveErp()}">
+            <i class="icon material-icons">check</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <!-- 设备banner -->
+        <div class="device-banner">
+          <a
+            href="#"
+            func="core_get_photo"
+            ref="profile_subdevice_form_banner"
+            :style="{backgroundImage:'url('+image+')'}"
+            class="profile_subdevice_form_banner"
+          >
+            <input
+              type="text"
+              name="banner"
+              class="_readable"
+              readonly="readonly"
+              placeholder="Banner"
+              style="display: none"
+              :value="image"
+            />
+            <span class="material-icons" style="font-size: 30px; color: #ddd"> add_a_photo </span>
+          </a>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="row">
+              <div class="col-100">
+                <h5 lang="en">Profile Settings</h5>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="list no-hairlines-md">
+              <ul>
+                <li class="item-content item-input">
+                  <div class="item-media align-self-flex-start">
+                    <i class="icon material-icons setting-list-icon p-1">bed</i>
+                  </div>
+                  <div class="item-inner">
+                    <div class="item-title item-label" lang="en">Room</div>
+                    <div class="item-input-wrap input-dropdown-wrap">
+                      <select name="profile_room" placeholder="Please choose..." lang="en">
+                        <option :value="roomItem.name" v-for="roomItem in roomList" :key="roomItem.name" :selected="roomItem.selected">
+                          {{roomItem.title}}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </li>
+                <li class="item-content item-input">
+                  <div class="item-media align-self-flex-start">
+                    <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                  </div>
+                  <div class="item-inner">
+                    <div class="item-title item-label" lang="en">Name</div>
+                    <div class="item-input-wrap">
+                      <input
+                        class="init-input"
+                        name="title"
+                        v-model="deviceTitle"
+                        type="text"
+                        lang="en"
+                        :placeholder="_('Device Name')"
+                        required
+                        validate
+                      />
+                      <span class="input-clear-button"></span>
+                    </div>
+                  </div>
+                </li>
+                <li class="item-content item-input">
+                  <div class="item-media align-self-flex-start">
+                    <i class="icon material-icons setting-list-icon p-1">model_training</i>
+                  </div>
+                  <div class="item-inner">
+                    <div class="item-title item-label" lang="en">Device Mode</div>
+                    <div class="item-input-wrap input-dropdown-wrap">
+                      <select name="device_mode" placeholder="Please choose..." lang="en" id="device_mode">
+                        <option :value="deviceModeItem" v-for="deviceModeItem in deviceModeList" :key="deviceModeItem">{{deviceModeItem}}</option>
+                      </select>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="row">
+              <div class="col-100">
+                <h5 lang="en">General Information</h5>
+              </div>
+            </div>
+          </div>
+          <div class="card-content card-content-padding">
+            <div class="list" style="padding-left: var(--fimobile-padding); padding-right: var(--fimobile-padding)">
+              <ul>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">Brand</div>
+                      <div class="item-after">{{brand}}</div>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">GUID</div>
+                      <div class="item-after">{{deviceGuid}}</div>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">Device Button Group</div>
+                      <div class="item-after device-button-group">{{buttonGroup}}</div>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">Model</div>
+                      <div class="item-after">{{model}}</div>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">Batch No</div>
+                      <div class="item-after">{{batch}}</div>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">MAC Address</div>
+                      <div class="item-after">{{macAddress}}</div>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="item-content" style="padding-left: 0px">
+                    <div class="item-inner" style="padding-right: 0px">
+                      <div class="item-title" lang="en">Firmware</div>
+                      <div class="item-after">v{{firmware}}</div>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    let showIrLearnIcon = false;
+    let title = 'Device Control';
+    let bleStatus = 0;
+    let vueApp = null;
+    let { guid, subdevice } = $f7route.query;
+
+    const check_iot_connection = () => {
+      vueApp.check_iot_connection();
+    };
+    const saveErp = () => {
+      vueApp.saveErp();
+    };
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          image: '',
+          deviceTitle: '',
+          brand: '',
+          deviceGuid: guid,
+          buttonGroup: '',
+          model: '',
+          batch: '',
+          macAddress: '',
+          firmware: '',
+          password : '',
+          roomList: [],
+          deviceModeList: [],
+        },
+        computed: {},
+        watch: {},
+        components: {},
+        mounted() {
+          Vue.prototype.check_iot_connection = this.check_iot_connection;
+          Vue.prototype.saveErp = this.saveErp;
+          this.iotConnect();
+          this.initDeviceInfo();
+        },
+        methods: {
+          check_iot_connection() {
+            this.iotConnect(true);
+          },
+          //首次连接蓝牙并检查蓝牙信息
+          async iotConnect(operate=false) {
+            let connectStatus = false;
+            if (isset(window.peripheral[guid]) && window.peripheral[guid]) {
+              connectStatus = window.peripheral[guid].prop.connected;
+            }
+            //如果未连接，则开始连接蓝牙，并开始闪动
+            if (!connectStatus) {
+              //首先判断蓝牙是否已开启扫描
+              if (isset(window.peripheral) && isset(window.peripheral[guid])) {
+                bleStatus = 2;
+                $update();
+                try {
+                  await window.peripheral[guid].connect();
+                  bleStatus = 1;
+                  $update();
+                } catch (error) {
+                  bleStatus = 0;
+                  $update();
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              }else{
+                bleStatus = 0;
+                $update();
+                if(operate){
+                  //需要提醒用户先进入smart home
+                  app.dialog.alert(_('Please enter smart home.'));
+                }
+              }
+            } else {
+              bleStatus = 1;
+              $update();
+            }
+          },
+          //初始化房间信息
+          initRoomInfo(roomeName) {
+            let profileRoom = cloneDeep(erp.info.profile.profile_room);
+            this.roomList = profileRoom.map((item) => {
+              return {
+                name: item.name,
+                title: tran(item.title),
+                selected: roomeName == item.name ? true : false,
+              };
+            });
+          },
+          initDeviceInfo() {
+            this.deviceModeList = [];
+            let device_default_template = [];
+            let profileSubDevice = cloneDeep(erp.info.profile.profile_subdevice);
+            let deviceMap = profileSubDevice.find((item) => item.name == subdevice);
+            if (deviceMap) {
+              //从profile_device中获取信息
+              let profileDevice = cloneDeep(erp.info.profile.profile_device);
+              let deviceInfo = profileDevice.find((item) => item.name == deviceMap.profile_device);
+              if (deviceInfo) {
+                this.model = deviceInfo.device_model || '';
+              }
+              //从device中获取设备的信息
+              let device = cloneDeep(erp.info.device);
+              if (isset(device) && isset(device[guid])) {
+                this.firmware = this.getFirmwareNo(device[guid].firmware || '');
+                this.batch = device[guid].batch || '';
+                this.password = device[guid].password || '000000';
+              }
+              //通过型号获取品牌的信息
+              if (this.model) {
+                let models = cloneDeep(erp.doctype.device_model);
+                for (let key in models) {
+                  if (models[key].model_code == this.model) {
+                    this.brand = models[key].brand || '';
+                    this.image = models[key].image || '';
+                    device_default_template = models[key].device_default_template || [];
+                    break;
+                  }
+                }
+              }
+              //自身的信息
+              title = _('Edit ') + tran(deviceMap.title);
+              this.deviceTitle = tran(deviceMap.title);
+              this.buttonGroup = deviceMap.device_button_group || '';
+              this.macAddress = core_utils_get_mac_address_from_guid(guid);
+              this.deviceModeList.push(deviceMap.device_mode);
+              device_default_template.forEach((item) => {
+                if (this.deviceModeList.indexOf(item.mode) == -1) {
+                  this.deviceModeList.push(item.mode);
+                }
+              });
+              this.initRoomInfo(deviceMap.profile_room);
+              $update();
+            }
+          },
+          getFirmwareNo(firmware) {
+            try {
+              const versionPattern = /^\d+\.\d+\.\d+$/;
+              if (versionPattern.test(firmware)) {
+                firmware = `7.0`;
+              }
+            } catch (error) {}
+            let firmwareNo = firmware.replace(/[^0-9.]/g, '');
+            firmwareNo = firmwareNo.split('.');
+            firmwareNo = firmwareNo[0] + '.' + (firmwareNo.length > 1 ? firmwareNo.slice(1).join('') : '0');
+            return firmwareNo;
+          },
+          async saveErp(){
+            //处理错误检查
+            if(this.deviceTitle == '' || this.model == '' || this.buttonGroup == '' || this.batch == '' || this.deviceMode == ''){
+              app.dialog.alert(_('Please check the input information.'));
+              return;
+            }
+            app.dialog.preloader();
+            let url = `/api/method/save.subdevice`;
+            let method = 'POST';
+            let postData = {
+              title:this.deviceTitle,
+              guid : guid,
+              model:this.model,
+              device_mode:$('select[name="device_mode"]').val(),
+              profile_room:$('select[name="profile_room"]').val(),
+              peripheral:core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
+              device_button_group : this.buttonGroup,
+              parent : erp.info.profile.name,
+              batch : this.batch,
+              firmware : this.firmware,
+              password : this.password?this.password:'000000',
+              mac_address : core_utils_get_mac_address_from_guid(guid),
+              name : subdevice,
+              page_type : 1
+            }
+            try{
+              let resData = await http2.request(url, {
+                method : method,
+                serializer : 'json',
+                responseType : 'json',
+                data : postData,
+              });
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+            await ha_profile_ready();
+            app.dialog.close();
+            window.globalUpdate = true;
+            setTimeout(()=>{
+              emitter.emit('refresh',{page : 'save_subdevice'});
+            },500)
+            mainView.router.back();
+          }
+        },
+
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-banner a {
+    display: block;
+    overflow: hidden;
+    background: #eee;
+    height: 150px;
+    width: 150px;
+    line-height: 170px;
+    text-align: center;
+    background-size: cover;
+    background-position: center;
+    margin: 20px auto 0px auto;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    border-radius: 50%;
+  }
+</style>

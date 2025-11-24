@@ -30,6 +30,17 @@
             swipeout-delete-func="controller_iot_device_delete"
             ref="${ device.name }|${ subDevice.name }"
             key="${subDevice.name}"
+            subdevice-name="${subDevice.name}"
+            mac-address="${subDevice.mac_address}"
+            hexBatch="${subDevice.device_hex_batch}"
+            hexModel="${ subDevice.hex_model}"
+            firmware="${subDevice.firmware}"
+            uuid="${subDevice.uuid}"
+            button_group="${subDevice.device_button_group}"
+            guid="${subDevice.device}"
+            display-name="${tran(subDevice.title)}"
+            load-type="setting"
+            page-type="1"
           >
             <div class="item-content swipeout-content">
               <div class="item-media" style="background-image: url('${ subDevice.img_url }')"></div>
@@ -54,7 +65,8 @@
                 <i class="icon material-icons">${ subDevice.hidden == 1?'visibility_off':'visibility'}</i>
               </a>
               <a
-                href="/frappe/detail/${ tran(subDevice.title) } Setting/APP_Yoswit_Setting_Device_Information/Profile Subdevice/${ subDevice.name }/guid=${ subDevice.device }&device_button_group=${ subDevice.device_button_group }&title=Edit ${ tran(subDevice.titl) }&name=${ subDevice.name }&doctype=Profile Subdevice/"
+                func="ble_load_to_device_form_auto"
+                
                 class="link color-orange"
               >
                 <i class="icon material-icons">settings</i>
@@ -141,6 +153,11 @@
           }
         }
         if (item.profile_room === room) {
+          item.device_name = item.device;
+          item.device_hex_batch = '1D';
+          item.hex_model = item.device.substring(-6,-2);
+          item.firmware = erp.info.device[item.device].firmware;
+          item.uuid = window.peripheral && window.peripheral[item.device] ? window.peripheral[item.device].prop.id : '';
           deviceList.push(item);
         }
       });

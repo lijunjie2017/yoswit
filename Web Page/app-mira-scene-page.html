@@ -924,6 +924,20 @@
             await this.initSubdevice();
             await this.initData();
           },
+          //获取用户角色
+          getRolePermision(){
+            let roleList = erp.info.user.roles || [];
+            let haveAppDeveloper = false;
+            roleList.forEach(item=>{
+              if(item.role == "App Developer" || item.role == "App Developer - Tier 1"){
+                haveAppDeveloper = true;
+              }
+              if(item.role == "Engineer" || item.role == 'Super Admin'){
+                haveAppDeveloper = true;
+              }
+            });
+            return haveAppDeveloper;
+          },
           async showRoom(item, status) {
             console.log('name', item.name);
             console.log('status', status);
@@ -3484,6 +3498,11 @@
             let { name, enable } = obj;
             let scene_id = '';
             let guid = '';
+            let haveAppDeveloper = this.getRolePermision();
+            if(!haveAppDeveloper){
+              app.dialog.alert(_('Sorry, you do not have permission to modify this configuration.'));
+              return;
+            }
             this.topDeviceList.forEach((item) => {
               if (item.name == name) {
                 item.enable = enable;

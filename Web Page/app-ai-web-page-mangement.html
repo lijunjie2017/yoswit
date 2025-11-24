@@ -1,0 +1,2565 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('AI Page') }}</div>
+        <div class="right">
+          <a class="link icon-only" @click="${()=>saveForm()}">
+            <i class="icon material-icons md-only">check</i>
+          </a>
+          <a class="link icon-only" @click="${()=>loadAndDebug()}">
+            <i class="icon material-icons md-only">refresh</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content page-bg-gradient">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="block no-hairlines-between">
+          <!-- 页面标题 -->
+          <div class="page-header">
+            <h2 class="page-title">{{ _('Smart Scene Templates') }}</h2>
+            <p class="page-subtitle">{{ _('Customize Your Smart Home Control Panel') }}</p>
+          </div>
+
+          <!-- 模板列表 -->
+          <div
+            v-for="(template, ti) in templates"
+            :key="template.id"
+            class="template-card"
+          >
+            <div class="template-header">
+              <div class="template-room-container">
+                <div class="template-room-selector" v-on:click="openRoomPicker(ti)">
+                  <div class="template-room-info">
+                    <i class="icon f7-icons room-icon">location</i>
+                    <span class="template-room-name" v-if="!templates[ti].roomName">
+                      {{ _('Select Room') }}
+                    </span>
+                    <span class="template-room-name selected" v-else>
+                      {{ templates[ti].roomName }}
+                    </span>
+                  </div>
+                  <i class="icon f7-icons room-arrow">chevron_right</i>
+                </div>
+              </div>
+              <a
+                class="link template-delete"
+                v-on:click="deleteTemplate(ti)"
+                v-if="templates.length > 1"
+              >
+                <i class="icon f7-icons">trash</i>
+              </a>
+            </div>
+            
+            <div class="template-grid">
+              <div 
+                v-for="(slot, slotIdx) in template.slots"
+                v-if="!slot || !slot.isPlaceholder"
+                :key="'cell-' + ti + '-' + slotIdx"
+                class="template-cell"
+                :class="getCellClasses(ti, slotIdx)"
+                :style="getCellStyle(ti, slotIdx)"
+              >
+                <transition name="fade-scale">
+                  <button
+                    v-if="!slot"
+                    class="cell-button cell-empty"
+                    v-on:click="openPicker(ti, slotIdx)"
+                  >
+                    <div class="cell-inner">
+                      <i class="icon f7-icons icon-plus">plus_circle_fill</i>
+                      <span class="cell-label">{{ _('Add') }}</span>
+                    </div>
+                  </button>
+                  <button
+                    v-else
+                    class="cell-button cell-filled-btn"
+                    v-on:click="onTemplateItemClick(ti, slotIdx)"
+                  >
+                    <div class="cell-inner">
+                      <i
+                        v-if="slot.icon"
+                        class="icon f7-icons cell-icon"
+                      >{{ slot.icon }}</i>
+                      <span class="cell-label">
+                        {{ slot.text }}
+                      </span>
+                    </div>
+                  </button>
+                </transition>
+              </div>
+            </div>
+          </div>
+
+          <!-- 新增模板按钮 -->
+          <div class="add-template-section">
+            <button class="button-add-template" v-on:click="addTemplate">
+              <i class="icon f7-icons">plus_circle</i>
+              <span>{{ _('Add Template') }}</span>
+            </button>
+
+            <!-- 调试信息 -->
+            <div class="debug-info" v-if="templates.length > 0">
+              <p class="debug-text">
+                {{ _('Loaded') }} {{ templates.length }} {{ _('template(s) with') }}
+                {{ getTotalDevices() }} {{ _('device(s)') }}
+                <span v-if="getTotalRooms() > 0">
+                  ({{ getTotalRooms() }} {{ _('room(s)') }})
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    let { guid, sub_name } = $f7route.query;
+    //let { guid, subdevice_name } = $f7route.query;
+
+    const saveForm = ()=>{
+      vueApp.$saveForm();
+    }
+
+    const debugAnalysis = ()=>{
+      vueApp.$debugTemplateAnalysis();
+      vueApp.$runSystemTest();
+    }
+
+    const loadAndDebug = ()=>{
+      console.log('🔄 Manual reload and debug triggered');
+      vueApp.$loadFromServer();
+      vueApp.$runSystemTest();
+    }
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          templates: [],            // 优化后的模板数据结构
+          compactData: [],         // 服务器存储的精简数据: [{idx, deviceId, size, templateOrder}]
+          templateOrderCounter: 0,  // 模板创建顺序计数器
+          availableItems: [],
+          sizeOptions: [
+            { text: _('1×1 (Standard)'), width: 1, height: 1, slots: 1 },
+            { text: _('2×1 (Horizontal)'), width: 2, height: 1, slots: 2 },
+            { text: _('1×2 (Vertical)'), width: 1, height: 2, slots: 2 },
+            { text: _('2×2 (Large)'), width: 2, height: 2, slots: 4 },
+            { text: _('3×1 (Wide)'), width: 3, height: 1, slots: 3 },
+            { text: _('1×3 (Tall)'), width: 1, height: 3, slots: 3 },
+            { text: _('4×1 (Extra Wide)'), width: 4, height: 1, slots: 4 },
+          ],
+          searchQuery: '',
+          filteredItems: [],
+          // 尺寸映射表 - 从device_button_group获取占比信息
+          sizeMapping: {
+            '1*1': { width: 1, height: 1, slots: 1 },
+            '2*1': { width: 2, height: 1, slots: 2 },
+            '1*2': { width: 1, height: 2, slots: 2 },
+            '2*2': { width: 2, height: 2, slots: 4 },
+            '3*1': { width: 3, height: 1, slots: 3 },
+            '1*3': { width: 1, height: 3, slots: 3 },
+            '4*1': { width: 4, height: 1, slots: 4 }
+          },
+          roomList: [],
+        },
+        watch: {},
+        components: {
+
+        },
+        mounted() {
+          Vue.prototype.$saveForm = this.saveForm;
+          Vue.prototype.$debugTemplateAnalysis = this.debugTemplateAnalysis;
+          Vue.prototype.$runSystemTest = this.runSystemTest;
+          Vue.prototype.$loadFromServer = this.loadFromServer;
+          this.addTemplate();
+          this.getRoomList();
+          this.initData();
+
+          // 运行初始系统检查
+          setTimeout(() => {
+            console.log('🚀 ' + _('AI Web Page Management System initialized successfully'));
+            this.runSystemTest();
+          }, 1000);
+        },
+        methods: {
+          getRoomList(){
+           console.log('Loading room list from profile...');
+
+           // 检查profile数据是否存在
+           if (!erp || !erp.info || !erp.info.profile) {
+             console.error('ERP profile data not available');
+             this.roomList = [];
+             return;
+           }
+
+           let list = erp.info.profile.profile_room || [];
+           console.log('Raw room data:', list);
+
+           this.roomList = [];
+           list.forEach(item=>{
+            if (item && item.name) {
+              this.roomList.push({
+                name: item.name,
+                title: tran(item.title) || item.name,
+              });
+            }
+           });
+
+           console.log('Processed room list:', this.roomList);
+          },
+          // 核心算法：计算指定位置和尺寸占用的格子
+          calculateOccupiedSlots(idx, size) {
+            const sizeInfo = this.sizeMapping[size] || { width: 1, height: 1, slots: 1 };
+            const occupied = [];
+
+            // 3行4列网格布局
+            const row = Math.floor(idx / 4);
+            const col = idx % 4;
+
+            // 计算占用的所有格子位置
+            for (let h = 0; h < sizeInfo.height; h++) {
+              for (let w = 0; w < sizeInfo.width; w++) {
+                const newRow = row + h;
+                const newCol = col + w;
+
+                // 检查边界
+                if (newRow < 3 && newCol < 4) {
+                  occupied.push(newRow * 4 + newCol);
+                }
+              }
+            }
+
+            return occupied;
+          },
+
+          // 检查是否可以放置指定尺寸的项目
+          canPlaceItem(templates, newItemIdx, newItemSize) {
+            const newOccupied = this.calculateOccupiedSlots(newItemIdx, newItemSize);
+
+            // 检查是否超出边界
+            if (newOccupied.length === 0) return false;
+
+            // 检查与现有项目的冲突
+            for (const item of templates) {
+              const existingOccupied = this.calculateOccupiedSlots(item.idx, item.size);
+
+              // 检查是否有重叠
+              const hasOverlap = newOccupied.some(slot =>
+                existingOccupied.includes(slot)
+              );
+
+              if (hasOverlap) {
+                return false;
+              }
+            }
+
+            return true;
+          },
+
+          // 核心算法：分析compactData，自动分组为多个模板（保持创建顺序）
+          analyzeTemplates(compactData) {
+            if (!compactData || compactData.length === 0) {
+              return [];
+            }
+
+            // 先按模板创建顺序分组，然后在每个组内按idx排序
+            const templateGroupsMap = new Map();
+
+            compactData.forEach(item => {
+              const templateOrder = item.templateOrder || 0;
+
+              if (!templateGroupsMap.has(templateOrder)) {
+                templateGroupsMap.set(templateOrder, []);
+              }
+              templateGroupsMap.get(templateOrder).push(item);
+            });
+
+            // 转换为数组并按模板顺序排序
+            const templateGroups = [];
+            const sortedOrders = Array.from(templateGroupsMap.keys()).sort((a, b) => a - b);
+
+            sortedOrders.forEach(order => {
+              const group = templateGroupsMap.get(order);
+              // 在每个组内按idx排序
+              const sortedGroup = group.sort((a, b) => a.idx - b.idx);
+              templateGroups.push(sortedGroup);
+            });
+
+            return templateGroups;
+          },
+
+          // 将compactData转换为渲染用的templates数据结构
+          convertToTemplates(compactData, templateNames = null) {
+            const templateGroups = this.analyzeTemplates(compactData);
+            const templates = [];
+
+            templateGroups.forEach((group, groupIndex) => {
+              const template = this.createEmptyTemplate();
+
+              // 为模板设置正确的顺序信息
+              const templateOrder = group[0]?.templateOrder || groupIndex;
+              template.templateOrder = templateOrder;
+
+              // 恢复模板名称（从templateNames中获取，更可靠）
+              if (templateNames && templateNames.length > templateOrder && templateNames[templateOrder]) {
+                template.roomName = templateNames[templateOrder];
+                console.log(`Restored template name for order ${templateOrder}: ${template.roomName}`);
+              }
+              // 备用方案：从compactData中第一个设备获取
+              else if (group.length > 0) {
+                const firstDevice = group[0];
+                if (firstDevice.originalDevice && firstDevice.originalDevice.roomName) {
+                  template.roomName = firstDevice.originalDevice.roomName;
+                  console.log(`Fallback: restored template name from first device: ${template.roomName}`);
+                }
+              }
+
+              // 将每个项目放置到对应的格子中
+              group.forEach(item => {
+                const occupied = this.calculateOccupiedSlots(item.idx, item.size);
+                const deviceInfo = this.availableItems.find(d => d.id === item.deviceId);
+
+                if (deviceInfo) {
+                  const sizeInfo = this.sizeMapping[item.size];
+
+                  // 设置起始格子
+                  template.slots[item.idx] = {
+                    ...deviceInfo,
+                    width: sizeInfo.width,
+                    height: sizeInfo.height,
+                    size: item.size,
+                    idx: item.idx,
+                    templateOrder: templateOrder
+                  };
+
+                  // 设置占位符
+                  occupied.forEach((slot, index) => {
+                    if (slot !== item.idx) {
+                      template.slots[slot] = {
+                        startIndex: item.idx,
+                        isPlaceholder: true,
+                        templateOrder: templateOrder
+                      };
+                    }
+                  });
+                }
+              });
+
+              templates.push(template);
+            });
+
+            return templates;
+          },
+
+          // 将templates数据结构转换为compactData用于保存
+          convertToCompactData(templates) {
+            const compactData = [];
+
+            templates.forEach((template, templateIndex) => {
+              // 获取模板的templateOrder，如果没有则使用索引
+              const templateOrder = template.templateOrder !== undefined ? template.templateOrder : templateIndex;
+
+              template.slots.forEach((slot, idx) => {
+                if (slot && !slot.isPlaceholder) {
+                  compactData.push({
+                    idx: idx,
+                    deviceId: slot.id,
+                    size: slot.size || '1*1',
+                    templateOrder: templateOrder,  // 保留模板顺序信息
+                    roomName: template.roomName   // 添加房间名信息
+                  });
+                }
+              });
+            });
+
+            return compactData;
+          },
+
+          async saveForm(){
+            try {
+              // 数据验证
+              if (!this.templates || this.templates.length === 0) {
+                $f7.dialog.alert(_('No templates available. Please add at least one template.'));
+                return;
+              }
+
+              // 转换为精简数据格式
+              const compactData = this.convertToCompactData(this.templates);
+              console.log(`${_('Original data:')}`, this.templates);
+              console.log(`${_('Compact data:')}`, compactData);
+              console.log(`${_('Compression rate:')}`, `${((1 - JSON.stringify(compactData).length / JSON.stringify(this.templates).length) * 100).toFixed(1)}%`);
+
+              // 如果是没有保存任何东西，警告
+              if(compactData.length == 0){
+                $f7.dialog.alert(_('Please add at least one device to the templates.'));
+                return;
+              }
+
+              // 收集所有房间的名称
+              const roomNames = [];
+              this.templates.forEach(template => {
+                if (template && template.roomName) {
+                  roomNames.push(template.roomName);
+                }
+              });
+
+              if (roomNames.length === 0) {
+                $f7.dialog.alert(_('Please select rooms for at least one template.'));
+                return;
+              }
+
+              console.log(`${_('Room names to save:')} ${roomNames.join(', ')}`);
+
+              // 验证ERP数据可用性
+              if (!erp || !erp.info || !erp.info.profile) {
+                $f7.dialog.alert(_('Profile data not available. Please refresh the page and try again.'));
+                return;
+              }
+
+              // 提交到erp
+              let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+
+              if (!subdevices || !Array.isArray(subdevices)) {
+                $f7.dialog.alert(_('Device data not available. Please refresh the page and try again.'));
+                return;
+              }
+
+              // 重置当前系统相关的设备配置状态
+              subdevices.forEach(item => {
+                if (item && item.function && typeof item.function === 'string') {
+                  // 检查function字段是否包含我们的系统分隔符
+                  if (item.function.includes('%') && item.function.includes('#')) {
+                    // 如果是本系统生成的function字段，重置
+                    item.controller_mode = 0;
+                    item.controller_mode_idx = null;
+                    item.function = null;
+                    console.log(`Reset device ${item.name} with old function: ${item.function}`);
+                  }
+                  // 否则保留原有的function字段（可能是其他业务的数据）
+                } else if (item) {
+                  // 没有function字段或格式不正确，重置状态
+                  item.controller_mode = 0;
+                  item.controller_mode_idx = null;
+                }
+              });
+
+              // 重新设置所有设备配置 
+              let updatedCount = 0;
+              subdevices.forEach(item => {
+                if (item) {
+                  compactData.forEach(kitem => {
+                    if(kitem.deviceId == item.name){
+                      // 构建新的function字段，包含房间名
+                      const baseFunction = `%${kitem.size}#${kitem.templateOrder}`;
+                      let functionStr = baseFunction;
+
+                      // 如果模板有房间名，添加到function字段
+                      if (kitem.roomName) {
+                        functionStr = `${baseFunction}&&&${kitem.roomName}`;
+                      }
+
+                      item['function'] = functionStr;
+                      item.controller_mode_idx = kitem.idx;
+                      item.controller_mode = 1;
+
+                      updatedCount++;
+                      console.log(`${_('Updated device:')} ${item.name} ${_('with function:')} ${functionStr}`);
+                    }
+                  });
+                }
+              });
+
+              console.log(`Total devices updated: ${updatedCount}`);
+
+              if (updatedCount === 0) {
+                $f7.dialog.alert(_('No devices were updated. Please check your device configuration.'));
+                return;
+              }
+
+              // 保存房间名称到Profile的description字段，用&&&符号分隔
+              $f7.dialog.preloader();
+              let url = `/api/resource/Profile/${erp.info.profile.name}`;
+
+              const response = await http2
+              .request(url, {
+                method: 'PUT',
+                serializer: 'json',
+                responseType: 'json',
+                debug: true,
+                data: {
+                  profile_subdevice: subdevices
+                },
+              });
+
+              console.log('Save response:', response);
+              $f7.dialog.close();
+
+            } catch(error) {
+              console.error('Save error:', error);
+              $f7.dialog.close();
+              $f7.dialog.alert(_('Save failed: ') + (error.message || error.toString() || _('Unknown error')));
+            }
+          },
+          initData(){
+            //get the erp data
+            let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            this.availableItems = [];
+
+            // 这里需要根据不同的button group指定方向和规格
+            /*
+            首先需要知道哪些button group会有特别的方向和规格
+            1.含有DIMMING的，方向垂直，规格为1*2
+            2.含有Curtain Motor的，方向水平，规格2*1
+            */
+
+            profile_subdevices.forEach(item=>{
+              // 根据device_button_group自动确定默认尺寸
+              let defaultSize = '1*1'; // 默认尺寸
+
+              if (item.device_button_group) {
+                const group = item.device_button_group.toUpperCase();
+
+                // 根据设备类型自动设置合适的尺寸
+                if (group.includes('DIMMING')) {
+                  defaultSize = '1*2'; // 调光设备：纵向
+                } else if (group.includes('CURTAIN') || group.includes('MOTOR')) {
+                  defaultSize = '2*1'; // 窗帘电机：横向
+                } else if (group.includes('AIR') || group.includes('HVAC')) {
+                  defaultSize = '2*2'; // 空调：大尺寸
+                } else if (group.includes('SCENE')) {
+                  defaultSize = '3*1'; // 场景：宽幅
+                } else if (group.includes('SENSOR')) {
+                  defaultSize = '1*3'; // 传感器：纵向长条
+                }
+              }
+              //获取服务器的数据
+
+              this.availableItems.push({
+                id: item.name,
+                text: tran(item.title),
+                icon: 'lightbulb',
+                category: item.device_button_group,
+                defaultSize: defaultSize, // 默认推荐尺寸
+                // 可以扩展更多设备属性
+                deviceInfo: item
+              });
+            });
+
+            // 从服务器加载配置的数据
+            this.loadFromServer();
+          },
+
+          // 从服务器加载数据
+          loadFromServer() {
+            console.group('🔄 ' + _('Loading Saved Configuration'));
+            // 优先从profile_subdevices加载已配置的数据
+            const profileData = this.parseProfileSubdevices();
+            console.log('profileData', profileData);
+
+            if (profileData.compactData && profileData.compactData.length > 0) {
+              console.log('✅ ' + _('Loaded data from profile_subdevices'));
+              console.log(`   ${_('Found')} ${profileData.compactData.length} ${_('configured devices')}`);
+
+              // 使用从function字段中提取的模板名称
+              const templateNames = profileData.templateNames || [];
+              console.log(`   ${_('Loaded template names from function fields:')} ${templateNames.join(', ')}`);
+
+              console.log('🔄 Converting to templates...');
+              this.templates = this.convertToTemplates(profileData.compactData, templateNames);
+              this.compactData = profileData.compactData;
+
+              console.log(`✅ ${_('Successfully loaded')} ${this.templates.length} ${_('templates')}`);
+              console.groupEnd();
+              return;
+            }
+
+            // 备用：从localStorage加载数据
+            const savedData = localStorage.getItem('ai-web-page-mangement-compact');
+            const oldData = localStorage.getItem('ai-web-page-mangement'); // 向后兼容
+
+            let compactData = null;
+
+            if (savedData) {
+              // 加载新的精简数据格式
+              try {
+                compactData = JSON.parse(savedData);
+                console.log(_('Loaded compact data format'));
+              } catch (e) {
+                console.error(`${_('Failed to parse compact data:')}`, e);
+              }
+            } else if (oldData) {
+              // 向后兼容：转换旧数据格式
+              try {
+                const oldTemplates = JSON.parse(oldData);
+                compactData = this.convertLegacyData(oldTemplates);
+                console.log(_('Converted legacy data format'));
+              } catch (e) {
+                console.error(`${_('Failed to convert legacy data:')}`, e);
+              }
+            }
+
+            // 示例数据，演示compactData的格式和功能（会通过空间冲突自动分组）
+            const exampleCompactData = [
+              // 第一组设备 - 这些设备之间没有空间冲突，会形成第一个模板
+              { idx: 0, deviceId: "device1", size: "2*2", templateOrder: 0 },  // 占用格子: [0,1,4,5]
+              { idx: 6, deviceId: "device2", size: "1*1", templateOrder: 0 },  // 占用格子: [6]
+              { idx: 7, deviceId: "device3", size: "1*1", templateOrder: 0 },  // 占用格子: [7]
+              { idx: 8, deviceId: "device4", size: "2*1", templateOrder: 0 },  // 占用格子: [8,9]
+
+              // 第二组设备 - 与第一组设备有空间冲突，会形成第二个模板
+              { idx: 0, deviceId: "device5", size: "3*1", templateOrder: 1 },  // 占用格子: [0,1,2] - 与device1冲突
+              { idx: 3, deviceId: "device6", size: "1*2", templateOrder: 1 },  // 占用格子: [3,7]
+              { idx: 6, deviceId: "device7", size: "2*1", templateOrder: 1 },  // 占用格子: [6,7] - 与device6有部分冲突，但会开始新模板
+            ];
+
+            if (compactData && compactData.length > 0) {
+              // 转换为渲染用的模板数据
+              this.templates = this.convertToTemplates(compactData);
+              this.compactData = compactData;
+            } else if (exampleCompactData && exampleCompactData.length > 0) {
+              // 使用示例数据演示功能
+              this.templates = this.convertToTemplates(exampleCompactData);
+              this.compactData = exampleCompactData;
+              console.log(_('Using example data to demonstrate optimization features'));
+            } else {
+              // 如果没有保存的数据，创建一个空模板
+              this.addTemplate();
+            }
+          },
+
+          // 解析profile_subdevices数据，转换为compactData格式
+          parseProfileSubdevices() {
+            if (!erp || !erp.info || !erp.info.profile || !erp.info.profile.profile_subdevice) {
+              console.log(_('No profile_subdevices data found'));
+              return { compactData: null, templateNames: [] };
+            }
+
+            const profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice) ;
+            const compactData = [];
+            const templateNamesMap = new Map(); // 存储每个模板的名称
+
+            console.log(`${_('Parsing profile_subdevices:')} ${profile_subdevices.length} ${_('devices')}`);
+
+            profile_subdevices.forEach(device => {
+              // 检查设备是否已配置 (controller_mode = 1)
+              if (device.controller_mode === 1) {
+                // 解析function字段：格式如 "%1*1#0" 或 "%1*1#0&&&模板名"
+                if (device.function && typeof device.function === 'string') {
+                  const parsed = this.parseFunctionString(device.function);
+
+                  if (parsed && device.controller_mode_idx !== undefined && device.controller_mode_idx !== null) {
+                    // 从function字段中提取模板名称
+                    let templateName = parsed.roomName || null;
+
+                    // 如果提取到了模板名称，存储到templateNamesMap中
+                    if (templateName) {
+                      if (!templateNamesMap.has(parsed.templateOrder)) {
+                        templateNamesMap.set(parsed.templateOrder, templateName);
+                        console.log(`${_('Found template name for order')} ${parsed.templateOrder}: ${templateName}`);
+                      }
+                    }
+
+                    compactData.push({
+                      idx: device.controller_mode_idx,        // 起始位置
+                      deviceId: device.name,                // 设备ID
+                      size: parsed.size,                    // 尺寸 (如 "1*1")
+                      templateOrder: parsed.templateOrder,  // 模板顺序
+                      roomName: templateName,               // 模板名称
+                      // 保留原始设备信息以供调试
+                      originalDevice: {
+                        name: device.name,
+                        title: device.title,
+                        function: device.function,
+                        controller_mode: device.controller_mode,
+                        controller_mode_idx: device.controller_mode_idx,
+                        roomName: templateName
+                      }
+                    });
+
+                    console.log(`${_('Found configured device:')} ${device.name} ${_('at position')} ${device.controller_mode_idx}, ${_('size:')} ${parsed.size}, ${_('template:')} ${parsed.templateOrder}, ${_('template name:')} ${templateName || _('none')}`);
+                  } else {
+                    console.warn(`${_('Invalid function string or missing controller_mode_idx for device:')} ${device.name}`);
+                  }
+                }
+              }
+            });
+
+            // 将Map转换为按templateOrder排序的数组
+            const sortedTemplateOrders = Array.from(templateNamesMap.keys()).sort((a, b) => a - b);
+            const templateNames = sortedTemplateOrders.map(order => templateNamesMap.get(order));
+
+            console.log(`${_('Parsed')} ${compactData.length} ${_('configured devices from profile_subdevices')}`);
+            console.log(`${_('Found template names:')} ${templateNames.join(', ')}`);
+
+            return {
+              compactData: compactData.length > 0 ? compactData : null,
+              templateNames: templateNames
+            };
+          },
+
+          // 解析function字符串，提取尺寸和模板顺序
+          parseFunctionString(functionStr) {
+            // function格式: "%1*1#0" 或 "%1*1#0&&&房间名"
+            // 其中: 1*1 是尺寸，0 是模板顺序，&&&后面是房间名（可选）
+
+            // 先匹配基础格式
+            const baseMatch = functionStr.match(/^%(\d+\*\d+)#(\d+)/);
+
+            if (!baseMatch) {
+              console.warn(`${_('Invalid function string format:')} ${functionStr}`);
+              return null;
+            }
+
+            const result = {
+              size: baseMatch[1],                    // 如 "1*1"
+              templateOrder: parseInt(baseMatch[2], 10)  // 如 0
+            };
+
+            // 提取房间名（如果存在）
+            const roomMatch = functionStr.match(/&&&(.+)$/);
+            if (roomMatch) {
+              result.roomName = roomMatch[1];  // 房间名
+            }
+
+            return result;
+          },
+
+          // 向后兼容：转换旧数据格式
+          convertLegacyData(oldTemplates) {
+            const compactData = [];
+
+            oldTemplates.forEach((template, templateIndex) => {
+              if (template.slots && Array.isArray(template.slots)) {
+                template.slots.forEach((slot, idx) => {
+                  if (slot && !slot.isPlaceholder) {
+                    // 根据width和height确定size
+                    let size = '1*1';
+                    if (slot.width && slot.height) {
+                      size = `${slot.width}*${slot.height}`;
+                    }
+
+                    compactData.push({
+                      idx: idx,
+                      deviceId: slot.id || `device_${idx}`,
+                      size: size,
+                      templateOrder: templateIndex  // 使用模板索引作为顺序
+                    });
+                  }
+                });
+              }
+            });
+
+            return compactData;
+          },
+
+          // 调试工具：分析模板分组
+          debugTemplateAnalysis() {
+            console.group('=== ' + _('Template Group Analysis') + ' ===');
+            console.log(`${_('Current compact data:')}`, this.compactData);
+
+            const groups = this.analyzeTemplates(this.compactData);
+            console.log(`${_('Group result:')}`, groups);
+
+            groups.forEach((group, index) => {
+              console.log(`${_('Template')} ${index + 1}:`, group);
+
+              // 显示每个模板占用的格子
+              const occupiedSlots = [];
+              group.forEach(item => {
+                const slots = this.calculateOccupiedSlots(item.idx, item.size);
+                occupiedSlots.push(...slots);
+              });
+              console.log(`  ${_('Occupied slots:')} [${occupiedSlots.sort((a,b) => a-b).join(', ')}]`);
+              console.log(`  ${_('Occupancy rate:')} ${(occupiedSlots.length / 12 * 100).toFixed(1)}%`);
+            });
+
+            // 添加设备选择状态信息
+            const selectionInfo = this.getDeviceSelectionInfo();
+            console.log('\n=== ' + _('Device Selection Status') + ' ===');
+            console.log(`${_('Total devices:')} ${selectionInfo.total}`);
+            console.log(`${_('Selected:')} ${selectionInfo.selected}`);
+            console.log(`${_('Available:')} ${selectionInfo.available}`);
+            console.log(`${_('Selected device IDs:')}`, selectionInfo.selectedIds);
+
+            // 显示可用设备
+            const availableItems = this.getAvailableItemsForSelection();
+            console.log('\n' + _('Available devices:') + ':');
+            availableItems.forEach(item => {
+              console.log(`  - ${item.text} (${item.id}) - ${item.category}`);
+            });
+
+            console.groupEnd();
+          },
+
+          // 综合测试功能
+          runSystemTest() {
+            console.group('=== ' + _('System Health Check') + ' ===');
+
+            try {
+              // 1. 检查数据完整性
+              console.log('1. ' + _('Data Integrity Check:'));
+              console.log(`  - Templates: ${this.templates ? this.templates.length : 0} templates`);
+              console.log(`  - Available Items: ${this.availableItems ? this.availableItems.length : 0} devices`);
+              console.log(`  - Room List: ${this.roomList ? this.roomList.length : 0} rooms`);
+              console.log(`  - Compact Data: ${this.compactData ? this.compactData.length : 0} configured devices`);
+
+              // 2. 检查房间数据
+              console.log('\n2. ' + _('Room Data Check:'));
+              if (this.roomList && this.roomList.length > 0) {
+                this.roomList.forEach((room, index) => {
+                  console.log(`  - Room ${index + 1}: ${room.title || room.name} (${room.name})`);
+                });
+              } else {
+                console.warn('  ⚠️ No rooms available');
+              }
+
+              // 3. 检查模板房间关联
+              console.log('\n3. ' + _('Template-Room Association Check:'));
+              this.templates.forEach((template, index) => {
+                const roomStatus = template.roomName ? `✓ ${template.roomName}` : '✗ No room';
+                const deviceCount = template.slots ? template.slots.filter(slot => slot && !slot.isPlaceholder).length : 0;
+                console.log(`  - Template ${index + 1}: ${roomStatus}, ${deviceCount} devices`);
+              });
+
+              // 4. 检查设备分配
+              console.log('\n4. ' + _('Device Allocation Check:'));
+              const allocatedDevices = new Set();
+              this.templates.forEach((template, ti) => {
+                if (template.slots) {
+                  template.slots.forEach((slot, si) => {
+                    if (slot && !slot.isPlaceholder && slot.id) {
+                      allocatedDevices.add(slot.id);
+                    }
+                  });
+                }
+              });
+
+              console.log(`  - Allocated devices: ${allocatedDevices.size}/${this.availableItems.length}`);
+              console.log(`  - Unallocated devices: ${this.availableItems.length - allocatedDevices.size}`);
+
+              // 5. 检查数据压缩率
+              if (this.templates.length > 0) {
+                const compactData = this.convertToCompactData(this.templates);
+                const originalSize = JSON.stringify(this.templates).length;
+                const compactSize = JSON.stringify(compactData).length;
+                const compressionRate = ((1 - compactSize / originalSize) * 100).toFixed(1);
+                console.log('\n5. ' + _('Data Compression Analysis:'));
+                console.log(`  - Original size: ${originalSize} bytes`);
+                console.log(`  - Compact size: ${compactSize} bytes`);
+                console.log(`  - Compression rate: ${compressionRate}%`);
+              }
+
+              // 6. 检查算法功能
+              console.log('\n6. ' + _('Algorithm Functionality Check:'));
+              console.log('  ✓ calculateOccupiedSlots: Function exists');
+              console.log('  ✓ canPlaceItem: Function exists');
+              console.log('  ✓ analyzeTemplates: Function exists');
+              console.log('  ✓ convertToTemplates: Function exists');
+              console.log('  ✓ convertToCompactData: Function exists');
+
+              console.log('\n✅ ' + _('System health check completed successfully'));
+
+            } catch (error) {
+              console.error('\n❌ ' + _('System health check failed:'), error);
+            }
+
+            console.groupEnd();
+          },
+          createEmptyTemplate() {
+            // 计算新模板的顺序
+            const nextOrder = this.getNextTemplateOrder(this.compactData);
+
+            return {
+              id: 'tpl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+              templateOrder: nextOrder,  // 设置模板顺序
+              roomName: null,           // 房间名称
+              slots: Array(12).fill(null), // 3行×4列 = 12格
+            };
+          },
+
+          // 打开房间选择器 - 使用Framework7标准Picker
+          openRoomPicker(ti) {
+            console.log(`${_('Opening room picker for template')} ${ti}`);
+
+            // 重新加载房间列表，确保最新数据
+            this.getRoomList();
+
+            // 检查数据源
+            if (!erp || !erp.info || !erp.info.profile) {
+              $f7.dialog.alert(_('Profile data not available. Please try again later.'));
+              return;
+            }
+
+            // 确保roomList有数据
+            if (this.roomList.length === 0) {
+              console.warn('Room list is empty, attempting to reload...');
+              // 尝试从原始数据重新加载
+              if (erp.info.profile.profile_room && Array.isArray(erp.info.profile.profile_room)) {
+                this.roomList = erp.info.profile.profile_room
+                  .filter(room => room && room.name)
+                  .map(room => ({
+                    name: room.name,
+                    title: tran(room.title) || room.name
+                  }));
+              }
+            }
+
+            if (this.roomList.length === 0) {
+              $f7.dialog.alert(_('No rooms available. Please add rooms in the profile settings first.'));
+              return;
+            }
+
+            console.log(`Available rooms for selection:`, this.roomList);
+
+            // 准备Picker数据
+            const roomPickerValues = this.roomList.map(room => tran(room.name) || tran(room.title));
+            const roomPickerDisplayValues = this.roomList.map(room => tran(room.title) || tran(room.name));
+
+            // 如果已经选择了房间，设置为默认值
+            let currentValue = 0;
+            if (this.templates[ti] && this.templates[ti].roomName) {
+              const index = roomPickerDisplayValues.indexOf(this.templates[ti].roomName);
+              if (index !== -1) {
+                currentValue = index;
+              }
+            }
+
+            // 创建房间选择器
+            const picker = $f7.picker.create({
+              inputEl: null, // 不绑定到输入框
+              value: [currentValue],
+              cols: [
+                {
+                  textAlign: 'center',
+                  values: roomPickerValues,
+                  displayValues: roomPickerDisplayValues
+                }
+              ],
+              on: {
+                change: (picker, values) => {
+                  console.log('Picker values:', values);
+                  const selectedIndex = values[0];
+
+                  // 查找选中的房间
+                  const selectedRoom = this.roomList.find(item => item.name === selectedIndex);
+                  console.log('Selected room:', selectedRoom);
+
+                  if (selectedRoom) {
+                    this.setTemplateRoom(ti, selectedRoom.name, selectedRoom.title || selectedRoom.name);
+                    console.log(`${_('Selected room:')} ${selectedRoom.title || selectedRoom.name}`);
+                  }
+                },
+                open: () => {
+                  console.log(`${_('Room picker opened with')} ${this.roomList.length} ${_('rooms')}`);
+                },
+                close: () => {
+                  console.log(`${_('Room picker closed')}`);
+                }
+              }
+            });
+
+            // 添加清除房间选项
+            if (this.templates[ti] && this.templates[ti].roomName) {
+              picker.params.cols[0].values.push('');
+              picker.params.cols[0].displayValues.push(_('Clear Room'));
+            }
+
+            picker.open();
+          },
+
+          // 设置模板房间
+          setTemplateRoom(ti, roomName, roomTitle) {
+            const previousRoom = this.templates[ti].roomName;
+            this.$set(this.templates[ti], 'roomName', roomTitle);
+
+            // 添加视觉反馈
+            const roomSelector = document.querySelector(`.template-card:nth-child(${ti + 1}) .template-room-selector`);
+            if (roomSelector) {
+              roomSelector.style.transform = 'scale(0.95)';
+              setTimeout(() => {
+                roomSelector.style.transform = 'scale(1)';
+              }, 150);
+            }
+
+            console.log(`${_('Template')} ${ti + 1} ${_('room changed from')} ${previousRoom || _('none')} ${_('to:')} ${roomTitle || _('none')}`);
+          },
+          addTemplate() {
+            console.log(`${_('Adding new template with order:')} ${this.getNextTemplateOrder(this.compactData)}`);
+            this.templates.push(this.createEmptyTemplate());
+            setTimeout(() => {
+              const pageContent = document.querySelector('.page-content');
+              if (pageContent) {
+                pageContent.scrollTop = pageContent.scrollHeight;
+              }
+            }, 100);
+          },
+          deleteTemplate(ti) {
+            if (this.templates.length > 1) {
+              $f7.dialog.confirm(_('Are you sure you want to delete this template?'), () => {
+                this.templates.splice(ti, 1);
+              });
+            }
+          },
+          // 获取行列位置（3行4列）
+          getRowCol(index) {
+            return {
+              row: Math.floor(index / 4), // 每行4列
+              col: index % 4
+            };
+          },
+          // 检查单元格是否被占用
+          isCellOccupied(ti, si) {
+            const slot = this.templates[ti].slots[si];
+            return slot !== null;
+          },
+          // 检查单元格是否为空（可以添加内容）
+          isCellEmpty(ti, si) {
+            return this.templates[ti].slots[si] === null;
+          },
+          // 检查是否为占位符
+          isPlaceholder(ti, si) {
+            const slot = this.templates[ti].slots[si];
+            return slot && slot.isPlaceholder === true;
+          },
+          // 检查是否为起始单元格（显示内容的格子）
+          isCellStart(ti, si) {
+            const slot = this.templates[ti].slots[si];
+            if (!slot) return false;
+            // 如果有 startIndex 属性，说明是占位符
+            return !slot.hasOwnProperty('startIndex');
+          },
+          // 检查某个位置是否可以放置指定尺寸的项目
+          canPlaceItem(ti, si, width, height, excludeStartIndex = null) {
+            const { row, col } = this.getRowCol(si);
+            
+            // 检查是否超出边界（3行4列）
+            if (col + width > 4 || row + height > 3) {
+              return false;
+            }
+            
+            // 检查所有要占用的格子是否都为空
+            for (let h = 0; h < height; h++) {
+              for (let w = 0; w < width; w++) {
+                const checkIndex = (row + h) * 4 + (col + w);
+                const slot = this.templates[ti].slots[checkIndex];
+                
+                // 如果格子不为空
+                if (slot !== null) {
+                  // 如果是占位符，检查是否属于要替换的项目
+                  if (slot.isPlaceholder && slot.startIndex === excludeStartIndex) {
+                    continue; // 跳过，允许占用
+                  }
+                  // 如果是起始格子且就是要替换的位置
+                  if (checkIndex === excludeStartIndex) {
+                    continue; // 跳过，允许占用
+                  }
+                  // 否则，该位置已被其他项目占用
+                  return false;
+                }
+              }
+            }
+            
+            return true;
+          },
+          // 设置项目（占用多个格子）
+          setItem(ti, si, item, width, height) {
+            if (!item) {
+              // 清除项目
+              this.clearItem(ti, si);
+              return;
+            }
+            
+            // 检查当前位置是否有旧项目（用于更换类型）
+            const existingSlot = this.templates[ti].slots[si];
+            const isReplacing = existingSlot && !existingSlot.isPlaceholder;
+            
+            // 如果是更换类型，检查时排除当前项目占用的格子
+            if (!this.canPlaceItem(ti, si, width, height, isReplacing ? si : null)) {
+              $f7.dialog.alert(_('Cannot place, insufficient space or already occupied'));
+              return;
+            }
+            
+            // 如果是更换类型，先清除旧的
+            if (isReplacing) {
+              this.clearItem(ti, si);
+            }
+            
+            const { row, col } = this.getRowCol(si);
+            const selected = { ...item, width, height };
+            
+            // 设置起始格子
+            this.$set(this.templates[ti].slots, si, selected);
+            
+            // 设置占位符
+            for (let h = 0; h < height; h++) {
+              for (let w = 0; w < width; w++) {
+                if (h === 0 && w === 0) continue; // 跳过起始格子
+                const occupyIndex = (row + h) * 4 + (col + w);
+                this.$set(this.templates[ti].slots, occupyIndex, { 
+                  startIndex: si,
+                  isPlaceholder: true 
+                });
+              }
+            }
+          },
+          // 优化版本的clearItem方法 - 使用新的数据结构
+          clearItem(ti, si) {
+            const slot = this.templates[ti].slots[si];
+            if (!slot) return;
+
+            // 如果是占位符，找到起始格子
+            let startIndex = si;
+            if (slot.isPlaceholder) {
+              startIndex = slot.startIndex;
+            }
+
+            const item = this.templates[ti].slots[startIndex];
+            if (!item || item.isPlaceholder) return;
+
+            // 添加删除动画
+            const cellElements = [];
+            const occupiedSlots = this.calculateOccupiedSlots(startIndex, item.size || '1*1');
+
+            occupiedSlots.forEach(slotIndex => {
+              const cellElement = document.querySelector(`.template-card:nth-child(${ti + 1}) .template-cell:nth-child(${slotIndex + 1})`);
+              if (cellElement) {
+                cellElements.push(cellElement);
+                cellElement.style.transition = 'all 0.3s ease';
+                cellElement.style.opacity = '0';
+                cellElement.style.transform = 'scale(0.8)';
+              }
+            });
+
+            setTimeout(() => {
+              // 获取当前的compact数据
+              const currentCompactData = this.convertToCompactData(this.templates);
+
+              // 找到要删除的项目
+              const itemToDelete = currentCompactData.findIndex(compactItem =>
+                compactItem.idx === startIndex && compactItem.deviceId === item.id
+              );
+
+              if (itemToDelete !== -1) {
+                // 删除项目
+                currentCompactData.splice(itemToDelete, 1);
+
+                // 重新计算模板分组
+                const newTemplates = this.convertToTemplates(currentCompactData);
+
+                // 更新数据
+                this.templates = newTemplates;
+                this.compactData = currentCompactData;
+
+                // 删除后该设备重新变为可选择状态
+                console.log(`${_('Item deleted, device')} ${item.id} ${_('is now available for selection')}`);
+                console.log(`${_('Available devices count:')} ${this.getAvailableItemsForSelection().length}`);
+
+                // 恢复动画
+                setTimeout(() => {
+                  cellElements.forEach(cellElement => {
+                    if (cellElement) {
+                      cellElement.style.opacity = '1';
+                      cellElement.style.transform = 'scale(1)';
+                    }
+                  });
+                }, 100);
+              }
+            }, 300);
+          },
+          // 打开选择器：先选类型，再选尺寸
+          openPicker(ti, si) {
+            this.searchQuery = '';
+            // 过滤掉已选择的设备
+            this.filteredItems = this.getAvailableItemsForSelection();
+            
+            // 创建自定义 Sheet Modal
+            const sheetHtml = `
+              <div class="sheet-modal item-picker-sheet">
+                <div class="toolbar picker-toolbar">
+                  <div class="toolbar-inner">
+                    <div class="left"></div>
+                    <div class="title">${_('Select Control')}</div>
+                    <div class="right">
+                      <a class="link sheet-close picker-close-btn">${_('Done')}</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="sheet-modal-inner">
+                  <div class="picker-searchbar-wrap">
+                    <div class="searchbar picker-searchbar">
+                      <div class="searchbar-inner">
+                        <div class="searchbar-input-wrap">
+                          <input type="search" placeholder="${_('Search controls or categories...')}" class="item-search-input">
+                          <i class="searchbar-icon"></i>
+                          <span class="input-clear-button"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="page-content picker-page-content">
+                    <div class="list picker-item-list media-list no-hairlines">
+                      <ul id="item-picker-list"></ul>
+                    </div>
+                    <div class="picker-empty-state">
+                      <i class="icon f7-icons">search</i>
+                      <p>${_('No matching controls found')}</p>
+                      <span>${_('Please try other keywords')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            const sheet = $f7.sheet.create({
+              content: sheetHtml,
+              swipeToClose: true,
+              backdrop: true,
+              closeByBackdropClick: true,
+              on: {
+                opened: () => {
+                  // 初始化搜索功能
+                  const searchInput = sheet.$el.find('.item-search-input');
+                  const emptyState = sheet.$el.find('.picker-empty-state');
+                  const itemList = sheet.$el.find('.picker-item-list');
+                  
+                  searchInput.on('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    this.searchQuery = query;
+
+                    // 先过滤已选择的设备，再进行搜索过滤
+                    const availableItems = this.getAvailableItemsForSelection();
+                    this.filteredItems = availableItems.filter(item =>
+                      item.text.toLowerCase().includes(query) ||
+                      item.category.toLowerCase().includes(query)
+                    );
+                    this.renderItemList(sheet, ti, si);
+                    
+                    // 显示/隐藏空状态
+                    if (this.filteredItems.length === 0) {
+                      itemList.hide();
+                      emptyState.show();
+                    } else {
+                      itemList.show();
+                      emptyState.hide();
+                    }
+                  });
+                  
+                  // 清除按钮
+                  sheet.$el.find('.input-clear-button').on('click', () => {
+                    searchInput.val('');
+                    searchInput.trigger('input');
+                  });
+                  
+                  // 渲染列表
+                  this.renderItemList(sheet, ti, si);
+                  emptyState.hide();
+                },
+                closed: () => {
+                  sheet.destroy();
+                }
+              }
+            });
+            
+            sheet.open();
+          },
+          // 渲染选项列表
+          renderItemList(sheet, ti, si) {
+            const listEl = sheet.$el.find('#item-picker-list');
+            listEl.empty();
+
+            // 添加选择状态信息
+            const selectionInfo = this.getDeviceSelectionInfo();
+            if (selectionInfo.selected > 0) {
+              const statusItem = $(`
+                <li class="picker-status-item">
+                  <div class="picker-status-content">
+                    <div class="picker-status-info">
+                      <span class="picker-status-text">
+                        ${ _('Selected') } ${selectionInfo.selected} ${ _('devices, available') } ${selectionInfo.available} ${ _('more') }
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              `);
+              listEl.append(statusItem);
+            }
+
+            // 直接渲染所有可用项目
+            if (this.filteredItems.length === 0) {
+              const emptyItem = $(`
+                <li class="picker-empty-item">
+                  <div class="picker-empty-content">
+                    <i class="icon f7-icons">checkmark_circle_fill</i>
+                    <span class="picker-empty-text">${ _('All devices have been added to templates') }</span>
+                  </div>
+                </li>
+              `);
+              listEl.append(emptyItem);
+              return;
+            }
+
+            this.filteredItems.forEach(item => {
+              // 获取设备描述
+              const deviceDescription = this.getDeviceDescription(item.category, item.defaultSize);
+
+              const li = $(`
+                <li class="control-picker-list-item">
+                  <div class="control-picker-item-content">
+                    <div class="control-picker-icon-wrap">
+                      <div class="control-picker-icon-bg">
+                        <i class="icon f7-icons">${item.icon}</i>
+                      </div>
+                    </div>
+                    <div class="control-picker-text-wrap">
+                      <div class="control-picker-title-row">
+                        <div class="control-picker-title">${item.text}</div>
+                        <div class="control-picker-arrow">
+                          <i class="icon f7-icons">chevron_right</i>
+                        </div>
+                      </div>
+                      <div class="control-picker-subtitle">${item.category}</div>
+                      <div class="control-picker-description">${deviceDescription}</div>
+                    </div>
+                  </div>
+                </li>
+              `);
+
+              li.on('click', (e) => {
+                e.preventDefault();
+                sheet.close();
+                // 选择类型后，再选择尺寸
+                setTimeout(() => {
+                  this.openSizePicker(ti, si, item);
+                }, 300);
+              });
+
+              listEl.append(li);
+            });
+          },
+
+          // 获取设备描述信息
+          getDeviceDescription(category, defaultSize) {
+            const descriptions = {
+              'DIMMING': _('Dimmable light with brightness control'),
+              'CURTAIN': _('Curtain motor with open/close control'),
+              'MOTOR': _('Smart motor for various applications'),
+              'AIR': _('Air conditioner with temperature control'),
+              'HVAC': _('HVAC system with climate control'),
+              'SCENE': _('Scene controller for preset configurations'),
+              'SENSOR': _('Environmental sensor for monitoring'),
+              'SWITCH': _('Basic on/off switch control'),
+              'LIGHT': _('Standard light control'),
+              'default': _('Smart home device control')
+            };
+
+            // 检查category中是否包含关键词
+            for (const [key, description] of Object.entries(descriptions)) {
+              if (category && category.toUpperCase().includes(key)) {
+                return description;
+              }
+            }
+
+            return descriptions.default;
+          },
+          // 打开尺寸选择器 - 优化版本
+          openSizePicker(ti, si, item) {
+            // 获取设备的推荐尺寸
+            const recommendedSize = item.defaultSize || '1*1';
+
+            const groups = [];
+            const sizeButtons = this.sizeOptions.map((size) => {
+              const isRecommended = size.width + '*' + size.height === recommendedSize;
+              return {
+                text: size.text + (isRecommended ? ' ⭐' : ''),
+                onClick: () => {
+                  const sizeKey = size.width + '*' + size.height;
+                  this.setItemOptimized(ti, si, item, sizeKey);
+                },
+              };
+            });
+
+            groups.push(sizeButtons);
+            groups.push([{ text: _('Cancel'), color: 'gray' }]);
+
+            const act = $f7.actions.create({
+              buttons: groups,
+              cssClass: 'template-actions-sheet'
+            });
+            act.open();
+          },
+
+          // 优化版本的setItem方法 - 直接使用模板索引作为templateOrder
+          setItemOptimized(ti, si, item, size) {
+            if (!item) {
+              this.clearItem(ti, si);
+              return;
+            }
+
+            console.log(`${_('Adding item to template')} ${ti} ${_('at position')} ${si}`);
+
+            // 添加加载动画
+            const cellElement = document.querySelector(`.template-card:nth-child(${ti + 1}) .template-cell:nth-child(${si + 1})`);
+            if (cellElement) {
+              cellElement.style.opacity = '0.6';
+              cellElement.style.transform = 'scale(0.9)';
+            }
+
+            setTimeout(() => {
+              // 检查当前位置是否有旧项目
+              const existingSlot = this.templates[ti].slots[si];
+              const isReplacing = existingSlot && !existingSlot.isPlaceholder;
+
+              // 获取当前模板的templateOrder
+              const currentTemplate = this.templates[ti];
+              const templateOrder = currentTemplate.templateOrder !== undefined ? currentTemplate.templateOrder : ti;
+
+              // 获取当前模板的所有compact数据
+              const currentCompactData = this.convertToCompactData(this.templates);
+
+              // 如果是替换，先移除旧的
+              if (isReplacing) {
+                const oldSize = existingSlot.size || '1*1';
+                const oldItem = {
+                  idx: si,
+                  deviceId: existingSlot.id,
+                  size: oldSize,
+                  templateOrder: templateOrder
+                };
+                const index = currentCompactData.findIndex(item =>
+                  item.idx === oldItem.idx && item.deviceId === oldItem.deviceId && item.templateOrder === oldItem.templateOrder
+                );
+                if (index !== -1) {
+                  currentCompactData.splice(index, 1);
+                  console.log(`${_('Removed old item:')} ${existingSlot.id} ${_('from template')} ${ti}`);
+                }
+              }
+
+              // 创建新项目，使用当前模板的templateOrder
+              const newItem = {
+                idx: si,
+                deviceId: item.id,
+                size: size,
+                templateOrder: templateOrder
+              };
+
+              // 检查在当前模板中是否可以放置
+              const currentTemplateItems = currentCompactData.filter(item =>
+                item.templateOrder === templateOrder
+              );
+
+              if (!this.canPlaceItemInTemplate(currentTemplateItems, newItem)) {
+                $f7.dialog.alert(_('Cannot place, insufficient space or already occupied'));
+                if (cellElement) {
+                  cellElement.style.opacity = '1';
+                  cellElement.style.transform = 'scale(1)';
+                }
+                return;
+              }
+
+              // 添加新项目
+              currentCompactData.push(newItem);
+              console.log(`${_('Added new item:')} ${item.id} ${_('to template order')} ${templateOrder}`);
+
+              // 重新构建templates（保持现有的分组）
+              this.templates = this.convertToTemplates(currentCompactData);
+              this.compactData = currentCompactData;
+
+              console.log(`${_('Template reconstruction complete. Total templates:')} ${this.templates.length}`);
+
+              // 恢复动画
+              setTimeout(() => {
+                if (cellElement) {
+                  cellElement.style.opacity = '1';
+                  cellElement.style.transform = 'scale(1)';
+                }
+              }, 100);
+
+            }, 200);
+          },
+
+          // 获取下一个模板的顺序号
+          getNextTemplateOrder(compactData) {
+            const existingOrders = compactData.map(item => item.templateOrder || 0);
+            return Math.max(...existingOrders, -1) + 1;
+          },
+
+          // 获取当前项目所属的模板索引
+          getCurrentTemplateIndex(templateGroups, itemIdx) {
+            for (let i = 0; i < templateGroups.length; i++) {
+              const group = templateGroups[i];
+              if (group.some(item => item.idx === itemIdx)) {
+                return i;
+              }
+            }
+            return 0;
+          },
+
+          // 获取当前已选择的设备ID列表
+          getSelectedDeviceIds() {
+            const selectedIds = new Set();
+
+            // 遍历所有模板
+            this.templates.forEach(template => {
+              if (template.slots && Array.isArray(template.slots)) {
+                template.slots.forEach(slot => {
+                  if (slot && !slot.isPlaceholder && slot.id) {
+                    selectedIds.add(slot.id);
+                  }
+                });
+              }
+            });
+
+            return selectedIds;
+          },
+
+          // 获取可供选择的设备列表（排除已选择的）
+          getAvailableItemsForSelection() {
+            const selectedIds = this.getSelectedDeviceIds();
+
+            return this.availableItems.filter(item => !selectedIds.has(item.id));
+          },
+
+          // 获取下一个模板的顺序号
+          getNextTemplateOrder(compactData) {
+            const existingOrders = compactData.map(item => item.templateOrder || 0);
+            return Math.max(...existingOrders, -1) + 1;
+          },
+
+          // 检查在指定模板中是否可以放置项目
+          canPlaceItemInTemplate(templateItems, newItem) {
+            const newOccupied = this.calculateOccupiedSlots(newItem.idx, newItem.size);
+
+            // 检查是否超出边界
+            if (newOccupied.length === 0) return false;
+
+            // 检查与现有项目的冲突
+            for (const item of templateItems) {
+              const existingOccupied = this.calculateOccupiedSlots(item.idx, item.size);
+
+              // 检查是否有重叠
+              const hasOverlap = newOccupied.some(slot =>
+                existingOccupied.includes(slot)
+              );
+
+              if (hasOverlap) {
+                return false;
+              }
+            }
+
+            return true;
+          },
+
+          // 检查设备是否已被选择
+          isDeviceSelected(deviceId) {
+            const selectedIds = this.getSelectedDeviceIds();
+            return selectedIds.has(deviceId);
+          },
+
+          // 获取设备的选择状态信息
+          getDeviceSelectionInfo() {
+            const selectedIds = this.getSelectedDeviceIds();
+            const totalDevices = this.availableItems.length;
+            const selectedCount = selectedIds.size;
+            const availableCount = totalDevices - selectedCount;
+
+            return {
+              total: totalDevices,
+              selected: selectedCount,
+              available: availableCount,
+              selectedIds: Array.from(selectedIds)
+            };
+          },
+          // 点击已有项目
+          onTemplateItemClick(ti, si) {
+            const groups = [
+              [
+                {
+                  text: _('Change Type'),
+                  icon: `<i class="icon f7-icons">arrow_2_squarepath</i>`,
+                  onClick: () => this.openPicker(ti, si),
+                },
+                {
+                  text: _('Clear'),
+                  color: 'red',
+                  onClick: () => this.clearItem(ti, si),
+                },
+              ],
+              [{ text: _('Cancel'), color: 'gray' }]
+            ];
+            const act = $f7.actions.create({ 
+              buttons: groups,
+              cssClass: 'template-actions-sheet'
+            });
+            act.open();
+          },
+          // 获取单元格的CSS类
+          getCellClasses(ti, si) {
+            const slot = this.templates[ti].slots[si];
+            if (!slot || slot.isPlaceholder) return '';
+            
+            return `cell-filled cell-span-${slot.width}x${slot.height}`;
+          },
+          // 获取单元格的样式
+          getCellStyle(ti, si) {
+            const slot = this.templates[ti].slots[si];
+            if (!slot || slot.isPlaceholder) return {};
+
+            const width = slot.width || 1;
+            const height = slot.height || 1;
+
+            return {
+              gridColumn: `span ${width}`,
+              gridRow: `span ${height}`
+            };
+          },
+
+          // 统计方法
+          getTotalDevices() {
+            let total = 0;
+            this.templates.forEach(template => {
+              if (template.slots) {
+                total += template.slots.filter(slot => slot && !slot.isPlaceholder).length;
+              }
+            });
+            return total;
+          },
+
+          getTotalRooms() {
+            let total = 0;
+            this.templates.forEach(template => {
+              if (template.roomName) {
+                total++;
+              }
+            });
+            return total;
+          },
+        },
+        computed: {},
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  /* 页面背景渐变 */
+  .page-bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+  }
+
+  /* 页面头部 */
+  .page-header {
+    text-align: center;
+    padding: 24px 16px 16px;
+    margin-bottom: 8px;
+  }
+
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    font-weight: 400;
+  }
+
+  /* 模板卡片 */
+  .template-card {
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 20px;
+    margin: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+  }
+
+  .template-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.3);
+  }
+
+  /* 模板头部 - Framework7 风格 */
+  .template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .template-room-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .template-room-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 200px;
+  }
+
+  .template-room-selector:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+  }
+
+  .template-room-selector:active {
+    background: #dee2e6;
+    transform: scale(0.98);
+  }
+
+  .template-room-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .room-icon {
+    color: #6c757d;
+    font-size: 18px;
+  }
+
+  .template-room-name {
+    font-size: 16px;
+    font-weight: 400;
+    color: #495057;
+    flex: 1;
+  }
+
+  .template-room-name.selected {
+    color: #212529;
+    font-weight: 500;
+  }
+
+  .room-arrow {
+    color: #6c757d;
+    font-size: 16px;
+    transition: transform 0.2s ease;
+  }
+
+  .template-room-selector:hover .room-arrow {
+    color: #495057;
+  }
+
+  .template-delete {
+    color: #dc3545;
+    font-size: 18px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    margin-left: 12px;
+  }
+
+  .template-delete:hover {
+    background: rgba(220, 53, 69, 0.1);
+  }
+
+  .template-delete:active {
+    background: rgba(220, 53, 69, 0.2);
+    transform: scale(0.95);
+  }
+
+  /* 模板网格 - 3行4列 */
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4列 */
+    grid-template-rows: repeat(3, 1fr);    /* 3行 */
+    gap: 12px;
+    padding: 4px;
+    min-height: 280px; /* 固定最小高度，防止缩小 */
+  }
+
+  .template-cell {
+    aspect-ratio: 1;
+    position: relative;
+    min-width: 0; /* 防止溢出 */
+    min-height: 0; /* 防止溢出 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 跨格子的单元格 */
+  .template-cell.cell-filled {
+    aspect-ratio: auto; /* 取消固定比例，让grid控制 */
+  }
+
+  /* 隐藏的占位符单元格 */
+  .template-cell.cell-placeholder {
+    display: none !important;
+  }
+
+  /* 单元格按钮 */
+  .cell-button {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 16px;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 空单元格样式 */
+  .cell-empty {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+    border: 2px dashed rgba(102, 126, 234, 0.3);
+  }
+
+  .cell-empty:active {
+    transform: scale(0.95);
+    border-color: rgba(102, 126, 234, 0.6);
+  }
+
+  .cell-empty .icon-plus {
+    color: rgba(102, 126, 234, 0.6);
+    font-size: 32px;
+    transition: all 0.3s ease;
+  }
+
+  .cell-empty:active .icon-plus {
+    color: #667eea;
+    transform: rotate(90deg);
+  }
+
+  /* 已填充单元格样式 */
+  .cell-filled-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  .cell-filled-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  }
+
+  .cell-filled-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+    border-radius: 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .cell-filled-btn:active::before {
+    opacity: 1;
+  }
+
+  /* 单元格内容 */
+  .cell-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cell-icon {
+    font-size: 28px;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: font-size 0.3s ease;
+  }
+
+  .cell-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(102, 126, 234, 0.7);
+    text-align: center;
+    letter-spacing: 0.3px;
+    transition: font-size 0.3s ease;
+  }
+
+  .cell-filled-btn .cell-label {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 不同尺寸的单元格样式 */
+  /* 2x1 横向双格 */
+  .cell-span-2x1 .cell-icon {
+    font-size: 36px;
+  }
+
+  .cell-span-2x1 .cell-label {
+    font-size: 13px;
+  }
+
+  .cell-span-2x1 .cell-inner {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  /* 1x2 纵向双格 */
+  .cell-span-1x2 .cell-icon {
+    font-size: 36px;
+  }
+
+  .cell-span-1x2 .cell-label {
+    font-size: 13px;
+  }
+
+  /* 2x2 大型方块 */
+  .cell-span-2x2 .cell-icon {
+    font-size: 48px;
+  }
+
+  .cell-span-2x2 .cell-label {
+    font-size: 16px;
+  }
+
+  /* 3x1 长横条 */
+  .cell-span-3x1 .cell-icon {
+    font-size: 40px;
+  }
+
+  .cell-span-3x1 .cell-label {
+    font-size: 14px;
+  }
+
+  .cell-span-3x1 .cell-inner {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  /* 1x3 长纵条 */
+  .cell-span-1x3 .cell-icon {
+    font-size: 42px;
+  }
+
+  .cell-span-1x3 .cell-label {
+    font-size: 14px;
+  }
+
+  /* 4x1 超长横条 */
+  .cell-span-4x1 .cell-icon {
+    font-size: 38px;
+  }
+
+  .cell-span-4x1 .cell-label {
+    font-size: 14px;
+  }
+
+  .cell-span-4x1 .cell-inner {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  /* 新增模板按钮区域 */
+  .add-template-section {
+    padding: 24px 16px 32px;
+    text-align: center;
+  }
+
+  /* 调试信息样式 */
+  .debug-info {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    backdrop-filter: blur(4px);
+  }
+
+  .debug-text {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .button-add-template {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 32px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #667eea;
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(31, 38, 135, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+  }
+
+  .button-add-template:active {
+    transform: scale(0.96);
+    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.3);
+  }
+
+  .button-add-template .icon {
+    font-size: 22px;
+    transition: transform 0.3s ease;
+  }
+
+  .button-add-template:active .icon {
+    transform: rotate(90deg);
+  }
+
+  /* 过渡动画 */
+  .fade-scale-enter-active, .fade-scale-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fade-scale-enter, .fade-scale-leave-to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  /* 交互反馈动画 */
+  .template-cell {
+    transition: all 0.2s ease;
+  }
+
+  .template-room-selector {
+    transition: all 0.2s ease;
+  }
+
+  .cell-button {
+    transition: all 0.2s ease;
+  }
+
+  /* 加载状态 */
+  .cell-loading {
+    opacity: 0.6;
+    transform: scale(0.95);
+    pointer-events: none;
+  }
+
+  /* 脉冲动画效果 */
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    50% {
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+    }
+    100% {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+  }
+
+  .cell-filled-btn:hover {
+    animation: pulse 2s infinite;
+  }
+
+  /* Sheet Modal 样式 - 选择器 */
+  .item-picker-sheet {
+    height: 75vh;
+    max-height: 650px;
+    border-radius: 24px 24px 0 0;
+    overflow: hidden;
+  }
+
+  /* 工具栏样式 */
+  .item-picker-sheet .picker-toolbar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 16px rgba(102, 126, 234, 0.3);
+    --f7-toolbar-height: 50px;
+  }
+
+  .item-picker-sheet .picker-toolbar .title {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.3px;
+  }
+
+  .item-picker-sheet .picker-close-btn {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 16px;
+    opacity: 0.95;
+  }
+
+  /* 搜索栏区域 */
+  .item-picker-sheet .picker-searchbar-wrap {
+    background: #ffffff;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .item-picker-sheet .picker-searchbar {
+    margin: 0;
+    background: #f5f7fa;
+    border-radius: 12px;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  .item-picker-sheet .picker-searchbar .searchbar-inner {
+    padding: 0;
+  }
+
+  .item-picker-sheet .picker-searchbar .searchbar-input-wrap {
+    height: 44px;
+    padding: 0 12px;
+    background: #f5f7fa;
+  }
+
+  .item-picker-sheet .picker-searchbar input {
+    font-size: 15px;
+    color: #333;
+    background: transparent;
+  }
+
+  .item-picker-sheet .picker-searchbar input::placeholder {
+    color: #999;
+  }
+
+  .item-picker-sheet .picker-searchbar .searchbar-icon {
+    color: #667eea;
+    font-size: 20px;
+  }
+
+  .item-picker-sheet .picker-searchbar .input-clear-button {
+    color: #999;
+  }
+
+  /* 页面内容区域 */
+  .item-picker-sheet .picker-page-content {
+    background: #ffffff;
+    padding-top: 0;
+  }
+
+  .item-picker-sheet .picker-item-list {
+    margin: 0;
+    background: #ffffff;
+  }
+
+  .item-picker-sheet .picker-item-list ul {
+    background: #ffffff;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .item-picker-sheet .picker-item-list li {
+    list-style: none;
+  }
+
+  /* 分类标题 */
+  .item-picker-sheet .picker-category-divider {
+    background: #fafbfc !important;
+    border: none !important;
+    padding: 12px 16px 8px !important;
+    margin-top: 8px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    list-style: none;
+  }
+
+  .item-picker-sheet .picker-category-divider:first-child {
+    margin-top: 0 !important;
+  }
+
+  .item-picker-sheet .category-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+    color: #667eea;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* 列表项样式 */
+  .item-picker-sheet .control-picker-list-item {
+    background: #ffffff;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    list-style: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .item-picker-sheet .control-picker-item-content {
+    padding: 12px 16px;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: none;
+    border-radius: 0;
+  }
+
+  .item-picker-sheet .control-picker-list-item:active {
+    background: rgba(102, 126, 234, 0.05);
+  }
+
+  .item-picker-sheet .control-picker-list-item + .control-picker-list-item {
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  .item-picker-sheet .control-picker-text-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding-left: 12px;
+  }
+
+  .item-picker-sheet .control-picker-title-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* 图标样式 */
+  .item-picker-sheet .control-picker-icon-wrap {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-picker-sheet .control-picker-icon-bg {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+    transition: all 0.3s ease;
+  }
+
+  .item-picker-sheet .control-picker-list-item:active .control-picker-icon-bg {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  }
+
+  .item-picker-sheet .control-picker-icon-bg .icon {
+    font-size: 26px;
+    color: #ffffff;
+  }
+
+  /* 文字样式 */
+  .item-picker-sheet .control-picker-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: #222;
+    letter-spacing: 0.2px;
+    flex: 1;
+  }
+
+  .item-picker-sheet .control-picker-subtitle {
+    font-size: 13px;
+    color: #888;
+    font-weight: 400;
+    margin-top: 4px;
+  }
+
+  .item-picker-sheet .control-picker-description {
+    font-size: 11px;
+    color: #aaa;
+    font-weight: 400;
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  .item-picker-sheet .control-picker-arrow {
+    color: #ccc;
+    font-size: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .item-picker-sheet .control-picker-arrow .icon {
+    font-size: 20px;
+  }
+
+  /* 选择状态信息样式 */
+  .item-picker-sheet .picker-status-item {
+    background: #f8f9fa !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    list-style: none;
+  }
+
+  .item-picker-sheet .picker-status-content {
+    padding: 8px 16px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    border: none;
+    border-radius: 0;
+  }
+
+  .item-picker-sheet .picker-status-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-picker-sheet .picker-status-text {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  /* 空选择项样式 */
+  .item-picker-sheet .picker-empty-item {
+    background: #ffffff !important;
+    border: none !important;
+    padding: 16px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    list-style: none;
+  }
+
+  .item-picker-sheet .picker-empty-content {
+    padding: 20px 16px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: none;
+    border-radius: 0;
+    text-align: center;
+  }
+
+  .item-picker-sheet .picker-empty-content .icon {
+    font-size: 36px;
+    color: #28a745;
+    margin-bottom: 8px;
+  }
+
+  .item-picker-sheet .picker-empty-text {
+    font-size: 15px;
+    color: #666;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* 空状态样式 */
+  .item-picker-sheet .picker-empty-state {
+    display: none;
+    text-align: center;
+    padding: 80px 40px;
+  }
+
+  .item-picker-sheet .picker-empty-state .icon {
+    font-size: 64px;
+    color: #ddd;
+    margin-bottom: 16px;
+  }
+
+  .item-picker-sheet .picker-empty-state p {
+    font-size: 17px;
+    font-weight: 600;
+    color: #666;
+    margin: 0 0 8px 0;
+  }
+
+  .item-picker-sheet .picker-empty-state span {
+    font-size: 14px;
+    color: #999;
+  }
+
+  /* Framework7 Actions 样式优化 */
+  .template-actions-sheet.actions-modal {
+    background: transparent;
+  }
+
+  .template-actions-sheet .actions-group {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    margin: 8px 16px;
+    overflow: hidden;
+  }
+
+  .template-actions-sheet .actions-button {
+    font-size: 17px;
+    padding: 16px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: background 0.2s ease;
+  }
+
+  .template-actions-sheet .actions-button:last-child {
+    border-bottom: none;
+  }
+
+  .template-actions-sheet .actions-button:active {
+    background: rgba(102, 126, 234, 0.08);
+  }
+
+  .template-actions-sheet .actions-button-bold {
+    font-weight: 600;
+  }
+
+  .template-actions-sheet .actions-button-color-red {
+    color: #ff3b30;
+  }
+
+  .template-actions-sheet .actions-button-color-red:active {
+    background: rgba(255, 59, 48, 0.08);
+  }
+
+  .template-actions-sheet .actions-button-color-gray {
+    color: #8e8e93;
+    font-weight: 500;
+  }
+
+  .template-actions-sheet .actions-button .icon {
+    margin-right: 12px;
+    font-size: 24px;
+    vertical-align: middle;
+    color: #667eea;
+  }
+
+  .template-actions-sheet .actions-button-media {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    padding-left: 20px;
+  }
+
+  .template-actions-sheet .actions-label {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    margin: 8px 16px 16px;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #8e8e93;
+  }
+
+  /* 响应式优化 */
+  @media (max-width: 375px) {
+    .template-grid {
+      gap: 8px;
+      min-height: 240px; /* 小屏最小高度 */
+    }
+    
+    .cell-icon {
+      font-size: 24px;
+    }
+    
+    .cell-label {
+      font-size: 10px;
+    }
+    
+    .page-title {
+      font-size: 24px;
+    }
+  }
+
+  @media (min-width: 376px) and (max-width: 767px) {
+    .template-grid {
+      min-height: 280px; /* 中等屏幕最小高度 */
+    }
+  }
+
+  @media (min-width: 768px) {
+    .template-card {
+      margin: 24px auto;
+      max-width: 700px;
+    }
+    
+    .template-grid {
+      min-height: 320px; /* 大屏最小高度 */
+      gap: 16px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .template-card {
+      max-width: 800px;
+    }
+    
+    .template-grid {
+      min-height: 360px; /* 超大屏最小高度 */
+    }
+  }
+</style>

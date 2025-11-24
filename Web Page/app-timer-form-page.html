@@ -217,7 +217,7 @@
           device_button_group: '',
           mode: '',
           model: '',
-          device_image: '',
+          device_image: 'https://my.yoswit.com/files/2061.svg',
           device_name: '',
           firmware: 0,
           mac_address: '',
@@ -325,11 +325,14 @@
             for (let i in models) {
               if (models[i].model_code === this.model) {
                 if (isset(models[i].image)) {
-                  this.device_image = models[i].image;
+                  this.device_image = models[i].image ;
                 } else {
                   this.device_image = 'https://my.yoswit.com/files/products/YO815.svg';
                 }
               }
+            }
+            if(!this.device_image){
+              this.device_image = 'https://my.yoswit.com/files/products/YO815.svg';
             }
           },
           toHref() {
@@ -466,12 +469,12 @@
               });
             }, 200);
           },
-          rangeChangeFunDimming(element){
+          rangeChangeFunDimming(element) {
             console.log(element);
             let value = element.value;
-            if(value == 0){
+            if (value == 0) {
               this.ref = 0;
-            }else{
+            } else {
               this.ref = value;
             }
           },
@@ -619,21 +622,41 @@
 
               let $command = `${this.timercommand}`;
               let $length = ($command.length / 2).toString(16).pad('00');
-              let command = `8F2000${parseInt(timer_id).toString(16).pad('00')}${parseInt(timer_id).toString(16).pad('00')}${$length}${$command}`;
-              let actioncommand_pre = `8F1000${parseInt(timer_id).toString().pad('00')}`;
+              let command = `8f2000${parseInt(timer_id).toString(16).pad('00')}${parseInt(timer_id).toString(16).pad('00')}${$length}${$command}`;
+              let actioncommand_pre = `8f1000${parseInt(timer_id).toString().pad('00')}`;
               let action_command = '';
-              if (this.ref == 0) {
-                let $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000100`;
-                action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
+              //在这里区分不同的model
+              if (this.device_button_group.includes('ONOFF GANG')) {
+                let gang = this.device_button_group.replace('ONOFF GANG', '') * 1;
+                if (gang < 1 || gang > 4) {
+                  app.dialog.alert('Sorry, the gang number is invalid.');
+                  return;
+                } else {
+                  let data = [0, 0, 0, 0, 0, 0, 0, 0];
+                  data[4 - gang] = 1;
+                  if (this.ref != 0) {
+                    data[8 - gang] = 1;
+                  }
+                  let command_data = parseInt(data.join(''), 2).toString(16).toUpperCase().pad('00');
+                  let ble_command = `8000${command_data}00`;
+                  let final_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}${ble_command}`;
+                  action_command = `${actioncommand_pre}${(final_command.length / 2).toString(16).pad('00')}${final_command}`;
+                }
               } else {
-                //mode fan and temp
-                let on_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000101`;
-                let mode_command = `069404000001${parseInt(this.modeStr).toString(16).pad('00')}`;
-                let speed_command = `069405000001${parseInt(this.speedVaule).toString(16).pad('00')}`;
-                let temp_command = `069406000001${parseInt(this.temperature).toString(16).pad('00')}`;
-                action_command = `${on_command}${mode_command}${speed_command}${temp_command}`;
-                action_command = `${actioncommand_pre}${(action_command.length / 2).toString(16).pad('00')}${action_command}`;
+                if (this.ref == 0) {
+                  let $action_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000100`;
+                  action_command = `${actioncommand_pre}${($action_command.length / 2).toString().pad('00')}${$action_command}`;
+                } else {
+                  //mode fan and temp
+                  let on_command = `02${core_utils_get_mac_address_from_guid(this.guid, true)}1306940300000101`;
+                  let mode_command = `069404000001${parseInt(this.modeStr).toString(16).pad('00')}`;
+                  let speed_command = `069405000001${parseInt(this.speedVaule).toString(16).pad('00')}`;
+                  let temp_command = `069406000001${parseInt(this.temperature).toString(16).pad('00')}`;
+                  action_command = `${on_command}${mode_command}${speed_command}${temp_command}`;
+                  action_command = `${actioncommand_pre}${(action_command.length / 2).toString(16).pad('00')}${action_command}`;
+                }
               }
+
               console.log('action_command', action_command);
               console.log('command', command);
               //tindy the colok
@@ -682,7 +705,7 @@
                 app.dialog.alert(_(erp.get_log_description(error)));
               }
             } else if (this.firmware < 10.0) {
-              let set_timers = cloneDeep(isset(erp.setTimer)  && isset(erp.setTimer[this.guid]) ? erp.setTimer[this.guid] : []);
+              let set_timers = cloneDeep(isset(erp.setTimer) && isset(erp.setTimer[this.guid]) ? erp.setTimer[this.guid] : []);
               let idList = set_timers.map((e) => {
                 return e.timer_id;
               });
@@ -791,7 +814,7 @@
                   }
                   bleList.push({
                     service: service,
-                    characteristic: "fe02",
+                    characteristic: 'fe02',
                     data: `${parseInt(timer_id).toString(16).pad('00')}`,
                   });
                   let dataList = command_data.match(/.{1,2}/g);

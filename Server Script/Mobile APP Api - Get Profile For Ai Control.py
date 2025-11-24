@@ -13,10 +13,18 @@ def contains_chars(text, chars):
     except TypeError:
         return str(chars).lower() in text_lower
 
-def get_group_id(query_string):
+def get_size(query_string):
     if not query_string:
         return 0
-    params = query_string.split('^')
+    params = query_string.split('%')
+    if len(params) < 2:
+        return 0
+    value = params[1]
+    return value[0:3]
+def get_page_num(query_string):
+    if not query_string:
+        return 1
+    params = query_string.split('#')
     if len(params) < 2:
         return 0
     value = params[1]
@@ -196,58 +204,132 @@ def sort_by_guest_mode_idx_key(item):
         return (1, 0)
     return (0, v)
 
-# 从设备列表中提取房间列表：仅保留 title 含 Bedroom/Living Room 的项
+# 从function字段中提取房间名称
+def extract_room_name_from_function(function_str):
+    if not function_str:
+        return None
+    try:
+        # 处理类似 '%1*1#0&&&Living Room' 的格式
+        print(f"DEBUG: 处理function字段: '{function_str}'")
+        # 通过&&&分隔符分割字符串
+        parts = str(function_str).split('&&&')
+        print(f"DEBUG: 分割后的parts: {parts}")
+        if len(parts) >= 2:
+            # 取&&&后面的部分作为房间名称
+            room_name = parts[1].strip()
+            print(f"DEBUG: 提取的房间名称: '{room_name}'")
+            # 去除首尾的空格和特殊字符
+            if room_name:
+                return room_name
+        print("DEBUG: 没有找到有效的房间名称")
+        return None
+    except Exception as e:
+        print(f"DEBUG: 提取房间名称时发生异常: {e}")
+        return None
+
+# 从设备列表中提取房间列表：基于function字段提取房间名称，并去重
 def build_room_list(device_list):
     room_list = []
     seen = set()
-    for it in device_list or []:
-        # 优先从 room_name 的 [en] 标签中提取英文，用于匹配
-        room_name_raw = it.get('room_name')
-        room_name_en = extract_tag_content(room_name_raw, 'en')
-        title_val = it.get('title')
-        match_source = room_name_en if room_name_en else room_name_raw
-        if contains_chars(match_source, ['bedroom', 'living room']) or contains_chars(title_val, ['bedroom', 'living room']):
-            profile_room = it.get('profile_room')
-            # 输出 room_name 使用英文提取后的结果（如无则保持原值）
-            out_room_name = room_name_en if room_name_en else room_name_raw
-            key = (profile_room, out_room_name)
-            if key not in seen:
-                seen.add(key)
-                room_list.append({'profile_room': profile_room, 'room_name': out_room_name})
-    return room_list
-
-# 为 subItemList 增加 relate_room 字段
-def attach_relate_room(device_list, room_list):
-    # 预先找出 bedroom 与 living room 的参考 profile_room
-    bedroom_profile_room = None
-    living_profile_room = None
-    for r in room_list:
-        rn = str(r.get('room_name') or '')
-        if contains_chars(rn, 'bedroom') and bedroom_profile_room is None:
-            bedroom_profile_room = r.get('profile_room')
-        if contains_chars(rn, 'living room') and living_profile_room is None:
-            living_profile_room = r.get('profile_room')
-    # 提高匹配效率：将 room_list 的 profile_room 放入集合
-    room_profile_set = set([r.get('profile_room') for r in room_list])
+    print(f"DEBUG: build_room_list 开始处理 {len(device_list or [])} 个设备")
 
     for idx, it in enumerate(device_list or []):
-        if idx < 4:
+        try:
+            print(f"DEBUG: 处理设备 {idx+1}")
+            # 从function字段提取房间名称
+            function_str = it.get('function', '')
+            print(f"DEBUG: 设备 {idx+1} 的function字段: '{function_str}'")
+
+            room_name_from_function = extract_room_name_from_function(function_str)
+
+            if room_name_from_function:
+                print(f"DEBUG: 成功提取房间名称: '{room_name_from_function}'")
+                profile_room = it.get('profile_room')
+                print(f"DEBUG: profile_room: '{profile_room}'")
+
+                # 提取房间的英文标签名称（如果有的话）
+                room_name_en = extract_tag_content(room_name_from_function, 'en')
+                out_room_name = room_name_en if room_name_en else room_name_from_function
+                print(f"DEBUG: 最终房间名称: '{out_room_name}'")
+
+                # 使用(profile_room, room_name)作为唯一键进行去重
+                key = (profile_room, out_room_name)
+                if key not in seen:
+                    seen.add(key)
+                    room_list.append({
+                        'profile_room': profile_room,
+                        'room_name': out_room_name
+                    })
+                    print(f"DEBUG: 添加房间到列表: {key}")
+                else:
+                    print(f"DEBUG: 房间已存在，跳过: {key}")
+            else:
+                print(f"DEBUG: 设备 {idx+1} 未能提取到房间名称")
+        except Exception as e:
+            print(f"DEBUG: 处理设备 {idx+1} 时发生异常: {e}")
+            # 单个设备处理失败时跳过，继续处理其他设备
+            continue
+
+    print(f"DEBUG: build_room_list 完成，构建了 {len(room_list)} 个房间")
+    return room_list
+
+# 为 subItemList 增加 relate_room 字段，基于function字段进行匹配
+def attach_relate_room(device_list, room_list):
+    # 创建房间映射字典，提高查找效率
+    room_map = {}
+    for room in room_list:
+        profile_room = room.get('profile_room')
+        room_name = room.get('room_name')
+        if profile_room and room_name:
+            if profile_room not in room_map:
+                room_map[profile_room] = []
+            room_map[profile_room].append(room_name)
+
+    # 创建房间名称到profile_room的反向映射
+    room_name_to_profile = {}
+    for room in room_list:
+        room_name = room.get('room_name')
+        profile_room = room.get('profile_room')
+        if room_name and profile_room:
+            room_name_to_profile[room_name] = profile_room
+
+    for idx, it in enumerate(device_list or []):
+        try:
+            if idx < 4:
+                it['relate_room'] = ''
+                continue
+
+            # 首先尝试从function字段提取房间名称进行匹配
+            function_str = it.get('function', '')
+            room_name_from_function = extract_room_name_from_function(function_str)
+
+            if room_name_from_function:
+                # 直接匹配房间名称
+                if room_name_from_function in room_name_to_profile:
+                    it['relate_room'] = room_name_to_profile[room_name_from_function]
+                    continue
+
+                # 尝试匹配房间名称包含关系（处理标签情况）
+                for room_name, profile_room in room_name_to_profile.items():
+                    if (room_name_from_function.lower() in room_name.lower() or
+                        room_name.lower() in room_name_from_function.lower()):
+                        it['relate_room'] = profile_room
+                        break
+                else:
+                    # 没有找到匹配，设为空
+                    it['relate_room'] = ''
+            else:
+                # 如果function字段没有房间信息，尝试传统的profile_room匹配
+                pr = it.get('profile_room')
+                if pr in room_map:
+                    it['relate_room'] = pr
+                else:
+                    it['relate_room'] = ''
+
+        except Exception:
+            # 单个设备处理失败时设为空字符串，继续处理其他设备
             it['relate_room'] = ''
             continue
-        pr = it.get('profile_room')
-        rn = str(it.get('room_name') or '')
-        # 与 room_list 中 profile_room 相同
-        if pr in room_profile_set and pr:
-            it['relate_room'] = pr
-            continue
-        # 不同 profile_room：根据 room_name 关键字关联
-        if contains_chars(rn, 'bathroom'):
-            it['relate_room'] = bedroom_profile_room or ''
-            continue
-        if contains_chars(rn, ['checkroom', 'toilet']):
-            it['relate_room'] = living_profile_room or ''
-            continue
-        it['relate_room'] = ''
 
     # 组跟随：同组且 group_id 非 0，统一跟随该组首项的 relate_room
     def normalize_group_key(gid):
@@ -264,19 +346,25 @@ def attach_relate_room(device_list, room_list):
 
     first_group_relate = {}
     for it in (device_list or []):
-        gk = normalize_group_key(it.get('group_id'))
-        if not gk:
-            continue
-        if gk not in first_group_relate:
-            first_group_relate[gk] = it.get('relate_room') or ''
-
-    if first_group_relate:
-        for it in (device_list or []):
+        try:
             gk = normalize_group_key(it.get('group_id'))
             if not gk:
                 continue
-            if gk in first_group_relate:
-                it['relate_room'] = first_group_relate[gk]
+            if gk not in first_group_relate:
+                first_group_relate[gk] = it.get('relate_room') or ''
+        except Exception:
+            continue
+
+    if first_group_relate:
+        for it in (device_list or []):
+            try:
+                gk = normalize_group_key(it.get('group_id'))
+                if not gk:
+                    continue
+                if gk in first_group_relate:
+                    it['relate_room'] = first_group_relate[gk]
+            except Exception:
+                continue
 
 # 仅用于非 Frappe 环境的静态检查占位，不影响真实运行环境
 try:
@@ -300,6 +388,23 @@ except Exception:
     profile = {}
 
 profile_subdevice = profile.get('profile_subdevice') or []
+profile_device = profile.get('profile_device') or []
+profile_subdevice_copy = []
+
+
+#拼接profile_device的值给subdevice
+for p_s_item in profile_subdevice:
+    # 将 ProfileSubdevice 对象转换为字典，以支持 item assignment
+    try:
+        p_s_result = dict(p_s_item.as_dict())
+    except AttributeError:
+        p_s_result = dict(p_s_item)
+    for p_d_item in profile_device:
+        if p_d_item.get('name') == p_s_item.get('profile_device'):
+            p_s_result['gateway'] = p_d_item.get('gateway')
+            profile_subdevice_copy.append(p_s_result)
+            break
+
 
 try:
     scenes = frappe.get_all('Scene', filters=[["profile", "=", frappe.form_dict.profile_name],["scene_template","=","RCU Scene Button"]],fields=['name'])
@@ -310,7 +415,7 @@ scene_list = []
 
 for scene in scenes:
     try:
-        scene_name = scene.get('name') if hasattr(scene, 'get') else getattr(scene, 'name', None)
+        scene_name = scene.name
         if scene_name is None:
             continue
         scene_map = frappe.get_doc('Scene', scene_name)
@@ -322,25 +427,28 @@ subItemList = []
 
 #场景处理，区分是否是通过virtual button控制，sceneTpye 0是virtual button，1是通过scene id控制,2是雷达场景,3是dnd,4是clean,5是其他wifi产品
 
-for item in profile_subdevice:
+for item in profile_subdevice_copy:
     try:
         title = item.get('title')
         button_group = item.get('device_button_group')
-        guest_mode = item.get('guest_mode')
-        if guest_mode == 1:
+        controller_mode = item.get('controller_mode')
+        if controller_mode == 1:
             config = item.get('config')
+            function_str = item.get('function')
             group_id = item.get('function')
             result_item = {
                 'device_button_group': button_group,
                 'device_mode': item.get('device_mode'),
-                'guest_mode': guest_mode,
                 'config': config,
                 'device': item.get('device'),
                 'title': extract_tag_content(item.get('title'), 'en'),
-                'group_id': get_group_id(group_id),
-                'guest_mode_idx': item.get('guest_mode_idx'),
+                'gateway': item.get('gateway'),
+                'page': get_page_num(group_id),
+                'controller_mode_idx': item.get('controller_mode_idx'),
                 'profile_room': item.get('profile_room'),
+                'size': get_size(group_id),
                 'room_name': extract_tag_content(item.get('room_name'), 'en'),
+                'function': function_str,  # 添加function字段，这是房间匹配的关键
                 'image_base_64_list': get_ai_button_group_icon(button_group, title)
             }
             result_item['scene_type'] = 0
@@ -368,12 +476,34 @@ for item in profile_subdevice:
                     found = False
                     for scene_item in scene_list:
                         scene_virtual_button = scene_item.get('scene_virtual_button') or []
+                        
                         for scene_virtual_button_item in scene_virtual_button:
-                            if scene_virtual_button_item.get('virtual_button_id') == decimal_num:
+                            try:
+                                vb_id = int(str(scene_virtual_button_item.get('virtual_button_id')).strip() or '0')
+                                
+                            except (ValueError, TypeError):
+                                vb_id = None
+                            if vb_id is not None and vb_id == decimal_num:
+                                
                                 scene_device_location = scene_item.get('scene_device_location') or []
                                 for scene_device_location_item in scene_device_location:
                                     if scene_device_location_item.get('device') == item.get('device'):
-                                        result_item['scene_id'] = scene_device_location_item.get('storage_id')
+                                        try:
+                                            sid_raw = scene_device_location_item.get('storage_id')
+                                            sid_str = '' if sid_raw is None else str(sid_raw).strip()
+                                            # 支持 0x/0X 前缀；否则先按十进制，失败再按十六进制
+                                            sid_int = None
+                                            prefix = sid_str[:2] if isinstance(sid_str, str) else ''
+                                            if prefix == '0x' or prefix == '0X':
+                                                sid_int = int(sid_str, 16)
+                                            else:
+                                                try:
+                                                    sid_int = int(sid_str)
+                                                except Exception:
+                                                    sid_int = int(sid_str, 16)
+                                            result_item['scene_id'] = hex(sid_int)[2:].upper().zfill(2)
+                                        except Exception:
+                                            result_item['scene_id'] = scene_device_location_item.get('storage_id')
                                         found = True
                                         break
                             if found:
@@ -384,6 +514,8 @@ for item in profile_subdevice:
             if not contains_chars(button_group, 'scene') and result_item['scene_type'] == 0:
                 result_item['scene_type'] = 5
             
+            
+
             subItemList.append(result_item)
     except Exception:
         # 单个 item 出错时，降级为最小结果，防止整体失败
@@ -397,14 +529,114 @@ for item in profile_subdevice:
             # 连降级也失败时，跳过该项
             continue
 
+# 将设备分配到房间中，基于function字段进行匹配
+def assign_devices_to_rooms(subItemList, room_list):
+    # 为每个房间初始化空的device_list
+    for room in room_list:
+        room['device_list'] = []
+
+    # 创建房间映射字典，提高查找效率
+    room_map = {}
+    for room in room_list:
+        profile_room = room.get('profile_room')
+        room_name = room.get('room_name')
+        if profile_room and room_name:
+            key = (profile_room, room_name)
+            room_map[key] = room
+
+    # 创建房间名称到profile_room的反向映射
+    room_name_to_profile = {}
+    for room in room_list:
+        room_name = room.get('room_name')
+        profile_room = room.get('profile_room')
+        if room_name and profile_room:
+            room_name_to_profile[room_name] = profile_room
+
+    # 将设备分配到对应房间
+    for device in subItemList:
+        try:
+            device_room_name = device.get('room_name', '')
+            device_profile_room = device.get('profile_room', '')
+            assigned = False
+
+            # 首先尝试从function字段提取房间名称进行匹配
+            function_str = device.get('function', '')
+            room_name_from_function = extract_room_name_from_function(function_str)
+
+            if room_name_from_function:
+                # 直接匹配房间名称和profile_room
+                if room_name_from_function in room_name_to_profile:
+                    target_profile_room = room_name_to_profile[room_name_from_function]
+                    key = (target_profile_room, room_name_from_function)
+                    if key in room_map:
+                        room_map[key]['device_list'].append(device)
+                        assigned = True
+
+                # 如果直接匹配失败，尝试模糊匹配（处理标签情况）
+                if not assigned:
+                    for room in room_list:
+                        room_name = room.get('room_name')
+                        profile_room = room.get('profile_room')
+                        if (room_name_from_function.lower() in room_name.lower() or
+                            room_name.lower() in room_name_from_function.lower()):
+                            room['device_list'].append(device)
+                            assigned = True
+                            break
+
+            # 如果function字段匹配失败，尝试传统的room_name和profile_room匹配
+            if not assigned:
+                key = (device_profile_room, device_room_name)
+                if key in room_map:
+                    room_map[key]['device_list'].append(device)
+                else:
+                    # 尝试模糊匹配room_name
+                    for room in room_list:
+                        room_name = room.get('room_name')
+                        profile_room = room.get('profile_room')
+                        if (device_room_name.lower() in room_name.lower() or
+                            room_name.lower() in device_room_name.lower()):
+                            room['device_list'].append(device)
+                            break
+
+        except Exception:
+            # 单个设备分配失败时跳过，继续处理其他设备
+            continue
+
 try:
     subItemList.sort(key=sort_by_guest_mode_idx_key)
+
+    # 调试信息：输出原始数据数量
+    print(f"DEBUG: 处理前 subItemList 数量: {len(subItemList)}")
+
+    # 显示前几个设备的function字段内容（用于调试）
+    for i, device in enumerate(subItemList[:3]):  # 只显示前3个
+        print(f"DEBUG: 设备{i+1} - function: {device.get('function', 'None')}")
+        print(f"DEBUG: 设备{i+1} - profile_room: {device.get('profile_room', 'None')}")
+        print(f"DEBUG: 设备{i+1} - room_name: {device.get('room_name', 'None')}")
+
     room_list = build_room_list(subItemList)
+    print(f"DEBUG: 构建的房间列表数量: {len(room_list)}")
+
+    # 显示房间信息
+    for i, room in enumerate(room_list):
+        print(f"DEBUG: 房间{i+1} - profile_room: {room.get('profile_room')}, room_name: {room.get('room_name')}")
+
     attach_relate_room(subItemList, room_list)
+    assign_devices_to_rooms(subItemList, room_list)
+
+    # 统计每个房间的设备数量
+    for i, room in enumerate(room_list):
+        device_count = len(room.get('device_list', []))
+        print(f"DEBUG: 房间 '{room.get('room_name')}' 分配到 {device_count} 个设备")
+
     frappe.response['data'] = {
-        'room_list': room_list,
-        'device_list': subItemList,
+        'room_list': room_list
     }
-except Exception:
+
+except Exception as e:
+    # 输出详细错误信息用于调试
+    import traceback
+    print(f"ERROR: 处理过程中发生异常: {str(e)}")
+    print(f"ERROR: 异常堆栈: {traceback.format_exc()}")
     # 最终兜底，确保不会因设置 response 失败而异常
     pass

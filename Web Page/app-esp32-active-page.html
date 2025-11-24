@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('YO381-Configuration') }}</div>
+        <div class="title">{{ _('YO382-Configuration') }}</div>
       </div>
     </div>
 
@@ -164,7 +164,7 @@
                     <ul>
                       <li class="item-content item-input no-padding-left">
                         <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Device Name")}}</div>
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Name")}}</div>
                           <div class="item-input-wrap">
                             <input type="text" name="deviceName" v-model="deviceName" :placeholder="deviceNameTip" required validate />
                           </div>
@@ -657,7 +657,7 @@
           deviceName: '', // device name
           deviceImage: '',
           flatValue: '',
-          deviceNameTip: 'Please enter the Door name', // device name tip
+          deviceNameTip: 'Please enter the name', // device name tip
           index: 1, // control the step-content
           activeStatus: false, //if choose the template, show the step-content
           deviceType: 1, //1: door, 2: lift, 3: mailbox, 4: locker

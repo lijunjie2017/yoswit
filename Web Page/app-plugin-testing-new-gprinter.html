@@ -49,17 +49,23 @@
      * 如果不需要填写请清空，例如空对象{}，避免大老板扣问号
      */
     const defaultJSONConfig = {
-      getPhoto: {
-        quality: 60,
-        allowEditing: false,
-        resultType: 'uri',
-        saveToGallery: false,
-        source: 'CAMERA',
-      },
-      pickImages: {
-        quality: 60,
-        limit: 9,
-      },
+      print: {
+        ticket_name: '#Test',
+        valid_from: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+        valid_to: dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
+        qr_code: 'https://www.google.com',
+        ticket_type: 'Booking Fee',
+        g_printer_title_x : 20,
+        g_printer_title_y : 50,
+        g_printer_qr_code_x : 20,
+        g_printer_qr_code_y : 90,
+        g_printer_name_x : 130,
+        g_printer_name_y : 290,
+        g_printer_from_time_x : 90,
+        g_printer_from_time_y : 290,
+        g_printer_to_time_x : 50,
+        g_printer_to_time_y : 290
+      }
     };
 
     /**
@@ -70,7 +76,7 @@
      */
     const pluginActions = [
       {
-        method: 'getPhoto',
+        method: 'print',
         description: 'Prompt the user to pick a photo from an album, or take a new photo with the camera.',
         /**
          * @param config: 配置对象
@@ -79,21 +85,33 @@
          */
         onClick: async (config, allConfig, applyCfg) => {
           console.log(config);
-          const ret = await Capacitor.Plugins.Camera.getPhoto(config);
+          debugger
+          //这里可以再次对对象进行二次加工
+          let configMap = {
+            name: config.ticket_name,
+            ticket_name: config.ticket_name,
+            valid_from: config.valid_from,
+            valid_to: config.valid_to,
+            qr_code: config.qr_code,
+            ticket_type: config.ticket_type,
+            opt : {
+              g_printer_title_x: config['g_printer_title_x'],
+                g_printer_title_y: config['g_printer_title_y'],
+                g_printer_qr_code_x: config['g_printer_qr_code_x'],
+                g_printer_qr_code_y: config['g_printer_qr_code_y'],
+                g_printer_name_x: config['g_printer_name_x'],
+                g_printer_name_y: config['g_printer_name_y'],
+                g_printer_from_time_x: config['g_printer_from_time_x'],
+                g_printer_from_time_y: config['g_printer_from_time_y'],
+                g_printer_to_time_x: config['g_printer_to_time_x'],
+                g_printer_to_time_y: config['g_printer_to_time_y'],
+            }
+          }
+          const ret = await Capacitor.Plugins.YoswitGPrinter.printUseGPinter(configMap);
           console.log(ret);
-          applyCfg('getPhotoRet', ret);
+          applyCfg('print', ret);
         },
-      },
-      {
-        method: 'pickImages',
-        description:
-          'Allows the user to pick multiple pictures from the photo gallery. On iOS 13 and older it only allows to pick one picture.',
-        onClick: async (config, allConfig) => {
-          console.log(config);
-          const ret = await Capacitor.Plugins.Camera.pickImages(config);
-          console.log(ret);
-        },
-      },
+      }
     ];
 
     /**
@@ -290,6 +308,7 @@
                                 v-else
                                 @click="handleFieldNameClick(method, fieldKey)" 
                                 :style="{ cursor: isMethodEdit(method) ? 'pointer' : 'default', color: '#007aff' }"
+                                :title="fieldKey"
                               >
                                 {{ fieldKey }}
                               </strong>

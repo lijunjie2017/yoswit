@@ -27,7 +27,7 @@
         <div
           class="list medium-inset no-chevron virtual-list searchbar-found search-list device-type-list"
           style="margin-top: 0px; margin-bottom: 0px"
-          v-if="!activeStatus"
+          v-if="!activeStatus && !rfActiveStatus"
         >
           <ul>
             <li class="device-type-list-item">
@@ -177,7 +177,156 @@
                 <span>{{_('Dyson')}}</span>
               </a>
             </li>
+            <li class="device-type-list-item">
+              <a v-on:click="clickDeviceType('rf443')">
+                <svg 
+                  t="1761806176826" 
+                  style="margin-bottom: 10px"
+                  class="icon" 
+                  viewBox="0 0 1024 1024" 
+                  version="1.1" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  p-id="4729" 
+                  width="30" 
+                  height="30">
+                    <path d="M884.224 1024H139.776C62.464 1024 0 961.536 0 884.224V139.776C0 62.464 62.464 0 139.776 0h744.448C961.536 0 1024 62.464 1024 139.776v744.448c0 77.312-62.464 139.776-139.776 139.776zM139.776 56.32c-46.592 0-83.968 37.888-83.968 83.968v744.448c0 46.592 37.888 83.968 83.968 83.968h744.448c46.592 0 83.968-37.888 83.968-83.968V140.288c0-46.592-37.888-83.968-83.968-83.968H139.776z" fill="#707070" p-id="4730"></path><path d="M114.176 889.344c0 15.872 12.8 29.184 29.184 29.184 15.872 0 29.184-12.8 29.184-29.184 0-15.872-12.8-29.184-29.184-29.184s-29.184 12.8-29.184 29.184z m1.024-755.2c0 15.36 12.288 27.648 27.648 27.648s27.648-12.288 27.648-27.648-12.288-27.648-27.648-27.648c-14.848 0-27.648 12.288-27.648 27.648z m738.816 0c0 15.36 12.288 27.648 27.648 27.648s27.648-12.288 27.648-27.648-12.288-27.648-27.648-27.648-27.648 12.288-27.648 27.648z m0 755.2c0 15.36 12.288 27.648 27.648 27.648s27.648-12.288 27.648-27.648-12.288-27.648-27.648-27.648-27.648 12.288-27.648 27.648zM441.344 478.72l14.336-20.48 181.248 124.928-14.336 20.48-181.248-124.928z m6.656-115.712l189.952-78.848 9.728 23.04-189.952 78.848-9.728-23.04z" fill="#707070" p-id="4731"></path><path d="M668.16 283.648m-58.88 0a58.88 58.88 0 1 0 117.76 0 58.88 58.88 0 1 0-117.76 0Z" fill="#707070" p-id="4732"></path><path d="M668.16 229.888c30.208 0 53.76 23.552 53.76 53.76s-23.552 53.76-53.76 53.76S614.4 313.856 614.4 283.648s23.552-53.76 53.76-53.76m0-10.24c-35.328 0-64 28.16-64 64s28.16 64 64 64c35.328 0 64-28.16 64-64s-28.672-64-64-64z" fill="#707070" p-id="4733"></path><path d="M667.648 696.832c-39.936 0-72.704-32.768-72.704-72.704 0.512-39.936 33.28-72.704 72.704-73.216 39.936 0 72.704 32.768 72.704 73.216 0 39.936-32.768 72.704-72.704 72.704z" fill="#707070" p-id="4734"></path><path d="M667.648 556.032c37.376 0 67.584 30.72 67.584 68.096s-30.208 67.584-67.584 67.584-67.584-30.208-67.584-67.584c0.512-36.864 30.72-67.584 67.584-68.096m0-10.24c-42.496 0.512-77.312 35.328-77.824 78.336 0 43.008 34.816 77.824 77.824 77.824s77.824-34.816 77.824-77.824-34.816-78.336-77.824-78.336z" fill="#707070" p-id="4735"></path><path d="M373.76 414.72m-95.744 0a95.744 95.744 0 1 0 191.488 0 95.744 95.744 0 1 0-191.488 0Z" fill="#707070" p-id="4736"></path><path d="M349.696 368.128l-22.016 30.72c-1.536 2.56-5.12 2.56-7.168 1.024l-1.024-1.024c-2.56-1.536-2.56-5.12-1.024-7.168l22.016-30.72c1.536-2.56 5.12-2.56 7.168-1.024l1.024 1.024c2.048 2.048 2.56 5.632 1.024 7.168z m31.744 0l-32.768 44.544c-1.536 2.56-5.12 2.56-7.168 1.024l-1.024-1.024c-2.56-1.536-2.56-5.12-1.024-7.168l32.768-44.544c1.536-2.56 5.12-2.56 7.168-1.024l1.024 1.024c2.048 2.048 2.56 5.632 1.024 7.168z" fill="#707070" p-id="4737"></path><path d="M276.48 918.016v-26.112h-47.616v-12.288l50.176-71.168h10.752v71.168h14.848v12.288h-14.848v26.112H276.48z m0-38.912V829.44l-34.304 49.664H276.48zM318.464 888.832l13.312-2.048c1.536 7.68 4.096 13.312 7.68 16.384 3.584 3.584 8.192 5.12 13.312 5.12 6.144 0 11.776-2.048 15.872-6.656 4.608-4.608 6.656-9.728 6.656-16.384 0-6.144-2.048-11.264-6.144-15.36-4.096-4.096-9.216-6.144-15.36-6.144-2.56 0-5.632 0.512-9.728 1.536l1.536-11.776h2.048c5.632 0 10.752-1.536 15.36-4.608 4.608-3.072 6.656-7.68 6.656-13.824 0-5.12-1.536-9.216-5.12-12.288-3.584-3.072-7.68-4.608-12.8-4.608s-9.728 1.536-13.312 5.12c-3.584 3.072-5.632 8.192-6.656 14.848l-13.312-2.56c1.536-9.216 5.632-15.872 11.264-20.992 5.632-5.12 13.312-7.68 21.504-7.68 6.144 0 11.264 1.536 16.384 4.096s8.704 6.144 11.776 10.752 4.096 9.216 4.096 14.336c0 4.608-1.024 9.216-3.584 12.8-2.56 4.096-6.144 7.168-11.264 9.216 6.656 1.536 11.264 4.608 14.848 9.216s5.632 10.752 5.632 17.92c0 9.728-3.584 17.92-10.24 24.576-7.168 6.656-15.872 9.728-26.624 9.728-9.728 0-17.408-3.072-24.064-8.704-5.12-5.12-8.704-12.8-9.728-22.016zM403.456 888.832l13.312-2.048c1.536 7.68 4.096 13.312 7.68 16.384 3.584 3.584 8.192 5.12 13.312 5.12 6.144 0 11.776-2.048 15.872-6.656 4.608-4.608 6.656-9.728 6.656-16.384 0-6.144-2.048-11.264-6.144-15.36-4.096-4.096-9.216-6.144-15.36-6.144-2.56 0-5.632 0.512-9.728 1.536l1.536-11.776h2.048c5.632 0 10.752-1.536 15.36-4.608 4.608-3.072 6.656-7.68 6.656-13.824 0-5.12-1.536-9.216-5.12-12.288-3.584-3.072-7.68-4.608-12.8-4.608s-9.728 1.536-13.312 5.12c-3.584 3.072-5.632 8.192-6.656 14.848l-13.312-2.56c1.536-9.216 5.632-15.872 11.264-20.992 5.632-5.12 13.312-7.68 21.504-7.68 6.144 0 11.264 1.536 16.384 4.096s8.704 6.144 11.776 10.752 4.096 9.216 4.096 14.336c0 4.608-1.024 9.216-3.584 12.8-2.56 4.096-6.144 7.168-11.264 9.216 6.656 1.536 11.264 4.608 14.848 9.216s5.632 10.752 5.632 17.92c0 9.728-3.584 17.92-10.24 24.576-7.168 6.656-15.872 9.728-26.624 9.728-9.728 0-17.408-3.072-24.064-8.704-5.12-5.12-8.704-12.8-9.728-22.016zM493.568 918.016v-109.568h22.016l26.112 77.824c2.56 7.168 4.096 12.8 5.12 16.384 1.024-4.096 3.072-9.728 5.632-17.408L578.56 808.96h19.456v109.568h-13.824v-91.648l-31.744 91.648h-13.312l-31.744-93.184v93.184h-13.824zM622.08 918.016v-109.568h14.336v45.056h56.832v-45.056h14.336v109.568h-14.336v-51.712h-56.832v51.712h-14.336zM723.456 918.016v-10.752l50.688-57.856c-5.632 0.512-10.752 0.512-15.36 0.512h-32.256v-10.752h65.024v8.704l-43.008 50.176-8.192 9.216c6.144-0.512 11.776-0.512 16.896-0.512h36.864v11.776h-70.656z" fill="#707070" p-id="4738"></path>
+                </svg>
+                
+                <span>{{_('Rf433')}}</span>
+              </a>
+            </li>
           </ul>
+        </div>
+        <!-- 当选择的是rf433时的框 -->
+        <div v-if="rfActiveStatus">
+          <div class="toolbar-box" style="padding: 0 15px; margin-top: 15px" v-if="rfStepList.length">
+            <div class="toolbar tabbar tabbar-scrollable" style="height: 60px">
+              <div class="toolbar-inner scene-toolbar-inner">
+                <button
+                  v-for="(item,index) in rfStepList"
+                  :key="item.id"
+                  :class="item.isActive?'button-active button':'button'"
+                >
+                  {{_('Step')}} {{item.name}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div id="step-rf-1" class="view tab view-main" :class="[rfStepIndex == 1 ? 'tab-active' : '']" v-if="rfStepIndex == 1">
+              <div class="card">
+                <div class="card-content card-content-padding">
+                  <div class="list no-hairlines-md" style="margin: 10px 0">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-inner">
+                          <div
+                            class="item-title item-label"
+                            style="font-size: var(--f7-block-title-font-size, inherit); color: var(--f7-block-title-text-color)"
+                          >
+                            {{ _("Command") }}
+                          </div>
+                          <div class="item-input-wrap">
+                            <input
+                              class="init-input"
+                              name="title"
+                              type="text"
+                              :placeholder="_('Learn Command')"
+                              required
+                              readonly
+                              v-model="rfCommand"
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="studyForRf()">{{_("Learn")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="testForRf()">{{_("Test")}}</div>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 30px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="toCompele()">{{_("Next")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 加入房间前的选择 -->
+            <div id="step-rf-5" class="view tab view-main" :class="[rfStepIndex == 2 ? 'tab-active' : '']" v-if="rfStepIndex == 2">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row">
+                    <div class="col-100">
+                      <h5>{{ _('Profile Settings') }}</h5>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-content card-content-padding">
+                  <div class="list no-hairlines-md">
+                    <ul>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i class="icon material-icons setting-list-icon p-1">bed</i>
+                        </div>
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Room')}}</div>
+                          <div class="item-input-wrap input-dropdown-wrap">
+                            <select name="profile_room_rf" placeholder="" lang="en">
+                              <option :value="roomItem.name" selected="selected" v-for="roomItem in profileRoom" :key="roomItem.name">
+                                {{tran(roomItem.title)}}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i class="icon material-icons setting-list-icon p-1">home_max_dots</i>
+                        </div>
+                        <div class="item-inner">
+                          <div class="item-title item-label">{{ _('Name')}}</div>
+                          <div class="item-input-wrap">
+                            <input class="init-input" name="title" v-model="postTitle" type="text" placeholder="Device Name" />
+                            <span class="input-clear-button"></span>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="item-content item-input">
+                        <div class="item-media align-self-flex-start">
+                          <i
+                            class="icon material-icons setting-list-icon p-1 text-color-theme"
+                            v-if="hideStatus"
+                            v-on:click="hideStatus = !hideStatus"
+                            >check_box</i
+                          >
+                          <i class="icon material-icons setting-list-icon p-1" v-if="!hideStatus" v-on:click="hideStatus = !hideStatus"
+                            >check_box_outline_blank</i
+                          >
+                        </div>
+                        <div class="item-inner">
+                          <div class="" style="line-height: 30px">{{ _('Hide IR Device') }}</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="oBackForRf">{{_("Previous")}}</div>
+                  </div>
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="saveErpForRf">{{_("Compelte")}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- 选择设备类型后，显示设备列表 -->
         <div v-if="activeStatus">
@@ -195,6 +344,7 @@
             </div>
           </div>
           <div class="tabs">
+            <!-- 品牌选择 -->
             <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
               <div class="card brand-selection-container">
                 <!-- 搜索框 - 固定在顶部 -->
@@ -268,6 +418,7 @@
                 </div>
               </div>
               </div>
+              <!-- 一键匹配 -->
               <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
                 <div class="card">
                   <div class="card-content card-content-padding">
@@ -412,6 +563,7 @@
                   </div>
                 </div>
               </div>
+              <!-- 全面板控制 -->
               <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
                 <div class="card">
                   <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Full Panel")}}</div>
@@ -476,6 +628,7 @@
                   </div>
                 </div>
               </div>
+              <!-- 加入房间前的选择 -->
               <div id="step-5" class="view tab view-main" :class="[index == 5 ? 'tab-active' : '']" v-if="index == 5">
                 <div class="card">
                   <div class="card-header">
@@ -544,6 +697,7 @@
                   </div>
                 </div>
               </div>
+              <!-- 选择品牌后的测试界面 -->
             <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <div class="card">
                 <!-- 测试卡片 -->
@@ -632,12 +786,28 @@
         data: {
           index: 1, // control the step-content
           activeStatus: false, //if choose the template, show the step-content
+          rfActiveStatus : false, //if choose the rf433, show the step-content
+          rfStepIndex: 1, //the current step index of rf433
           deviceType: 1,
           // step-2 测试用状态
           isPowerOn: false,
           isSwitching: false,
           testingIndex: 1,
           testingTotal: 1,
+          rfStepList:[
+            {
+              id: 1,
+              name: '1',
+              isActive: true,
+              relatedIndex: 1,
+            },
+            {
+              id: 2,
+              name: '2',
+              isActive: false,
+              relatedIndex: 2,
+            },
+          ],
           stepList: [
             {
               id: 1,
@@ -718,6 +888,7 @@
           iotAttempt : 0,
           isTestMatched: false,
           thisPage : true,//防止打开其他页面占用
+          rfCommand : '',
         },
         computed: {
           // 过滤后的品牌列表
@@ -1121,7 +1292,6 @@
               }
               console.log('this.zipUrl', this.zipUrl);
               console.log('this.fileName', this.fileName);
-              this.init();
             } catch (error) {
               console.log('error', error);
               app.dialog.alert('error', error);
@@ -1151,6 +1321,7 @@
             await this.sendIrCode();
             this.isSwitching = false;
           },
+          //一键匹配后的测试指令发射
           async togglePowerForStep3(){
             if (this.isSwitching) return;
             this.isSwitching = true;
@@ -1274,16 +1445,25 @@
           },
           async init() {
             //check if the plugin is not ready
+            let initStatus = false;
             try{
               if(!Zeep){
-                app.dialog.alert(_('The plugin is not ready. Please download the latest version of the app.'));
-                mainView.router.back();
-                return;
+                app.dialog.confirm(_('The plugin is not ready. Go back to the home page.'),()=>{
+                  mainView.router.back();
+                },()=>{
+
+                })
               }
+              initStatus = true;
             }catch(error){
-              app.dialog.alert(_('The plugin is not ready. Please download the latest version of the app.'));
-              mainView.router.back();
-              return;
+              app.dialog.confirm(_('The plugin is not ready. Go back to the home page.'),()=>{
+                  mainView.router.back();
+                },()=>{
+                  
+                })
+            }
+            if(!initStatus){
+              return false;
             }
             
             let mkdirFilePath = `databases/`;
@@ -1319,6 +1499,7 @@
               });
             try{
               await  this.requestMtuForBle();
+              return true;
             }catch(error){
               console.log('error', error);
               app.dialog.alert(_(erp.get_log_description(error)))
@@ -1433,6 +1614,7 @@
             )
             });
           },
+          //全面版的空调指令发射
           async sendAirStatus(item){
             //change the value of the airDefaultValue
             switch(item.key){
@@ -1507,6 +1689,7 @@
               app.dialog.alert(_(erp.get_log_description(error)))
             }
           },
+          //全面版的指令发射
           async testIrCode(item){
             //if is the air, should send the status of the air
             if(this.deviceType == 1){
@@ -1556,7 +1739,7 @@
             7. supportedWindDirections 代表在给定模式下支持固定风的档位数，是一个整数，表示当前一共有多少种不同方向的固定风。
             */
             let command = '';
-            let pre_command = `972107`;
+            let pre_command = `97210701`;
             let onoff = this.isPowerOn ? '00' : '01';
             command = `${pre_command}0101${parseInt(item.key).toString(16).padStart(2, '0')}${onoff}${parseInt(this.airDefaultValue.temp - 16).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.mode).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.swing).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.fan).toString(16).padStart(2, '0')}${parseInt(this.airDefaultValue.wind).toString(16).padStart(2, '0')}${this.fileCode}`;
             return command;
@@ -1714,7 +1897,7 @@
               console.log('command', command);
               console.log('command length', command.length);
               try{
-                let postCommand = `97210700${command}3075`;
+                let postCommand = `9721070001${command}3075`;
                 //check if the command is long command
                 if(postCommand.length > 1008){
                   await this.sendLongCommandReady(postCommand);
@@ -1796,6 +1979,7 @@
               }
             })
           },
+          //选择品牌后的发送红外代码指令
           sendIrCode(){
             //send the ir code
             return new Promise(async(resolve, reject) => {
@@ -1936,9 +2120,22 @@
               }
             }
           },
-          clickDeviceType(type) {
+          async clickDeviceType(type) {
             this.deviceType = type;
-            this.init();
+            if(type == 'rf443'){
+              this.rfActiveStatus = true;
+              return;
+            }
+            //留点时间进行数据库的初始化操作
+            if(!this.fileName){
+              await app.dialog.alert(_('Please wait for the database to be initialized.'));
+              await this.sleep(2000);
+              app.dialog.close();
+            }
+            let initStatus = await this.init();
+            if(!initStatus){
+              return false;
+            }
             this.activeStatus = true;
             this.toTab(1);
             this.initPostTitle();
@@ -2062,6 +2259,9 @@
           async initAirData(){
             let command = '';
             let collectMap = this.step3MatchList[this.matchIndex-1];
+            if(!collectMap){
+              return;
+            }
             console.log('collectMap', collectMap);
             let sql = `SELECT * FROM remote_index where id = ${collectMap.remote_index_id};`;
             let result = await this.irSqliteExecuteSql(this.dbMap, sql);
@@ -2130,7 +2330,7 @@
                       }
                     }
                     if(item.code){
-                      item.code = `97210700${item.code}3075`;
+                      item.code = `9721070001${item.code}3075`;
                     }
                   }
                 }
@@ -2211,9 +2411,51 @@
             }
             return str;
           },
+          //获取IR device setting的id
+          getIrDeviceSettingIndexId() {
+            let device_settings = [];
+            let index_id = 1;
+            debugger
+            try{
+              device_settings = cloneDeep(erp.info.device[guid].settings);
+            }catch(error){
+              device_settings = [];
+            }
+            if(!device_settings.length){
+              index_id = 1;
+            }else{
+              let ir_index = device_settings.filter(item => item.setting_type.includes('Index_') && item.setting != 0);
+              index_id = ir_index.length + 1;
+            }
+            return index_id;
+          },
+          //保存到ERP
           async saveErp() {
             let subDevice = cloneDeep(erp.info.profile.profile_subdevice);
             console.log('addDeviceToErp');
+            let index_id = cloneDeep(this.getIrDeviceSettingIndexId());
+            app.dialog.preloader(_('Writing IR Configuration'));
+            //写入IR设备的Index
+            console.log('index_id', index_id);
+            try{
+              let index_command = `972007${parseInt(index_id).toString(16).padStart(2, '0')}${this.fileCode}`;
+              if(index_command.length > 1008){
+                await this.sendLongCommandReady(index_command);
+              }else{
+                await window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: index_command,
+                  },
+                ]);
+              }
+              app.dialog.close();
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
             app.dialog.preloader();
             //get model should pass the device model tabel
             let hexid = window.peripheral[guid].prop.hexModel;
@@ -2238,6 +2480,7 @@
                 "device_type_num" : this.deviceType,
                 "device_type" : this.turnDeviceTypeToStr(),
                 "file_code" : this.fileCode,
+                "index_id" :index_id,
                 "button" : this.panelConfig['button']
               }),
             };
@@ -2248,6 +2491,9 @@
                 responseType: 'json',
                 data: postData,
               });
+              //update the device_settings
+              await iot_device_setting_sync_server(guid, `Index_${index_id}`, index_id);
+
               //update the hide setting
               if (this.hideStatus) {
                 console.log('resData', resData);
@@ -2273,6 +2519,7 @@
                   app.dialog.alert(updateError);
                 }
               }
+              
               await ha_profile_ready();
               app.dialog.close();
               window.globalUpdate = true;
@@ -2281,6 +2528,145 @@
               app.dialog.close();
               app.dialog.alert(error);
             }
+          },
+          /*
+          -----------------------------------------------------------
+          这里是rf433的业务
+          -----------------------------------------------------------
+          */
+          async studyForRf(){
+            console.log('studyForRf');
+            
+            //20s 超时监听期
+            this.matchTimeoutTimer = setTimeout(() => {
+              app.dialog.close();
+              app.dialog.alert(_(`No response from device within 20s. Please press the physical power button again and retry.`));
+            }, 20000);
+            try{
+              if(!this._sendIrLearnFun){
+                this._sendIrLearnFun = (data) => {
+                  console.log('data', data);
+                  let rs = data.rs;
+                  if(rs.length > 8){
+                    //将字符的第4位改成1
+                    this.rfCommand = rs.substring(0, 3) + '1' + rs.substring(4, rs.length);
+                    emitter.off(`ir_learned_code_for_rf433`, this._sendIrLearnFun);
+                    this._sendIrLearnFun = null;
+                    app.dialog.close();
+                    clearTimeout(this.matchTimeoutTimer);
+                  }else if(rs.length == 8 && rs.substring(6, 8) != '00'){
+                    app.dialog.close();
+                    app.dialog.alert(_('No response from device'));
+                    emitter.off(`ir_learned_code_for_rf433`, this._sendIrLearnFun);
+                    this._sendIrLearnFun = null;
+                    clearTimeout(this.matchTimeoutTimer);
+                  }
+                };
+              }
+              emitter.off(`ir_learned_code_for_rf433`, this._sendIrLearnFun);
+              emitter.on(`ir_learned_code_for_rf433`, this._sendIrLearnFun);
+              app.dialog.preloader(_('Send Command And Wait For Response'));
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '972106',
+                },
+              ]);
+              app.dialog.close();
+              app.dialog.preloader(_('Please press the remote and wait for the device to respond.'));
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+          },
+          async testForRf(){
+            console.log('testForRf');
+            if(!this.rfCommand){
+              app.dialog.alert(_('Please learn the command first'));
+              return;
+            }
+            try{
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: this.rfCommand,
+                },
+              ]);
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+          },
+          activeRfStep(){
+            this.rfStepList.forEach((item, index) => {
+              if (item.id == this.rfStepIndex) {
+                item.isActive = true;
+              } else {
+                item.isActive = false;
+              }
+            });
+          },
+          oBackForRf(){
+            this.rfStepIndex = 1;
+            this.activeRfStep();
+          },
+          toCompele(){
+            //check if study the command
+            if(!this.rfCommand){
+              app.dialog.alert(_('Please learn the command first'));
+              return;
+            }
+            this.postTitle = `RF433`;
+            this.rfStepIndex = 2;
+            this.activeRfStep();
+          },
+          async saveErpForRf(){
+            let subDevice = cloneDeep(erp.info.profile.profile_subdevice);
+            app.dialog.preloader();
+            //get model should pass the device model tabel
+            let hexid = window.peripheral[guid].prop.hexModel;
+            let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
+            let mode = erp.doctype.device_model[`${hexid}`.toUpperCase()].mode;
+            let device_button_group = 'IR-RF433';
+            let device_batch = erp.doctype.device_batch[peripheral[guid].getProp().hexBatch.toUpperCase()];
+            let postData = {
+              title: this.postTitle,
+              guid: guid,
+              model: model,
+              device_mode: mode,
+              peripheral: core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
+              device_button_group: device_button_group,
+              parent: erp.info.profile.name,
+              batch: isset(device_batch) ? device_batch.batch_id : 'YO0012',
+              firmware: peripheral[guid].getProp().firmware || 0,
+              profile_room: $('select[name="profile_room_rf"]').val(),
+              password: peripheral[guid].getProp().password,
+              mac_address: core_utils_get_mac_address_from_guid(guid),
+              function: JSON.stringify({
+                "command_code" : this.rfCommand
+              }),
+            };
+            try{
+              let resData = await http2.request('/api/method/save.subdevice', {
+                method: 'POST',
+                serializer: 'json',
+                responseType: 'json',
+                data: postData,
+              });
+              await ha_profile_ready();
+            }catch(error){
+              app.dialog.close();
+              app.dialog.alert(_(erp.get_log_description(error)));
+              return;
+            }
+            
+            app.dialog.close();
+            window.globalUpdate = true;
+            mainView.router.back();
           },
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));

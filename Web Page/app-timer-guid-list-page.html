@@ -262,6 +262,12 @@
             console.log('status', status);
             console.log('guid', guid);
             console.log('subdevice_name', subdevice_name);
+            //此处需要判断新的定时和旧的定时，新的定时是用场景写的,如果是新的场景的话，暂时先跳详情让他改
+            if(isset(erp.info.device[guid]) && erp.info.device[guid].device_model.includes('YO2061')){
+              this.onEdit(item);
+              return;
+            }
+
             const timer_id = item.timer_id;
             const action = item.action;
             const button_group = item.device_button_group;

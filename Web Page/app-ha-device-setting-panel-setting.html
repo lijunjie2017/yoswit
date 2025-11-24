@@ -1,0 +1,657 @@
+<template>
+  <div class="page">
+    <!-- 顶部导航栏 -->
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Panel Setting') }}</div>
+      </div>
+    </div>
+
+    <!-- 页面内容 -->
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">SIP Configuration</div>
+          </div>
+          <div class="card-content">
+            <form class="list" id="sip-form">
+              <ul>
+                <!-- SIP URI -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">SIP URI</div>
+                      <div class="item-input-wrap">
+                        <input
+                          type="text"
+                          v-model="formData.sipUri"
+                          placeholder="udp://sipserver.mob-mob.com"
+                          maxlength="96"
+                          :class="{ 'input-invalid': errors.sipUri }"
+                        />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- SIP Port -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">SIP Port</div>
+                      <div class="item-input-wrap">
+                        <input
+                          type="number"
+                          v-model.number="formData.sipPort"
+                          placeholder="5060"
+                          :class="{ 'input-invalid': errors.sipPort }"
+                        />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- SIP Number -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">SIP Number</div>
+                      <div class="item-input-wrap">
+                        <input
+                          type="number"
+                          v-model="formData.sipNumber"
+                          placeholder="Enter SIP Number"
+                          maxlength="32"
+                          :class="{ 'input-invalid': errors.sipNumber }"
+                        />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- SIP Password -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">SIP Password</div>
+                      <div class="item-input-wrap">
+                        <input
+                          :type="showSipPassword ? 'text' : 'password'"
+                          v-model="formData.sipPassword"
+                          placeholder="Enter SIP Password"
+                          maxlength="64"
+                          :class="{ 'input-invalid': errors.sipPassword }"
+                        />
+                        <span class="input-clear-button"></span>
+                        <span
+                          class="password-toggle-button"
+                          v-on:click="toggleSipPassword"
+                        >
+                          <i class="material-icons">{{ showSipPassword ? 'visibility' : 'visibility_off' }}</i>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- SIP Name -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">SIP Name</div>
+                      <div class="item-input-wrap">
+                        <input
+                          type="text"
+                          v-model="formData.sipName"
+                          placeholder="Enter SIP Name"
+                          maxlength="64"
+                          :class="{ 'input-invalid': errors.sipName }"
+                        />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Call Configuration</div>
+          </div>
+          <div class="card-content">
+            <form class="list" id="call-form">
+              <ul>
+                <!-- Call Number -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">Call Number</div>
+                      <div class="item-input-wrap">
+                        <input
+                          type="number"
+                          v-model="formData.callNumber"
+                          placeholder="Enter Call Number"
+                          maxlength="32"
+                          :class="{ 'input-invalid': errors.callNumber }"
+                        />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- Call Name -->
+                <li>
+                  <div class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">Call Name</div>
+                      <div class="item-input-wrap">
+                        <input
+                          type="text"
+                          v-model="formData.callName"
+                          placeholder="Enter Call Name"
+                          maxlength="64"
+                          :class="{ 'input-invalid': errors.callName }"
+                        />
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </form>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+          <div class="col">
+            <div class="button button-fill button-save" v-on:click="submitForm()">{{_("Submit")}}</div>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+    const {guid} = $f7route.query
+    let vueApp = null;
+    $on('pageMounted', (e, page) => {
+      console.log(guid);
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          formData: {
+            sipUri: '',
+            sipPort: 5060,
+            sipNumber: '',
+            sipPassword: '',
+            sipName: '',
+            callNumber: '',
+            callName: '',
+          },
+          errors: {},
+          isSubmitting: false,
+          showSipPassword: false,
+          maxLengths: {
+            sipUri: 96,
+            sipNumber: 32,
+            sipPassword: 64,
+            sipName: 64,
+            callNumber: 32,
+            callName: 64,
+          },
+        },
+        watch: {
+          'formData.sipUri': function () {
+            this.validateField('sipUri');
+          },
+          'formData.sipPort': function () {
+            this.validateField('sipPort');
+          },
+          'formData.sipNumber': function () {
+            this.validateField('sipNumber');
+          },
+          'formData.sipPassword': function () {
+            this.validateField('sipPassword');
+          },
+          'formData.sipName': function () {
+            this.validateField('sipName');
+          },
+          'formData.callNumber': function () {
+            this.validateField('callNumber');
+          },
+          'formData.callName': function () {
+            this.validateField('callName');
+          },
+        },
+        components: {},
+        created() {
+          // Initialize form with default values if needed
+        },
+        mounted() {
+          Vue.prototype.$loadTop = this.loadTop;
+          Vue.prototype.$loadMore = this.loadMore;
+          //init form data
+          try{
+            const deviceMap = cloneDeep(erp.info.device[guid]);
+            const settings = deviceMap.settings;
+            settings.forEach(setting => {
+              if(setting.setting_type == 'SIP URI'){
+                this.formData.sipUri = setting.setting;
+              }else if(setting.setting_type == 'SIP Port'){
+                this.formData.sipPort = setting.setting;
+              }else if(setting.setting_type == 'SIP Number'){
+                this.formData.sipNumber = setting.setting;
+              }else if(setting.setting_type == 'SIP Password'){
+                this.formData.sipPassword = setting.setting;
+              }else if(setting.setting_type == 'SIP Name'){
+                this.formData.sipName = setting.setting;
+              }else if(setting.setting_type == 'Call Number'){
+                this.formData.callNumber = setting.setting;
+              }else if(setting.setting_type == 'Call Name'){
+                this.formData.callName = setting.setting;
+              }
+            });
+          }catch(error){
+            console.error(error);
+          }
+        },
+        methods: {
+          validateField(field) {
+            const value = this.formData[field];
+
+            // Clear previous error for this field
+            this.$delete(this.errors, field);
+
+            switch (field) {
+              case 'sipUri':
+                if (!value || value.trim().length === 0) {
+                  this.$set(this.errors, field, 'SIP URI is required');
+                } else if (value.length > this.maxLengths.sipUri) {
+                  this.$set(this.errors, field, `SIP URI must not exceed ${this.maxLengths.sipUri} characters`);
+                }
+                break;
+
+              case 'sipPort':
+                if (!value) {
+                  this.$set(this.errors, field, 'SIP Port is required');
+                } else if (isNaN(value) || value < 1 || value > 65535) {
+                  this.$set(this.errors, field, 'SIP Port must be between 1 and 65535');
+                }
+                break;
+
+              case 'sipNumber':
+                if (!value || value.trim().length === 0) {
+                  this.$set(this.errors, field, 'SIP Number is required');
+                } else if (value.length > this.maxLengths.sipNumber) {
+                  this.$set(this.errors, field, `SIP Number must not exceed ${this.maxLengths.sipNumber} characters`);
+                }
+                break;
+
+              case 'sipPassword':
+                if (!value || value.trim().length === 0) {
+                  this.$set(this.errors, field, 'SIP Password is required');
+                } else if (value.length > this.maxLengths.sipPassword) {
+                  this.$set(this.errors, field, `SIP Password must not exceed ${this.maxLengths.sipPassword} characters`);
+                }
+                break;
+
+              case 'sipName':
+                if (!value || value.trim().length === 0) {
+                  this.$set(this.errors, field, 'SIP Name is required');
+                } else if (value.length > this.maxLengths.sipName) {
+                  this.$set(this.errors, field, `SIP Name must not exceed ${this.maxLengths.sipName} characters`);
+                }
+                break;
+
+              case 'callNumber':
+                if (!value || value.trim().length === 0) {
+                  this.$set(this.errors, field, 'Call Number is required');
+                } else if (value.length > this.maxLengths.callNumber) {
+                  this.$set(this.errors, field, `Call Number must not exceed ${this.maxLengths.callNumber} characters`);
+                }
+                break;
+
+              case 'callName':
+                if (!value || value.trim().length === 0) {
+                  this.$set(this.errors, field, 'Call Name is required');
+                } else if (value.length > this.maxLengths.callName) {
+                  this.$set(this.errors, field, `Call Name must not exceed ${this.maxLengths.callName} characters`);
+                }
+                break;
+            }
+          },
+
+          validateForm() {
+            // Validate all fields
+            Object.keys(this.formData).forEach((field) => {
+              this.validateField(field);
+            });
+
+            return Object.keys(this.errors).length === 0;
+          },
+
+          toggleSipPassword() {
+            this.showSipPassword = !this.showSipPassword;
+          },
+          generatePortCommand(prefix, port) {
+            const portStr = String(port).padStart(4, '0');
+            return `${prefix}02${portStr}`;
+          },
+          generateCommand(prefix, data, maxLength) {
+            const dataStr = String(data);
+            const length = dataStr.length;
+            const hexLength = (length/2).toString(16).padStart(2, '0').toUpperCase();
+            return `${prefix}${hexLength}${dataStr}`;
+          },
+          stringToUtf8Hex(str) {
+            let utf8Bytes;
+            if (typeof TextEncoder !== 'undefined') {
+              // 现代浏览器和 Node.js
+              const encoder = new TextEncoder();
+              utf8Bytes = encoder.encode(str);
+            } else {
+              // 兼容旧环境（如旧版 IE）
+              utf8Bytes = [];
+              for (let i = 0; i < str.length; i++) {
+                let code = str.charCodeAt(i);
+
+                if (code < 0x80) {
+                  // 单字节字符
+                  utf8Bytes.push(code);
+                } else if (code < 0x800) {
+                  // 双字节字符
+                  utf8Bytes.push(0xc0 | (code >> 6));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                } else if (code < 0x10000) {
+                  // 三字节字符（包括大部分中文字符）
+                  utf8Bytes.push(0xe0 | (code >> 12));
+                  utf8Bytes.push(0x80 | ((code >> 6) & 0x3f));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                } else {
+                  // 四字节字符
+                  utf8Bytes.push(0xf0 | (code >> 18));
+                  utf8Bytes.push(0x80 | ((code >> 12) & 0x3f));
+                  utf8Bytes.push(0x80 | ((code >> 6) & 0x3f));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                }
+              }
+              utf8Bytes = new Uint8Array(utf8Bytes);
+            }
+            // 转换为十六进制字符串
+            return Array.from(utf8Bytes)
+              .map((byte) => byte.toString(16).padStart(2, '0'))
+              .join('');
+          },
+
+          async submitForm() {
+            if (!this.validateForm()) {
+              $f7.dialog.alert(_('Please fix the errors before submitting'), _('Validation Error'));
+              return;
+            }
+
+            this.isSubmitting = true;
+
+            try {
+              // Generate commands according to the specification
+              const commands = [
+                this.generateCommand('93B00000', this.stringToUtf8Hex(this.formData.sipUri), this.maxLengths.sipUri),
+                `93B1000002${(this.formData.sipPort*1).toString(16).pad("0000")}`,
+                this.generateCommand('93B20000', this.stringToUtf8Hex(this.formData.sipNumber), this.maxLengths.sipNumber),
+                this.generateCommand('93B30000', this.stringToUtf8Hex(this.formData.sipPassword), this.maxLengths.sipPassword),
+                this.generateCommand('93B40000', this.stringToUtf8Hex(this.formData.sipName), this.maxLengths.sipName),
+                this.generateCommand('93B60000', this.stringToUtf8Hex(this.formData.callNumber), this.maxLengths.callNumber),
+                this.generateCommand('93B50000', this.stringToUtf8Hex(this.formData.callName), this.maxLengths.callName),
+              ];
+
+              // Simulate sending commands to device
+              console.log('Sending commands to device:', commands);
+              let bleWriteList = [];
+              for(const command of commands){
+                bleWriteList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command.toLocaleLowerCase(),
+                });
+              }
+              console.log(bleWriteList);
+              try{
+                app.dialog.preloader();
+                // Simulate async operation
+                await window.peripheral[guid].write(bleWriteList);
+                await iot_device_setting_sync_server(guid, null, null, true, {
+                  'SIP URI': this.formData.sipUri,
+                  'SIP Port': this.formData.sipPort,
+                  'SIP Number': this.formData.sipNumber,
+                  'SIP Password': this.formData.sipPassword,
+                  'SIP Name': this.formData.sipName,
+                  'Call Number': this.formData.callNumber,
+                  'Call Name': this.formData.callName,
+                });
+              }catch(error){
+                app.dialog.close();
+                console.error(error);
+                app.dialog.alert(_(erp.get_log_description(error)))
+              }
+              app.dialog.close();
+              // Show success message
+              app.dialog.confirm(_('Saved successfully, would you like to restart the device?'), async() => {
+                app.dialog.preloader(_('Restarting...'));
+                try{
+                  await window.peripheral[guid].write([{
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: `810e`,
+                  }])
+                  app.dialog.close();
+                  app.dialog.alert(_('Restarted successfully.'));
+                }catch(error){
+                  app.dialog.close();
+                  console.error(error);
+                  app.dialog.alert(_(erp.get_log_description(error)))
+                }
+              }, () => {
+                app.dialog.close();
+              });
+            } catch (error) {
+              console.error('Submit error:', error);
+              app.dialog.alert(_('Failed to submit configuration. Please try again.'));
+            } finally {
+              this.isSubmitting = false;
+            }
+          },
+          resetForm() {
+            $f7.dialog.confirm('Are you sure you want to reset all form data?', 'Reset Form', () => {
+              this.formData = {
+                sipUri: '',
+                sipPort: 5060,
+                sipNumber: '',
+                sipPassword: '',
+                sipName: '',
+                callNumber: '',
+                callName: '',
+              };
+              this.errors = {};
+            });
+          },
+
+          loadTop() {
+            // Implementation for loading top data
+            console.log('Loading top data...');
+          },
+
+          loadMore() {
+            // Implementation for loading more data
+            console.log('Loading more data...');
+          },
+        },
+        computed: {
+          hasErrors() {
+            return Object.keys(this.errors).length > 0;
+          },
+
+          debugCommands() {
+            const commands = [
+              this.generateCommand('93B00000', this.formData.sipUri, this.maxLengths.sipUri),
+              `93B1000002${(this.formData.sipPort*1).toString(16).pad("0000")}`,
+              this.generateCommand('93B20000', this.formData.sipNumber, this.maxLengths.sipNumber),
+              this.generateCommand('93B30000', this.formData.sipPassword, this.maxLengths.sipPassword),
+              this.generateCommand('93B40000', this.formData.sipName, this.maxLengths.sipName),
+              this.generateCommand('93B60000', this.formData.callNumber, this.maxLengths.callNumber),
+              this.generateCommand('93B50000', this.formData.callName, this.maxLengths.callName),
+            ];
+
+            return commands.join('\n');
+          },
+        },
+        beforeDestroy() {},
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .input-invalid {
+    border-color: #ff3b30 !important;
+    background-color: #fff5f5 !important;
+  }
+
+  .text-color-red {
+    color: #ff3b30;
+  }
+
+  .block-title {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .page-content {
+    background-color: #f7f7f7;
+  }
+
+  .list {
+    margin: 15px 0;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .button {
+    transition: all 0.3s ease;
+  }
+
+  .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #495057;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .grid-cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Password toggle button styles */
+  .password-toggle-button {
+    position: absolute;
+    right: 35px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s;
+  }
+
+  .item-input-wrap input:not(:placeholder-shown) ~ .password-toggle-button {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .password-toggle-button i {
+    font-size: 20px;
+    color: #666;
+  }
+
+  /* Adjust input padding to accommodate both icons */
+  .item-input-wrap input[type="password"],
+  .item-input-wrap input[type="text"] {
+    padding-right: 70px;
+  }
+
+  /* Position input with password toggle */
+  .item-input-wrap {
+    position: relative;
+  }
+
+  /* Already handled above - keeping for other inputs without password toggle */
+
+  /* Import Material Icons */
+  @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+  @media (max-width: 480px) {
+    .grid-cols-2 {
+      grid-template-columns: 1fr;
+    }
+
+    .password-toggle-button {
+      right: 30px;
+    }
+
+    .password-toggle-button i {
+      font-size: 18px;
+    }
+  }
+</style>
