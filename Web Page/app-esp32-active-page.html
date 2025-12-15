@@ -10,6 +10,14 @@
           </a>
         </div>
         <div class="title">{{ _('YO382-Configuration') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only esp-connect esp-wifi">
+            <i class="icon material-icons wifi-icons" ref="0">wifi</i>
+          </a>
+          <a href="#" class="link icon-only esp-bluetooth" @click="${()=>bleConnect()}">
+            <i class="icon material-icons bluetooth-icons" ref="0">bluetooth</i>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -85,7 +93,7 @@
                     fill="#8a8a8a"
                   ></path>
                 </svg>
-                <span>{{_('mailbox')}}</span>
+                <span>{{_('Mailbox')}}</span>
               </a>
             </li>
             <li class="device-type-list-item">
@@ -164,7 +172,7 @@
                     <ul>
                       <li class="item-content item-input no-padding-left">
                         <div class="item-inner no-padding-right">
-                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Name")}}</div>
+                          <div class="item-title item-label" lang="en" style="font-size: 16px">{{showDeviceNameLabel()}}</div>
                           <div class="item-input-wrap">
                             <input type="text" name="deviceName" v-model="deviceName" :placeholder="deviceNameTip" required validate />
                           </div>
@@ -220,8 +228,65 @@
             </div>
             <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
               <div class="card">
-                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Choose Control Button Group")}}</div>
+                <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Command Configuration")}}</div>
                 <div class="card-content card-content-padding">
+                  <div v-if="deviceType == 3">
+                    <div class="list no-hairlines-md">
+                      <ul>
+                        <li class="item-content item-input">
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{_('Board')}}</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                              <select v-model="selectedMailBoard" v-on:change="onMailBoardChange" style="appearance: none; -webkit-appearance: none; width: 100%; background: transparent; z-index: 2; position: relative;">
+                                <option value="" disabled selected>{{_('Select Board')}}</option>
+                                <option v-for="board in mailBoardList" :value="board" :key="board">{{board}}</option>
+                              </select>
+                               <i class="icon material-icons" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;">arrow_drop_down</i>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input" v-if="selectedMailBoard">
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{_('Board Address')}}</div>
+                            <div class="item-input-wrap input-dropdown-wrap">
+                              <select v-model="selectedMailAddress" v-on:change="onMailAddressChange" style="appearance: none; -webkit-appearance: none; width: 100%; background: transparent; z-index: 2; position: relative;">
+                                <option value="" disabled selected>{{_('Select Address')}}</option>
+                                <option v-for="addr in mailAddressList" :value="addr" :key="addr">{{addr}}</option>
+                              </select>
+                              <i class="icon material-icons" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;">arrow_drop_down</i>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input" v-if="selectedMailAddress">
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{_('Mail Open Lock')}}</div>
+                            <div class="item-input-wrap">
+                              <input type="text" v-model="mail_open_lock" />
+                              <span class="input-clear-button"></span>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input" v-if="selectedMailAddress">
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{_('Mail Sensor Block')}}</div>
+                            <div class="item-input-wrap">
+                              <input type="text" v-model="mail_sensor_block" />
+                              <span class="input-clear-button"></span>
+                            </div>
+                          </div>
+                        </li>
+                        <li class="item-content item-input" v-if="selectedMailAddress">
+                          <div class="item-inner">
+                            <div class="item-title item-label">{{_('Mail Sensor Release')}}</div>
+                            <div class="item-input-wrap">
+                              <input type="text" v-model="mail_sensor_release" />
+                              <span class="input-clear-button"></span>
+                            </div>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                   <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
                     <div class="add-box add-action display-flex justify-content-space-between align-items-center">
                       <div class="trigger-text">{{_('VIA 485')}}</div>
@@ -263,11 +328,13 @@
                   <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
                     <div class="action-list list media-list no-margin">
                       <ul>
-                        <li class="device" v-for="(item,index) in buttonGroupList" :key="index">
+                        <li class="device" v-for="(item,index) in buttonGroupList" :key="item.name">
                           <div class="item-content swipeout-content display-flex justify-content-space-between align-items-center">
                             <div class="item-inner">
                               <div class="item-title-row" style="margin-top: 10px">
-                                <div class="item-title ellipsis" lang="en" style="width: 235px">{{buttonGroupName}}</div>
+                                <div class="item-title device-button-group-name ellipsis" lang="en" style="width: 235px">
+                                  {{buttonGroupName}}
+                                </div>
                               </div>
                               <div class="item-subtitle ellipsis" style="width: 235px">
                                 <span v-for="(sub,index) in item.button_group_list" :key="index">{{sub.device_command}}</span>
@@ -647,6 +714,9 @@
 
     let vueApp = null;
     let { guid, sub_name } = $f7route.query;
+    bleConnect = async () => {
+      await vueApp.connectBleAndUiHandle();
+    };
     //let { guid, subdevice_name } = $f7route.query;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
@@ -721,13 +791,36 @@
           totalVailTo: '',
           qrcode_random_16: '',
           deviceAccessList: [],
-          buttonGroupName : '',
+          buttonGroupName: '',
+          bleStatus: false,
+          wifiStatus: false,
+          heartbeatTimer: null,
+          mail_open_lock : '',
+          mail_open_lock_tip : 'Please enter the mail open lock.',
+          mail_sensor_block : '',
+          mail_sensor_block_tip : 'Please enter the mail sensor block.',
+          mail_sensor_release : '',
+          mail_sensor_release_tip : 'Please enter the mail sensor release.',
+          mailBoardList: [],
+          selectedMailBoard: '',
+          mailAddressList: [],
+          selectedMailAddress: '',
         },
-        watch: {},
+        watch: {
+          bleStatus(newVal) {
+            $('.esp-bluetooth i').attr('ref', newVal ? '1' : '0');
+            $('.esp-access-bluetooth i').attr('ref', newVal ? '1' : '0');
+          },
+          wifiStatus(newVal) {
+            $('.esp-wifi i').attr('ref', newVal ? '1' : '0');
+            $('.esp-access-wifi i').attr('ref', newVal ? '1' : '0');
+          },
+        },
         components: {
           DataInputComponent,
         },
         mounted() {
+          Vue.prototype.connectBleAndUiHandle = this.connectBleAndUiHandle;
           this.init();
           this.qrcode_random_16 = this.generateRandom16();
           this.generateQRCode(`{{${this.qrcode_random_16}}}`);
@@ -757,20 +850,180 @@
           //   })
           //   this.scheduleList = this.scheduleList.concat(data);
           // });
+          this.startHeartbeat();
+        },
+        beforeDestroy() {
+          console.log('beforeDestroy');
+          this.stopHeartbeat();
         },
         methods: {
+          showDeviceNameLabel() {
+            if (this.deviceType == 3) {
+              return _("MailBox Name");
+            }else if(this.deviceType == 1){
+              return _("Door Name");
+            }else if(this.deviceType == 2){
+              return _("Lift Name");
+            }else if(this.deviceType == 4){
+              return _("Locker Name");
+            }
+          },
           init() {
             this.getFlatList();
           },
+          startHeartbeat() {
+            this.stopHeartbeat(); // 防止重复开启
+            this.checkBleConnection();
+            this.checkWifiConnection();
+            this.heartbeatTimer = setInterval(() => {
+              this.checkBleConnection();
+              this.checkWifiConnection();
+            }, 1000 * 60);
+          },
+          stopHeartbeat() {
+            if (this.heartbeatTimer) {
+              clearInterval(this.heartbeatTimer);
+              this.heartbeatTimer = null;
+            }
+            if (this.$wifiCheckTimeout) {
+              clearTimeout(this.$wifiCheckTimeout);
+              this.$wifiCheckTimeout = null;
+            }
+            if (this.$listenWifiFun) {
+              emitter.off('iot/wifi/info', this.$listenWifiFun);
+              this.$listenWifiFun = null;
+            }
+          },
+          checkBleConnection() {
+            console.log('checkBleConnection');
+            if (guid && window.peripheral && window.peripheral[guid]) {
+              // 检查 BLE 连接状态
+              const isConnected = window.peripheral[guid].prop.connected;
+              if (this.bleStatus !== isConnected) {
+                this.bleStatus = isConnected;
+              }
+            } else {
+              this.bleStatus = false;
+            }
+          },
+          async checkWifiConnection() {
+            /*
+            1. 如果有蓝牙可以通过蓝牙检测wifi的连接状况
+            2. 如果没有蓝牙可以通过mqtt检测wifi的连接状况
+            3. 但是进入到配置阶段，只能依靠蓝牙，所有只需要考虑蓝牙
+            4. 因为需要发送蓝牙指令，这里是否需要定时检查wifi状态，可能会影响到蓝牙上传时候的状态
+            */
+
+            //设置超时处理，防止蓝牙没有任何反应
+            if (this.$wifiCheckTimeout) {
+              clearTimeout(this.$wifiCheckTimeout);
+              this.$wifiCheckTimeout = null;
+            }
+            //清理旧的监听，防止多次绑定
+            if (this.$listenWifiFun) {
+              emitter.off('iot/wifi/info', this.$listenWifiFun);
+              this.$listenWifiFun = null;
+            }
+
+            this.$wifiCheckTimeout = setTimeout(() => {
+              this.wifiStatus = false;
+              // 超时也要清理监听
+              if (this.$listenWifiFun) {
+                emitter.off('iot/wifi/info', this.$listenWifiFun);
+                this.$listenWifiFun = null;
+              }
+            }, 10000);
+
+            this.$listenWifiFun = (data) => {
+              console.log('data', data);
+              try {
+                let rs = data.rs;
+                if (rs && rs.length > 10) {
+                  let jsonData = JSON.parse(this.hexToPlainText(rs.substring(10, rs.length)));
+                  console.log('jsonData', jsonData);
+                  if (isset(jsonData)) {
+                    if (isset(jsonData.ipv4)) {
+                      this.wifiStatus = true;
+                    } else {
+                      this.wifiStatus = false;
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('checkWifiConnection error:', e);
+              } finally {
+                clearTimeout(this.$wifiCheckTimeout);
+                this.$wifiCheckTimeout = null;
+                emitter.off('iot/wifi/info', this.$listenWifiFun);
+                this.$listenWifiFun = null;
+              }
+            };
+            try {
+              emitter.on('iot/wifi/info', this.$listenWifiFun);
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '9329',
+                },
+              ]);
+            } catch (error) {
+              console.log(erp.get_log_description(error));
+              // 发送失败也要清理
+              if (this.$listenWifiFun) {
+                emitter.off('iot/wifi/info', this.$listenWifiFun);
+                this.$listenWifiFun = null;
+              }
+              if (this.$wifiCheckTimeout) {
+                clearTimeout(this.$wifiCheckTimeout);
+                this.$wifiCheckTimeout = null;
+              }
+              this.wifiStatus = false;
+            }
+          },
+          hexToPlainText(hexString) {
+            // 使用正则表达式检查输入是否是合法的十六进制字符串
+            const hexPattern = /^[0-9A-Fa-f]+$/;
+            if (!hexPattern.test(hexString)) {
+              throw new Error('Invalid HEX input. Only hexadecimal characters (0-9, A-F) are allowed.');
+            }
+
+            // 将十六进制字符串转换为字节数组
+            const byteArray = [];
+            for (let i = 0; i < hexString.length; i += 2) {
+              byteArray.push(parseInt(hexString.substr(i, 2), 16));
+            }
+
+            // 使用TextDecoder将字节数组转换为普通字符
+            const decoder = new TextDecoder();
+            const plainText = decoder.decode(new Uint8Array(byteArray));
+
+            return plainText;
+          },
           async getFlatList() {
             try {
+              // let res = await http2.request({
+              //   url: encodeURI(`/api/resource/Flat?fields=["name"]&limit=10000000&filters={"status":""}`),
+              //   responseType: 'json',
+              //   debug: true,
+              //   method: 'GET',
+              // });
               let res = await http2.request({
-                url: encodeURI(`/api/resource/Flat?fields=["name"]&limit=10000000&filters={"status":""}`),
+                url: encodeURI(`/api/method/get_flat`),
                 responseType: 'json',
                 debug: true,
-                method: 'GET',
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  filters:{"status":""},
+                  order_by:"",
+                  group_by : '',
+                  start: 0,
+                  page_length: 10000000,
+                },
               });
-              this.flatList = res.data.data.map((item) => item.name);
+              console.log('res', res);
+              this.flatList = res.data.message.map((item) => item.name);
             } catch (error) {
               app.dialog.alert(error);
             }
@@ -840,10 +1093,93 @@
               }
             );
           },
+          connectBleAndUiHandle() {
+            return new Promise(async (resolve, reject) => {
+              console.log('bleConnect');
+              if (guid && window.peripheral && window.peripheral[guid]) {
+                try {
+                  $('.esp-bluetooth i').attr('ref', '2');
+                  await window.peripheral[guid].connect();
+                  $('.esp-bluetooth i').attr('ref', '1');
+                  resolve();
+                } catch (error) {
+                  $('.esp-bluetooth i').attr('ref', '0');
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                  reject();
+                }
+              } else {
+                $('.esp-bluetooth i').attr('ref', '0');
+                app.dialog.alert(_('Device not found'));
+                reject();
+              }
+            });
+          },
+          checkAndConnectBle() {
+            return new Promise((resolve, reject) => {
+              if (!this.bleStatus) {
+                app.dialog.confirm(
+                  _('Continue to connect the device by bluetooth?'),
+                  async () => {
+                    await this.connectBleAndUiHandle();
+                    resolve();
+                  },
+                  () => {
+                    reject();
+                  }
+                );
+              } else {
+                resolve();
+              }
+            });
+          },
           clickDeviceType(type) {
-            this.deviceType = type;
-            this.activeStatus = true;
-            this.toTab(1);
+            //判断蓝牙是否已经连接
+            this.checkAndConnectBle()
+              .then(() => {
+                this.deviceType = type;
+                if (type == 3) {
+                  this.initMailData();
+                  this.isVia = true;
+                  this.isIo = false;
+                  this.isCom1 = false;
+                  this.isCom2 = true;
+                }
+                this.activeStatus = true;
+                this.toTab(1);
+              })
+              .catch(() => {
+                return;
+              });
+          },
+          initMailData() {
+            if (window.HEX_CODE_V2) {
+              const boards = new Set(window.HEX_CODE_V2.map((item) => item.board));
+              this.mailBoardList = Array.from(boards).sort();
+            }
+          },
+          onMailBoardChange() {
+            if (window.HEX_CODE_V2) {
+              this.mailAddressList = window.HEX_CODE_V2
+                .filter((item) => item.board === this.selectedMailBoard)
+                .map((item) => item.board_address)
+                .sort();
+              this.selectedMailAddress = '';
+              this.mail_open_lock = '';
+              this.mail_sensor_block = '';
+              this.mail_sensor_release = '';
+            }
+          },
+          onMailAddressChange() {
+            if (window.HEX_CODE_V2) {
+              const item = window.HEX_CODE_V2.find(
+                (i) => i.board === this.selectedMailBoard && i.board_address === this.selectedMailAddress
+              );
+              if (item) {
+                this.mail_open_lock = item['open_lock(10s)'];
+                this.mail_sensor_block = item['sensor_block'];
+                this.mail_sensor_release = item['sensor_release'];
+              }
+            }
           },
           activeStep() {
             this.stepList.forEach((item) => {
@@ -862,6 +1198,24 @@
             } else {
               //ble
               this.syncToDeviceWithBle();
+            }
+          },
+          async checkDoorName() {
+            try {
+              let res = await http2.request({
+                url: encodeURI('/api/method/appv6.checkDoorName'),
+                responseType: 'json',
+                debug: true,
+                method: 'POST',
+                serializer: 'json',
+                data: {
+                  door_name: this.deviceName,
+                },
+              });
+              console.log('res', res);
+              return res.data.message;
+            } catch (error) {
+              app.dialog.alert(error);
             }
           },
           async postDoor() {
@@ -1011,7 +1365,7 @@
               return 'Unknown';
             }
           },
-          toTab(index) {
+          async toTab(index) {
             let postStatus = true;
             if (index == 0) {
               this.activeStatus = false;
@@ -1019,6 +1373,13 @@
               if (!this.deviceName) {
                 postStatus = false;
                 app.dialog.alert('Please enter the door name.');
+              }
+              if(!postStatus)return;
+              let doorNameStatus = await this.checkDoorName();
+              if (doorNameStatus != 200) {
+                postStatus = false;
+                app.dialog.alert(_('Sorry, the door name already exists. Please change the door name.'));
+                return;
               }
             } else if (index == 3) {
               if (!this.flatValue) {
@@ -1118,186 +1479,239 @@
             });
           },
           async postBleData(json, postHead) {
-            app.dialog.preloader(_('Connecting...'));
-            let uploadTimer = setTimeout(() => {
+            if (postHead == 0) {
               app.dialog.close();
-              app.dialog.alert(_('Upload Data Failed'));
-            }, 10000 * 60);
-            this.iot_attempt = 0;
-            await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
-            // console.log('dataTime', this.formatDateTime($('#demo-calendar-date-time').val()));
-            // console.log('dataTime', this.formatDateTime($('#demo-calendar-date-time-to').val()));
-            const bleManager = createBLEUploadManager();
-            console.log('bleManager', bleManager);
-            // const jsonData = {"key":"value"}
-            const jsonData = json;
-            const encoder = new TextEncoder();
-            const uint8Array = encoder.encode(JSON.stringify(jsonData));
-            console.log('uint8Array', uint8Array);
-            const fileString = arrayBufferToHex(uint8Array);
-            // console.log('md5str', md5str);
-            let fileData = `990${postHead}000000${fileString}`;
-
-            const bytestoString = bytesToString(fileData.convertToBytes());
-            console.log('bytestoString', bytestoString);
-            const md5str = SparkMD5.hashBinary(bytestoString);
-            let sizeHex = iot_utils_to_little_endian_hex(fileData.length / 2, 4);
-            let nameHex = convertToFixedSizeHex(`device_access`, 31);
-            // let readyData = `93330000340${'03'}${sizeHex}${fileData}${nameHex}`;
-            let readyData = `93330000340${'3'}${sizeHex}${md5str}${nameHex}`;
-            let allData = `93330000340${'3'}${sizeHex}${fileData}${nameHex}`;
-            console.log('fileData', fileData);
-            console.log('readyData', readyData);
-            console.log('md5str1', md5str);
-            try {
-              this.uuid = window.peripheral[guid].prop.id
-              let that = this;
-              try {
-                ble.connect(this.uuid, (peripheralData) => {
-                  console.log('peripheralData', peripheralData);
-                  if (Capacitor.getPlatform() === 'android') {
-                    ble.requestMtu(
-                      this.uuid,
-                      512,
-                      () => {
-                        console.log('>>>> device request mtu success');
-                        app.dialog.close();
-                        let this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
-                        setTimeout(() => {
-                          ble.startNotification(
-                            this.uuid,
-                            'ff80',
-                            'ff85',
-                            function (rs) {
-                              console.log('notification', rs);
-                              // debugger
-                              if (rs && that.iot_attempt == 0) {
-                                that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
-                                that.iot_attempt++;
-                              }
-                              if (rs && that.iot_attempt > 0) {
-                                let status = parseInt(rs.substring(10, 12), 16);
-                                console.log('status', status);
-                                // this.changeChunkIndex();
-                                // this.startPostBleData(0,0);
-                                // this.checkSendBleIndex();
-                                // this.postBleDataListChunkIndex++;
-                                if (status > 0) {
-                                  app.preloader.hide();
-                                  this_dialog.setProgress(status);
-                                  this_dialog.setText(`${_('Upload Data')}: ${status}%`);
-                                }
-                                if (status == 100) {
-                                  app.preloader.hide();
-                                  this_dialog.close();
-                                  // app.dialog.alert('Success', runtime.appInfo.name, () => {});
-                                  window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
-                                }
-                                //if status > 100?reject error
-                                if (status > 100) {
-                                  //disconnect the device
-                                  app.preloader.hide();
-                                  app.dialog.close();
-                                  ble.disconnect(this.uuid);
-                                  console.log('disconnect');
-                                  // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
-                                }
-                              }
-                            },
-                            function (error) {
-                              console.log(error);
-                            }
-                          );
-                          ble.writeWithoutResponse(
-                            this.uuid,
-                            'ff80',
-                            'ff85',
-                            readyData.convertToBytes(),
-                            function (response) {
-                              console.log(response);
-                            },
-                            function (error) {
-                              console.log(error);
-                            }
-                          );
-                        }, 1000);
-                      },
-                      (err) => {
-                        console.log('>>>> device request mtu fail: ' + err);
-                        app.dialog.alert('>>>> device request mtu fail: ' + err);
-                      }
-                    );
-                  } else {
-                    app.dialog.close();
-                    let this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
-                    let that = this;
-                    setTimeout(() => {
-                      ble.startNotification(
-                        this.uuid,
-                        'ff80',
-                        'ff85',
-                        function (rs) {
-                          console.log(rs);
-                          if (rs && that.iot_attempt == 0) {
-                            that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
-                            that.iot_attempt++;
-                          }
-                          if (rs && that.iot_attempt > 0) {
-                            let status = parseInt(rs.substring(10, 12), 16);
-                            console.log('status', status);
-                            // this.checkSendBleIndex();
-                            if (status > 0) {
-                              app.preloader.hide();
-                              this_dialog.setProgress(status);
-                              this_dialog.setText(`${_('Upload Progress')}: ${status}%`);
-                            }
-                            if (status == 100) {
-                              app.preloader.hide();
-                              this_dialog.close();
-                              // app.dialog.alert('Success', runtime.appInfo.name, () => {});
-                              window.uploadStatus[parseInt(that.iot_attempt) - 1] = true;
-                            }
-                            //if status > 100?reject error
-                            if (status > 100) {
-                              //disconnect the device
-                              app.preloader.hide();
-                              app.dialog.close();
-                              ble.disconnect(this.uuid);
-                              // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
-                            }
-                          }
-                        },
-                        function (error) {
-                          console.log(error);
-                        }
-                      );
-                      ble.writeWithoutResponse(
-                        this.uuid,
-                        'ff80',
-                        'ff85',
-                        readyData.convertToBytes(),
-                        function (response) {
-                          console.log(response);
-                        },
-                        function (error) {
-                          console.log(error);
-                        }
-                      );
-                    }, 1000);
-                  }
-                });
-              } catch (error) {}
-              // await bleManager.connect(jsonData.device, {
-              //   onConnect: () => console.log('Connected!')
-              // });
-
-              // await bleManager.sendJSONData(jsonData, {
-              //   onProgress: (current, total) =>
-              //     console.log(`Progress: ${Math.round((current / total) * 100)}%`)
-              // });
-            } catch (err) {
-              console.log('err', err);
             }
+            this.postBleDataList = [];
+            let uploadTimer = setTimeout(
+              () => {
+                app.dialog.close();
+                app.dialog.alert(_('Upload Data Failed'));
+              },
+              10000 * 60 * 5
+            );
+            return new Promise(async (resolve, reject) => {
+              this.iot_attempt = 0;
+              await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
+              const jsonData = json;
+              const encoder = new TextEncoder();
+              const uint8Array = encoder.encode(JSON.stringify(jsonData));
+              const fileString = arrayBufferToHex(uint8Array);
+              let fileData = `990${postHead}000000${fileString}`;
+
+              const bytestoString = bytesToString(fileData.convertToBytes());
+              console.log('bytestoString', bytestoString);
+              const md5str = SparkMD5.hashBinary(bytestoString);
+              let sizeHex = iot_utils_to_little_endian_hex(fileData.length / 2, 4);
+              debugger;
+              let nameHex = convertToFixedSizeHex(`device_access`, 31);
+              let readyData = `93330000340${'3'}${sizeHex}${md5str}${nameHex}`;
+              let allData = `93330000340${'3'}${sizeHex}${fileData}${nameHex}`;
+              try {
+                let that = this;
+                this.uuid = window.peripheral[guid].prop.id;
+                app.dialog.preloader();
+                ble.startNotification(
+                  this.uuid,
+                  'ff80',
+                  'ff85',
+                  (rs) => {
+                    console.log('notification', rs);
+                    // debugger
+                    if (rs && that.iot_attempt == 0) {
+                      that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                      that.iot_attempt++;
+                    }
+                    if (rs && that.iot_attempt > 0) {
+                      let status = parseInt(rs.substring(10, 12), 16);
+                      console.log('status', status);
+                      if (status > 0 && status < 100) {
+                        // this.this_dialog.setProgress(status);
+                        // this.this_dialog.setText(`${_('Upload Data')}: ${status}%`);
+                      }
+                      if (status == 100) {
+                        app.dialog.close();
+                        clearTimeout(uploadTimer);
+                        resolve(true);
+                        window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
+                        if (postHead == 0) {
+                          this.isSyncSetting = true;
+                          app.dialog.alert(_('Upload Data Success'));
+                        }
+                      }
+                      //if status > 100?reject error
+                      if (status > 100) {
+                        //disconnect the device
+                        app.dialog.close();
+                        window.peripheral[guid].disconnect();
+                        clearTimeout(uploadTimer);
+                        console.log('disconnect');
+                        reject(_('Upload Data Failed'));
+                        // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
+                      }
+                    }
+                  },
+                  function (error) {
+                    console.log(error);
+                  }
+                );
+                setTimeout(() => {
+                  ble.writeWithoutResponse(
+                    this.uuid,
+                    'ff80',
+                    'ff85',
+                    readyData.convertToBytes(),
+                    function (response) {
+                      console.log(response);
+                    },
+                    function (error) {
+                      console.log(error);
+                    }
+                  );
+                }, 1000);
+                return;
+                try {
+                  ble.connect(this.uuid, (peripheralData) => {
+                    console.log('peripheralData', peripheralData);
+                    if (Capacitor.getPlatform() === 'android') {
+                      ble.requestMtu(
+                        this.uuid,
+                        512,
+                        () => {
+                          console.log('>>>> device request mtu success');
+                          app.dialog.close();
+                          this.this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
+                          setTimeout(() => {
+                            ble.startNotification(
+                              this.uuid,
+                              'ff80',
+                              'ff85',
+                              (rs) => {
+                                console.log('notification', rs);
+                                // debugger
+                                if (rs && that.iot_attempt == 0) {
+                                  that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                                  that.iot_attempt++;
+                                }
+                                if (rs && that.iot_attempt > 0) {
+                                  let status = parseInt(rs.substring(10, 12), 16);
+                                  console.log('status', status);
+                                  if (status > 0) {
+                                    app.preloader.hide();
+                                    this.this_dialog.setProgress(status);
+                                    this.this_dialog.setText(`${_('Upload Data')}: ${status}%`);
+                                  }
+                                  if (status == 100) {
+                                    app.preloader.hide();
+                                    this.this_dialog.close();
+                                    clearTimeout(uploadTimer);
+                                    app.dialog.alert(_('Upload Data Success'));
+                                    resolve(true);
+                                    window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
+                                  }
+                                  //if status > 100?reject error
+                                  if (status > 100) {
+                                    //disconnect the device
+                                    app.preloader.hide();
+                                    app.dialog.close();
+                                    ble.disconnect(this.uuid);
+                                    clearTimeout(uploadTimer);
+                                    console.log('disconnect');
+                                    reject(_('Upload Data Failed'));
+                                    // app.dialog.alert('Error: ' + status, runtime.appInfo.name, () => {});
+                                  }
+                                }
+                              },
+                              function (error) {
+                                console.log(error);
+                              }
+                            );
+                            ble.writeWithoutResponse(
+                              this.uuid,
+                              'ff80',
+                              'ff85',
+                              readyData.convertToBytes(),
+                              function (response) {
+                                console.log(response);
+                              },
+                              function (error) {
+                                console.log(error);
+                              }
+                            );
+                          }, 1000);
+                        },
+                        (err) => {
+                          console.log('>>>> device request mtu fail: ' + err);
+                          app.dialog.alert('>>>> device request mtu fail: ' + err);
+                        }
+                      );
+                    } else {
+                      app.dialog.close();
+                      this.this_dialog = app.dialog.progress(`${_('Upload Data')}`, 0);
+                      let that = this;
+                      setTimeout(() => {
+                        ble.startNotification(
+                          this.uuid,
+                          'ff80',
+                          'ff85',
+                          (rs) => {
+                            console.log(rs);
+                            if (rs && that.iot_attempt == 0) {
+                              that.iotProcessDataForEsp(this.uuid, fileData.convertToBytes());
+                              that.iot_attempt++;
+                            }
+                            if (rs && that.iot_attempt > 0) {
+                              let status = parseInt(rs.substring(10, 12), 16);
+                              console.log('status', status);
+                              // this.checkSendBleIndex();
+                              if (status > 0) {
+                                app.preloader.hide();
+                                this.this_dialog.setProgress(status);
+                                this.this_dialog.setText(`${_('Upload Progress')}: ${status}%`);
+                              }
+                              if (status == 100) {
+                                app.preloader.hide();
+                                this.this_dialog.close();
+                                window.uploadStatus[parseInt(that.iot_attempt) - 1] = true;
+                                clearTimeout(uploadTimer);
+                                app.dialog.alert(_('Upload Data Success'));
+                                resolve(true);
+                              }
+                              //if status > 100?reject error
+                              if (status > 100) {
+                                //disconnect the device
+                                app.preloader.hide();
+                                app.dialog.close();
+                                clearTimeout(uploadTimer);
+                                ble.disconnect(this.uuid);
+                                reject(_('Upload Data Failed'));
+                              }
+                            }
+                          },
+                          function (error) {
+                            console.log(error);
+                          }
+                        );
+                        ble.writeWithoutResponse(
+                          this.uuid,
+                          'ff80',
+                          'ff85',
+                          readyData.convertToBytes(),
+                          function (response) {
+                            console.log(response);
+                          },
+                          function (error) {
+                            console.log(error);
+                          }
+                        );
+                      }, 1000);
+                    }
+                  });
+                } catch (error) {}
+              } catch (err) {
+                console.log('err', err);
+              }
+            });
           },
           async iotProcessDataForEsp(uuid, data) {
             console.log('uuid', uuid);
@@ -1411,23 +1825,33 @@
           },
           chooseDeviceAccess() {
             mainView.router.navigate(
-              `/mobile-app/esp-choose-device-access?device_button_group=${this.buttonGroupList[0].name}&guid=${guid}`
+              `/mobile-app/esp-choose-device-access?device_button_group=${this.buttonGroupList[0].name}&guid=${guid}&device_type=${this.deviceType}`
             );
           },
           addDeviceAccess() {
             let buttonGroupCommand = this.tindyButtonGroupCommand(this.buttonGroupList[0]);
             console.log(buttonGroupCommand);
             mainView.router.navigate(
-              `/mobile-app/esp-device-access-page?guid=${guid}&button_group=${this.buttonGroupList[0].name}&button_group_command=${buttonGroupCommand}`
+              `/mobile-app/esp-device-access-page?guid=${guid}&button_group=${this.buttonGroupList[0].name}&button_group_command=${buttonGroupCommand}&device_type=${this.deviceType}`
             );
           },
           getDeviceButtonGroupForDeviceType() {
-            if(this.buttonGroupList.length > 0){
+            if (this.buttonGroupList.length > 0) {
+              //check the board
+              if(this.deviceType == 3){
+                if(!this.selectedMailBoard || !this.selectedMailAddress){
+                  app.dialog.alert(_('Please select the board and address.'));
+                  return;
+                }
+                if(!this.mail_open_lock || !this.mail_sensor_block || !this.mail_sensor_release){
+                  app.dialog.alert(_('Please enter the mail open lock, sensor block and sensor release.'));
+                  return;
+                }
+              }
               this.toTab(4);
-            }else{
+            } else {
               app.dialog.alert(_('Please add button group first.'));
             }
-            
           },
           removeDuplicates(arr) {
             const seen = new Set();
@@ -1560,6 +1984,7 @@
           },
           async saveDoor() {
             //save door data
+            app.dialog.preloader(_('Saving door data...'));
             try {
               let postFlatList = [
                 {
@@ -1570,6 +1995,7 @@
                 },
               ];
               let accessList = [];
+              let configList = [];
               this.deviceAccessList.forEach((item) => {
                 accessList.push({
                   access_type: item.access_type,
@@ -1578,7 +2004,17 @@
                   parenttype: 'Door',
                   doctype: 'Device Access Type Select',
                 });
+                if(item.name){
+                  configList.push(item.name);
+                }
               });
+
+              //if accessList is empty, then return
+              if(accessList.length == 0){
+                app.dialog.close();
+                app.dialog.alert(_('Please add access type first.'));
+                return;
+              }
               let url = `/api/resource/Door`;
               let res = await http2.request({
                 url: url,
@@ -1603,19 +2039,36 @@
                   gender: 'Not Specified',
                   links: postFlatList,
                   access_type: accessList,
+                  mail_open_lock: this.mail_open_lock,
+                  mail_sensor_block: this.mail_sensor_block,
+                  mail_sensor_release: this.mail_sensor_release,
                 },
               });
               console.log(res);
-              await this.saveProfileDoor(this.deviceName);
+              await this.saveProfileDoor(this.deviceName, configList);
+              //如果是mailbox需要发送同步door的指令
+              if(this.deviceType == 3){
+                let json = { 'result': [] };
+                json.result.push(res.data.data);
+                try{
+                  app.dialog.close();
+                  await this.postBleData(json, 3);
+                }catch(error){
+                  app.dialog.close();
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              }
               await ha_profile_ready(2);
+              app.dialog.close();
               //save door in the profile
               mainView.router.back();
             } catch (error) {
+              app.dialog.close();
               console.log(error);
               app.dialog.alert(_(error));
             }
           },
-          saveProfileDoor(title){
+          saveProfileDoor(title, configList) {
             return new Promise(async (resolve, reject) => {
               let hexid = window.peripheral[guid].prop.hexModel;
               let model = erp.doctype.device_model[`${hexid}`.toUpperCase()].model_code;
@@ -1627,14 +2080,15 @@
                 model: model,
                 device_mode: mode,
                 peripheral: core_utils_get_mac_address_from_guid(guid).replace(/:/g, ''),
-                profile_room:erp.info.profile.profile_room[0].name,
+                profile_room: erp.info.profile.profile_room[0].name,
                 password: peripheral[guid].getProp().password,
                 mac_address: core_utils_get_mac_address_from_guid(guid),
                 device_button_group: this.buttonGroupName,
                 parent: erp.info.profile.name,
-                function:this.tindyButtonGroupCommand(this.buttonGroupList[0]),
+                function: this.tindyButtonGroupCommand(this.buttonGroupList[0]),
                 batch: isset(device_batch) ? device_batch.batch_id : 'YO0012',
                 firmware: peripheral[guid].getProp().firmware || 0,
+                config: configList.join(','),
               };
               try {
                 await http2.request('/api/method/save.subdevice', {
@@ -1657,15 +2111,16 @@
               if (commandJson.func.toLowerCase().indexOf('gpio') != -1) {
                 // /setGpio   972101xx+xx
                 let strList = commandJson.value.split(',');
-                let command_str = `972101${parseInt(strList[0]).toString(16).pad('00')}${parseInt(strList[1]).toString(16).pad('00')}`;
-                if (strList.length == 4) {
-                  let delay = 7000;
-                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972101${parseInt(strList[2]).toString(16).pad('00')}${parseInt(strList[3]).toString(16).pad('00')}`;
-                  let command = `13${(command_str.length / 2).toString(16).pad('00')}${command_str}${(delayItem.length / 2).toString(16).pad('00')}${delayItem}`;
-                  returnCommand = command;
-                } else {
-                  returnCommand = command_str;
-                }
+                let command_str = `8000${parseInt(strList[0])}${parseInt(strList[1])}00000000FFFF0000`;
+                // let command_str = `972101${parseInt(strList[0]).toString(16).pad('00')}${parseInt(strList[1]).toString(16).pad('00')}`;
+                // if (strList.length == 4) {
+                //   let delay = 7000;
+                //   let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972101${parseInt(strList[2]).toString(16).pad('00')}${parseInt(strList[3]).toString(16).pad('00')}`;
+                //   let command = `13${(command_str.length / 2).toString(16).pad('00')}${command_str}${(delayItem.length / 2).toString(16).pad('00')}${delayItem}`;
+                //   returnCommand = command;
+                // } else {
+                //   returnCommand = command_str;
+                // }
               } else if (commandJson.func.toLowerCase().indexOf('485') != -1 || commandJson.func.toLowerCase().indexOf('mailbox') != -1) {
                 // uart  972102+index+cmd
                 // uart  972102+index+cmd
@@ -1684,7 +2139,7 @@
                   //8F1F+index+xxxxxxxx（延迟ms）+action
                   //defalut 5s
                   let delay = 7000;
-                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972102${parseInt(comPost).toString(16).pad('00')}${strList[1].toLowerCase()}`;
+                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}9721${parseInt(comPost).toString(16).pad('00')}fe${strList[1].toLowerCase()}`;
                   let item_1 = `972102${parseInt(comPost).toString(16).pad('00')}${strList[0].toLowerCase()}`;
                   let $length = parseInt(delayItem.length / 2)
                     .toString(16)
@@ -1711,24 +2166,29 @@
               if (commandJson.func.toLowerCase().indexOf('gpio') != -1) {
                 // /setGpio   972101xx+xx
                 let strList = commandJson.value.split(',');
-                let command_str = `972101${parseInt(strList[0]).toString(16).pad('00')}${parseInt(strList[1]).toString(16).pad('00')}`;
+                let command_str = `8000${parseInt(strList[0])}${parseInt(strList[1])}00000000FFFF0000`;
                 // debugger
-                if (strList.length == 4) {
-                  let delay = 7000;
-                  let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972101${parseInt(strList[2]).toString(16).pad('00')}${parseInt(strList[3]).toString(16).pad('00')}`;
-                  let command = `13${(command_str.length / 2).toString(16).pad('00')}${command_str}${(delayItem.length / 2).toString(16).pad('00')}${delayItem}`;
-                  gpioCommand.push({
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: command,
-                  });
-                } else {
-                  gpioCommand.push({
-                    service: 'ff80',
-                    characteristic: 'ff81',
-                    data: command_str,
-                  });
-                }
+                // if (strList.length == 4) {
+                //   let delay = 7000;
+                //   let delayItem = `8f1f00${iot_utils_to_little_endian_hex(delay, 4)}972101${parseInt(strList[2]).toString(16).pad('00')}${parseInt(strList[3]).toString(16).pad('00')}`;
+                //   let command = `13${(command_str.length / 2).toString(16).pad('00')}${command_str}${(delayItem.length / 2).toString(16).pad('00')}${delayItem}`;
+                //   gpioCommand.push({
+                //     service: 'ff80',
+                //     characteristic: 'ff81',
+                //     data: command,
+                //   });
+                // } else {
+                //   gpioCommand.push({
+                //     service: 'ff80',
+                //     characteristic: 'ff81',
+                //     data: command_str,
+                //   });
+                // }
+                gpioCommand.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command_str,
+                });
               } else if (commandJson.func.toLowerCase().indexOf('485') != -1 || commandJson.func.toLowerCase().indexOf('mailbox') != -1) {
                 // uart  972102+index+cmd
                 let strList = commandJson.parameter.split(',');
@@ -1786,55 +2246,20 @@
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
-          async iotUploadFile() {
-            let jsonMap = {
-              'name': '3jn76gks1m',
-              'owner': 'david.deng@yoswit.com',
-              'creation': '2025-04-30 08:53:57.500646',
-              'modified': '2025-04-30 08:56:46.638125',
-              'modified_by': 'Administrator',
-              'docstatus': 0,
-              'idx': 0,
-              'device': '24:EC:4A:09:3F:4E',
-              'device_button_group': 'INNO_PRESS_LIFT_10F',
-              'status': 'Expired',
-              'access_type': 'HID Bluetooth Key',
-              'guest_email': 'david.deng@yoswit.com',
-              'pin_remark': 'HID Bluetooth Key',
-              'key_card_id': '32',
-              'octopus_check_digit': 'NA',
-              'access_level': '0',
-              'one_time_access': 0,
-              'access_control_setting': 0,
-              'disabled': 0,
-              'valid_from': '2025-04-29 19:05:35',
-              'valid_to': '2025-04-29 23:59:00',
-              'repeat_1': 0,
-              'repeat_2': 0,
-              'repeat_3': 0,
-              'repeat_4': 0,
-              'repeat_5': 0,
-              'repeat_6': 0,
-              'repeat_7': 0,
-              'reference': 'umv8hhsre0',
-              'next_publish': '2025-04-30 08:53:57.500345',
-              'door': '026ec8ce1e',
-              'next_publish_mins': 0,
-              'door_name': 'Innocell Lift 2 Cam 3 10F',
-              'doctype': 'Device Access',
-              'blocking_schedule': [],
-              '__last_sync_on': '2025-04-30T03:13:53.247Z',
-            };
-          },
         },
         computed: {},
-        beforeDestroy() {},
       });
     });
 
-    $on('pageBeforeRemove', (e, page) => {});
+    $on('pageBeforeRemove', (e, page) => {
+      console.log('pageBeforeRemove');
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
 
     $onUnmounted(() => {
+      console.log('onUnmounted');
       if (vueApp) {
         vueApp.$destroy();
       }
@@ -1904,5 +2329,11 @@
     height: 70px;
     padding: 0px 15px;
     color: var(--f7-theme-color);
+  }
+  .esp-wifi i[ref='0'] {
+    color: red;
+  }
+  .esp-wifi i[ref='1'] {
+    color: green;
   }
 </style>

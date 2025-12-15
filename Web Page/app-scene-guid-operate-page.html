@@ -1243,7 +1243,7 @@
 </template>
 
 <script>
-  export default async (props, ctx) => {
+export default async (props, ctx) => {
     const $f7 = ctx.$f7,
       $f7route = ctx.$f7route,
       $onUnmounted = ctx.$onUnmounted,
@@ -2288,6 +2288,17 @@
           });
         },
         methods: {
+          _hasPrimaryActionCommand(){
+            if(!isset(this.actionMap)){
+              return false;
+            }
+            for(let k in this.actionMap){
+              if(isset(this.actionMap[k]) && isset(this.actionMap[k]['actionCommand'])){
+                return true;
+              }
+            }
+            return false;
+          },
           async init() {
             let scenes = cloneDeep(erp.info.scene);
             if (type == 'favorite') {
@@ -2298,6 +2309,8 @@
             }
             //init the rcu data,init the mianRcuConfig
             let devices = cloneDeep(erp.info.device);
+            let is_via_485 = false;
+            //初始化rcu列表
             for (let i in devices) {
               if (devices[i].device_model.startsWith('YO780') && !devices[i].device_model.startsWith('YO780-Scene')) {
                 //this.actionGuid = devices[i].guid;
@@ -2311,12 +2324,22 @@
                       this.mainRcuGuid = i;
                     }
                   }
+                  if(settingItem.setting_type.startsWith('via_485')){
+                    if(settingItem.setting == 1){
+                      is_via_485 = true;
+                    }
+                  }
                 });
                 devices[i].asMain = asMain;
                 this.rcuList.push(devices[i]);
               }
             }
-
+            //如果是485的话，就只能显示主rcu
+            if(is_via_485){
+              this.rcuList = this.rcuList.filter(item=>{
+                return item.asMain;
+              });
+            }
             //init the subdevice name
             let profile_subdevices = cloneDeep(erp.info.profile.profile_subdevice);
             let profile_devices = cloneDeep(erp.info.profile.profile_device);
@@ -3378,6 +3401,7 @@
               );
               // 更新原数组
               this.overallSceneMap['scene_device_location'] = uniqueDevices;
+              debugger
               let post_data = {
                 title: this.sceneName,
                 profile: erp.info.profile.name,
@@ -3806,7 +3830,7 @@
                         let device_button_group = this_list[k].device_button_group;
                         if(device_button_group.startsWith('RCU ONOFF GANG')){
                           //find the gangs
-                          let solt = this_list[k].config;
+                          let solt = this.tindySlot(this_list[k].config);
                           let gang = device_button_group.replace('RCU ONOFF GANG','')*1;
                           let target_gang = gang%4;
                           if(target_gang == 0){
@@ -3816,7 +3840,7 @@
                           command += `${(_command.length/2).toString(16).pad('00')}${_command}`;
                         }else if(device_button_group.startsWith('RCU DIMMING')){
                           //find the gangs
-                          let solt = this_list[k].config;
+                          let solt = this.tindySlot(this_list[k].config);
                           let gang = device_button_group.replace('RCU DIMMING','')*1;
                           let target_gang = gang%2;
                           if(target_gang == 0){
@@ -3911,7 +3935,16 @@
           },
           //simulate the post scene data.in order to case the scene id repeat
           simulateScenePostId(guid, id) {
-            debugger;
+            // 仅在本地占位，避免污染 erp.info.scene 造成“死ID”
+            if (!this.reservedSceneIds) {
+              this.reservedSceneIds = {};
+            }
+            if (!this.reservedSceneIds[guid]) {
+              this.reservedSceneIds[guid] = new Set();
+            }
+            this.reservedSceneIds[guid].add(parseInt(id));
+          },
+          simulateToggleScenePostId(guid, id) {
             let sceneDeviceLocationList = [];
             let sceneObj = cloneDeep(erp.info.scene);
             let key = new Date().getTime();
@@ -3971,7 +4004,7 @@
                   }
                   if(device_button_group.startsWith('RCU ONOFF GANG')){
                     //find the gangs
-                    let solt = this_list[j].config;
+                    let solt = this.tindySlot(this_list[j].config);
                     let gang = device_button_group.replace('RCU ONOFF GANG','')*1;
                     let target_gang = gang%4;
                     if(target_gang == 0){
@@ -3981,7 +4014,7 @@
                     command += `${(_command.length/2).toString(16).pad('00')}${_command}`;
                   }else if(device_button_group.startsWith('RCU DIMMING')){
                     //find the gangs
-                    let solt = this_list[j].config;
+                    let solt = this.tindySlot(this_list[j].config);
                     let gang = device_button_group.replace('RCU DIMMING','')*1;
                     let target_gang = gang%2;
                     if(target_gang == 0){
@@ -4248,17 +4281,34 @@
                   url = encodeURI(`/api/resource/Scene`);
                 }
                 let scene_device_location = [];
-                for (let i in this.actionLocation) {
-                  scene_device_location.push({
-                    device: i,
-                    storage_id: this.actionLocation[i],
-                  });
-                }
+                
+                // ✅ Welcome Scene 和 RCU Radar：使用 overallSceneMap（包含所有拆分的 ID）
                 if(this.templateName == 'Welcome Scene' || this.templateName == 'RCU Radar'){
-                  if(isset(this.actionMap[`second_action_id`])){
+                  if (isset(this.overallSceneMap) && isset(this.overallSceneMap['scene_device_location']) && this.overallSceneMap['scene_device_location'].length > 0) {
+                    scene_device_location = cloneDeep(this.overallSceneMap['scene_device_location']);
+                    console.log(`[Submit to ERP - ${this.templateName}] Using overallSceneMap with ${scene_device_location.length} scene IDs`);
+                  } else {
+                    // 降级：使用旧逻辑
+                    console.warn(`[Submit to ERP - ${this.templateName}] Fallback to legacy logic`);
+                    for (let i in this.actionLocation) {
+                      scene_device_location.push({
+                        device: i,
+                        storage_id: this.actionLocation[i],
+                      });
+                    }
+                    if(isset(this.actionMap[`second_action_id`])){
+                      scene_device_location.push({
+                        device: this.actionMap[`second_action_guid`],
+                        storage_id: this.actionMap[`second_action_id`],
+                      });
+                    }
+                  }
+                } else {
+                  // 其他场景：保持原有逻辑
+                  for (let i in this.actionLocation) {
                     scene_device_location.push({
-                      device: this.actionMap[`second_action_guid`],
-                      storage_id: this.actionMap[`second_action_id`],
+                      device: i,
+                      storage_id: this.actionLocation[i],
                     });
                   }
                 }
@@ -4602,7 +4652,7 @@
               if(item.ref == 0){
                 this_ref = '00';
               }
-              let solt = item.config;
+              let solt = this.tindySlot(item.config);
               let device_button_group = item.device_button_group;
               if(device_button_group.startsWith('RCU ONOFF GANG')){
                 let gang = device_button_group.replace('RCU ONOFF GANG','')*1;
@@ -4705,6 +4755,7 @@
               this.initSheetTriggerContent();
               let checkIndex = 0;
               let errorTriggerList = [];
+              
               for (let i in this.trigger) {
                 let mac = core_utils_get_mac_address_from_guid(this.trigger[i].guid, true);
                 let rcuMac = core_utils_get_mac_address_from_guid(this.actionGuid, true);
@@ -5208,7 +5259,7 @@
                     {
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: last_command,
+                      data: last_command.toLowerCase(),
                     },
                   ];
                   if (last_command.includes('&&')) {
@@ -5218,54 +5269,54 @@
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: $command_1,
+                      data: $command_1.toLowerCase(),
                     });
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: $command_2,
+                      data: $command_2.toLowerCase(),
                     });
                   }
                   if (ledTriggerOn) {
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: ledTriggerOn,
+                      data: ledTriggerOn.toLowerCase(),
                     });
                   }
                   if (ledActionOn) {
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: ledActionOn,
+                      data: ledActionOn.toLowerCase(),
                     });
                   }
                   if (ledTriggerOff) {
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: ledTriggerOff,
+                      data: ledTriggerOff.toLowerCase(),
                     });
                   }
                   if (ledActionOff) {
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: ledActionOff,
+                      data: ledActionOff.toLowerCase(),
                     });
                   }
                   if (thisActionCommand) {
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: thisActionCommand,
+                      data: thisActionCommand.toLowerCase(),
                     });
                   }
                   if(ledRawSettingCommand){
                     bleList.push({
                       service: 'ff80',
                       characteristic: 'ff81',
-                      data: ledRawSettingCommand,
+                      data: ledRawSettingCommand.toLowerCase(),
                     });
                   }
                   // if (isset(virtualSceneId) && virtualSceneId) {
@@ -5280,7 +5331,7 @@
                       bleList.push({
                         service: 'ff80',
                         characteristic: 'ff81',
-                        data: settingCommandList[z],
+                        data: settingCommandList[z].toLowerCase(),
                       });
                     }
                   }
@@ -5289,7 +5340,7 @@
                       bleList.push({
                         service: 'ff80',
                         characteristic: 'ff81',
-                        data: settingCommandList[z],
+                        data: settingCommandList[z].toLowerCase(),
                       });
                     }
                   }
@@ -5299,7 +5350,7 @@
                   await window.peripheral[guid].write(bleList);
                   await window.peripheral[guid].disconnect();
                   this.trigger[i].isBle = true;
-                  this.simulateScenePostId(guid, sceneId);
+                  this.simulateToggleScenePostId(guid, sceneId);
                   this.loadingDeviceConnect(guid, this.trigger[i].button_group);
                   this.overallSceneMap['scene_device_location'].push({
                     device: guid,
@@ -5597,6 +5648,16 @@
             // 全部灯灭    8f20000101+length+00+30+mac+00+00+slot+gang+slot+gang+...
             
           },
+          tindySlot(num){
+            const intNum = parseInt(num);
+            
+            if (intNum < 1 || intNum > 50) return null;
+            const group = Math.floor((intNum - 1) / 5);
+            const pos = ((intNum - 1) % 5) + 1;
+            const highMap = [0x0, 0x2, 0x4, 0x6, 0x8, 0xa, 0xb, 0xc, 0xd, 0xe];
+            const high = highMap[group];
+            return ((high << 4) | pos).toString(16).padStart(2, '0').toLowerCase();
+          },
           postActionBle(actualActionList,isWelcome=false) {
             let controlIndex = 0;
             let postList = cloneDeep(actualActionList);
@@ -5646,9 +5707,9 @@
                         onoff_data = '8000';
                       }
                     }
-                    let this_data = `971f${item.config}8000${onoff_data}`;
+                    let this_data = `971f${this.tindySlot(item.config)}8000${onoff_data}`;
                     if (ref == 2) {
-                      this_data = `8f31${item.config}0${gang}${'01'}01`;
+                      this_data = `8f31${this.tindySlot(item.config)}0${gang}${'01'}01`;
                     }
                     //let this_data = `8f31${item.config}0${gang}${'01'}${ref == 1 ? '00' : '01'}`;
                     let this_length = this_data.length / 2;
@@ -5767,9 +5828,9 @@
                     let triger_status = '02';
                     if (item.turnlight != 4 && item.turnlight != 5) {
                       //4 on ,5 off ,2 toggle ,3 Brighten, 1 Dim
-                      let this_data = `8f31${item.config}0${gang}${light}${triger_status}01`;
+                      let this_data = `8f31${this.tindySlot(item.config)}0${gang}${light}${triger_status}01`;
                       if (item.turnlight == 2) {
-                        this_data = `8f31${item.config}0${gang}${light}${triger_status}`;
+                        this_data = `8f31${this.tindySlot(item.config)}0${gang}${light}${triger_status}`;
                       }
                       let this_length = this_data.length / 2;
                       if (index == 0) {
@@ -5780,7 +5841,7 @@
                     } else if (item.turnlight == 4) {
                       //let range_value = ref.toString(16).pad('00');
                       let range_value = `${parseInt(item.ref).toString(16).pad('00')}`;
-                      let this_data = `971f${item.config}892${gang == 1 ? 0 : 1}${range_value}`;
+                      let this_data = `971f${this.tindySlot(item.config)}892${gang == 1 ? 0 : 1}${range_value}`;
                       let this_length = this_data.length / 2;
                       if (index == 0) {
                         data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
@@ -5788,7 +5849,7 @@
                         data = `${this_length.toString(16).pad('00')}${this_data}`;
                       }
                     } else if (item.turnlight == 5) {
-                      let this_data = `971f${item.config}892${gang == 1 ? 0 : 1}${`00`}`;
+                      let this_data = `971f${this.tindySlot(item.config)}892${gang == 1 ? 0 : 1}${`00`}`;
                       let this_length = this_data.length / 2;
                       if (index == 0) {
                         data = `02${mac}13${this_length.toString(16).pad('00')}${this_data}`;
@@ -5897,6 +5958,64 @@
                     // }
                     
                   }
+                }else if( item.device_button_group.startsWith('RCU OPENCLOSE GANG')){
+                  //需要确定是Open或者是close
+                  //获取gang
+                  /*
+                  1_2 slot 1-1
+                  3_4 slot 1-2
+                  5_6 slot 2-1
+                  7_8 slot 2-2
+                  9_10 slot 3-1
+                  11_12 slot 3-2
+                  13_14 slot 4-1
+                  15_16 slot 4-2
+                  17_18 slot 5-1
+                  19_20 slot 5-2
+                  */
+                  let gang = button_group.replace('RCU OPENCLOSE GANG', '');
+                  let onoff_unit = [0,0,0,0,0,0,0,0];
+                  let gangs = gang.split('_');
+
+                  gangs.forEach((zitem,index)=>{
+
+                    let unit_gang = ((zitem*1+11)%4)+1;
+                    onoff_unit[4-unit_gang] = 1;
+                    if(ref > 1 && index == 0){
+                      onoff_unit[7-((zitem*1+11)%4)] = 1;
+                    }
+                    if(ref == 0 && index == 1){
+                      onoff_unit[7-((zitem*1+11)%4)] = 1;
+                    }                    
+                  });
+                  debugger
+                 const gangMap = {
+                  "1_2": {slot: 1, gang: 1},
+                  "3_4": {slot: 1, gang: 2},
+                  "5_6": {slot: 2, gang: 1},
+                  "7_8": {slot: 2, gang: 2},
+                  "9_10": {slot: 3, gang: 1},
+                  "11_12": {slot: 3, gang: 2},
+                  "13_14": {slot: 4, gang: 1},
+                  "15_16": {slot: 4, gang: 2},
+                  "17_18": {slot: 5, gang: 1},
+                  "19_20": {slot: 5, gang: 2},
+                 }
+                 //需要获取最新的run for time
+                 console.log("item",item);
+                 const onoff_data = parseInt(onoff_unit.join(''), 2).toString(16).pad('00');
+                 const slotMap = gangMap[gang];
+                 if(slotMap){
+                  const slot = slotMap.slot;
+                  const target_gang = slotMap.gang;
+                  const command = `971f${this.tindySlot(slot)}8000${onoff_data}00000000ffff0000`;
+                  let this_data = `${command}`;
+                  if (index == 0) {
+                    data = `02${mac}13${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
+                  }else{
+                    data = `${(this_data.length / 2).toString(16).pad('00')}${this_data}`;
+                  }
+                 }
                 }
                 if (
                   data.length &&
@@ -6090,7 +6209,8 @@
                   postList[i].device_mode == '0-10v Dimming' ||
                   postList[i].device_mode == '1-10v Dimming' ||
                   postList[i].device_mode == 'RCU Controller' ||
-                  postList[i].device_mode == 'On Off Switch'
+                  postList[i].device_mode == 'On Off Switch' ||
+                  postList[i].device_mode == 'Curtain Switch'
                 ) {
                   haveRcu = true;
                   let this_data = postList[i].actionCommand;
@@ -6151,6 +6271,8 @@
             debugger
             let isMainRcu = false;
             let devices = cloneDeep(erp.info.device);
+            let main_status = false;
+            let is_via_485 = false;
             for (let i in devices) {
               if(i != guid){
                 continue;
@@ -6159,10 +6281,18 @@
                 settings.forEach((settingItem) => {
                   if (settingItem.setting_type.startsWith('main_rcu')) {
                     if (settingItem.setting == 1) {
-                      isMainRcu = true;
+                      main_status = true;
+                    }
+                  }
+                  if (settingItem.setting_type.startsWith('via_485')) {
+                    if (settingItem.setting == 1) {
+                      is_via_485 = true;
                     }
                   }
                 });
+                if(main_status && !is_via_485){
+                  isMainRcu = true;
+                }
             }
             return isMainRcu;
           },
@@ -6194,7 +6324,7 @@
                 onoff_data = '8000';
               }
             }
-            command = `07971f${parseInt(solt).toString(16).pad('00')}8000${onoff_data}`;
+            command = `07971f${solt}8000${onoff_data}`;
             return command;
           },
           saveActionForNewToggle(){
@@ -6252,7 +6382,7 @@
                   //972103+index+00/01/02
                   let device_button_group = list[i].device_button_group;
                   if(device_button_group.startsWith('RCU ONOFF GANG')){
-                    let solt = list[i].config;
+                    let solt = this.tindySlot(list[i].config);
                     let gang = device_button_group.replace('RCU ONOFF GANG','')*1;
                     let target_gang = gang%4;
                     if(target_gang == 0){
@@ -6260,20 +6390,20 @@
                     }
                     let on_command = this.getRcuOnOffCommand(solt, target_gang, 1);
                     let off_command = this.getRcuOnOffCommand(solt, target_gang, 0);
-                    toggle_setting_item += `04971f${parseInt(solt).toString(16).pad('00')}${parseInt(target_gang).toString(16).pad('00')}`;
+                    toggle_setting_item += `04971f${solt}${parseInt(target_gang).toString(16).pad('00')}`;
                     
                     toggle_default_on_item += `${on_command}`;
                     toggle_default_off_item += `${off_command}`;
                   }else if(device_button_group.startsWith('RCU DIMMING')){
-                    let solt = list[i].config;
+                    let solt = this.tindySlot(list[i].config);
                     let gang = device_button_group.replace('RCU DIMMING','')*1;
                     let target_gang = gang%2;
                     if(target_gang == 0){
                       target_gang = 2;
                     }
-                    toggle_setting_item += `04971f${parseInt(solt).toString(16).pad('00')}${parseInt(target_gang).toString(16).pad('00')}`;
-                    toggle_default_on_item += `06971f${parseInt(solt).toString(16).pad('00')}892${target_gang == 1?0:1}ff`;
-                    toggle_default_off_item += `06971f${parseInt(solt).toString(16).pad('00')}892${target_gang == 1?0:1}00`;
+                    toggle_setting_item += `04971f${solt}${parseInt(target_gang).toString(16).pad('00')}`;
+                    toggle_default_on_item += `06971f${solt}892${target_gang == 1?0:1}ff`;
+                    toggle_default_off_item += `06971f${solt}892${target_gang == 1?0:1}00`;
                   }else if(device_button_group.startsWith('RCU OUTPUT')){
                     let target_gang = device_button_group.replace('RCU OUTPUT','')*1;
                     toggle_setting_item += `04972101${parseInt(target_gang).toString(16).pad('00')}`;
@@ -6455,372 +6585,734 @@
               }
             })
           },
-          saveActionForWelcomeScene(){
+          saveActionForWelcomeScene() {
             return new Promise(async (resolve, reject) => {
-              let actionList = this.actionList.filter(item=>{
-                return item.isCheck;
-              });
-              debugger
-              if(actionList.length == 0){
-                resolve(1);
-                return;
-              }
-              let actualActionList = this.strucActionList(actionList);
-              let actionCommandList = this.postActionBle(actualActionList,true);
-              let sceneObj = erp.info.scene;
-              let sceneMap;
-              let errorStatus = true;
-              let errorMap;
-              for(let i in actionCommandList){
-                let existId;
-                let actionItem = actionCommandList[i];
-                let idList = [];
-                let sceneDeviceLocationList = [];
-                let isClickRcuStatus = false;
-                let isClickRcuGuid = '';
-                let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-                subdevices.forEach((subItem) => {
-                  if (
-                    subItem.name == sub_name &&
-                    subItem.device_button_group.startsWith('ONOFF GANG') &&
-                    subItem.device_mode == 'RCU Controller'
-                  ) {
-                    //filter the randar prop
-                    isClickRcuStatus = true;
-                    isClickRcuGuid = subItem.device;
-                    this.actionGuid = subItem.device;
-                  }
-                });
-                for (let i in sceneObj) {
-                  if (this.scenePostId == sceneObj[i].name && isset(sceneObj[i].name)) {
-                    sceneMap = sceneObj[i];
-                  }
+              try {
+                // 1. 过滤只要 isCheck 的动作
+                let actionList = this.actionList.filter(item => item.isCheck);
+                
+                if (actionList.length == 0) {
+                  resolve(1);
+                  return;
                 }
-                if (isset(sceneMap)) {
-                  let list = sceneMap.scene_device_location;
-                  let thisRcuIdList = [];
-                  list.forEach((zitem) => {
-                    if (zitem.device == i) {
-                      thisRcuIdList.push(zitem);
-                    }
+                
+                // 2. 准备 isCheck=true 的动作列表
+                let actualActionList = this.strucActionList(actionList);
+                let additionalActionCommandList = this.postActionBle(actualActionList, true);
+                
+                // 3. 获取场景映射
+                const sceneMap = this._getSceneMap();
+                
+                // 4. 创建场景处理器实例
+                const sceneHandler = new window.iotScene();
+                sceneHandler.setDebug(true);
+                
+                // 4.5 ✅ 确保 scene_device_location 已初始化
+                if (!this.overallSceneMap['scene_device_location']) {
+                  this.overallSceneMap['scene_device_location'] = [];
+                }
+                
+                console.log(`[Welcome Scene] Before processing, scene_device_location has ${this.overallSceneMap['scene_device_location'].length} entries`);
+                
+                // 5. 处理每个设备：合并指令并重新拆分
+                for (let deviceGuid in additionalActionCommandList) {
+                  const additionalActionData = additionalActionCommandList[deviceGuid];
+                  
+                  // 5.1 ✅ 读取 saveActionOnBle 已保存的主场景信息
+                  if (!isset(this.overallSceneMap['action'][deviceGuid])) {
+                    console.error(`[saveActionForWelcomeScene] No main scene found for ${deviceGuid}`);
+                    continue;
+                  }
+                  
+                  const mainSceneId = this.overallSceneMap['action'][deviceGuid]['scene_id'];
+                  const existingSplitIds = this.overallSceneMap['action'][deviceGuid]['splitScenes'] || [mainSceneId];
+                  
+                  // 5.2 ✅ 读取主场景的原始指令数据（去除 8F1000 前缀和长度字节）
+                  let mainActionCommand = this.overallSceneMap['action'][deviceGuid]['actionCommand'];
+                  const dataStartPos = 10; // 8F1000(6) + sceneId(2) + length(2)
+                  let mainActionData = mainActionCommand.substring(dataStartPos);
+                  
+                  // 5.3 ✅ 合并指令：主场景 + isCheck=true 的动作 + 链式调用回到开头
+                  const chainBackCommand = `048f0200${parseInt(mainSceneId).toString(16).padStart(2, '0')}`;
+                  const mergedActionData = mainActionData + additionalActionData + chainBackCommand;
+                  
+                  console.log(`[Welcome Scene] Merging actions for ${deviceGuid}:`);
+                  console.log(`  Main action length: ${mainActionData.length / 2} bytes`);
+                  console.log(`  Additional action length: ${additionalActionData.length / 2} bytes`);
+                  console.log(`  Chain back command: ${chainBackCommand}`);
+                  console.log(`  Total merged length: ${mergedActionData.length / 2} bytes`);
+                  
+                  // 5.4 ✅ 使用 iotScene 重新拆分整个合并后的指令
+                  const sceneResult = await this._processSceneWithSplit(
+                    sceneHandler,
+                    deviceGuid,
+                    mainSceneId,
+                    mergedActionData,
+                    { [deviceGuid]: mergedActionData },
+                    existingSplitIds  // ✅ 优先复用已有的拆分 ID
+                  );
+                  
+                  // 5.5 ✅ 完全覆盖 actionMap
+                  this.actionMap[deviceGuid]['actionCommand'] = sceneResult.mainCommand;
+                  this.actionMap[deviceGuid]['scene_id'] = mainSceneId;
+                  
+                  if (sceneResult.isSplit) {
+                    this.actionMap[deviceGuid]['splitScenes'] = sceneResult.sceneIds;
+                    this.actionMap[deviceGuid]['splitScenesDetail'] = sceneResult.scenes;
+                    console.log(`✓ Welcome Scene split into ${sceneResult.scenes.length} parts for ${deviceGuid}`);
+                  } else {
+                    // 清除可能存在的旧拆分信息
+                    delete this.actionMap[deviceGuid]['splitScenes'];
+                    delete this.actionMap[deviceGuid]['splitScenesDetail'];
+                  }
+                  
+                  // 5.6 ✅ 完全覆盖 overallSceneMap
+                  this.overallSceneMap['action'][deviceGuid]['actionCommand'] = sceneResult.mainCommand;
+                  this.overallSceneMap['action'][deviceGuid]['scene_id'] = mainSceneId;
+                  
+                  if (sceneResult.isSplit) {
+                    this.overallSceneMap['action'][deviceGuid]['splitScenes'] = sceneResult.sceneIds;
+                    this.overallSceneMap['action'][deviceGuid]['splitScenesDetail'] = sceneResult.scenes;
+                  } else {
+                    delete this.overallSceneMap['action'][deviceGuid]['splitScenes'];
+                    delete this.overallSceneMap['action'][deviceGuid]['splitScenesDetail'];
+                  }
+                  
+                  // 5.7 ✅ 完全覆盖 scene_device_location
+                  // 移除该设备的所有旧 ID
+                  this.overallSceneMap['scene_device_location'] = this.overallSceneMap['scene_device_location'].filter(
+                    loc => loc.device !== deviceGuid
+                  );
+                  
+                  console.log(`[Welcome Scene] Updating scene_device_location for ${deviceGuid}`);
+                  console.log(`  Scene count: ${sceneResult.scenes.length}`);
+                  
+                  // 添加新的所有拆分 ID
+                  sceneResult.scenes.forEach(scene => {
+                    console.log(`  Adding scene ID ${scene.sceneIdDecimal} (hex: ${scene.sceneId}) to scene_device_location`);
+                    this.overallSceneMap['scene_device_location'].push({
+                      device: deviceGuid,
+                      storage_id: scene.sceneIdDecimal,  // ✅ 使用 sceneIdDecimal
+                    });
+                    this.simulateScenePostId(deviceGuid, scene.sceneIdDecimal);
                   });
-                  if(thisRcuIdList.length > 1){
-                    existId = thisRcuIdList[1].storage_id
-                  }
+                  
+                  // 5.8 ✅ 兼容旧代码（保留字段）
+                  this.actionMap[`second_action_${deviceGuid}`] = sceneResult.mainCommand;
+                  this.actionMap[`second_action_guid`] = deviceGuid;
+                  this.actionMap[`second_action_id`] = mainSceneId;
                 }
-                let sceneId = isset(existId) ? existId : this.getDeviceBleId(i);
-                let actioncommand_pre = `8F1000${parseInt(sceneId).toString(16).pad('00')}`;
-                let totalActionCommand = `${actioncommand_pre}${actionItem}`;
-                console.log('saveActionForWelcomeScene', totalActionCommand);
-                //should resend the first action to rcu
-                let preActionCommand = this.overallSceneMap['action'][i]['actionCommand'];
-                preActionCommand = `${preActionCommand}048f0200${parseInt(sceneId).toString(16).pad('00')}`;
-                let $length = parseInt(preActionCommand.substring(8, 10),16);
-                let targetLength = $length + 5;
-                preActionCommand = preActionCommand.substring(0, 8) + parseInt(targetLength).toString(16).pad('00') + preActionCommand.substring(10);
-                debugger
-                if(isset(this.actionMap[i])){
-                  this.actionMap[i]= preActionCommand;
-                }else{ 
-                  this.actionMap[i] = ''; 
-                  this.actionMap[i] = preActionCommand; 
-                }
-                try { 
-                  await window.peripheral[i].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: totalActionCommand,
-                    },
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: preActionCommand,
-                    }
-                  ]);
-                  this.actionMap[`second_action_${i}`] = totalActionCommand;
-                  this.actionMap[`second_action_guid`] = i;
-                  this.actionMap[`second_action_id`] = sceneId;
-                  //save id
-                  this.overallSceneMap['scene_device_location'].push({
-                    device: i,
-                    storage_id: sceneId,
-                  });
-                  this.simulateScenePostId(i, sceneId);
-                } catch (error) {
-                  errorStatus = false;
-                  errorMap = error;
-                }
-              }
-              if(!errorStatus){
-                reject(errorMap)
-              }else{
+                
+                // 6. ✅ 去重 scene_device_location（确保没有重复）
+                const uniqueLocations = this.overallSceneMap['scene_device_location'].filter((item, index, self) =>
+                  index === self.findIndex((d) => d.device === item.device && d.storage_id === item.storage_id)
+                );
+                this.overallSceneMap['scene_device_location'] = uniqueLocations;
+                
+                console.log(`[Welcome Scene] Final scene_device_location:`, uniqueLocations);
+                
                 resolve(1);
+              } catch (error) {
+                console.error('[saveActionForWelcomeScene] Error:', error);
+                reject(error);
               }
-            })
+            });
           },
           saveActionOnBle(extraStaus) {
             return new Promise(async (resolve, reject) => {
-              let actualActionList;
-              if(this.templateName == 'Welcome Scene' || this.templateName == 'RCU Radar'){
-                let actionList = this.actionList.filter(item=>{
-                  return !item.isCheck;
-                });
-                actualActionList = this.strucActionList(actionList);
-              }else{
-                actualActionList = this.strucActionList(this.actionList);
-              }
-              this.overallSceneMap['action']['actionList'] = this.actionList;
-              if (this.mutiwayStatus == 2) {
-                actualActionList = this.strucActionList(this.actionList_2);
-                this.overallSceneMap['action']['actionList_2'] = this.actionList_2;
-              }
-              console.log('actualActionList', actualActionList);
-              
-              let actionCommandList = this.postActionBle(actualActionList);
-              debugger
-              //have this case,485 connect the rcu,but the action is not have main rcu
-              if (this.mainRcuGuid && !isset(actionCommandList[this.mainRcuGuid])) {
-                actionCommandList[this.mainRcuGuid] = '';
-              }
-              this.actionBleCommandList = actionCommandList;
-              console.log('actionCommandList', actionCommandList);
-              let sceneObj = erp.info.scene;
-              let sceneMap;
-              let errorStatus = true;
-              let errorMap;
-              //in order to get the attach rcu id
-              //have this case,485 connect the rcu,but the action is not have main rcu
-              for (let i in actionCommandList) {
-                let existId;
-                for (let i in sceneObj) {
-                  if (this.scenePostId == sceneObj[i].name && isset(sceneObj[i].name)) {
-                    sceneMap = sceneObj[i];
+              try {
+                // 统一第二路判定：如果未显式传 true，但已处于双路且存在第一路指令，则强制第二路
+                const hasPrimaryAction = this._hasPrimaryActionCommand();
+                extraStaus = extraStaus === true ? true : (this.mutiwayStatus == 2 && hasPrimaryAction);
+
+                // 新建场景时，清理当前设备的本地占位缓存，避免沿用历史 ID
+                if (!this.scenePostId) {
+                  if (!this.currentActionDeviceGuids) {
+                    this.currentActionDeviceGuids = [];
                   }
+                  // 收集当前 actionCommandList 的 key 之后再清理
                 }
-                if (isset(sceneMap)) {
-                  let list = sceneMap.scene_device_location;
-                  let thisRcuIdList = [];
-                  list.forEach((zitem) => {
-                    if (zitem.device == i) {
-                      thisRcuIdList.push(zitem);
-                    }
-                  });
-                  if (this.mutiwayStatus == 2) {
-                    existId = thisRcuIdList[1].storage_id;
-                  } else {
-                    existId = thisRcuIdList[0].storage_id;
-                  }
-                }
-                //alert(existId);
-                let sceneId = isset(existId) ? existId : this.getDeviceBleId(i);
-                if (i != this.mainRcuGuid) {
-                  this.attachRcuId = sceneId;
-                  this.attachRcuGuid = i;
+
+                // ========== 第1步：准备 ActionList ==========
+                const actualActionList = this._prepareActionList();
+                console.log('actualActionList', actualActionList);
+                
+                // ========== 第2步：生成蓝牙指令 ==========
+                const actionCommandList = this.postActionBle(actualActionList);
+                
+                // 特殊处理：485连接RCU但动作列表中没有主RCU
+                if (this.mainRcuGuid && !isset(actionCommandList[this.mainRcuGuid])) {
+                  actionCommandList[this.mainRcuGuid] = '';
                 }
                 
-                this.overallSceneMap['scene_device_location'].push({
-                  device: i,
-                  storage_id: sceneId,
-                });
-              }
-              for (let i in actionCommandList) {
-                let existId;
-                let actionItem = actionCommandList[i];
-                let idList = [];
-                let sceneDeviceLocationList = [];
-                let isClickRcuStatus = false;
-                let isClickRcuGuid = '';
-                let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
-                subdevices.forEach((subItem) => {
-                  if (
-                    subItem.name == sub_name &&
-                    subItem.device_button_group.startsWith('ONOFF GANG') &&
-                    subItem.device_mode == 'RCU Controller'
-                  ) {
-                    //filter the randar prop
-                    isClickRcuStatus = true;
-                    isClickRcuGuid = subItem.device;
-                    this.actionGuid = subItem.device;
-                  }
-                });
-                for (let i in sceneObj) {
-                  if (this.scenePostId == sceneObj[i].name && isset(sceneObj[i].name)) {
-                    sceneMap = sceneObj[i];
-                  }
-                }
-                if (isset(sceneMap)) {
-                  let list = sceneMap.scene_device_location;
-                  let thisRcuIdList = [];
-                  list.forEach((zitem) => {
-                    if (zitem.device == i) {
-                      thisRcuIdList.push(zitem);
-                    }
-                  });
-                  //if scene toggle button,can not get the single id
-                  if (this.templateName == 'RCU Scene Toggle' || this.templateName == 'RCU Scene Toggle - Save Status') {
-                    // if(isset(sceneMap.action) && sceneMap.action){
-                    //   let thisActionMap = JSON.parse(sceneMap.action);
-                    //   if(this.mutiwayStatus == 2){
-                    //     //secoend
-                    //     let secoendActionMap = thisActionMap.actionMap_2;
-                    //     existId = secoendActionMap[i];
-                    //   }else{
-                    //     let firstActionMap = thisActionMap.actionMap;
-                    //     existId = firstActionMap[i];
-                    //   }
-                    // }
-                    if (this.mutiwayStatus == 2) {
-                      existId = thisRcuIdList[1].storage_id;
-                    } else {
-                      existId = thisRcuIdList[0].storage_id;
-                    }
-                  } else if (this.templateName == 'RCU Curtain') {
-                    if (this.mutiwayStatus == 2) {
-                      existId = thisRcuIdList[1].storage_id;
-                    } else {
-                      existId = thisRcuIdList[0].storage_id;
-                    }
-                  } else {
-                    for (const zitem of list) {
-                      if (zitem.device === i) {
-                        existId = zitem.storage_id;
-                        break; // 找到后立即终止循环
-                      }
-                    }
-                  }
-                }
-                let sceneId = isset(existId) ? existId : this.getDeviceBleId(i);
-                if (extraStaus) {
-                  sceneId = parseInt(sceneId) + 1;
-                }
-                // if (this.mainRcuGuid && i == this.mainRcuGuid) {
-                //   this.mainRcuId = sceneId;
-                // } else if (i == this.actionGuid) {
-                //   this.mainRcuId = sceneId;
-                // } else {
-                //   //this.attachRcuId = sceneId;
-                // }
-                if (!isset(this.actionLocation[i])) {
-                  this.actionLocation[i] = sceneId;
-                } else {
-                  this.actionLocation[i] = sceneId;
-                }
-                //click and stop
-                if (this.templateName == 'RCU Curtain') {
-                  if (this.mutiwayStatus == 2) {
-                    this.actionCurtainId_2 = sceneId;
-                  } else {
-                    this.actionCurtainId_1 = sceneId;
-                  }
-                }
-                console.log('sceneId', sceneId);
-                let actioncommand_pre = `8F1000${parseInt(sceneId).toString(16).pad('00')}`;
-                let totalActionCommand = `${actioncommand_pre}${actionItem}`;
-                if (i == this.mainRcuGuid && Object.keys(actionCommandList).length > 1) {
-                  debugger;
-                  totalActionCommand = `${totalActionCommand}0b02${core_utils_get_mac_address_from_guid(this.attachRcuGuid, true)}8f0200${parseInt(this.attachRcuId).toString(16).pad('00')}`;
-                }
-                //if radarExitUnmannedModeStatus
-                if(this.templateName == 'Welcome Scene'){
-                  //totalActionCommand = this.tindyRadarUnmanedModeCommand(totalActionCommand,i);
-                }
-                //if the action length more than 240 bytes,should warn the user
-                //alert(totalActionCommand);
-                let only_radar_action = this.actionList.filter(item=>{
-                  return item.isCheck
-                });
-                if((totalActionCommand.length > (240+4)*2) && only_radar_action.length == 0){
-                  app.dialog.alert(`${_('Action length is too long,please check the action.')}`);
-                  break;
-                }
-                console.log('totalActionCommand', totalActionCommand);
-                //alert(totalActionCommand);
-                if (isClickRcuStatus && isClickRcuGuid == i) {
-                  this.randarActionCommand['guid'] = i;
-                  this.randarActionCommand['command'] = totalActionCommand;
-                }
-                try {
-                  await window.peripheral[i].write([
-                    {
-                      service: 'ff80',
-                      characteristic: 'ff81',
-                      data: totalActionCommand,
-                    },
-                  ]);
-                  if (extraStaus) {
-                    this.actionMap[`extra_${i}`] = totalActionCommand;
-                  } else {
-                    this.actionMap[i] = totalActionCommand;
-                  }
-                  if (!isset(this.overallSceneMap['action'][i])) {
-                    this.overallSceneMap['action'][i] = {};
-                  }
-                  if(this.mutiwayStatus == 2){
-                    this.overallSceneMap['action'][i]['actionCommand_2'] = totalActionCommand;
-                  }else{
-                    this.overallSceneMap['action'][i]['actionCommand'] = totalActionCommand;
-                  }
-                  //save id
-                  this.simulateScenePostId(i, sceneId);
-                } catch (error) {
-                  errorStatus = false;
-                  errorMap = error;
-                }
-              }
-              if (!errorStatus) {
-                reject(errorMap);
-              } else {
-                //if randar should save the command to the randar rcu
+                this.actionBleCommandList = actionCommandList;
+                console.log('actionCommandList', actionCommandList);
+                
+                // ========== 第3步：获取场景映射信息 ==========
+                const sceneMap = this._getSceneMap();
+                
+                // ========== 第4步：处理每个设备的场景 ==========
+                await this._processDeviceScenes(actionCommandList, sceneMap, extraStaus);
+                
+                // ========== 第5步：特殊处理 RCU Radar ==========
                 if (this.templateName == 'RCU Radar') {
-                  if (Object.keys(this.actionBleCommandList).length <= 1) {
-                    resolve(1);
-                  } else {
-                    let anotherRcuSecenIdList = [];
-                    let guid = this.randarActionCommand['guid'];
-                    for (let i in this.actionBleCommandList) {
-                      if (i != guid) {
-                        anotherRcuSecenIdList.push({
-                          guid: i,
-                          id: this.actionLocation[i],
-                        });
-                      }
-                    }
-                    let anotherCommand = '';
-                    for (let i in anotherRcuSecenIdList) {
-                      let sceneId = anotherRcuSecenIdList[i].id;
-                      let guid = anotherRcuSecenIdList[i].guid;
-                      anotherCommand += `0b02${core_utils_get_mac_address_from_guid(guid, true)}8f0200${parseInt(sceneId).toString(16).pad('00')}`;
-                    }
-                    let postCommand = this.randarActionCommand['command'];
-                    postCommand = `${postCommand}${anotherCommand}`;
-                    console.log('postCommand', postCommand);
-                    try {
-                      await window.peripheral[guid].write([
-                        {
-                          service: 'ff80',
-                          characteristic: 'ff81',
-                          data: postCommand,
-                        },
-                      ]);
-                      this.actionMap[guid] = postCommand;
-                      if (!isset(this.overallSceneMap['action'][guid])) {
-                        this.overallSceneMap['action'][guid] = {};
-                      }
-                      this.overallSceneMap['action'][guid]['actionCommand'] = postCommand;
-                      resolve(1);
-                    } catch (error) {
-                      reject(error);
-                    }
-                  }
-                } else {
-                  resolve(1);
+                  await this._processRadarScene();
                 }
+                
+                resolve(1);
+                
+              } catch (error) {
+                console.error('[saveActionOnBle] Error:', error);
+                reject(error);
               }
             });
-            //change the actionList to {guid : '',list:[]}
-            return;
-            actioncommand = `${actioncommand_pre}${this.postActionBle(actualActionList)}`;
+          },
+          
+          /**
+           * 步骤1：准备 ActionList
+           */
+          _prepareActionList() {
+            let actualActionList;
+            
+            // Welcome Scene 和 RCU Radar：过滤掉 isCheck 的动作
+            if (this.templateName == 'Welcome Scene' || this.templateName == 'RCU Radar') {
+              const filteredList = this.actionList.filter(item => !item.isCheck);
+              actualActionList = this.strucActionList(filteredList);
+            } else {
+              actualActionList = this.strucActionList(this.actionList);
+            }
+            
+            // 保存到 overallSceneMap
+            this.overallSceneMap['action']['actionList'] = this.actionList;
+            
+            // 双路场景：使用 actionList_2
+            if (this.mutiwayStatus == 2) {
+              actualActionList = this.strucActionList(this.actionList_2);
+              this.overallSceneMap['action']['actionList_2'] = this.actionList_2;
+            }
+            
+            return actualActionList;
+          },
+          
+          /**
+           * 步骤2：获取场景映射信息
+           */
+          _getSceneMap() {
+            const sceneObj = erp.info.scene;
+            let sceneMap = null;
+            
+            // 查找当前编辑的场景
+            for (let key in sceneObj) {
+              if (this.scenePostId == sceneObj[key].name && isset(sceneObj[key].name)) {
+                sceneMap = sceneObj[key];
+                break;
+              }
+            }
+            
+            return sceneMap;
+          },
+          
+          /**
+           * 步骤3：获取设备的 SceneId（编辑时复用，新建时分配）
+           */
+          _collectUsedSceneIds(deviceGuid, sceneMap) {
+            const used = new Set();
+
+            const addNumber = (val) => {
+              if (val === undefined || val === null) return;
+              const num = parseInt(val);
+              if (!isNaN(num)) {
+                used.add(num);
+              }
+            };
+
+            // 1) 当前会话累积的 scene_device_location
+            if (isset(this.overallSceneMap) && isset(this.overallSceneMap['scene_device_location'])) {
+              this.overallSceneMap['scene_device_location'].forEach((item) => {
+                if (item.device == deviceGuid) {
+                  addNumber(item.storage_id);
+                }
+              });
+            }
+
+            // 1.1) 本地占位的 sceneId（避免“死ID”）
+            if (isset(this.reservedSceneIds) && this.reservedSceneIds[deviceGuid]) {
+              this.reservedSceneIds[deviceGuid].forEach((val) => addNumber(val));
+            }
+
+            // 2) 当前会话 actionMap 里拆分出来的 sceneId（splitScenes / splitScenes_2）
+            if (isset(this.actionMap) && isset(this.actionMap[deviceGuid])) {
+              const actionData = this.actionMap[deviceGuid];
+              ['splitScenes', 'splitScenes_2'].forEach((field) => {
+                if (Array.isArray(actionData[field])) {
+                  actionData[field].forEach((id) => addNumber(id));
+                }
+              });
+              ['sceneId', 'sceneId_2'].forEach((field) => addNumber(actionData[field]));
+            }
+
+            // 3) overallSceneMap 里的 action 信息（可能是上一轮保存的）
+            if (isset(this.overallSceneMap) && isset(this.overallSceneMap['action']) && isset(this.overallSceneMap['action'][deviceGuid])) {
+              const savedAction = this.overallSceneMap['action'][deviceGuid];
+              ['splitScenes', 'splitScenes_2', 'splitScenesDetail', 'splitScenesDetail_2'].forEach((field) => {
+                if (Array.isArray(savedAction[field])) {
+                  savedAction[field].forEach((id) => addNumber(id));
+                }
+              });
+              ['sceneId', 'sceneId_2', 'actionCurtainId_1', 'actionCurtainId_2'].forEach((field) => addNumber(savedAction[field]));
+            }
+
+            // 4) actionLocation 中的记录
+            if (isset(this.actionLocation) && isset(this.actionLocation[deviceGuid])) {
+              addNumber(this.actionLocation[deviceGuid]);
+            }
+
+            // 5) 当前 sceneMap 的 scene_device_location
+            if (isset(sceneMap) && Array.isArray(sceneMap.scene_device_location)) {
+              sceneMap.scene_device_location.forEach((loc) => {
+                if (loc.device == deviceGuid) {
+                  addNumber(loc.storage_id);
+                }
+              });
+            }
+
+            // 6) 全局 erp.info.scene（包含 simulateScenePostId 占位数据）
+            if (typeof erp !== 'undefined' && erp.info && erp.info.scene) {
+              const sceneObj = cloneDeep(erp.info.scene);
+              for (let key in sceneObj) {
+                const locList = sceneObj[key].scene_device_location || [];
+                locList.forEach((loc) => {
+                  if (loc.device == deviceGuid) {
+                    addNumber(loc.storage_id);
+                  }
+                });
+              }
+            }
+
+            return [...used].sort((a, b) => a - b);
+          },
+
+          _getDeviceSceneId(deviceGuid, sceneMap, extraStaus) {
+            let result = {
+              mainSceneId: null,
+              existingSplitIds: []
+            };
+            
+            // ========== 1. 优先从 action 读取（编辑模式）==========
+            if (isset(sceneMap) && sceneMap.action) {
+              try {
+                const actionData = JSON.parse(sceneMap.action);
+                
+                if (actionData[deviceGuid]) {
+                  const deviceData = actionData[deviceGuid];
+                  const fieldSuffix = extraStaus ? '_2' : '';
+                  
+                  // ✅ 第一优先：读取主 sceneId（scene_id / scene_id_2）
+                  const sceneIdField = `scene_id${fieldSuffix}`;
+                  if (deviceData[sceneIdField]) {
+                    result.mainSceneId = deviceData[sceneIdField];
+                    
+                    // ✅ 如果有拆分场景，读取拆分ID（排除主ID）
+                    const splitScenesField = `splitScenes${fieldSuffix}`;
+                    if (deviceData[splitScenesField] && Array.isArray(deviceData[splitScenesField])) {
+                      // splitScenes 包含主ID，需要排除
+                      result.existingSplitIds = deviceData[splitScenesField].filter(
+                        id => id !== result.mainSceneId
+                      );
+                    }
+                    
+                    console.log(`[Edit Mode] Reusing scene_id for ${deviceGuid}${fieldSuffix}:`, 
+                                result.mainSceneId, 
+                                result.existingSplitIds.length > 0 ? `(split: ${result.existingSplitIds})` : '');
+                    return result;
+                  }
+                  
+                  // ⚠️ 兼容旧数据：如果没有 scene_id，降级到 splitScenes
+                  const splitScenesField = `splitScenes${fieldSuffix}`;
+                  if (deviceData[splitScenesField] && Array.isArray(deviceData[splitScenesField])) {
+                    result.existingSplitIds = deviceData[splitScenesField];
+                    result.mainSceneId = result.existingSplitIds[0];
+                    
+                    console.warn(`[Edit Mode - Legacy] Using splitScenes[0] for ${deviceGuid}${fieldSuffix}`);
+                    return result;
+                  }
+                  
+                  // ⚠️ 兼容更旧的数据：sceneId / sceneId_2 字段（未来可删除）
+                  const legacySceneIdField = extraStaus ? 'sceneId_2' : 'sceneId';
+                  if (deviceData[legacySceneIdField]) {
+                    result.mainSceneId = deviceData[legacySceneIdField];
+                    console.warn(`[Edit Mode - Legacy] Using ${legacySceneIdField} for ${deviceGuid}`);
+                    return result;
+                  }
+                }
+              } catch (e) {
+                console.warn('[_getDeviceSceneId] Failed to parse action data:', e);
+              }
+            }
+            
+            // ========== 2. 降级：从 scene_device_location 读取（兼容旧数据）==========
+            if (isset(sceneMap) && sceneMap.scene_device_location) {
+              const thisRcuIdList = sceneMap.scene_device_location.filter(
+                item => item.device == deviceGuid
+              );
+              
+              if (thisRcuIdList.length > 0) {
+                // ⚠️ 编辑模式：有历史 scene_device_location
+                const sortedIds = thisRcuIdList
+                  .map(item => parseInt(item.storage_id))
+                  .filter(id => !isNaN(id))
+                  .sort((a, b) => a - b);
+
+                // 对第二路/额外状态，若没有 action 中的 scene_id_2，优先分配新的空闲 ID，避免与主路相同
+                if (extraStaus) {
+                  const usedIds = this._collectUsedSceneIds(deviceGuid, sceneMap);
+                  result.mainSceneId = this.findMissingNumber(usedIds);
+                  return result;
+                }
+
+                // 主路：复用最小 ID，其余作为拆分
+                result.mainSceneId = sortedIds[0];
+                if (sortedIds.length > 1) {
+                  result.existingSplitIds = sortedIds.slice(1);
+                  console.warn('[_getDeviceSceneId] Found multiple IDs in scene_device_location, treating as split scenes');
+                }
+                
+                return result;
+              }
+            }
+            
+            // ========== 3. 新场景：分配新 ID ==========
+            const usedIds = this._collectUsedSceneIds(deviceGuid, sceneMap);
+            result.mainSceneId = this.findMissingNumber(usedIds);
+            
+            return result;
+          },
+          
+          /**
+           * 步骤4：检查是否为 Radar 触发器的 RCU
+           */
+          _isRadarTriggerRcu(deviceGuid) {
+            const subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            
+            for (let subItem of subdevices) {
+              if (subItem.name == sub_name &&
+                  subItem.device_button_group.startsWith('ONOFF GANG') &&
+                  subItem.device_mode == 'RCU Controller' &&
+                  subItem.device == deviceGuid) {
+                this.actionGuid = deviceGuid;
+                return true;
+              }
+            }
+            
+            return false;
+          },
+          
+          
+          /**
+           * 步骤7：处理每个设备的场景
+           */
+          async _processDeviceScenes(actionCommandList, sceneMap, extraStaus) {
+            // 创建场景处理器实例
+            const sceneHandler = new window.iotScene();
+            sceneHandler.setDebug(true); // 可根据需要启用调试
+            // 保留已有的场景位置，避免多次保存/双路覆盖
+            const existingLocations = cloneDeep(this.overallSceneMap['scene_device_location'] || []);
+            this.overallSceneMap['scene_device_location'] = cloneDeep(existingLocations);
+            // 本地持久缓存每个设备的已占用 sceneId，避免依赖 erp.info.scene 不及时刷新
+            if (!this.persistedSceneIdsByDevice) {
+              this.persistedSceneIdsByDevice = {};
+            }
+            // 新建模式下清理当前保存涉及设备的本地占位，避免沿用旧 ID
+            const isNewScene = !this.scenePostId;
+            const savingDeviceGuids = Object.keys(actionCommandList || {});
+            if (isNewScene) {
+              savingDeviceGuids.forEach((guid) => {
+                if (this.persistedSceneIdsByDevice[guid]) {
+                  delete this.persistedSceneIdsByDevice[guid];
+                }
+                if (this.reservedSceneIds && this.reservedSceneIds[guid]) {
+                  delete this.reservedSceneIds[guid];
+                }
+              });
+            }
+            
+            // 第一遍：获取 sceneId 信息（包含 existingSplitIds）
+            const deviceSceneInfo = {};
+            for (let deviceGuid in actionCommandList) {
+              const sceneInfo = this._getDeviceSceneId(deviceGuid, sceneMap, extraStaus);
+              deviceSceneInfo[deviceGuid] = sceneInfo;
+              
+              // 记录 attachRcu（非主 RCU 的设备） 
+              if (deviceGuid != this.mainRcuGuid) {
+                this.attachRcuId = sceneInfo.mainSceneId;
+                this.attachRcuGuid = deviceGuid;
+              }
+              
+              // 保存 sceneId 到 actionLocation（兼容性）
+              this.actionLocation[deviceGuid] = sceneInfo.mainSceneId;
+              
+              // Curtain 特殊处理
+              if (this.templateName == 'RCU Curtain') {
+                if (this.mutiwayStatus == 2) {
+                  this.actionCurtainId_2 = sceneInfo.mainSceneId;
+                } else {
+                  this.actionCurtainId_1 = sceneInfo.mainSceneId;
+                }
+              }
+            }
+            
+            // 第二遍：构建并写入场景命令（集成 iotScene 拆分）
+            for (let deviceGuid in actionCommandList) {
+              const actionItem = actionCommandList[deviceGuid];
+              const sceneInfo = deviceSceneInfo[deviceGuid];
+              
+              // 检查是否为 Radar 触发器的 RCU
+              const isRadarTriggerRcu = this._isRadarTriggerRcu(deviceGuid);
+              
+              try {
+                // === 使用 iotScene 智能处理场景（自动判断是否需要拆分）===
+                const sceneResult = await this._processSceneWithSplit(
+                  sceneHandler,
+                  deviceGuid,
+                  sceneInfo.mainSceneId,
+                  actionItem,
+                  actionCommandList,
+                  sceneInfo.existingSplitIds  // ✅ 传入已有的拆分ID
+                );
+                
+                // Radar 场景：保存命令用于后续处理
+                if (isRadarTriggerRcu) {
+                  this.randarActionCommand['guid'] = deviceGuid;
+                  this.randarActionCommand['command'] = sceneResult.mainCommand;
+                }
+                
+                // ✅ 初始化 actionMap[deviceGuid]
+                if (!isset(this.actionMap[deviceGuid])) {
+                  this.actionMap[deviceGuid] = {};
+                }
+                
+                // ✅ 保存到 actionMap（正确结构）
+                const isSecondPath = extraStaus || (this.mutiwayStatus == 2 && isset(this.actionMap[deviceGuid]['actionCommand']));
+                const fieldSuffixForActionMap = isSecondPath ? '_2' : '';
+                this.actionMap[deviceGuid][`actionCommand${fieldSuffixForActionMap}`] = sceneResult.mainCommand;
+                
+                // ✅ 新增：保存主 sceneId
+                this.actionMap[deviceGuid][`scene_id${fieldSuffixForActionMap}`] = sceneInfo.mainSceneId;
+                
+                // ✅ 如果发生了拆分，保存完整场景信息
+                if (sceneResult.isSplit) {
+                  const fieldSuffix = fieldSuffixForActionMap;
+                  this.actionMap[deviceGuid][`splitScenes${fieldSuffix}`] = sceneResult.sceneIds;
+                  this.actionMap[deviceGuid][`splitScenesDetail${fieldSuffix}`] = sceneResult.scenes;
+                  
+                  console.log(`✓ Scene split into ${sceneResult.scenes.length} parts for ${deviceGuid}${fieldSuffix}`);
+                }
+                
+                // ✅ 保存到 overallSceneMap
+                if (!isset(this.overallSceneMap['action'][deviceGuid])) {
+                  this.overallSceneMap['action'][deviceGuid] = {};
+                }
+                
+                const isSecondPathForOverall = extraStaus || (this.mutiwayStatus == 2 && isset(this.overallSceneMap['action'][deviceGuid]['actionCommand']));
+                const fieldSuffixForOverall = isSecondPathForOverall ? '_2' : '';
+                this.overallSceneMap['action'][deviceGuid][`actionCommand${fieldSuffixForOverall}`] = sceneResult.mainCommand;
+                
+                // ✅ 新增：保存主 sceneId
+                this.overallSceneMap['action'][deviceGuid][`scene_id${fieldSuffixForOverall}`] = sceneInfo.mainSceneId;
+                
+                if (sceneResult.isSplit) {
+                  this.overallSceneMap['action'][deviceGuid][`splitScenes${fieldSuffixForOverall}`] = sceneResult.sceneIds;
+                  this.overallSceneMap['action'][deviceGuid][`splitScenesDetail${fieldSuffixForOverall}`] = sceneResult.scenes;
+                }
+                
+                // ✅ 更新 scene_device_location（包含所有拆分的场景ID）
+                sceneResult.scenes.forEach(scene => {
+                  this.overallSceneMap['scene_device_location'].push({
+                    device: deviceGuid,
+                    storage_id: parseInt(scene.sceneId, 16),  // ✅ 确保是十进制
+                  });
+                  
+                  // 模拟场景 ID 保存
+                  this.simulateScenePostId(deviceGuid, scene.sceneIdDecimal);
+                });
+                
+              } catch (error) {
+                console.error(`[processDeviceScenes] Failed for device ${deviceGuid}:`, error);
+                throw error;
+              }
+            }
+
+            // 合并旧有位置并去重
+            const mergedLocations = [...existingLocations, ...this.overallSceneMap['scene_device_location']];
+            const uniqueLocations = mergedLocations.filter((item, index, self) =>
+              index === self.findIndex((d) => d.device === item.device && d.storage_id === item.storage_id)
+            );
+            this.overallSceneMap['scene_device_location'] = uniqueLocations;
+
+            // 更新本地缓存的已占用 sceneId（跨保存保留，防止缺少历史 ID）
+            uniqueLocations.forEach((loc) => {
+              if (!this.persistedSceneIdsByDevice[loc.device]) {
+                this.persistedSceneIdsByDevice[loc.device] = new Set();
+              }
+              this.persistedSceneIdsByDevice[loc.device].add(parseInt(loc.storage_id));
+            });
+          },
+          
+          /**
+           * 使用 iotScene 处理场景（支持自动拆分）
+           */
+          async _processSceneWithSplit(sceneHandler, deviceGuid, sceneId, actionItem, actionCommandList, existingSplitIds = []) {
+            const sceneIdHex = parseInt(sceneId).toString(16).padStart(2, '0');
+            
+            // postActionBle 返回的 actionItem 格式：[长度字节] + [数据]
+            // 问题：当数据超过255字节时，长度字段会溢出（只取后2位）
+            // 解决：不依赖长度字节，直接检测数据是否以 02 开头
+            let baseActionCommand = actionItem.toLowerCase();
+            
+            // 智能去除长度字节
+            // 如果不是以 02 开头，说明有长度字节，需要跳过
+            // 限制最多跳过4个字节（2字节长度字段的最大情况）
+            let skipCount = 0;
+            while (baseActionCommand.length > 0 && 
+                   !baseActionCommand.startsWith('02') && 
+                   skipCount < 4) {
+              baseActionCommand = baseActionCommand.substring(2);
+              skipCount++;
+            }
+            
+            // 验证是否找到了有效的前缀
+            if (!baseActionCommand.startsWith('02')) {
+              console.warn('[_processSceneWithSplit] Command does not start with 02 prefix');
+              console.warn('  This might be a command without prefix, proceeding anyway...');
+              console.warn('  First 50 chars:', baseActionCommand.substring(0, 50));
+              // 恢复原始数据（可能没有前缀，直接是子指令）
+              baseActionCommand = actionItem.toLowerCase();
+              // 如果第一个字节看起来像长度字节（小于等于0xFF），尝试跳过
+              const firstByte = parseInt(baseActionCommand.substring(0, 2), 16);
+              if (!isNaN(firstByte) && firstByte > 0 && firstByte < 256) {
+                baseActionCommand = baseActionCommand.substring(2);
+              }
+            }
+            
+            // 检查是否需要添加跨设备级联命令（主RCU触发附属RCU）
+            const needCascade = (deviceGuid == this.mainRcuGuid && Object.keys(actionCommandList).length > 1);
+            let cascadeCommand = '';
+            
+            if (needCascade) {
+              const attachRcuMac = core_utils_get_mac_address_from_guid(this.attachRcuGuid, true).toLowerCase();
+              const attachRcuIdHex = parseInt(this.attachRcuId).toString(16).padStart(2, '0').toLowerCase();
+              cascadeCommand = `0b02${attachRcuMac}8f0200${attachRcuIdHex}`;
+            }
+            
+            // 获取该设备已使用的场景ID列表
+            const usedSceneIds = sceneHandler.getAllUsedSceneIds(deviceGuid);
+            // 合并本地占位与当前会话已占用的 sceneId，避免链式拆分撞到未持久化的“死ID”
+            if (isset(this.reservedSceneIds) && this.reservedSceneIds[deviceGuid]) {
+              this.reservedSceneIds[deviceGuid].forEach((id) => usedSceneIds.push(id));
+            }
+            if (isset(this.overallSceneMap) && isset(this.overallSceneMap['scene_device_location'])) {
+              this.overallSceneMap['scene_device_location'].forEach((loc) => {
+                if (loc.device == deviceGuid) {
+                  usedSceneIds.push(parseInt(loc.storage_id));
+                }
+              });
+            }
+            // 去重
+            const usedSceneIdList = [...new Set(usedSceneIds)].sort((a, b) => a - b);
+            
+            // 使用 iotScene 拆分场景
+            // 注意：如果需要级联，将级联命令附加到 baseActionCommand
+            // 让 iotScene 统一处理，这样它会正确地考虑空间限制
+            const finalActionCommand = needCascade 
+              ? baseActionCommand + cascadeCommand 
+              : baseActionCommand;
+            
+            // 累积本地缓存的 sceneId，补足可能未同步到 erp.info.scene 的历史 ID
+            if (isset(this.persistedSceneIdsByDevice) && this.persistedSceneIdsByDevice[deviceGuid]) {
+              this.persistedSceneIdsByDevice[deviceGuid].forEach((id) => usedSceneIdList.push(id));
+            }
+
+            const scenes = sceneHandler.splitSceneCommand({
+              sceneId: sceneIdHex,
+              actionCommand: finalActionCommand,
+              deviceGuid: deviceGuid,
+              usedSceneIds: usedSceneIdList,
+              existingSplitIds: existingSplitIds,  // ✅ 传入已有的拆分ID
+            });
+            
+            // 写入所有场景到蓝牙
+            for (let scene of scenes) {
+              console.log(`Writing scene ${scene.sceneId} to device ${deviceGuid} (${scene.sizeBytes} bytes)`);
+              
+              await window.peripheral[deviceGuid].write([{
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: scene.command,
+              }]);
+              
+              if (scene.isChained) {
+                console.log(`  └─ Chained to next scene ${scene.nextSceneId}`);
+              }
+            }
+            
+            return {
+              mainCommand: scenes[0].command,               // 第一个场景命令
+              isSplit: scenes.length > 1,                   // 是否发生拆分
+              scenes: scenes,                                // 所有场景信息
+              sceneIds: scenes.map(s => parseInt(s.sceneId, 16)),  // ✅ 所有场景ID（十进制）
+              sceneCount: scenes.length,                    // 场景数量
+            };
+          },
+          
+          /**
+           * 步骤8：处理 RCU Radar 特殊逻辑
+           */
+          async _processRadarScene() {
+            // 只有一个 RCU，不需要特殊处理
+            if (Object.keys(this.actionBleCommandList).length <= 1) {
+              return;
+            }
+            
+            const radarGuid = this.randarActionCommand['guid'];
+            const radarCommand = this.randarActionCommand['command'];
+            
+            // 收集其他 RCU 的场景 ID
+            const otherRcuSceneList = [];
+            for (let deviceGuid in this.actionBleCommandList) {
+              if (deviceGuid != radarGuid) {
+                otherRcuSceneList.push({
+                  guid: deviceGuid,
+                  id: this.actionLocation[deviceGuid],
+                });
+              }
+            }
+            
+            // 构建级联触发命令
+            let cascadeCommand = '';
+            for (let item of otherRcuSceneList) {
+              const mac = core_utils_get_mac_address_from_guid(item.guid, true);
+              const sceneIdHex = parseInt(item.id).toString(16).pad('00');
+              cascadeCommand += `0b02${mac}8f0200${sceneIdHex}`;
+            }
+            
+            // 组合完整命令
+            const finalCommand = `${radarCommand}${cascadeCommand}`;
+            console.log('RCU Radar final command', finalCommand);
+            
+            // 写入主 Radar RCU
+            await window.peripheral[radarGuid].write([{
+              service: 'ff80',
+              characteristic: 'ff81',
+              data: finalCommand,
+            }]);
+            
+            // 更新 actionMap
+            this.actionMap[radarGuid] = finalCommand;
+            
+            if (!isset(this.overallSceneMap['action'][radarGuid])) {
+              this.overallSceneMap['action'][radarGuid] = {};
+            }
+            this.overallSceneMap['action'][radarGuid]['actionCommand'] = finalCommand;
           },
           tindyRadarUnmanedModeCommand(actioncommand,rcuGuid){
             debugger
@@ -7823,6 +8315,12 @@
                 } else {
                     status = 'OFF';
                   }
+                }
+              }else if(mode == 'Curtain Switch'){
+                if(ref > 1){
+                  status = 'OPEN';
+                }else{
+                  status = 'CLOSE';
                 }
               } else if (mode == 'RCU Controller') {
                 if (ref == 1) {

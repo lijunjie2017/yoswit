@@ -32,7 +32,7 @@ window.towngasSoap = (function () {
   }
   function towngasSoap(soapObject) {
     this.props = {
-      domian: 'https://frappe.cecgaming.com',
+      domian: 'https://frappe.cecgaming.com/',
       logApi: '/api/method/towngas_soap_client.api.get_call_result',
       loginApi: '/api/method/towngas_soap_client.api.call_wsdl_method',
       loginMethod: 'Login',
@@ -46,7 +46,7 @@ window.towngasSoap = (function () {
       jsonParams: soapObject && soapObject.jsonParams ? soapObject.jsonParams : {},
       guestAccount: '96159708',
       password: 'Password2020!',
-      smid: '353851664234621',
+      smid: '353851664234622',
       phoneInfo: 'iPhone',
     };
     this.utils = new towngasUtils(this);

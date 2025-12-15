@@ -148,6 +148,12 @@
             mainView.router.back();
           },
           clickButtonGroup(item){
+            //取消其他的选择
+            this.buttonGroupList.forEach(kitem => {
+              if(kitem.name != item.name){
+                kitem.ischeck = false;
+              }
+            }); 
             item.ischeck = !item.ischeck;
           },
           searchButtonGroup(e){

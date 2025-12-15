@@ -32,7 +32,7 @@
             </div>
           </div>
           <div class="tabs">
-            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+            <div id="step-2" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <div class="card data-table" v-if="!deviceSettingStatus">
                 <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Activate Rcu Slot")}}</div>
                 <div class="card-content card-content-padding">
@@ -65,6 +65,9 @@
                   </table>
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  <div class="col">
+                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("previous")}}</div>
+                  </div>
                   <div class="col">
                     <div class="button button-fill button-save" v-on:click="saveRcuModeConfig">{{_("NEXT STEP")}}</div>
                   </div>
@@ -103,7 +106,7 @@
                 </div>
               </div>
             </div>
-            <div id="step-1" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
+            <div id="step-3" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
               <input name="per_press_brightness_init" type="hidden" value="" />
               <div class="card data-table">
                 <div v-for="item in slotItemConfig" :key="item.name" v-if="item.mode != 1">
@@ -133,7 +136,7 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(1)">{{_("previous")}}</div>
+                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("previous")}}</div>
                   </div>
                   <div class="col">
                     <div class="button button-fill button-save" v-on:click="saveDeviceSetting()">{{_("NEXT STEP")}}</div>
@@ -141,7 +144,7 @@
                 </div>
               </div>
             </div>
-            <div id="step-1" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
+            <div id="step-4" class="view tab view-main" :class="[index == 4 ? 'tab-active' : '']" v-if="index == 4">
               <div class="card data-table">
                 <div class="card-header" style="font-weight: 500; font-size: 18px">{{_("Activate Output/Input Port")}}</div>
                 <div class="card-content card-content-padding">
@@ -240,7 +243,7 @@
                 </div>
               </div>
             </div>-->
-            <div id="step-2" class="view tab view-main" :class="[index == 3 ? 'tab-active' : '']" v-if="index == 3">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
               <div class="card data-table">
                 <div class="card-content card-content-padding">
                   <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
@@ -298,12 +301,91 @@
                   </div>
                   <p class="tips text-color-gray">{{_('This configuration is suitable for multiple RCUs connected via 485 wiring.')}}</p>
                 </div>
-                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
-                  <div class="col">
-                    <div class="button button-fill button-save" v-on:click="nextStep(2)">{{_("previous")}}</div>
+                <!-- 主从设备的设置 -->
+                <div
+                  class="device-master-slave-card card-content card-content-padding list media-list"
+                  v-if="mainRcuConfig && viaConfig && rcuDeviceList.length >= 2"
+                >
+                  <li
+                    class="device swipeout rcu-device-item"
+                    v-for="(subItem,subIndex) in displayRcuDeviceList"
+                    :key="subItem.name"
+                  :class="{'device-connecting': getConnectionStatus(subItem) === 'connecting', 'device-synced': getConnectionStatus(subItem) === 'synced', 'device-error': getConnectionStatus(subItem) === 'error'}"
+                   style="padding-left: 0px;"
+                  >
+                    <div class="item-content swipeout-content" style="padding-left: 0px;">
+                      <a
+                        class="item-link item-content no-chevron no-ripple no-active-state"
+                        style="width: 100%"
+                      >
+                      <div
+                        class="device-thumb item-media"
+                        :style="{
+                        'background-image' : 'url('+subItem.imgUrl+')',
+                        'background-position' : 'center',
+                        'background-size' : 'contain',
+                        'position' : 'relative'
+                      }"
+                      ></div>
+                      <div class="item-inner">
+                        <div class="item-title-row">
+                          <div class="item-title ellipsis" lang="en" style="width: 180px">{{tran(subItem.title)}}</div>
+                        </div>
+                        <div class="item-subtitle">{{ subItem.mac_address.substring(0,12) }}</div>
+                        <div class="signal-panel item-text height-21" style="width: 120%">
+                          <div :signal="subItem.signal" :bluetooth="subItem.bluetooth">
+                            <div class="signal"></div>
+                            <div class="bluetooth"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="item-after master-slave-panel">
+                        <div class="master-slave-badge" :class="subItem.masterSlaveStatus === 'master' ? 'master-badge' : 'slave-badge'">
+                          <i class="material-icons status-dot">fiber_manual_record</i>
+                          <span v-if="subItem.masterSlaveStatus === 'master'">{{_('Master')}}</span>
+                          <span v-else class="slave-label" v-on:click.stop.prevent="openSlaveIndexPicker(subItem)">
+                            {{_('Slave')}} <span v-if="subItem.slaveIndex">#{{subItem.slaveIndex}}</span><span v-else class="text-color-red">({{_('Set Index')}})</span>
+                          </span>
+                        </div>
+                        <div class="master-slave-row">
+                          <div class="device-sync-status" :class="'sync-' + getConnectionStatus(subItem)">
+                            <i class="material-icons" :class="{'rotating': getConnectionStatus(subItem) === 'connecting'}">{{ connectionStatusIcon(getConnectionStatus(subItem)) }}</i>
+                            <span>{{ connectionStatusText(getConnectionStatus(subItem)) }}</span>
+                          </div>
+                          <a
+                            href="#"
+                            class="button button-outline master-slave-button"
+                            v-on:click.stop.prevent="masterSlaveSetting(subItem)"
+                            :disabled="isSyncing"
+                          >
+                            <i class="material-icons">swap_horiz</i>
+                          </a>
+                        </div>
+                      </div>
+                      </a>
+                    </div>
+                  </li>
+                </div>
+                <!-- 当仅设备不足时的提示（仅在已开启 mainRcuConfig & viaConfig 时显示） -->
+                <div
+                  class="data-table card"
+                  v-else-if="mainRcuConfig && viaConfig && rcuDeviceList.length < 2"
+                  style="padding: 12px;"
+                >
+                  <div class="text-color-gray" style="font-size: 13px; line-height: 18px;">
+                    {{_('At least two devices are required to set master/slave.')}}
                   </div>
+                </div>
+
+                <!-- 同步状态提示 -->
+                <div class="sync-status-bar" v-if="allDevicesSynced">
+                  <i class="material-icons">check_circle</i>
+                  <span>{{_('All devices configured successfully')}}</span>
+                </div>
+                <div class="row" style="margin-bottom: 15px; margin-top: 15px">
+                  
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="ioConfigDisplay()">{{_("NEXT STEP")}}</div>
+                    <div class="button button-fill button-save" v-on:click="goToNextStep()" :disabled="!allDevicesSynced || isSyncing">{{_("NEXT STEP")}}</div>
                   </div>
                 </div>
               </div>
@@ -503,7 +585,15 @@
           doorBellStatus: true,
           cleanAndDndStatus: true,
           mainRcuConfig : false,
-          viaConfig : false
+          viaConfig : false,
+          rcuDeviceList : [], //主从设备的列表
+          rcuConnectionStatus : {},
+          isSyncing : false, //是否正在同步
+          allDevicesSynced : false, //是否所有设备同步完成
+          finalStatusActive : false, //是否开始校验最终规则（切换过主从才激活）
+          finalStatusOk : true, //最终状态是否通过
+          finalStatusErrors : [], //最终状态错误码列表
+          monitorTimer : null //信号/连接状态轮询定时器
         },
         watch:{
           slotlist:{
@@ -512,18 +602,41 @@
             },
             deep : true,
             immediate : true
+          },
+          index(val){
+            if(val == 2){
+              this.initSlotlist();
+            }
+          },
+          mainRcuConfig(val){
+            this.handleConfigGate();
+          },
+          viaConfig(val){
+            this.handleConfigGate();
           }
         },
         computed:{
-          
+          // 展示列表：保证 master 排最后
+          displayRcuDeviceList(){
+            const list = cloneDeep(this.rcuDeviceList || []);
+            return list.sort((a,b)=>{
+              if(a.masterSlaveStatus === b.masterSlaveStatus) return 0;
+              if(a.masterSlaveStatus === 'master') return 1;
+              if(b.masterSlaveStatus === 'master') return -1;
+              return 0;
+            });
+          }
         },
         mounted() { 
           this.initIoList();
           this.initSetting();
           this.initDeviceList();
+          // 先获取主从设备列表，再根据主/从决定 slot 的读取和扩展
+          this.initRcuDeviceList();
           this.initSlotlist();
           this.initSlotConfigList();
           this.initSlotItemConfig();
+          this.startMonitorDeviceStatus();
         },
         methods: {
           dealWithMode(item){
@@ -673,7 +786,7 @@
               await iot_device_setting_sync_server(guid,null, null, true, postData);
               
               app.dialog.close();
-              this.index = 3;
+              this.index = 4;
               this.activeStep();
             }catch(error){
               app.dialog.close();
@@ -904,25 +1017,89 @@
             this.slotlist.forEach((item) => {});
           },
           async initSlotlist() {
+            // 清空旧数据，避免重复追加
+            this.slotlist = [];
+
+            const baseSlotsPerDevice = 5;
+            const defaultMode = '2';
             let devices = cloneDeep(erp.info.device);
-            let modeList = [2,2,2,2,2];
-            if(isset(devices[guid])){
+            let modeList = [];
+
+            // 先从 ERP 读取 mode_list（可能为空），稍后按需要补齐长度
+            if (isset(devices[guid])) {
               let settingsList = devices[guid].settings;
               settingsList.forEach((item) => {
-                if(item.setting_type == 'mode_list'){
+                if (item.setting_type == 'mode_list') {
                   modeList = item.setting.split(",");
                 }
-              })
-            }
-            for (let i = 1; i <= 5; i++) {
-              let indexItem = ['2','4','5'].indexOf(modeList[i-1]);
-              this.slotlist.push({
-                name: i,
-                mode: modeList[i-1],
-                activeMode : indexItem != -1?2:1
               });
             }
-            //get the rcu manual slot list
+
+            // 判断当前设备是 master 还是 slave
+            const currentDevice = (this.rcuDeviceList || []).find(d => d.device === guid);
+            const isCurrentSlave = currentDevice && currentDevice.masterSlaveStatus === 'slave';
+            const currentSlaveIndex = isCurrentSlave ? parseInt(currentDevice.slaveIndex, 10) : null;
+
+            // master 收集有效的 slaveIndex，最多 7 个
+            let slaveIndices = [];
+            if (!isCurrentSlave) {
+              (this.rcuDeviceList || []).forEach(item => {
+                const idx = parseInt(item.slaveIndex, 10);
+                if (item.masterSlaveStatus === 'slave' && idx > 0 && idx <= 7) {
+                  slaveIndices.push(idx);
+                }
+              });
+              slaveIndices = [...new Set(slaveIndices)].sort((a, b) => a - b);
+            }
+
+            // 计算需要的 slot 总数（master 自己 + 有效 slave）
+            const totalDevices = isCurrentSlave ? 1 : (1 + slaveIndices.length);
+            const targetLength = totalDevices * baseSlotsPerDevice;
+
+            // 补齐 / 截断 modeList
+            while (modeList.length < targetLength) {
+              modeList.push(defaultMode);
+            }
+            if (modeList.length > targetLength) {
+              modeList = modeList.slice(0, targetLength);
+            }
+
+            // 生成 slotKey（BLE 返回里的索引）：master 用 0x01-0x05，slaveIndex=n 用 0x(20*n+1) - 0x(20*n+5)
+            const buildSlotKey = (deviceIndex, slotNo) => {
+              // deviceIndex: 0 代表 master，其他为 slaveIndex
+              const base = deviceIndex === 0 ? 0 : deviceIndex * 0x20;
+              return (base + slotNo).toString(16).padStart(2, '0');
+            };
+
+            // 按设备（master + slaves）顺序推入 slotlist，展示编号连续累加
+            let displayIndex = 1;
+            const pushDeviceSlots = (deviceIndex) => {
+              for (let i = 1; i <= baseSlotsPerDevice; i++) {
+                const modeVal = modeList[displayIndex - 1] ?? defaultMode;
+                const activeMode = ['2', '4', '5'].includes(String(modeVal)) ? 2 : 1;
+                this.slotlist.push({
+                  name: displayIndex, // UI 连续编号：1..N
+                  mode: modeVal,
+                  activeMode: activeMode,
+                  slotKey: buildSlotKey(deviceIndex, i), // BLE 数据键
+                  slotNo: i, // 设备内槽位号 1..5
+                  slaveIndex: deviceIndex === 0 ? null : deviceIndex,
+                  role: deviceIndex === 0 ? 'master' : 'slave',
+                });
+                displayIndex++;
+              }
+            };
+
+            if (isCurrentSlave) {
+              // slave 仅读取自身 1-5
+              pushDeviceSlots(0);
+            } else {
+              // master 先自身，再依次追加 slave
+              pushDeviceSlots(0);
+              slaveIndices.forEach(idx => pushDeviceSlots(idx));
+            }
+
+            // 获取实际槽位状态（含 slave 段）
             let data = `9701`;
             await peripheral[guid].connect();
             try {
@@ -933,31 +1110,14 @@
                 (rs) => {
                   console.log(rs);
                   if (rs.startsWith('9711')) {
-                    // let index_one = rs.substr(6, 2);
-                    // let index_two = rs.substr(10, 2);
-                    // let index_three = rs.substr(14, 2);
-                    // let index_four = rs.substr(18, 2);
-                    // let index_five = rs.substr(22, 2);
-                    // this.slotlist.forEach((kitem) => {
-                    //   if (kitem.name == 1) {
-                    //     kitem.activeMode = parseInt(index_one);
-                    //   } else if (kitem.name == 2) {
-                    //     kitem.activeMode = parseInt(index_two);
-                    //   } else if (kitem.name == 3) {
-                    //     kitem.activeMode = parseInt(index_three);
-                    //   } else if (kitem.name == 4) {
-                    //     kitem.activeMode = parseInt(index_four);
-                    //   } else if (kitem.name == 5) {
-                    //     kitem.activeMode = parseInt(index_five);
-                    //   }
-                    // });
                     let obj = class_test_rcu(rs);
                     console.log("obj",obj);
                     this.slotlist.forEach(item=>{
-                      if(isset(obj[parseInt(item.name).toString(16).pad('00')])){
-                        let value = obj[parseInt(item.name).toString(16).pad('00')];
+                      const key = item.slotKey || parseInt(item.name).toString(16).padStart(2,'0');
+                      if(isset(obj[key])){
+                        let value = obj[key];
                         if(value.length == 2){
-                          item.activeMode = '00';
+                          item.activeMode = 0;
                         }else{
                           item.activeMode = parseInt(value.substr(0,2));
                           let mode = parseInt(value.substr(2,2));
@@ -970,7 +1130,6 @@
                           }else{
                             item.mode = mode;
                           }
-                          //item.mode = parseInt(value.substr(2,2));
                         }
                       }
                     })
@@ -1018,6 +1177,260 @@
                 this.deviceList.push(item);
               }
             });
+          },
+          initRcuDeviceList() {
+            this.rcuDeviceList = [];
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            let profile_devices = cloneDeep(erp.info.profile.profile_device);
+            let models = cloneDeep(erp.doctype.device_model);
+            let list = [];
+            subdevices.forEach((item) => {
+              let pushStatus = true;
+              if (item.device_button_group == 'ONOFF GANG1' && item.device_mode == 'RCU Controller') {
+                const device_name = item.profile_device;
+                const device_model = profile_devices.find(device => device.name == device_name)?.device_model;
+                item['device_model'] = device_model;
+                item['signal'] = isset(window.peripheral[item.device]) && window.peripheral[item.device].prop.rssilv ? window.peripheral[item.device].prop.rssilv : 0;
+                item['bluetooth'] = isset(window.peripheral[item.device]) && window.peripheral[item.device].prop.connected ? 1 : 0;
+                item['mac_address'] = core_utils_get_mac_address_from_guid(item.device).replace(/:/g, '');
+                item['imgUrl'] = 'https://my.yoswit.com/files/products/YO815.svg';
+                for (let i in models) {
+                  if(models[i].model_code == device_model){
+                    if (isset(models[i].image)) {
+                      item['imgUrl'] =  models[i].image;
+                    }
+                    break;
+                  }
+                }
+                let rawStatus = 'master';
+                if(isset(erp.info.device) && isset(erp.info.device[item.device])){
+                  const settings = erp.info.device[item.device].settings;
+                  settings.forEach(kitem => {
+                    if(kitem.setting_type === 'slave_index'){
+                      item['slave_index'] = kitem.setting;
+                    }
+                    if(kitem.setting_type === 'main_rcu'){
+                      if(kitem.setting === '0'){
+                        rawStatus = 'slave';
+                      }
+                    }
+                  });
+                }
+                item['masterSlaveStatus'] = rawStatus === 'slave' ? 'slave' : 'master';
+                // 初始化从机序号（若有）以便后续显示/编辑
+                item['slaveIndex'] = isset(item.slave_index) ? parseInt(item.slave_index,10) : null;
+                list.push(item);
+              }
+            });
+            console.log('list',list);
+            this.rcuDeviceList = list;
+            this.rcuConnectionStatus = {};
+            this.rcuDeviceList.forEach((deviceItem)=>{
+              this.setConnectionStatus(deviceItem.name,'idle');
+            });
+            this.allDevicesSynced = false;
+            this.isSyncing = false;
+            this.finalStatusOk = true;
+            this.finalStatusErrors = [];
+            this.finalStatusActive = (this.mainRcuConfig && this.viaConfig && this.rcuDeviceList.length >= 2);
+          },
+          //实时监听设备的信号以及连接状态（由 startMonitorDeviceStatus 驱动）
+          realTimeMonitorDeviceStatus(){
+            if(!this.rcuDeviceList || this.rcuDeviceList.length === 0){
+              return;
+            }
+            this.rcuDeviceList.forEach((deviceItem)=>{
+              const devGuid = deviceItem.device;
+              const exist = isset(window.peripheral[devGuid]);
+              deviceItem.signal = exist && window.peripheral[devGuid].prop.rssilv ? window.peripheral[devGuid].prop.rssilv : 0;
+              deviceItem.bluetooth = exist && window.peripheral[devGuid].prop.connected ? 1 : 0;
+            });
+          },
+          // 实时监听设备信号及连接状态（2秒轮询）
+          startMonitorDeviceStatus(){
+            this.stopMonitorDeviceStatus();
+            this.monitorTimer = setInterval(()=>{
+              this.realTimeMonitorDeviceStatus();
+            },2000);
+          },
+          stopMonitorDeviceStatus(){
+            if(this.monitorTimer){
+              clearInterval(this.monitorTimer);
+              this.monitorTimer = null;
+            }
+          },
+          //指令计算的方法，根据设备的主从状态，返回一个指令数组
+          calculateCommandList(item){
+            const status = item.masterSlaveStatus;
+            const deviceList = cloneDeep(this.rcuDeviceList);
+            // 仅保留有效序号的从机，避免 NaN / 未设置导致指令异常
+            const slaveList = deviceList.filter(d => d.masterSlaveStatus === 'slave' && parseInt(d.slaveIndex,10) > 0);
+            let commandList = [];
+            if(status === 'master'){
+              // 设置为主机
+              commandList.push('936A00000181');
+              // 为主机注册所有从机：936B000007 + indexHex + mac
+              slaveList.forEach(slave => {
+                const idx = parseInt(slave.slaveIndex,10);
+                if(isNaN(idx)){ return; }
+                const idxHex = idx.toString(16).padStart(2,'0');
+                const macHex = core_utils_get_mac_address_from_guid(slave.device,true);
+                commandList.push(`936B000007${idxHex}${macHex}`);
+              });
+              commandList.push('810e');
+            }else{
+              // 设置为从机
+              commandList.push('936A00000101');
+              commandList.push('810e');
+
+            }
+            return commandList;
+          },
+          // 发送单个设备的主从配置指令（真实蓝牙）
+          async sendMasterAndSlaveCommand(item){
+            this.setConnectionStatus(item.name,'connecting');
+            try{
+              const getCommandListByDevice = this.calculateCommandList(item);
+              const postCommandList = [];
+              for(let i in getCommandListByDevice){
+                const command = getCommandListByDevice[i];
+                postCommandList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: command.toLowerCase(),
+                });
+              }
+              await window.peripheral[item.device].write(postCommandList);
+              this.setConnectionStatus(item.name,'synced');
+            }catch(error){
+              this.setConnectionStatus(item.name,_(erp.get_log_description(error)));
+              throw error;
+            }
+          },
+          // 开始同步所有设备（从第一个开始依次连接），返回 {success, allSynced, errors}
+          async startSyncAllDevices(){
+            const result = { success: false, allSynced: false, errors: [] };
+            // 基础校验：需要主/从开启且至少2台
+            if(!(this.mainRcuConfig && this.viaConfig && this.rcuDeviceList.length >= 2)){
+              result.errors.push('NOT_READY');
+              app.toast.create({
+                text: `${_('Please enable Main RCU & 485 and ensure at least 2 devices.')}`,
+                closeTimeout: 2000,
+              }).open();
+              return result;
+            }
+            if(this.isSyncing || this.rcuDeviceList.length === 0){
+              result.errors.push('BUSY_OR_EMPTY');
+              return result;
+            }
+            this.isSyncing = true;
+            this.allDevicesSynced = false;
+            // 重置所有设备状态
+            this.rcuDeviceList.forEach((deviceItem)=>{
+              this.setConnectionStatus(deviceItem.name,'idle');
+            });
+            
+            try{
+              // 更新顺序：先 Slave 再 Master，Master 放最后
+              const slaves = this.rcuDeviceList.filter(d=>d.masterSlaveStatus === 'slave');
+              const masters = this.rcuDeviceList.filter(d=>d.masterSlaveStatus === 'master');
+              const ordered = [...slaves, ...masters];
+
+              // 依次连接每个设备
+              for(let i = 0; i < ordered.length; i++){
+                const deviceItem = ordered[i];
+                const success = await this.connectSingleDevice(deviceItem, i);
+                if(!success){
+                  // 用户选择取消，继续下一个设备
+                  this.setConnectionStatus(deviceItem.name,'error');
+                }
+              }
+              // 检查是否全部成功
+              let allSuccess = true;
+              this.rcuDeviceList.forEach((deviceItem)=>{
+                if(this.getConnectionStatus(deviceItem) !== 'synced'){
+                  allSuccess = false;
+                }
+              });
+              this.allDevicesSynced = allSuccess;
+              this.evaluateFinalStatus();
+              result.success = allSuccess;
+              result.allSynced = allSuccess;
+              if(!allSuccess){
+                result.errors.push('NOT_ALL_SYNCED');
+              }
+              if(allSuccess){
+                app.toast.create({
+                  text: `${_('All devices synchronized successfully!')}`,
+                  closeTimeout: 2000,
+                }).open();
+              }
+            }finally{
+              this.isSyncing = false;
+            }
+            return result;
+          },
+          // 连接单个设备，返回 true 表示成功，false 表示用户取消
+          async connectSingleDevice(deviceItem, index){
+            return new Promise(async (resolve) => {
+              const tryConnect = async () => {
+                try{
+                  // 真实指令发送
+                  await this.sendMasterAndSlaveCommand(deviceItem);
+                  resolve(true);
+                }catch(error){
+                  // 连接失败，弹出确认框
+                  const deviceTitle = tran(deviceItem.title) || deviceItem.mac_address.substring(0,12);
+                  app.dialog.confirm(
+                    `${_('Failed to connect to')} ${deviceTitle}. ${_('Please move closer and try again.')}`,
+                    _('Retry'),
+                    async () => {
+                      // 用户选择重试
+                      this.setConnectionStatus(deviceItem.name,'idle');
+                      const result = await this.connectSingleDevice(deviceItem, index);
+                      resolve(result);
+                    },
+                    () => {
+                      // 用户选择取消，继续下一个
+                      resolve(false);
+                    }
+                  );
+                }
+              };
+              await tryConnect();
+            });
+          },
+          // 检查是否可以进入下一步
+          async goToNextStep(){
+            // 连接中直接忽略点击，防抖
+            if(this.isSyncing){
+              return;
+            }
+            // 未激活最终状态检测时，直接进入下一步，不要求同步/规则
+            if(!this.finalStatusActive){
+              this.ioConfigDisplay();
+              return;
+            }else{
+              const syncResult = await this.startSyncAllDevices();
+              if(!syncResult.success){
+                app.dialog.alert(_('Please sync all devices before proceeding.'));
+                return;
+              }
+            }
+            // 先检查同步状态
+            if(!this.allDevicesSynced){
+              app.dialog.alert(_('Please sync all devices before proceeding.'));
+              return;
+            }
+            // 检查最终状态规则
+            const ok = this.evaluateFinalStatus();
+            if(!ok){
+              const msgs = this.getFinalStatusMessages();
+              const msgText = msgs.length ? msgs.join('\\n') : _('Final rule not satisfied.');
+              app.dialog.alert(msgText);
+              return;
+            }
+            this.ioConfigDisplay();
           },
           initIoList() {
             let settingList = [];
@@ -1108,27 +1521,30 @@
             let list = [];
             let commandList = [];
             for(let i in this.slotlist){
-              let this_mode = this.slotlist[i].mode;
-              let slotIndex = parseInt(this.slotlist[i].name).toString(16).pad('00');
-              list.push(this_mode);
+              const slot = this.slotlist[i];
+              const this_mode = slot.mode;
+              const modeNum = parseInt(this_mode);
+              // 实际槽位的 BLE 索引：优先使用 slotKey（含 master/slave 段），否则退回显示编号
+              const slotIndex = (slot.slotKey ? slot.slotKey : parseInt(slot.name).toString(16).padStart(2,'0')).toString().padStart(2,'0');
+              list.push(modeNum);
               //dimming should set the minimum trim to 13,0-10v should set the minimum trim to 0
-              if(this_mode == 1){
+              if(modeNum == 1){
                 commandList.push(`9711${slotIndex}01`);
                 commandList.push(`971f${slotIndex}810500`);
-              }else if(this_mode == 2){
+              }else if(modeNum == 2){
                 commandList.push(`9711${slotIndex}02`);
                 commandList.push(`971f${slotIndex}89070101`);
                 commandList.push(`971f${slotIndex}89050d0d`);
                 commandList.push(`971f${slotIndex}89068a8a`);
-              }else if(this_mode == 3){
+              }else if(modeNum == 3){
                 commandList.push(`9711${slotIndex}01`);
                 commandList.push(`971f${slotIndex}810501`);
-              }else if(this_mode == 4){
+              }else if(modeNum == 4){
                 commandList.push(`9711${slotIndex}02`);
                 commandList.push(`971f${slotIndex}89070202`);
                 commandList.push(`971f${slotIndex}89050000`);
                 commandList.push(`971f${slotIndex}8906ffff`);
-              }else if(this_mode == 5){
+              }else if(modeNum == 5){
                 commandList.push(`9711${slotIndex}02`);
                 commandList.push(`971f${slotIndex}89070303`);
                 commandList.push(`971f${slotIndex}89050000`);
@@ -1146,12 +1562,13 @@
                   data: commandList[i],
                 })
               }
+              debugger
               await window.peripheral[guid].write(bleList);
               await iot_device_setting_sync_server(guid,'mode_list',list.join(","));
               //save in the profile device 
               await this.sync_profile_subdevice();
               app.dialog.close();
-              this.index = 2;
+              this.index = 3;
               this.activeStep();
             }catch(error){
               app.dialog.close();
@@ -1369,7 +1786,7 @@
               'door_bell': this.doorBellStatus ? '1' : '0',
               'clean_dnd': this.cleanAndDndStatus ? '1' : '0',
               'main_rcu' : this.mainRcuConfig?'1':'0',
-              'via_485' : this.viaConfig?'1':'0'
+              'via_485' : this.viaConfig?'1':'0',
             };
             //change the ioList status
             this.ioList.forEach((item) => {
@@ -1379,35 +1796,52 @@
               }
             });
             //init via_485
-            try{
-              let list = [];
-              if(this.viaConfig){
-                list.push({
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: `972002010400000100c20100`,
-                })
-              }else{
-                list.push({
-                  service: 'ff80',
-                  characteristic: 'ff81',
-                  data: `972002010000000100c20100`,
-                })
-              }
-              await window.peripheral[guid].write(list);
-            }catch(error){ 
-              app.dialog.close();
-              app.dialog.alert(_(erp.get_log_description(error)));
-            }
+            // try{
+            //   let list = [];
+            //   if(this.viaConfig){
+            //     list.push({
+            //       service: 'ff80',
+            //       characteristic: 'ff81',
+            //       data: `972002010400000100c20100`,
+            //     })
+            //   }else{
+            //     list.push({
+            //       service: 'ff80',
+            //       characteristic: 'ff81',
+            //       data: `972002010000000100c20100`,
+            //     })
+            //   }
+            //   await window.peripheral[guid].write(list);
+            // }catch(error){ 
+            //   app.dialog.close();
+            //   app.dialog.alert(_(erp.get_log_description(error)));
+            // }
             try {
               console.log(erpObj);
-              await iot_device_setting_sync_server(guid, null, null, true, erpObj);
+              //这里需要改一下，需要保存所有的rcu的设置到erp
+              if(this.viaConfig){
+                for(let i in this.rcuDeviceList){
+                  let item = this.rcuDeviceList[i];
+                  if(item.masterSlaveStatus === 'master'){
+                    await iot_device_setting_sync_server(guid, null, null, true, erpObj);
+                  }else{
+                    const itemObj = {
+                      'main_rcu' : '0',
+                      'slave_index': item.slaveIndex
+                    }
+                    debugger
+                    await iot_device_setting_sync_server(item.device, null, null, true, itemObj);
+                  }
+                }
+              }else{
+                await iot_device_setting_sync_server(guid, null, null, true, erpObj);
+              }
               app.dialog.close();
             } catch (error) {
               app.dialog.close();
               app.dialog.alert(error);
             }
-            this.index = 4;
+            this.index = 2;
             this.activeStep();
           },
           async activeRcu() {
@@ -1471,13 +1905,259 @@
               app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
+          //主从设备的设置 - 点击切换主从状态
+          async masterSlaveSetting(subItem) {
+            if(!subItem || this.isSyncing){
+              return;
+            }
+            // 只有 mainRcuConfig 与 viaConfig 同时为 true 时才允许操作
+            if(!(this.mainRcuConfig && this.viaConfig)){
+              app.dialog.alert(_('Please enable Main RCU and 485 first.'));
+              return;
+            }
+            const nextStatus = subItem.masterSlaveStatus === 'master' ? 'slave' : 'master';
+            const deviceTitle = tran(subItem.title) || subItem.mac_address.substring(0,12);
+            
+            if(nextStatus === 'master'){
+              // 设置为 Master 时，其他设备自动变为 Slave
+              app.dialog.confirm(
+                `${_('Set')} ${deviceTitle} ${_('as Master? Other devices will be set as Slave.')}`,
+                () => {
+                  this.finalStatusActive = (this.mainRcuConfig && this.viaConfig);
+                  this.rcuDeviceList.forEach((item) => {
+                    if(item.name === subItem.name){
+                      item.masterSlaveStatus = 'master';
+                    }else{
+                      item.masterSlaveStatus = 'slave';
+                      // 变为从机时，若无序号则自动分配
+                      if(!item.slaveIndex){
+                        item.slaveIndex = this.getAutoSlaveIndex();
+                      }
+                    }
+                  });
+                  // 重置同步状态，需要重新同步
+                  this.allDevicesSynced = false;
+                  this.rcuDeviceList.forEach((deviceItem)=>{
+                    this.setConnectionStatus(deviceItem.name,'idle');
+                  });
+                  this.evaluateFinalStatus();
+                  app.toast.create({
+                    text: `${deviceTitle} ${_('is now Master. Please click Start Sync to apply changes.')}`,
+                    closeTimeout: 2500,
+                  }).open();
+                },
+                () => {}
+              );
+            }else{
+              // 设置为 Slave
+              app.dialog.confirm(
+                `${_('Set')} ${deviceTitle} ${_('as Slave?')}`,
+                () => {
+                  this.finalStatusActive = (this.mainRcuConfig && this.viaConfig);
+                  subItem.masterSlaveStatus = 'slave';
+                  // 设置为从机时自动分配序号（若未设置）
+                  if(!subItem.slaveIndex){
+                    subItem.slaveIndex = this.getAutoSlaveIndex();
+                  }
+                  // 检查是否还有 Master，如果没有则提示
+                  const hasMaster = this.rcuDeviceList.some(item => item.masterSlaveStatus === 'master');
+                  if(!hasMaster && this.rcuDeviceList.length > 0){
+                    this.rcuDeviceList[0].masterSlaveStatus = 'master';
+                    app.toast.create({
+                      text: `${_('First device is now Master by default.')}`,
+                      closeTimeout: 2000,
+                    }).open();
+                  }
+                  // 重置同步状态
+                  this.allDevicesSynced = false;
+                  this.rcuDeviceList.forEach((deviceItem)=>{
+                    this.setConnectionStatus(deviceItem.name,'idle');
+                  });
+                  this.evaluateFinalStatus();
+                },
+                () => {}
+              );
+            }
+          },
+          setConnectionStatus(name,status){
+            this.$set(this.rcuConnectionStatus,name,status);
+          },
+          getConnectionStatus(item){
+            if(!item){
+              return 'idle';
+            }
+            return this.rcuConnectionStatus[item.name] || 'idle';
+          },
+          connectionStatusText(status){
+            const map = {
+              idle : _('Waiting'),
+              connecting : _('Connecting...'),
+              synced : _('Synced'),
+              error : _('Error'),
+            };
+            return map[status] || '';
+          },
+          connectionStatusIcon(status){
+            if(status == 'connecting'){
+              return 'sync';
+            }
+            if(status == 'error'){
+              return 'error_outline';
+            }
+            if(status == 'synced'){
+              return 'check_circle';
+            }
+            return 'hourglass_empty';
+          },
+          // 自动分配最小未占用的从机序号（从1开始）
+          getAutoSlaveIndex(){
+            const used = new Set();
+            this.rcuDeviceList.forEach(item=>{
+              if(item.masterSlaveStatus === 'slave' && item.slaveIndex){
+                used.add(parseInt(item.slaveIndex,10));
+              }
+            });
+            let idx = 1;
+            while(used.has(idx)){
+              idx++;
+            }
+            return idx;
+          },
+          // 打开序号选择器
+          openSlaveIndexPicker(item){
+            if(this.isSyncing){
+              return;
+            }
+            // 仅 Slave 可编辑
+            if(item.masterSlaveStatus !== 'slave'){
+              return;
+            }
+            const maxIndex = Math.max(this.rcuDeviceList.length, 5); // 上限给一点冗余
+            const used = new Set();
+            this.rcuDeviceList.forEach(s=>{
+              if(s.name !== item.name && s.masterSlaveStatus === 'slave' && s.slaveIndex){
+                used.add(parseInt(s.slaveIndex,10));
+              }
+            });
+            const values = [];
+            const displayValues = [];
+            for(let i=1;i<=maxIndex;i++){
+              values.push(i);
+              displayValues.push(used.has(i) ? `${i} (${_('Used')})` : `${i}`);
+            }
+            const picker = app.picker.create({
+              cols: [
+                {
+                  textAlign: 'center',
+                  values,
+                  displayValues,
+                }
+              ],
+              value: item.slaveIndex ? [item.slaveIndex] : undefined,
+              formatValue(val){
+                return val[0];
+              },
+              on: {
+                change: (p, value) => {
+                  const chosen = parseInt(value[0],10);
+                  if(used.has(chosen)){
+                    return;
+                  }
+                  item.slaveIndex = chosen;
+                },
+                open: (p) => {
+                  // 打开时同步当前值到 picker
+                  const current = item.slaveIndex ? [item.slaveIndex] : undefined;
+                  if(current){
+                    p.setValue(current);
+                  }
+                }
+              }
+            });
+            picker.open();
+          },
+          // 计算最终状态：仅当 finalStatusActive 为 true 时生效
+          evaluateFinalStatus(){
+            if(!this.finalStatusActive){
+              this.finalStatusOk = true;
+              this.finalStatusErrors = [];
+              return true;
+            }
+            const errors = [];
+            const devices = this.rcuDeviceList || [];
+            const masterCount = devices.filter(d => d.masterSlaveStatus === 'master').length;
+            const total = devices.length;
+            const allSynced = devices.every(d => this.getConnectionStatus(d) === 'synced');
+            // 规则：A 全部是 Master；B 仅一个 Master
+            const ruleOk = (masterCount === total) || (masterCount === 1);
+            if(!ruleOk){
+              errors.push({ code: 'ERR_MASTER_RULE', message: `${_('Only supports: all Master, or exactly one Master.')}` });
+            }
+            if(!allSynced){
+              errors.push({ code: 'ERR_NOT_SYNCED', message: `${_('All devices must be synced before proceeding.')}` });
+            }
+            this.finalStatusErrors = errors;
+            this.finalStatusOk = errors.length === 0;
+            return this.finalStatusOk;
+          },
+          // 配置门控：mainRcuConfig 与 viaConfig 必须同时为 true 才允许主从操作与最终检测
+          handleConfigGate(){
+            const gateOn = this.mainRcuConfig && this.viaConfig;
+            if(!gateOn){
+              this.finalStatusActive = false;
+              this.finalStatusOk = true;
+              this.finalStatusErrors = [];
+              this.allDevicesSynced = false;
+              this.isSyncing = false;
+              // 重置连接状态
+              this.rcuDeviceList.forEach((deviceItem)=>{
+                this.setConnectionStatus(deviceItem.name,'idle');
+              });
+            }else{
+              if(this.rcuDeviceList.length >= 2){
+                this.finalStatusActive = true;
+              }
+            }
+          },
+          // 收集错误提示文本
+          getFinalStatusMessages(){
+            if(!this.finalStatusActive || this.finalStatusOk){
+              return [];
+            }
+            return this.finalStatusErrors.map(e => e.message);
+          },
+          mockDelay(duration = 500){
+            return new Promise((resolve)=>{
+              setTimeout(resolve, duration);
+            });
+          },
+          async syncMasterSlaveStatus(subItem,status){
+            let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
+            subdevices.forEach((item)=>{
+              if(item.name == subItem.name){
+                item.master_slave_status = status;
+              }
+            });
+            let url = `/api/resource/Profile/${erp.info.profile.name}`;
+            await http2.request(encodeURI(url), {
+              method: 'PUT',
+              serializer: 'json',
+              responseType: 'json',
+              data: {
+                profile_subdevice: subdevices,
+              },
+              debug: true,
+            });
+            erp.info.profile.profile_subdevice = subdevices;
+          },
           nextStep(sindex) {
             this.index = sindex;
             this.activeStep();
           },
         },
-        computed: {},
-        beforeDestroy() {},
+        beforeDestroy() {
+          this.stopMonitorDeviceStatus();
+        },
       });
     });
 
@@ -1506,5 +2186,151 @@
   .tips {
     padding: 0px 15px;
     font-size: 12px;
+  }
+  .master-slave-panel {
+    min-width: 130px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+    text-align: right;
+  }
+  .master-slave-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a4a4a;
+  }
+  .master-badge {
+    color: #1b5e20;
+  }
+  .slave-badge {
+    color: #bf360c;
+  }
+  .master-slave-badge .status-dot {
+    font-size: 14px;
+  }
+  .slave-label {
+    cursor: pointer;
+  }
+  
+  /* 状态和按钮行 */
+  .master-slave-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  
+  /* 同步状态显示 */
+  .device-sync-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #9e9e9e;
+  }
+  .device-sync-status .material-icons {
+    font-size: 14px;
+  }
+  .device-sync-status.sync-idle {
+    color: #bdbdbd;
+  }
+  .device-sync-status.sync-connecting {
+    color: var(--f7-theme-color);
+  }
+  .device-sync-status.sync-synced {
+    color: #4caf50;
+  }
+  .device-sync-status.sync-error {
+    color: #f44336;
+  }
+  
+  .master-slave-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .master-slave-button .material-icons {
+    font-size: 18px;
+  }
+  
+  /* 设备项状态样式 */
+  .rcu-device-item {
+    position: relative;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .rcu-device-item.device-connecting {
+    background: linear-gradient(90deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.12) 50%, rgba(33, 150, 243, 0.05) 100%);
+    background-size: 200% 100%;
+    animation: connecting-pulse 1.5s ease-in-out infinite;
+  }
+  .rcu-device-item.device-synced {
+    background: rgba(76, 175, 80, 0.08);
+  }
+  .rcu-device-item.device-error {
+    background: rgba(244, 67, 54, 0.06);
+  }
+  
+  /* 同步状态栏 */
+  .sync-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: 8px;
+    color: #2e7d32;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .sync-status-bar .material-icons {
+    font-size: 20px;
+  }
+  
+  /* 旋转动画 */
+  .rotating {
+    animation: status-rotate 1s linear infinite;
+  }
+  @keyframes status-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes connecting-pulse {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  @media (max-width: 480px) {
+    .master-slave-panel {
+      min-width: 90px;
+    }
+    .device-sync-status {
+      font-size: 10px;
+    }
+    .device-sync-status .material-icons {
+      font-size: 14px;
+    }
   }
 </style>

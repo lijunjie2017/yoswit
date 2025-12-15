@@ -148,7 +148,7 @@
           weekCommand[parseInt(item)] = 1;
         }
       });
-      let repeat = `0${weekCommand.join('')}`;
+      let repeat = `0${weekCommand.reverse().join('')}`;
       let repeat_int = parseInt(repeat,2).toString(16).pad('00');
       let start_time = '';
       let end_time = '';

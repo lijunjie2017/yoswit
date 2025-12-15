@@ -289,7 +289,9 @@
               el: '#device_timer-repeat-select',
               openIn: 'sheet',
             });
-            //iot_device_timer_form_repeat_select.setValue(repeat);
+            this.iot_device_timer_form_repeat_select.setValue([0,1,1,1,1,1,1]);
+            
+            // this.iot_device_timer_form_repeat_select.setValue([0,1,1,1,1,1,1]);
           },
           init() {
             let devices = cloneDeep(erp.info.profile.profile_device);
@@ -333,6 +335,44 @@
             }
             if(!this.device_image){
               this.device_image = 'https://my.yoswit.com/files/products/YO815.svg';
+            }
+            //如果传入timer_id，则获取对应的timer数据
+            if(this.timerId){
+              const repeat_keys = {
+                'repeat_monday': 0,
+                'repeat_tuesday': 0,
+                'repeat_wednesday': 0,
+                'repeat_thursday': 0,
+                'repeat_friday': 0,
+                'repeat_saturday': 0,
+                'repeat_sunday': 0,
+              };
+              let devices = cloneDeep(erp.info.device);
+              let deviceMap = devices[this.guid];
+              let device_timers = deviceMap.device_timer;
+              device_timers.forEach((item) => {
+                if(item.timer_id == this.timerId){
+                  //解析重复的repeat字段
+                  repeat_keys['repeat_monday'] = item.repeat_monday;
+                  repeat_keys['repeat_tuesday'] = item.repeat_tuesday;
+                  repeat_keys['repeat_wednesday'] = item.repeat_wednesday;
+                  repeat_keys['repeat_thursday'] = item.repeat_thursday;
+                  repeat_keys['repeat_friday'] = item.repeat_friday;
+                  repeat_keys['repeat_saturday'] = item.repeat_saturday;
+                  repeat_keys['repeat_sunday'] = item.repeat_sunday;
+                  let kes_list = [];
+                  for(let i in repeat_keys){
+                    if(repeat_keys[i] == 1){
+                      kes_list.push(i);
+                    }
+                  }
+                  setTimeout(() => {
+                    if(isset(this.iot_device_timer_form_repeat_select)){
+                      this.iot_device_timer_form_repeat_select.setValue(kes_list);
+                    }
+                  }, 100);
+                }
+              });
             }
           },
           toHref() {
@@ -507,13 +547,13 @@
               let deviceMap = devices[this.guid];
               let device_timers = deviceMap.device_timer;
               const repeat_keys = [
+                'repeat_sunday',
                 'repeat_monday',
                 'repeat_tuesday',
                 'repeat_wednesday',
                 'repeat_thursday',
                 'repeat_friday',
                 'repeat_saturday',
-                'repeat_sunday',
               ].reverse();
               const repeat = {};
               for (let i = 0; i < repeat_keys.length; i++) {
@@ -565,14 +605,16 @@
           },
           async save() {
             //save the timer
+            console.log(this.iot_device_timer_form_repeat_select.getValue());
+            debugger
             const repeat_keys = [
+              'repeat_sunday',
               'repeat_monday',
               'repeat_tuesday',
               'repeat_wednesday',
               'repeat_thursday',
               'repeat_friday',
               'repeat_saturday',
-              'repeat_sunday',
             ].reverse();
             const formdata = app.form.convertToData('#frappe-form');
             console.log('timer', formdata);
@@ -600,6 +642,7 @@
             const hexYear = date.getFullYear().toString(16).pad('0000');
             const yearHigh = hexYear.substring(0, 2);
             const yearLow = hexYear.substring(2);
+            let this_years = (parseInt((dayjs().year()))).toString(16).pad('0000').match(/.{1,2}/g).reverse().join('');
             if (this.firmware > 10.0) {
               let devices = cloneDeep(erp.info.device);
               let deviceMap = devices[this.guid];
@@ -608,12 +651,12 @@
                 return e.timer_id;
               });
               let timer_id = this.timerId || this.timerId == 0 ? this.timerId : this.findMissingNumber(idList);
-
+              console.log(repeat.pad('00000000'))
               let repeat_int = parseInt(repeat.pad('00000000'), 2).toString(16).pad('00');
               if (repeat_int == '00') {
                 repeat_int = '80';
               }
-              this.timercommand = `000300${start_time_mins}${start_time_hours}${this_day}${this_month}${yearLow}${yearHigh}${repeat_int}`;
+              this.timercommand = `000300${start_time_mins}${start_time_hours}${this_day}${this_month}${this_years}${repeat_int}`;
               console.log(this.timercommand);
               // let type = '03';
               // let opcode = '00';

@@ -73,6 +73,10 @@
                       </div>
                     </div>
                   </div>
+                  <div class="item-after display-flex justify-content-center" style="min-width: 120px;">
+                    <button class="button button-round link bg-color-white" style="width: 50px;margin-right: 10px;"  ref="1" v-on:click="batchOnOff(1,roomItem)">ON</button>
+                    <button class="button button-round link bg-color-white" style="width: 50px;"  ref="2" v-on:click="batchOnOff(2,roomItem)">OFF</button>
+                  </div>
                 </div>
               </li>
               <div class="scene-room-device-item">
@@ -484,6 +488,99 @@
           sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
+          batchOnOff(ref, roomItem){
+            const roomName = roomItem && roomItem.name ? roomItem.name : roomItem;
+            const isOn = ref == 1;
+            const defaultRef = isOn ? 1 : 0;
+            // build chooseList the same way chooseTemplate does, take the first option
+            const buildChooseList = (item) => {
+              const button_group = item.device_button_group || '';
+              let chooseList = [
+                { value: '01', text: 'ON/OFF', type: 2 },
+                { value: '02', text: 'TOGGLE', type: 4 },
+              ];
+              if (button_group.startsWith('Hdmicec')) {
+                chooseList = [
+                  { value: '01', text: 'ON/OFF', type: 2 },
+                  { value: '02', text: 'TOGGLE', type: 4 },
+                  { value: '50', text: 'CHECKOUT', type: 50 },
+                ];
+              } else if (button_group.startsWith('Thermostat')) {
+                chooseList = [
+                  { value: '01', text: 'ON/OFF', type: 2 },
+                  { value: '50', text: 'CHECKOUT', type: 50 },
+                ];
+              } else if (button_group.startsWith('RCU DIMMING') || button_group.startsWith('DIMMING')) {
+                chooseList = [
+                  { value: '4', text: 'ON/OFF', type: 2 },
+                  { value: '2', text: 'TOGGLE', type: 4 },
+                  { value: '3', text: 'BRIGHTEN', type: 5 },
+                  { value: '1', text: 'DIM', type: 6 },
+                ];
+              } else if (button_group.startsWith('OPENCLOSE UART') || button_group.startsWith('OPENCLOSE WIFI UART')) {
+                chooseList = [
+                  { value: '01', text: 'OPEN/CLOSE', type: 7 },
+                  { value: '02', text: 'PAUSE', type: 9 },
+                  { value: '50', text: 'CHECKOUT', type: 50 },
+                ];
+              } else if (button_group.startsWith('DOOR SIGN')) {
+                chooseList = [
+                  { value: '31', text: 'CLEAR ON', type: 10 },
+                  { value: '34', text: 'CLEAR OFF', type: 12 },
+                  { value: '32', text: 'DND ON', type: 11 },
+                  { value: '35', text: 'DND OFF', type: 13 },
+                ];
+              }
+              return chooseList;
+            };
+            const applyTemplate = (item, labelItem) => {
+              const button_group = item.device_button_group || '';
+              item.mainType = labelItem.type;
+              item.chooseStatus = true;
+              item.buttonBoxType = 0;
+              // default on/off ref
+              item.ref = defaultRef;
+              // handle special templates similar to home_ui_click_touch_app_save
+              if (labelItem.type == 2 && (button_group.startsWith('DIMMING') || button_group.startsWith('RCU DIMMING'))) {
+                item.buttonBoxType = 1;
+                item.turnlight = labelItem.value;
+                item.ref = isOn ? 100 : 0;
+                item.chooseType = 4;
+                this.initRangeBar(item.device, button_group, item.ref);
+                this.changeBarUI(item.device, button_group, item.ref);
+              } else if (labelItem.type == 2 && button_group.startsWith('Thermostat')) {
+                item.buttonBoxType = 3;
+              } else if (labelItem.type == 7) {
+                item.buttonBoxType = 2;
+                item.ref = isOn ? 100 : 0;
+                this.initRangeBar(item.device, button_group, item.ref);
+                this.changeBarUI(item.device, button_group, item.ref);
+              } else if (labelItem.type == 4) {
+                item.chooseType = 2;
+              } else if (labelItem.type == 5) {
+                item.chooseType = 3;
+              } else if (labelItem.type == 6) {
+                item.chooseType = 1;
+              } else if (labelItem.type == 9) {
+                item.chooseType = 8;
+                item.ref = 2;
+              } else if (labelItem.type > 9) {
+                item.chooseType = 9;
+                item.ref = labelItem.value;
+              }
+              return item;
+            };
+            this.subdevices.forEach((item, index) => {
+              if (item.profile_room === roomName && !item.isHidden) {
+                const chooseList = buildChooseList(item);
+                if (chooseList && chooseList.length) {
+                  const firstTemplate = chooseList[0];
+                  const newItem = applyTemplate(item, firstTemplate);
+                  this.$set(this.subdevices, index, newItem);
+                }
+              }
+            });
+          },
           async init() {
             //init the roomList
             this.roomList = cloneDeep(erp.info.profile.profile_room);
@@ -826,6 +923,9 @@
                 },
               ];
               //this.home_ui_click_touch_app_save(chooseList[0]);
+            }else if(button_group.startsWith('RCU OPENCLOSE GANG')){
+              this.home_ui_click_touch_app_save({value: '01',text: 'OPEN/CLOSE',type: 7,});
+              return;
             }else if(button_group.startsWith('DOOR SIGN')){
               chooseList = [
                 {
@@ -958,7 +1058,20 @@
           },
           //tindy the command of the choose list
           async tindyCommand() {
-            let this_list = this.subdevices.filter((item) => item.chooseStatus);
+            const roomOrder = {};
+            this.roomList.forEach((room, idx) => {
+              roomOrder[room.name] = idx;
+            });
+            let this_list = this.subdevices
+              .filter((item) => item.chooseStatus)
+              .sort((a, b) => {
+                const ra = isset(roomOrder[a.profile_room]) ? roomOrder[a.profile_room] : 9999;
+                const rb = isset(roomOrder[b.profile_room]) ? roomOrder[b.profile_room] : 9999;
+                if (ra !== rb) return ra - rb;
+                const na = a.name || '';
+                const nb = b.name || '';
+                return na.localeCompare(nb);
+              });
             
             this_list.forEach((item) => {
               let { device_button_group, name, device, ref,device_mode ,device_model} = item;

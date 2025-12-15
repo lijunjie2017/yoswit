@@ -481,7 +481,7 @@
               });
               console.log(data);
               let dataObj = data.data.data;
-              erpProfile = dataObj;
+              this.erpProfile = dataObj;
               this.getProfileSubdeviceList(true);
               //app.dialog.close();
             } catch (err) {
@@ -496,8 +496,8 @@
               subDeviceList = cloneDeep(erp.info.profile.profile_subdevice);
               roomList = cloneDeep(erp.info.profile.profile_room);
             } else {
-              subDeviceList = cloneDeep(erpProfile.profile_subdevice);
-              roomList = cloneDeep(erpProfile.profile_room);
+              subDeviceList = cloneDeep(this.erpProfile.profile_subdevice);
+              roomList = cloneDeep(this.erpProfile.profile_room);
             }
             let modelList = cloneDeep(erp.doctype.device_model);
             let list = [];
@@ -618,9 +618,20 @@
             let thisList = this.deviceList.filter((item) => item.isTitle != true);
             let url = `/api/resource/Profile/${this.profileName}`;
             let post_list = cloneDeep(thisList);
+            let subDeviceList = cloneDeep(this.erpProfile.profile_subdevice);
             post_list.forEach((item, index) => {
-              delete item.hidden;
+              subDeviceList.forEach((kitem, kindex) => {
+                if (kitem.name === item.name) {
+                  item.hidden = kitem.hidden;
+                  if(kitem.hidden){
+                    item.unsync_to_google = 1;
+                  }
+                }
+              });
             })
+            // post_list.forEach((item, index) => {
+            //   delete item.hidden;
+            // })
             
             try {
               await http.request(url, {

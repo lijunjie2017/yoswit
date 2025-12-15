@@ -10,6 +10,14 @@
           </a>
         </div>
         <div class="title">{{ _('Add Device Access') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only esp-access-wifi esp-wifi">
+            <i class="icon material-icons wifi-icons" ref="0">wifi</i>
+          </a>
+          <a href="#" class="link icon-only esp-access-bluetooth" @click="${()=>bleConnect()}">
+            <i class="icon material-icons bluetooth-icons" ref="0">bluetooth</i>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -33,7 +41,7 @@
             </div>
           </div>
           <div class="tabs">
-            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-if="index == 1">
+            <div id="step-1" class="view tab view-main" :class="[index == 1 ? 'tab-active' : '']" v-show="index == 1">
               <div class="card">
                 <div class="card-content card-content-padding">
                   <div class="list list-strong-ios list-outline-ios list-dividers-ios">
@@ -41,7 +49,8 @@
                       <li>
                         <a class="item-link smart-select smart-select-init" data-open-in="sheet">
                           <select name="mac-windows" v-model="accessType">
-                            <option value="1" selected>Dynamic QR Code</option>
+                            <option value="0" selected>Door Management</option>
+                            <option value="1">Dynamic QR Code</option>
                             <option value="2">QR Code</option>
                             <option value="3">Key Card</option>
                             <option value="4">Secure Key Card</option>
@@ -121,7 +130,7 @@
                         </div>
                       </li>
                       <li>
-                        <div class="item-content item-input">
+                        <div class="item-content item-input" v-if="accessType != 0">
                           <div class="item-inner">
                             <div class="item-input-wrap">
                               <input type="text" :placeholder="_('Valid From')" readonly="readonly" id="demo-calendar-date-time" />
@@ -130,7 +139,7 @@
                         </div>
                       </li>
                       <li>
-                        <div class="item-content item-input">
+                        <div class="item-content item-input" v-if="accessType != 0">
                           <div class="item-inner">
                             <div class="item-input-wrap">
                               <input type="text" :placeholder="_('Valid To')" readonly="readonly" id="demo-calendar-date-time-to" />
@@ -138,7 +147,7 @@
                           </div>
                         </div>
                       </li>
-                      <li class="item-content item-input">
+                      <li class="item-content item-input" v-if="accessType != 0">
                         <div class="item-inner no-padding-right">
                           <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Access Group")}}</div>
                           <div class="item-input-wrap">
@@ -155,18 +164,18 @@
                       </li>
                       <li>
                         <a class="item-link smart-select smart-select-init" data-open-in="sheet">
-                          <select name="mac-windows" v-model="postType">
-                            <option value="1">WIFI</option>
-                            <option value="2" selected>BLE</option>
+                          <select name="smart-select-post-type" v-model="postType">
+                            <option value="1" :selected="device_type == 3 ? true : false">WIFI</option>
+                            <option value="2" :selected="device_type != 3 ? true : false" v-if="device_type != 3">BLE</option>
                           </select>
                           <div class="item-content" style="height: 70px">
                             <div class="item-inner">
-                              <div class="item-title">{{_('Connection Mode')}}</div>
+                              <div class="item-title">{{_('Sync Method')}}</div>
                             </div>
                           </div>
                         </a>
                       </li>
-                      <li class="item-content item-input" v-if="postType == 1 && !wifiConnected">
+                      <li class="item-content item-input" v-if="postType == 1 && !wifiConnected && !wifiStatus">
                         <div class="item-inner no-padding-right">
                           <div class="item-title item-label" lang="en" style="font-size: 16px">
                             {{_("Ssid")}}
@@ -184,18 +193,31 @@
                           </div>
                         </div>
                       </li>
-                      <li class="item-content item-input" v-if="postType == 1 && !wifiConnected">
+                      <li class="item-content item-input" v-if="postType == 1 && !wifiConnected && !wifiStatus" style="padding-left: 15px">
                         <div class="item-inner no-padding-right">
                           <div class="item-title item-label" lang="en" style="font-size: 16px">{{_("Password")}}</div>
                           <div class="item-input-wrap">
                             <input
-                              type="text"
+                              type="password"
                               name="password"
                               v-model="password"
                               :placeholder="_('Please enter the wifi password.')"
                               required
                               validate
                             />
+                            <i
+                              class="material-icons"
+                              style="
+                                position: absolute;
+                                right: 10px;
+                                top: 0px;
+                                padding: 10px 0px 10px 10px;
+                                font-size: 20px;
+                                z-index: 999999;
+                              "
+                              func="show_hide_password_field"
+                              >visibility_off</i
+                            >
                           </div>
                         </div>
                       </li>
@@ -217,7 +239,7 @@
             <div id="step-5" class="view tab view-main" :class="[index == 2 ? 'tab-active' : '']" v-if="index == 2">
               <div class="card">
                 <div class="card-content card-content-padding">
-                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px">
+                  <div class="action-box card" style="margin-left: 0; margin-right: 0; margin-top: 10px" v-if="accessType != 0">
                     <div class="action-list list media-list no-margin">
                       <ul>
                         <li class="device" v-for="(item,index) in scheduleList" :key="index">
@@ -264,7 +286,9 @@
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
                   <div class="col">
-                    <div class="button button-fill button-save" v-on:click="syncToDevice()">{{_("Sync To Device")}}({{isSyncSetting?_('Synced') : _('Not Synced')}})</div>
+                    <div class="button button-fill button-save" v-on:click="syncToDevice()">
+                      {{_("Sync To Device")}}({{isSyncSetting?_('Synced') : _('Not Synced')}})
+                    </div>
                   </div>
                 </div>
                 <div class="row" style="margin-bottom: 15px; margin-top: 15px">
@@ -293,7 +317,10 @@
       $on = ctx.$on;
 
     let vueApp = null;
-    let { guid, sub_name, button_group ,button_group_command} = $f7route.query;
+    let { guid, sub_name, button_group, button_group_command,device_type } = $f7route.query;
+    bleConnect = async () => {
+      await vueApp.connectBleAndUiHandle();
+    };
     //let { guid, subdevice_name } = $f7route.query;
     $on('pageMounted', (e, page) => {
       vueApp = new Vue({
@@ -314,7 +341,7 @@
               relatedIndex: 2,
             },
           ],
-          accessType: 1, //default Dynamic QR Code
+          accessType: 0, //default Door Management
           guestEmail: '',
           keyCardId: '',
           keyCardSecret: '',
@@ -322,8 +349,10 @@
           calendarDateTimeFrom: null,
           calendarDateTimeTo: null,
           postType: 2,
+          device_type: device_type,
           ssid: '',
           password: '',
+          email: '',
           iot_attempt: 0,
           postBleDataList: [],
           postBleDataListIndex: 0,
@@ -337,23 +366,41 @@
           qrcode_random_16: '',
           deviceAccessMap: {},
           wifiConnected: false,
-          isSyncSetting : false,
+          isSyncSetting: false,
+          bleStatus: false,
+          wifiStatus: false,
+          heartbeatTimer: null,
+          wifiCheckTimeout: null,
+          wifiTopicHandler: null,
         },
         watch: {
-          postType: function(newVal, oldVal) {
+          accessType: function (newVal, oldVal) {
+            console.log('accessType', newVal, oldVal);
+            if (newVal != 0) {
+              this.initDateDom();
+            }
+          },
+          postType: function (newVal, oldVal) {
             console.log('postType', newVal, oldVal);
-            if(newVal == 1){
+            if (newVal == 1) {
               let mobmob = window.peripheral[guid].prop.is_mobmob;
-              if(mobmob){
+              if (mobmob) {
                 this.wifiConnected = true;
-              }else{
+              } else {
                 this.wifiConnected = false;
               }
             }
-          }
+          },
+          bleStatus(newVal) {
+            $('.esp-access-bluetooth i').attr('ref', newVal ? '1' : '0');
+          },
+          wifiStatus(newVal) {
+            $('.esp-access-wifi i').attr('ref', newVal ? '1' : '0');
+          },
         },
         components: {},
         async mounted() {
+          Vue.prototype.connectBleAndUiHandle = this.connectBleAndUiHandle;
           this.init();
           this.qrcode_random_16 = this.generateRandom16();
           this.generateQRCode(`{{${this.qrcode_random_16}}}`);
@@ -368,11 +415,10 @@
             });
             this.scheduleList = this.scheduleList.concat(data);
           });
-          // let settings = await this.upDateDeviceSettings();
-          // console.log('settings', settings);
+          this.startHeartbeat();
         },
         methods: {
-          async init() {
+          initDateDom(){
             setTimeout(() => {
               app.calendar.create({
                 inputEl: '#demo-calendar-date-time',
@@ -385,16 +431,193 @@
                 dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' },
               });
             }, 500);
-            try{
+          },
+          async init() {
+            this.initDateDom();
+            //init the device sync type
+            if(device_type == 3){
+              this.postType = 1;
+            }else{
+              this.postType = 2;
+            }
+            $('select[name="smart-select-post-type"]').val(this.postType);
+            //init the device wifi
+            if (isset(erp.info.device) && isset(erp.info.device[guid])) {
+              let device = erp.info.device[guid];
+              const settings = device.settings;
+              settings.forEach((item) => {
+                if (item.setting_type == 'Wifi SSID') {
+                  this.ssid = item.setting;
+                }
+                if (item.setting_type == 'Wifi Password') {
+                  this.password = item.setting;
+                }
+                if (item.setting_type == 'Email Address') {
+                  this.email = item.setting.toLowerCase();
+                  this.checkIfOnline(this.email);
+                }
+              });
+            }
+            try {
               await this.requestMtuForBle();
-            }catch(error){
+            } catch (error) {
               console.log('error', error);
-              app.dialog.alert(_(erp.get_log_description(error)))
+              app.dialog.alert(_(erp.get_log_description(error)));
             }
           },
           generateRandom16() {
             const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
             return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+          },
+          startHeartbeat() {
+            this.stopHeartbeat(); // 防止重复开启
+            this.checkBleConnection();
+            this.checkWifiConnection();
+            this.heartbeatTimer = setInterval(() => {
+              this.checkBleConnection();
+              this.checkWifiConnection();
+            }, 1000 * 60);
+          },
+          stopHeartbeat() {
+            if (this.heartbeatTimer) {
+              clearInterval(this.heartbeatTimer);
+              this.heartbeatTimer = null;
+            }
+            if (this.$wifiCheckTimeout) {
+              clearTimeout(this.$wifiCheckTimeout);
+              this.$wifiCheckTimeout = null;
+            }
+            if (this.$listenWifiFun) {
+              emitter.off('iot/wifi/info', this.$listenWifiFun);
+              this.$listenWifiFun = null;
+            }
+          },
+          checkBleConnection() {
+            console.log('checkBleConnectionForAccess');
+            if (guid && window.peripheral && window.peripheral[guid]) {
+              // 检查 BLE 连接状态
+              const isConnected = window.peripheral[guid].prop.connected;
+              if (this.bleStatus !== isConnected) {
+                this.bleStatus = isConnected;
+              }
+            } else {
+              this.bleStatus = false;
+            }
+          },
+          async checkWifiConnection() {
+            /*
+            1. 如果有蓝牙可以通过蓝牙检测wifi的连接状况
+            2. 如果没有蓝牙可以通过mqtt检测wifi的连接状况
+            3. 但是进入到配置阶段，只能依靠蓝牙，所有只需要考虑蓝牙
+            4. 因为需要发送蓝牙指令，这里是否需要定时检查wifi状态，可能会影响到蓝牙上传时候的状态
+            */
+
+            //设置超时处理，防止蓝牙没有任何反应
+            if (this.$wifiCheckTimeout) {
+              clearTimeout(this.$wifiCheckTimeout);
+              this.$wifiCheckTimeout = null;
+            }
+            //清理旧的监听，防止多次绑定
+            if (this.$listenWifiFun) {
+              emitter.off('iot/wifi/info', this.$listenWifiFun);
+              this.$listenWifiFun = null;
+            }
+
+            this.$wifiCheckTimeout = setTimeout(() => {
+              this.wifiStatus = false;
+              // 超时也要清理监听
+              if (this.$listenWifiFun) {
+                emitter.off('iot/wifi/info', this.$listenWifiFun);
+                this.$listenWifiFun = null;
+              }
+            }, 10000);
+
+            this.$listenWifiFun = (data) => {
+              console.log('data', data);
+              try {
+                let rs = data.rs;
+                if (rs && rs.length > 10) {
+                  let jsonData = JSON.parse(this.hexToPlainText(rs.substring(10, rs.length)));
+                  console.log('jsonData', jsonData);
+                  if (isset(jsonData)) {
+                    if (isset(jsonData.ipv4)) {
+                      this.wifiStatus = true;
+                    } else {
+                      this.wifiStatus = false;
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('checkWifiConnection error:', e);
+              } finally {
+                clearTimeout(this.$wifiCheckTimeout);
+                this.$wifiCheckTimeout = null;
+                emitter.off('iot/wifi/info', this.$listenWifiFun);
+                this.$listenWifiFun = null;
+              }
+            };
+            try {
+              emitter.on('iot/wifi/info', this.$listenWifiFun);
+              await window.peripheral[guid].write([
+                {
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: '9329',
+                },
+              ]);
+            } catch (error) {
+              console.log(erp.get_log_description(error));
+              // 发送失败也要清理
+              if (this.$listenWifiFun) {
+                emitter.off('iot/wifi/info', this.$listenWifiFun);
+                this.$listenWifiFun = null;
+              }
+              if (this.$wifiCheckTimeout) {
+                clearTimeout(this.$wifiCheckTimeout);
+                this.$wifiCheckTimeout = null;
+              }
+              this.wifiStatus = false;
+            }
+          },
+          hexToPlainText(hexString) {
+            // 使用正则表达式检查输入是否是合法的十六进制字符串
+            const hexPattern = /^[0-9A-Fa-f]+$/;
+            if (!hexPattern.test(hexString)) {
+              throw new Error('Invalid HEX input. Only hexadecimal characters (0-9, A-F) are allowed.');
+            }
+
+            // 将十六进制字符串转换为字节数组
+            const byteArray = [];
+            for (let i = 0; i < hexString.length; i += 2) {
+              byteArray.push(parseInt(hexString.substr(i, 2), 16));
+            }
+
+            // 使用TextDecoder将字节数组转换为普通字符
+            const decoder = new TextDecoder();
+            const plainText = decoder.decode(new Uint8Array(byteArray));
+
+            return plainText;
+          },
+          connectBleAndUiHandle() {
+            return new Promise(async (resolve, reject) => {
+              console.log('bleConnect');
+              if (guid && window.peripheral && window.peripheral[guid]) {
+                try {
+                  $('.esp-access-bluetooth i').attr('ref', '2');
+                  await window.peripheral[guid].connect();
+                  $('.esp-access-bluetooth i').attr('ref', '1');
+                  resolve();
+                } catch (error) {
+                  $('.esp-access-bluetooth i').attr('ref', '0');
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                  reject();
+                }
+              } else {
+                $('.esp-access-bluetooth i').attr('ref', '0');
+                app.dialog.alert(_('Device not found'));
+                reject();
+              }
+            });
           },
           deleteSchedule(name) {
             this.scheduleList = this.scheduleList.filter((item) => item.name != name);
@@ -406,16 +629,16 @@
             } else {
               await window.peripheral[guid].connect();
             }
-            this.$getKeyCardId = (data)=>{
+            this.$getKeyCardId = (data) => {
               console.log('data', data);
-              if(data.rs.length >= 20){
+              if (data.rs.length >= 20) {
                 this.keyCardId = data.rs.slice(-8);
-                if(this.accessType == 4){
+                if (this.accessType == 4) {
                   this.keyCardSecret = '832227680083';
                 }
               }
-            }
-            if(this.$getKeyCardId){
+            };
+            if (this.$getKeyCardId) {
               emitter.off('key_card_id', this.$getKeyCardId);
             }
             emitter.on('key_card_id', this.$getKeyCardId);
@@ -444,8 +667,8 @@
               _('Align your card (e.g., access card) with the D-card reader. Keep it steady until the device completes recognition.')
             );
           },
-          startQrcodeSetTimer(){
-            if(this.$qrcodeSetTimer){
+          startQrcodeSetTimer() {
+            if (this.$qrcodeSetTimer) {
               clearInterval(this.$qrcodeSetTimer);
             }
             this.$qrcodeSetTimer = setInterval(() => {
@@ -498,10 +721,148 @@
           },
           completeDeviceAccess() {
             console.log('completeDeviceAccess');
-            emitter.emit('saveDeviceAccess', this.deviceAccessMap);
+            //此处需要判断一下，如果是选择的是door management，则不需要生成一条access的记录
+            if (this.accessType != 0) {
+              emitter.emit('saveDeviceAccess', this.deviceAccessMap);
+            }else{
+              emitter.emit('saveDeviceAccess', [{
+                access_type: 'Door Management',
+                blocking_schedule : []
+              }]);
+            }
             mainView.router.back();
           },
+          //发送后开始监听蓝牙的notify,通过emitter来监听
+          /*
+          options = {
+             require9900: true/false, // 是否需要等待 9900 响应
+             require9901: true/false  // 是否需要等待 9901 响应
+          }
+          */
+          startListenBleNotify(options = { require9900: true, require9901: true }) {
+            return new Promise((resolve, reject) => {
+              /*
+              这里又两个逻辑需要处理
+              1. 理论上是要获取990000000164和990100000164两个值，只是有收到这两个值才能算是全部同步成功
+              2. 是通过最后一个字节来判断的，转成10进制后，如果是100，则算同步成功，否者需要截取减掉100后的值为错误码；
+              3. 这是一个总体的监听，需要设置1分钟的超时，如果1分钟后没有收到这两个值，则算同步失败，并弹出错误码；
+              4. 需要首先对收到的数据进行长度判断，如果长度少于12，则直接过滤；
+              */
+              const ERROR_CODES = {
+                1: _('Offline Mode'),
+                2: _('HTTP Request Failed'),
+                3: _('IP Disconnected'),
+                4: _('HTTP Status Error'),
+                5: _('JSON Parse Error'),
+                6: _('Get Result Error'),
+                7: _('Database Open Failed'),
+                8: _('Database Run Error'),
+                9: _('Database Not Found'),
+                10: _('Prepare Statement Failed'),
+                11: _('JSON Print Error'),
+                12: _('Invalid Parameter'),
+                13: _('Unsupported Access Type'),
+                14: _('Key Card Timeout'),
+                15: _('Key Card Encrypted'),
+                16: _('Key Card Parse Error'),
+                17: _('Unknown Access Type'),
+                18: _('Blocking Schedule Error'),
+                155: _('Device Access Failed')
+              };
+
+              // 初始化接收状态，如果不需要接收某个指令，则默认设为 true
+              let received9900 = !options.require9900;
+              let received9901 = !options.require9901;
+
+              const cleanup = () => {
+                if (this.listenBleNotify) {
+                  emitter.off('upload/notify', this.listenBleNotify);
+                  this.listenBleNotify = null;
+                }
+                if (this.listenBleNotifyTimeout) {
+                  clearTimeout(this.listenBleNotifyTimeout);
+                  this.listenBleNotifyTimeout = null;
+                }
+              };
+              
+              cleanup();
+
+              this.listenBleNotifyTimeout = setTimeout(() => {
+                cleanup();
+                reject(new Error(_('Sync Timeout')));
+              }, 60000);
+
+              this.listenBleNotify = (data) => {
+                let res = data.rs;
+                console.log('upload/notify res', res);
+                if (!res || res.length < 12) return;
+
+                const prefix = res.substring(0, 4);
+                // 只处理我们关心的指令
+                if (prefix !== '9900' && prefix !== '9901') return;
+                // 如果收到了不需要关心的指令，也直接返回，避免逻辑干扰（虽然上面已经初始化为true）
+                if (prefix === '9900' && !options.require9900) return;
+                if (prefix === '9901' && !options.require9901) return;
+
+                const statusHex = res.substring(res.length - 2);
+                const status = parseInt(statusHex, 16);
+
+                if (status >= 0 && status < 100) {
+                  // Ignore, maybe log it
+                  console.log('Status ignored (0-99):', status);
+                  return;
+                }
+
+                if (status === 100) {
+                  if (prefix === '9900') received9900 = true;
+                  if (prefix === '9901') received9901 = true;
+                  
+                  if (received9900 && received9901) {
+                    cleanup();
+                    resolve(true);
+                  }
+                } else if (status > 100) {
+                  const code = status - 100;
+                  const msg = ERROR_CODES[code] || _('Unknown Error');
+                  cleanup();
+                  reject(new Error(msg));
+                }
+              };
+
+              emitter.on('upload/notify', this.listenBleNotify);
+            });
+          },
           async syncToDeviceWithWifi() {
+            //判断如果选择的是door management，则只需要同步device
+            if (this.accessType == 0) {
+              try{
+                app.dialog.preloader(_('Syncing to device...'));
+                let settings = await this.upDateDeviceSettings();
+                await window.peripheral[guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '9901',
+                  },
+                ]);
+                let status = await this.startListenBleNotify({ require9900: false, require9901: true });
+                debugger
+                if(status){
+                  app.dialog.close();
+                  app.dialog.alert(_('Sync to device success.'));
+                  this.isSyncSetting = true;
+                }else{
+                  app.dialog.close();
+                  app.dialog.alert(_('Sync to device failed.'));
+                  this.isSyncSetting = false;
+                }
+              }catch(error){
+                app.dialog.close();
+                app.dialog.alert(erp.get_log_description(error));
+              }
+              return;
+            }
+            app.dialog.preloader(_('Getting device access...'));
             try {
               let result = await http2.request({
                 url: encodeURI('/api/method/appv6.getDeviceAccessByDevice'),
@@ -515,6 +876,7 @@
                 },
               });
               console.log('result', result);
+              app.dialog.close();
               if (result.status == 200) {
                 let data = result.data.data;
                 let postScheduleList = [];
@@ -543,11 +905,11 @@
                     key_card_id: this.keyCardId,
                     key_card_secret: this.keyCardSecret,
                     octopus_card_id: this.octopusCardId,
-                    guest_email: this.guestEmail,
                     blocking_schedule: postScheduleList,
                     access_level: this.accessGroup,
                   };
                   try {
+                    app.dialog.preloader(_('Saving device access...'));
                     let respone = await http2.request({
                       url: encodeURI('/api/resource/Device Access'),
                       responseType: 'json',
@@ -557,19 +919,24 @@
                       data: deviceAccessMap,
                     });
                     console.log('respone', respone);
+                    this.deviceAccessMap = respone.data.data;
+                    app.dialog.close();
                     let settings = await this.upDateDeviceSettings();
                     await window.peripheral[guid].write([
                       {
                         service: 'ff80',
                         characteristic: 'ff81',
                         data: '9900',
-                      },{
+                      },
+                      {
                         service: 'ff80',
                         characteristic: 'ff81',
                         data: '9901',
-                      }
+                      },
                     ]);
+                    app.dialog.close();
                   } catch (error) {
+                    app.dialog.close();
                     app.dialog.alert(error);
                   }
                 } else {
@@ -599,6 +966,7 @@
                   }
                   console.log('deviceAccessMap', deviceAccessMap);
                   try {
+                    app.dialog.preloader(_('Saving device access...'));
                     let respone = await http2.request({
                       url: encodeURI('/api/resource/Device Access/' + deviceAccessMap.name),
                       responseType: 'json',
@@ -619,13 +987,16 @@
                         service: 'ff80',
                         characteristic: 'ff81',
                         data: '9900',
-                      },{
+                      },
+                      {
                         service: 'ff80',
                         characteristic: 'ff81',
                         data: '9901',
-                      }
+                      },
                     ]);
+                    app.dialog.close();
                   } catch (error) {
+                    app.dialog.close();
                     app.dialog.alert(error);
                   }
                 }
@@ -634,42 +1005,74 @@
               console.log('error', error);
             }
           },
+          checkIfOnline(email){
+            let mac = core_utils_get_mac_address_from_guid(guid, false);
+            let topic_self = `${mac.toLowerCase()}-${email}`;
+            let will_topic = `will/${md5(md5(topic_self))}`;
+            return new Promise((resolve) => {
+              const cleanup = () => {
+                if(this.$checkIfOnlineTimeout){
+                  clearTimeout(this.$checkIfOnlineTimeout);
+                  this.$checkIfOnlineTimeout = null;
+                }
+                if(this.$checkOnlineInterval){
+                  clearInterval(this.$checkOnlineInterval);
+                  this.$checkOnlineInterval = null;
+                }
+                if (this.wifiTopicHandler) {
+                  emitter.off(will_topic, this.wifiTopicHandler);
+                  this.wifiTopicHandler = null;
+                }
+              };
+              
+              // 先清理可能存在的旧监听器和定时器
+              cleanup();
+
+              this.wifiTopicHandler = (res) => {
+                console.log('res', res);
+                if(res.message.toLowerCase().includes('online')){
+                  cleanup(); // 收到消息后立即清理
+                  console.log('wifiConnected', true);
+                  this.wifiConnected = true;
+                  resolve(true);
+                }else{
+                  // 收到offline或者其他消息，不立即resolve false，而是继续等待
+                  // 配合定时器重新订阅来确保能收到最新状态
+                  console.log('Received offline or other status, waiting...');
+                }
+              };
+              
+              core_mqtt_subscribe(will_topic, 0, false);
+              emitter.on(will_topic, this.wifiTopicHandler);
+              
+              // 每10秒重新订阅一次，确保订阅状态活跃
+              this.$checkOnlineInterval = setInterval(() => {
+                console.log('Resubscribing to check online status...');
+                core_mqtt_subscribe(will_topic, 0, false);
+              }, 10000);
+
+              this.$checkIfOnlineTimeout = setTimeout(() => {
+                cleanup();
+                resolve(false);
+              }, 60 * 1000);
+            });
+          },
           async syncWifi() {
+            let postStatus = true; //验证是否能下一步的状态
             //connect to the mqtt server
-            if (!this.ssid || !this.password) {
+            if (!this.wifiStatus) {
+              if (!this.ssid || !this.password) {
+                postStatus = false;
+              }
+            }
+            if (!postStatus) {
               app.dialog.alert(_('Please enter the wifi ssid and password.'));
               return;
             }
-            const checkIfOnline = () => {
-              let mac = core_utils_get_mac_address_from_guid(guid, false);
-              let topic_self = `${mac.toLowerCase()}-${users[users.current].usr.toLowerCase()}`;
-              let will_topic = `will/${md5(md5(topic_self))}`;
-              debugger;
-              core_mqtt_subscribe(will_topic, 0, false);
-              window.$subscribeTimer = setTimeout(() => {
-                core_mqtt_subscribe(will_topic, 0, false);
-              }, 10 * 1000);
-              if (window.$wifiTopicFun) {
-                emitter.off(will_topic, window.$wifiTopicFun);
-              }
-              window.$wifiTopicFun = async (res) => {
-                console.log('component res', res);
-                let message = res.message;
-                if (message.includes('Online')) {
-                  clearTimeout(window.$subscribeTimer);
-                  clearTimeout(window.$this_timer);
-                  app.dialog.close();
-                  this.wifiConnected = true;
-                  app.dialog.alert(_('Wi-Fi connected.'));
-                  this.toTab(2);
-                  //check the state of the connect status
-                }
-              };
-              emitter.on(will_topic, window.$wifiTopicFun);
-            };
             //connect to the wifi
             const saveSsid = () => {
-              const data = '932000' + this.ssid.length.toString(16).pad('0000') + this.ssid.convertToHex();
+              let ssid_utf_8 = this.stringToUtf8Hex(this.ssid);
+              const data = '932000' + (ssid_utf_8.length / 2).toString(16).pad('0000') + ssid_utf_8;
               return window.peripheral[guid].write([
                 {
                   service: 'ff80',
@@ -690,7 +1093,7 @@
               ]);
             };
             const saveEmail = () => {
-              let email = users[users.current].usr.toLowerCase();
+              let email = this.email?this.email:users[users.current].usr.toLowerCase();
               const data = '932200' + email.length.toString(16).pad('0000') + email.convertToHex();
 
               return window.peripheral[guid].write([
@@ -714,7 +1117,9 @@
               ]);
             };
             const saveServerUrl = () => {
-              let server_url = 'mqtt://' + erp.settings[erp.appId].mqtt_server;
+              let server_url = erp.settings[erp.appId].mqtt_scheme
+                ? erp.settings[erp.appId].mqtt_scheme + '://' + erp.settings[erp.appId].mqtt_server
+                : 'mqtt://' + erp.settings[erp.appId].mqtt_server;
               const data = '930000' + server_url.length.toString(16).pad('0000') + server_url.convertToHex();
 
               return window.peripheral[guid].write([
@@ -734,27 +1139,73 @@
                 },
               ]);
             };
+            const saveInErp = () => {
+              return iot_device_setting_sync_server(guid, null, null, true, {
+                'Wifi SSID': this.ssid,
+                'Wifi Password': this.password,
+                'Email Address': users[users.current].usr.toLowerCase() || 'null',
+                'Server Port': erp.settings[erp.appId].mqtt_port || 'null',
+                'Server URI': erp.settings[erp.appId].mqtt_scheme
+                  ? erp.settings[erp.appId].mqtt_scheme + '://' + erp.settings[erp.appId].mqtt_server
+                  : 'mqtt://' + erp.settings[erp.appId].mqtt_server || 'null',
+              });
+            };
             try {
               app.dialog.preloader(_('Bluetooth connection in progress.'));
               await window.peripheral[guid].connect();
-              await saveSsid();
-              await saveSsidPassword();
+              
+              // 只有在未连接状态下，或者用户明确输入了 SSID 时才下发配置
+              if(!this.wifiStatus){
+                await saveSsid();
+                await saveSsidPassword();
+              }
+              //如果已经连接了mqtt，则直接跳过
+              debugger
+              if(this.wifiConnected){
+                this.toTab(2);
+                return;
+              }
               await saveEmail();
               await savePort();
               await saveServerUrl();
+              await saveInErp();
               await restartDevice();
               app.dialog.close();
               app.dialog.preloader(_('Restarting...'));
               await this.sleep(10 * 1000);
               app.dialog.close();
               app.dialog.preloader(_('Checking connection...'));
-              checkIfOnline();
+              let status = await this.checkIfOnline(this.email?this.email:users[users.current].usr.toLowerCase());
+              if(status){
+                app.dialog.close();
+                  this.wifiConnected = true;
+                  app.toast.create({
+                    text: _('Wi-Fi connected.'),
+                    position: 'center',
+                    closeTimeout: 3000,
+                  });
+                  this.toTab(2);
+              }else{
+                app.dialog.close();
+                app.dialog.alert(_('Wi-Fi connection failed. Please check your Wi-Fi settings.'));
+              }
             } catch (error) {
               app.dialog.close();
-              app.dialog.alert(error);
+              app.dialog.alert(erp.get_log_description(error));
             }
           },
           async syncToDeviceWithBle() {
+            //判断如果选择的是door management，则只需要同步device
+            if (this.accessType == 0) {
+              try{
+                let settings = await this.upDateDeviceSettings();
+                await this.postBleData(settings, 0);
+              }catch(error){
+                app.dialog.alert(_(erp.get_log_description(error)));
+              }
+              return;
+            }
+            app.dialog.preloader(_('Getting device access...'));
             //send the ble data to the device
             try {
               let result = await http2.request({
@@ -769,6 +1220,7 @@
                 },
               });
               console.log('result', result);
+              app.dialog.close();
               if (result.status == 200) {
                 let data = result.data.data;
                 let postScheduleList = [];
@@ -802,6 +1254,7 @@
                     access_level: this.accessGroup,
                   };
                   try {
+                    app.dialog.preloader(_('Saving device access...'));
                     let respone = await http2.request({
                       url: encodeURI('/api/resource/Device Access'),
                       responseType: 'json',
@@ -814,11 +1267,13 @@
                     let json = { 'result': [] };
                     json.result.push(respone.data.data);
                     this.deviceAccessMap = respone.data.data;
+                    app.dialog.close();
                     await this.postBleData(json, 1);
                     await this.sleep(1000);
                     let settings = await this.upDateDeviceSettings();
                     await this.postBleData(settings, 0);
                   } catch (error) {
+                    app.dialog.close();
                     app.dialog.alert(error);
                   }
                 } else {
@@ -847,6 +1302,7 @@
                     deviceAccessMap.valid_to = this.totalVailTo;
                   }
                   console.log('deviceAccessMap', deviceAccessMap);
+                  app.dialog.preloader(_('Saving device access...'));
                   try {
                     let respone = await http2.request({
                       url: encodeURI('/api/resource/Device Access/' + deviceAccessMap.name),
@@ -861,12 +1317,14 @@
                     let json = { 'result': [] };
                     json.result.push(respone.data.data);
                     this.deviceAccessMap = respone.data.data;
+                    app.dialog.close();
                     await this.postBleData(json, 1);
-                    //update the device settings 
+                    //update the device settings
                     await this.sleep(1000);
                     let settings = await this.upDateDeviceSettings();
                     await this.postBleData(settings, 0);
                   } catch (error) {
+                    app.dialog.close();
                     app.dialog.alert(error);
                   }
                 }
@@ -875,72 +1333,72 @@
               console.log('error', error);
             }
           },
-          upDateDeviceSettings(){
-            return new Promise(async(resolve, reject) => {
-              try{
+          upDateDeviceSettings() {
+            return new Promise(async (resolve, reject) => {
+              try {
                 let res = await http2.request({
-                  url: encodeURI('/api/resource/Device/'+guid),
+                  url: encodeURI('/api/resource/Device/' + guid),
                   responseType: 'json',
                   method: 'GET',
                   debug: true,
                 });
                 console.log('res', res);
-                //tindy the data 
+                //tindy the data
                 let settingMap = res.data.data;
                 settingMap.password = '000000';
                 let settings = settingMap.settings;
                 let haveButtonGroup = false;
-                settings.forEach((item)=>{
-                  if(item.setting_type == button_group){
+                settings.forEach((item) => {
+                  if (item.setting_type == button_group) {
                     haveButtonGroup = true;
                   }
-                })
-                if(!haveButtonGroup){
+                });
+                if (!haveButtonGroup) {
                   settings.push({
-                    parent : guid,
-                    parentfield : 'settings',
-                    parenttype : 'Device',
-                    doctype : 'Device Settings',
-                    setting_type : button_group,
-                    setting : button_group_command,
+                    parent: guid,
+                    parentfield: 'settings',
+                    parenttype: 'Device',
+                    doctype: 'Device Settings',
+                    setting_type: button_group,
+                    setting: button_group_command,
                   });
                   let postRes = await http2.request({
-                    url: encodeURI('/api/resource/Device/'+guid),
+                    url: encodeURI('/api/resource/Device/' + guid),
                     responseType: 'json',
                     method: 'PUT',
                     serializer: 'json',
                     debug: true,
                     data: {
-                      settings:settings
+                      settings: settings,
                     },
                   });
                 }
                 resolve({
-                  "data":settingMap
+                  'data': settingMap,
                 });
               } catch (error) {
                 //this means the device is not registered
                 console.log('error', error);
-                if(error.status == 404){
+                if (error.status == 404) {
                   let settings = [];
                   settings.push({
-                    parent : guid,
-                    parentfield : 'settings',
-                    parenttype : 'Device',
-                    doctype : 'Device Settings',
-                    setting_type : 'default_password',
-                    setting : '000000',
+                    parent: guid,
+                    parentfield: 'settings',
+                    parenttype: 'Device',
+                    doctype: 'Device Settings',
+                    setting_type: 'default_password',
+                    setting: '000000',
                   });
                   settings.push({
-                    parent : guid,
-                    parentfield : 'settings',
-                    parenttype : 'Device',
-                    doctype : 'Device Settings',
-                    setting_type : button_group,
-                    setting : button_group_command,
+                    parent: guid,
+                    parentfield: 'settings',
+                    parenttype: 'Device',
+                    doctype: 'Device Settings',
+                    setting_type: button_group,
+                    setting: button_group_command,
                   });
                   //post the device
-                  try{
+                  try {
                     let res = await http2.request({
                       url: encodeURI('/api/resource/Device'),
                       responseType: 'json',
@@ -950,24 +1408,26 @@
                       data: {
                         guid: '12345',
                         password: '000000',
-                        device_model: 'YO381',
-                        device_mode : 'Device Access',
-                        firmware : '13.126',
+                        device_model: 'YO382',
+                        device_mode: 'Device Access',
+                        firmware: '13.126',
                         batch: 'YO0012',
-                        settings:settings
+                        settings: settings,
                       },
                     });
                     console.log('res', res);
                     resolve(res);
-                  }catch(errors){
+                  } catch (errors) {
                     reject(errors);
                   }
                 }
               }
-            })
+            });
           },
           getAccessTypeTitle(type) {
-            if (type == 1) {
+            if (type == 0) {
+              return 'Door Management';
+            } else if (type == 1) {
               return 'Dynamic QR Code';
             } else if (type == 2) {
               return 'QR Code';
@@ -991,8 +1451,10 @@
             if (index == 2) {
               //save the time
               try {
-                this.totalVailFrom = this.formatDateTime($('#demo-calendar-date-time').val());
-                this.totalVailTo = this.formatDateTime($('#demo-calendar-date-time-to').val());
+                if (this.accessType != 0) {
+                  this.totalVailFrom = this.formatDateTime($('#demo-calendar-date-time').val());
+                  this.totalVailTo = this.formatDateTime($('#demo-calendar-date-time-to').val());
+                }
               } catch (error) {
                 postStatus = false;
                 app.dialog.alert(_('Please select the time.'));
@@ -1041,14 +1503,14 @@
             const binaryStr = atob(base64);
             return Uint8Array.from(binaryStr, (c) => c.charCodeAt(0)).buffer;
           },
-          requestMtuForBle(){
-            return new Promise(async(resolve, reject) => {
-              if(deviceInfo.operatingSystem === 'ios'){
+          requestMtuForBle() {
+            return new Promise(async (resolve, reject) => {
+              if (deviceInfo.operatingSystem === 'ios') {
                 resolve(true);
-              }else{
-                try{
+              } else {
+                try {
                   await window.peripheral[guid].connect();
-                }catch(error){
+                } catch (error) {
                   console.log('error', error);
                   reject(error);
                   return;
@@ -1062,23 +1524,26 @@
                     resolve(true);
                   },
                   (error) => {
-                    if(error){
+                    if (error) {
                       reject(error);
                     }
                   }
                 );
               }
-            })
+            });
           },
           async postBleData(json, postHead) {
-            if(postHead == 0){
+            if (postHead == 0) {
               app.dialog.close();
             }
             this.postBleDataList = [];
-            let uploadTimer = setTimeout(() => {
-              app.dialog.close();
-              app.dialog.alert(_('Upload Data Failed'));
-            }, 10000 * 60*5);
+            let uploadTimer = setTimeout(
+              () => {
+                app.dialog.close();
+                app.dialog.alert(_('Upload Data Failed'));
+              },
+              10000 * 60 * 5
+            );
             return new Promise(async (resolve, reject) => {
               this.iot_attempt = 0;
               await core_load_script('https://dev.mob-mob.com/files/spark-md5.min.js');
@@ -1092,7 +1557,7 @@
               console.log('bytestoString', bytestoString);
               const md5str = SparkMD5.hashBinary(bytestoString);
               let sizeHex = iot_utils_to_little_endian_hex(fileData.length / 2, 4);
-              debugger
+              debugger;
               let nameHex = convertToFixedSizeHex(`device_access`, 31);
               let readyData = `93330000340${'3'}${sizeHex}${md5str}${nameHex}`;
               let allData = `93330000340${'3'}${sizeHex}${fileData}${nameHex}`;
@@ -1115,7 +1580,6 @@
                       let status = parseInt(rs.substring(10, 12), 16);
                       console.log('status', status);
                       if (status > 0 && status < 100) {
-                        
                         // this.this_dialog.setProgress(status);
                         // this.this_dialog.setText(`${_('Upload Data')}: ${status}%`);
                       }
@@ -1124,7 +1588,7 @@
                         clearTimeout(uploadTimer);
                         resolve(true);
                         window.uploadStatus[parseInt(window.iot_attempt) - 1] = true;
-                        if(postHead == 0){
+                        if (postHead == 0) {
                           this.isSyncSetting = true;
                           app.dialog.alert(_('Upload Data Success'));
                         }
@@ -1145,7 +1609,7 @@
                     console.log(error);
                   }
                 );
-                setTimeout(()=>{
+                setTimeout(() => {
                   ble.writeWithoutResponse(
                     this.uuid,
                     'ff80',
@@ -1158,7 +1622,7 @@
                       console.log(error);
                     }
                   );
-                },1000);
+                }, 1000);
                 return;
                 try {
                   ble.connect(this.uuid, (peripheralData) => {
@@ -1410,7 +1874,7 @@
           addSchedule() {
             mainView.router.navigate(`/mobile-app/esp-choose-schedule`);
           },
-          
+
           removeDuplicates(arr) {
             const seen = new Set();
             return arr.filter((item) => {
@@ -1421,11 +1885,91 @@
           async sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
           },
+          stringToUtf8Hex(str) {
+            let utf8Bytes;
+            if (typeof TextEncoder !== 'undefined') {
+              // 现代浏览器和 Node.js
+              const encoder = new TextEncoder();
+              utf8Bytes = encoder.encode(str);
+            } else {
+              // 兼容旧环境（如旧版 IE）
+              utf8Bytes = [];
+              for (let i = 0; i < str.length; i++) {
+                let code = str.charCodeAt(i);
+
+                if (code < 0x80) {
+                  // 单字节字符
+                  utf8Bytes.push(code);
+                } else if (code < 0x800) {
+                  // 双字节字符
+                  utf8Bytes.push(0xc0 | (code >> 6));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                } else if (code < 0x10000) {
+                  // 三字节字符（包括大部分中文字符）
+                  utf8Bytes.push(0xe0 | (code >> 12));
+                  utf8Bytes.push(0x80 | ((code >> 6) & 0x3f));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                } else {
+                  // 四字节字符
+                  utf8Bytes.push(0xf0 | (code >> 18));
+                  utf8Bytes.push(0x80 | ((code >> 12) & 0x3f));
+                  utf8Bytes.push(0x80 | ((code >> 6) & 0x3f));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                }
+              }
+              utf8Bytes = new Uint8Array(utf8Bytes);
+            }
+            // 转换为十六进制字符串
+            return Array.from(utf8Bytes)
+              .map((byte) => byte.toString(16).padStart(2, '0'))
+              .join('');
+          },
         },
         computed: {},
         beforeDestroy() {
-          if(this.$qrcodeSetTimer){
+          this.stopHeartbeat();
+          if (this.$qrcodeSetTimer) {
             clearInterval(this.$qrcodeSetTimer);
+          }
+          if(this.$checkOnlineInterval){
+            clearInterval(this.$checkOnlineInterval);
+            this.$checkOnlineInterval = null;
+          }
+          if(this.listenBleNotifyTimeout){
+            clearTimeout(this.listenBleNotifyTimeout);
+            this.listenBleNotifyTimeout = null;
+          }
+          if (this.listenBleNotify) {
+            emitter.off('upload/notify', this.listenBleNotify);
+            this.listenBleNotify = null;
+          }
+          // 清理 Wifi 检测相关的资源
+          if (this.wifiCheckTimeout) {
+            clearTimeout(this.wifiCheckTimeout);
+            this.wifiCheckTimeout = null;
+          }
+          if (this.wifiTopicHandler) {
+            // 这里需要重新计算 topic 才能解绑，或者在 data 中保存 topic
+            // 但由于 beforeDestroy 时 guid 可能还在，我们可以尝试解绑
+            // 更稳妥的方式是保存 topic 或者 handler 本身就是关键
+            // 由于 handler 引用保存在 this.wifiTopicHandler，只要 emitter.off 的时候传入同一个函数引用即可
+            // 但是 emitter.off 需要 topic。为了简单起见，我们只清理定时器，handler 依赖 topic。
+            // 如果 topic 变化了，旧的 handler 确实是个问题。
+            // 更好的做法是在 data 中也保存当前的监听 topic
+          }
+          // 实际上，在 checkIfOnline 中闭包的 cleanup 只能在内部调用
+          // 为了在组件销毁时也能清理，我们需要把 cleanup 逻辑或者相关引用挂载到 this 上
+          // 上面的 search_replace 中我已经把 handler 和 timeout 挂载到 this 上了
+          // 这里我们尝试清理
+          if (this.wifiTopicHandler && guid && users[users.current]) {
+            try {
+              let mac = core_utils_get_mac_address_from_guid(guid, false);
+              let topic_self = `${mac.toLowerCase()}-${users[users.current].usr.toLowerCase()}`;
+              let will_topic = `will/${md5(md5(topic_self))}`;
+              emitter.off(will_topic, this.wifiTopicHandler);
+            } catch (e) {
+              console.log('cleanup wifi handler error', e);
+            }
           }
         },
       });
