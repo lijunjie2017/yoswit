@@ -23,6 +23,7 @@ window.iotDeviceRepair = (function () {
   class iotDeviceRepairTool {
     constructor(instance) {
       this.instance = instance;
+      this.timers = new Set();
     }
 
     // Dialog管理 (UI控制)
@@ -70,6 +71,45 @@ window.iotDeviceRepair = (function () {
         app.dialog.close();
       }
     }
+
+    hexToPlainText(hexString) {
+      const hexPattern = /^[0-9A-Fa-f]+$/;
+      if (!hexPattern.test(hexString)) {
+        throw new Error('Invalid HEX input. Only hexadecimal characters (0-9, A-F) are allowed.');
+      }
+
+      const byteArray = [];
+      for (let i = 0; i < hexString.length; i += 2) {
+        byteArray.push(parseInt(hexString.substr(i, 2), 16));
+      }
+
+      const decoder = new TextDecoder();
+      return decoder.decode(new Uint8Array(byteArray));
+    }
+
+    extractVersion(str) {
+      if (!str) return '';
+      const match = str.match(/\d+\.\d+(\.\d+)?/);
+      return match ? match[0] : str;
+    }
+
+    async promisifyRead(uuid, service, characteristic) {
+      return new Promise((resolve, reject) => {
+        try {
+          if (window.peripheral && window.peripheral[uuid] && typeof window.peripheral[uuid].read === 'function') {
+            window.peripheral[uuid].read(service, characteristic, (res) => {
+              resolve(res);
+            }, (err) => {
+              reject(err);
+            });
+          } else {
+            reject('Device not found or read not supported');
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
   }
 
   //构造主函数
@@ -95,7 +135,7 @@ window.iotDeviceRepair = (function () {
     iotDeviceRepair.prototype.findRcuDevice = function () {
       try {
         // 安全访问嵌套属性
-        const profileDevice = safeGet(window, 'erp.info.profile.profile_device', []);
+        const profileDevice = safeGet(erp, 'info.profile.profile_device', []);
 
         if (!Array.isArray(profileDevice)) {
           console.warn('profile_device is not an array');
@@ -103,7 +143,6 @@ window.iotDeviceRepair = (function () {
         }
 
         const clonedProfileDevice = cloneDeep(profileDevice);
-
         return (
           clonedProfileDevice.find(function (item) {
             return item && RCU_DEVICE_MODELS.includes(item.device_model);
@@ -141,7 +180,204 @@ window.iotDeviceRepair = (function () {
       });
       return gateway;
     };
+    //修复wifi
+    iotDeviceRepair.prototype.repairWifi = function () {
+      let self = this;
+      //定义操作码
+      const NEED_RESTART = 101;
+      const NEED_RESET = 102;
+      const NEED_INPUT = 103;
+      return new Promise(async (resolve, reject) => {
+        //首先检查是否已经再setting中存在
+        try{
+          let ssid = self.findSettingValue('Wifi SSID');
+          let password = self.findSettingValue('Wifi Password');
+          if(ssid && password){
+            return resolve(NEED_RESTART);
+          }else{
+            return resolve(NEED_INPUT);
+          }
+        }catch(error){
+          reject(error)
+        }
+      });
+    }
 
+    //检查wifi设备的email是否与profile的一致
+    iotDeviceRepair.prototype.checkWifiEmail = function () {
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        let email = self.findSettingValue('Email Address');
+        let profileEmail = erp.info.profile.profile_email;
+        if(profileEmail && profileEmail !== email){
+          return resolve(false);
+        }else{
+          return resolve(true);
+        }
+      });
+    }
+
+    // 更改device setting里面的配置和profile里面的配置
+    iotDeviceRepair.prototype.updateEmailForDeviceAndProfile = function () {
+      /*
+      ** 这里最好一个api坐完这些动作
+      */
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        //首先先写入到设备，并需要提醒用户需要重启设备
+        //首先需要拼接gateway
+        const profile_email = erp.info.profile.profile_email;
+        if(!profile_email){
+          return resolve(true);
+        }else{
+          const emial = `${core_utils_get_mac_address_from_guid(self.props.guid, false)}-${profile_email}`;
+          //开始写入蓝牙指令
+          const email_data = `932200${profile_email.toLowerCase().length.toString(16).padStart(4, '0')}${profile_email.toLowerCase().convertToHex()}`;
+          try{
+            await window.peripheral[self.props.guid].write([
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: email_data,
+              },
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: '810e',
+              }
+            ]);
+            //成功之后通过api更新数据
+            const emailResponse = await http2.request({
+                url: encodeURI(`/api/method/appv6.updateProfileDeviceGateway`),
+                method: 'POST',
+                responseType: 'json',
+                serializer: 'json',
+                data: {
+                  device: self.props.guid,
+                  profile_name: erp.info.profile.name,
+                  gateway: emial,
+                  email: profile_email,
+                },
+              });
+            //更改本地profile device gateway的值
+            const profile_device = erp.info.profile.profile_device;
+            profile_device.forEach((item) => {
+              if(item.device == self.props.guid){
+                item.gateway = emial;
+              }
+            });
+            //更改本地的device setting的值
+            const deviceMap = erp.info.device[self.props.guid];
+            deviceMap.settings.forEach((item) => {
+              if(item.setting_type == 'Email Address'){
+                item.setting = profile_email;
+              }
+            });
+            //告诉smart home要更新
+            window.globalUpdate = true;
+            //这里默认先把mobmob的状态更新为最新
+            window.peripheral[self.props.guid].prop.is_mobmob = 1;
+            return resolve(true);
+          }catch(error){
+            return reject(error)
+          }
+        }
+      });
+    }
+
+    //检查wifi状态
+    iotDeviceRepair.prototype.checkWifiStatus = function () {
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        let isOnline = false;
+        let timeoutId = null;
+        let delayedWriteTimer = null;
+        let isCompleted = false;
+
+        const completeCheck = (result) => {
+          if (isCompleted) return;
+          isCompleted = true;
+          cleanup();
+          resolve(result);
+        };
+        const handleWifiInfo = (data) => {
+          try {
+            const rs = data.rs;
+            const jsonData = JSON.parse(self.utils.hexToPlainText(rs.substring(10)));
+            console.log("jsonData",jsonData);
+            if (jsonData.ipv4) {
+              isOnline = true;
+              completeCheck(true);
+            } else {
+              completeCheck(false);
+            }
+          } catch (e) {
+            // 解析失败通常是因为数据格式不对，不代表WiFi不通
+          }
+        };
+        const cleanup = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            self.utils.timers.delete(timeoutId);
+          }
+          if (delayedWriteTimer) {
+            clearTimeout(delayedWriteTimer);
+            self.utils.timers.delete(delayedWriteTimer);
+          }
+          emitter.off('iot/wifi/info', handleWifiInfo);
+        };
+        try {
+          // 监听WiFi信息
+          emitter.on('iot/wifi/info', handleWifiInfo);
+          // 延迟发送WiFi状态查询命令
+          delayedWriteTimer = setTimeout(async () => {
+            if (delayedWriteTimer) {
+              self.utils.timers.delete(delayedWriteTimer);
+              delayedWriteTimer = null;
+            }
+            if (isCompleted) return;
+
+            try {
+              if (window.peripheral && window.peripheral[self.props.guid]) {
+                await window.peripheral[self.props.guid].write([
+                  {
+                    service: 'ff80',
+                    characteristic: 'ff81',
+                    data: '9329',
+                  },
+                ]);
+              }
+            } catch(error) {
+              // 写入失败不一定代表WiFi不通，继续等待超时
+            }
+          }, 500);
+          self.utils.timers.add(delayedWriteTimer);
+
+          timeoutId = setTimeout(() => {
+            if (timeoutId) {
+              self.utils.timers.delete(timeoutId);
+              timeoutId = null;
+            }
+            completeCheck(isOnline);
+          }, 1000 * 6);
+          self.utils.timers.add(timeoutId);
+        } catch (error) {
+          completeCheck(isOnline);
+        }
+      });
+    };
+
+    //检查Mqtt的连接状态
+    iotDeviceRepair.prototype.checkMqttConnection = function () {
+      //因为一开始已经初始化了设备，所有直接拿peripheral上面的mqtt状态即可
+      let self = this;
+      const deviceMap = cloneDeep(peripheral[self.props.guid]);
+      if(deviceMap && deviceMap.prop && deviceMap.prop.is_mobmob){
+        return true;
+      }else{
+        return false;
+      }
+    }
     // 检测mesh的方法
     iotDeviceRepair.prototype.checkMesh = function () {
       const self = this;
@@ -152,10 +388,8 @@ window.iotDeviceRepair = (function () {
           const isMeshDevice = MESH_DEVICE_MODELS.some(function (model) {
             return self.props.repair_device_model && self.props.repair_device_model.includes(model);
           });
-
-          if (isMeshDevice) {
-            resolve(true);
-            return;
+          if (!isMeshDevice) {
+            return resolve({ success: true });
           }
 
           // 开始mesh判断流程
@@ -164,28 +398,246 @@ window.iotDeviceRepair = (function () {
 
           // 寻找rcu设备
           const rcu_device = self.findRcuDevice();
-
           if (!rcu_device) {
-            resolve(false);
-            return;
+            return resolve({ 
+              success: false, 
+              reason: 'rcu_not_found',
+              message: _('Main RCU controller not found in this room.')
+            });
           }
 
           // 安全获取rcu的mesh数量
           const peripheralPath = 'peripheral.' + rcu_device.device + '.prop.mnSize';
           rcu_mesh_num = safeGet(window, peripheralPath, 0);
-
+          self_mesh_num = safeGet(window, 'peripheral.' + self.props.guid + '.prop.mnSize', 0);
+          
           // 检查mesh数量匹配
           if (rcu_mesh_num === self_mesh_num && rcu_mesh_num > 0) {
-            resolve(true);
+            return resolve({ success: true, rcu_mesh_num, self_mesh_num });
           } else {
-            resolve(false);
+            return resolve({ 
+              success: false, 
+              reason: 'mesh_mismatch',
+              rcu_mesh_num, 
+              self_mesh_num,
+              message: rcu_mesh_num === 0 ? _('RCU has no mesh data.') : _('Mesh count mismatch with RCU.')
+            });
           }
         } catch (e) {
           console.error('Error checking mesh:', e);
-          reject(e);
+          return reject(e);
         }
       });
     };
+
+    // 修复wifi的具体执行逻辑
+    iotDeviceRepair.prototype.executeWifiRepair = async function (errorCode) {
+      let self = this;
+      const NEED_RESTART = 101;
+      const NEED_RESET = 102;
+      const NEED_INPUT = 103;
+
+      try {
+        let ssid = self.findSettingValue('Wifi SSID');
+        let password = self.findSettingValue('Wifi Password');
+
+        // 如果是 101 (已存在) 直接尝试重启
+        if(errorCode == NEED_RESTART){
+         await self.restartDevice();
+         return true;
+        }else if(errorCode == NEED_RESET){
+          await self.resetDevice();
+          return true;
+        }else if(errorCode == NEED_INPUT){
+          await self.sendWifiConfig(ssid, password);
+          return true;
+        }else{
+          return true;
+        }
+      } catch (e) {
+        console.error('executeWifiRepair error:', e);
+        return false;
+      }
+    };
+
+    // 下发 Wifi 配置的底层指令
+    iotDeviceRepair.prototype.sendWifiConfig = async function (ssid, password) {
+      let self = this;
+      try {
+        await window.peripheral[self.props.guid].connect();
+        
+        // 9301 是 SSID, 9302 是 Password (参考 MQTT 的 9302/9303，但 Wifi 通常是 01/02)
+        // 注意：这里需要根据实际协议调整，如果协议不对请告知
+        let ssid_data = '930100' + ssid.length.toString(16).padStart(4, '0') + ssid.convertToHex();
+        let password_data = '930200' + (password || '').length.toString(16).padStart(4, '0') + (password || '').convertToHex();
+        
+        const bleList = [
+          { service: 'ff80', characteristic: 'ff81', data: ssid_data },
+          { service: 'ff80', characteristic: 'ff81', data: password_data }
+        ];
+
+        await window.peripheral[self.props.guid].write(bleList);
+        
+        // 下发后通常需要重启生效
+        await window.peripheral[self.props.guid].write([
+          { service: 'ff80', characteristic: 'ff81', data: '8110' }
+        ]);
+
+        return true;
+      } catch (e) {
+        console.error('sendWifiConfig error:', e);
+        return false;
+      }
+    };
+
+    //设备通过蓝牙获取场景的方法
+    iotDeviceRepair.prototype.getDeviceSceneCommand = async function () {
+      const self = this;
+      return new Promise(async (resolve, reject) => {
+        let sceneTimer = null;
+        let sceneHandler = null;
+
+        const cleanup = () => {
+          if (sceneTimer) {
+            clearTimeout(sceneTimer);
+            sceneTimer = null;
+          }
+          if (sceneHandler) {
+            emitter.off('get/device/notification', sceneHandler);
+            sceneHandler = null;
+          }
+        };
+
+        try {
+          sceneTimer = setTimeout(async() => {
+            cleanup();
+            try{
+              await self.disConnectDevice();
+            }catch(error){
+              console.error('disConnectDevice or disConnectDevice error:', error);
+            }
+            reject('Scene Check Timed Out');
+          }, 1000 * 60);
+
+          let deviceMap = erp.info.device[this.props.guid];
+          if (!deviceMap) {
+            cleanup();
+            return reject('Device is not found.');
+          }
+
+          let deviceModel = deviceMap.device_model;
+          if (!(deviceModel.includes('780') || deviceModel.includes('M146') || deviceModel.includes('M86'))) {
+            cleanup();
+            return resolve([]);
+          }
+
+          let commandList = [];
+          
+          sceneHandler = (data) => {
+            // TODO: Device validation (skipped as per user request)
+            let rs = data.rs;
+            if (!rs) return;
+            // 处理特殊指令的转换逻辑
+            if (rs.startsWith('972303') && rs.length > 10) {
+              const subType = rs.substring(8, 10);
+              if (subType === '02' || subType === '01' || subType === '00') {
+                const sceneId = rs.slice(6, 8);
+                if (sceneId !== '00') {
+                  rs = rs.replace('972303', '972003');
+                }
+              }
+            }
+
+            //特殊指令的处理机制
+            if(rs.startsWith('8f32') && rs.length > 6){
+              rs = rs.substring(0, rs.length-2);
+            }
+
+            commandList.push(rs);
+
+            // 检查是否收齐了所有必要的包
+            let isFinished = 
+              commandList.indexOf('8f1300ff') !== -1 &&
+              commandList.indexOf('8f200000ff') !== -1 &&
+              commandList.indexOf('972303ff02') !== -1 &&
+              commandList.indexOf('972303ff00') !== -1 &&
+              commandList.indexOf('972303ff01') !== -1 &&
+              commandList.indexOf('8f1000ff') !== -1;
+            if(deviceModel.includes('M86') || deviceModel.includes('M146')){
+              isFinished = 
+              commandList.indexOf('8f1300ff') !== -1 &&
+              commandList.indexOf('8f200000ff') !== -1 &&
+              commandList.indexOf('972303ff02') !== -1 &&
+              commandList.indexOf('972303ff00') !== -1 &&
+              commandList.indexOf('972303ff01') !== -1 &&
+              commandList.indexOf('8f32ff') !== -1 &&
+              commandList.indexOf('8f1000ff') !== -1;
+            }
+            
+            if (isFinished) {
+              cleanup();
+              resolve(commandList);
+            }
+          };
+
+          emitter.on('get/device/notification', sceneHandler);
+
+          try {
+            let read_action_command = '8f1200ff';
+            let read_trriger_command = `8f220000ff`;
+            let read_scene_toggle_on_command = `972303ff01`;
+            let read_scene_toggle_off_command = `972303ff00`;
+            let read_scene_toggle_setting_command = `972303ff02`;
+            let read_raw_setting_command = `8f1500ff`;
+            let read_led_setting_command = `8f33ff`;
+            let read_8_1_0_c = `8f0c01`; //同步设备的状态
+            let totalCommand = `1303${read_8_1_0_c}04${read_action_command}05${read_trriger_command}05${read_scene_toggle_on_command}05${read_scene_toggle_off_command}05${read_scene_toggle_setting_command}04${read_raw_setting_command}03${read_led_setting_command}`;
+
+            await window.peripheral[this.props.guid].connect();
+            await window.peripheral[this.props.guid].write([
+              {
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: totalCommand.toLowerCase(),
+              }
+            ]);
+          } catch(error) {
+            cleanup();
+            reject(error);
+          }
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      });
+    };
+
+    //设备断开连接的方法
+    iotDeviceRepair.prototype.disConnectDevice = async function () {
+      let self = this;
+      try{
+        await window.peripheral[self.props.guid].disconnect();
+        return true;
+      }catch(error){
+        console.error('disConnectDevice error:', error);
+        return false;
+      }
+    }
+
+    //设备重启的方法
+
+    iotDeviceRepair.prototype.restartDevice = async function () {
+      let self = this;
+      try{
+        await window.peripheral[self.props.guid].write([
+          { service: 'ff80', characteristic: 'ff81', data: '810e' }
+        ]);
+        return true;
+      }catch(error){
+        console.error('restartDevice error:', error);
+        return false;
+      }
+    }
     // 设备重置的方法 - 返回状态码
     iotDeviceRepair.prototype.resetDevice = async function () {
       try {
@@ -338,6 +790,161 @@ window.iotDeviceRepair = (function () {
       return sceneList;
     };
 
+    //从erp中获取全部场景指令的数组
+    iotDeviceRepair.prototype.getErpSceneCommandList = function () {
+      let self = this;
+      const erpSceneCommandList = [];
+      return new Promise(async (resolve, reject) => {
+        let sceneList = self.initSceneList();
+        try{
+          for(let j in sceneList){
+            let item = sceneList[j];
+              let scene_device_location = item.scene_device_location || [];
+              let templateName = item.scene_template;
+              let trigger = JSON.parse(item.trigger);
+              let action = JSON.parse(item.action);
+              let rcuGuid = self.getTheSceneRcu(item);
+              let deviceMap = {};
+              let deviceModel = '';
+              try {
+                deviceMap = erp.info.device[self.props.guid];
+                deviceModel = deviceMap.device_model;
+              } catch (error) {}
+              if (deviceModel == 'YO780') {
+                let thisCommandList = await self.saveActionCommand(item);
+                console.log("thisCommandList",thisCommandList);
+                thisCommandList.forEach((kitem) => {
+                  if(erpSceneCommandList.indexOf(kitem.command.toLowerCase()) == -1){
+                    erpSceneCommandList.push(kitem.command.toLowerCase());
+                  }
+                });
+              } else {
+                let thisCommandList = await self.saveTriggetCommand(item,self.props.guid);
+                thisCommandList.forEach((kitem) => {
+                  if(erpSceneCommandList.indexOf(kitem.data.toLowerCase()) == -1){
+                    erpSceneCommandList.push(kitem.data.toLowerCase());
+                  }
+                });
+              }
+          }
+          return resolve(erpSceneCommandList);
+        }catch(error){
+          console.error('Error getting erp scene command list:', error);
+          return reject(error);
+        }
+      });
+    };
+
+    //核心检测方法，将erp存储的场景和蓝牙获取的场景进行对比，然后返回有错的场景id和相关的代码
+    iotDeviceRepair.prototype.checkCoreSceneCommand = function () {
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        let sceneList = self.initSceneList();
+        const errorSceneList = [];
+        //定义错误码
+        const ERROR_CODE_SCENE_NOT_FOUND = 1001;
+        const ERROR_CODE_SCENE_COMMAND_NOT_FOUND = 1002;
+        const ERROR_CODE_SCENE_COMMAND_NOT_CORRECT = 1003;
+        const returnData = {
+          errorSceneList: [],
+          errorCode: 100,
+        };
+        try{
+          const sceneCommandList = await self.getDeviceSceneCommand();
+          console.log(`sceneCommandList`,sceneCommandList);
+          
+          /*
+          1. 如果发现蓝牙有场景，但是erp没有场景，需要提醒用户进行删除
+          2. 如果发现erp有场景，但是蓝牙没有场景，需要提醒用户进行场景写入
+          3. 如果sceneCommandList中的场景在sceneList中，则检查该场景的指令是否正确
+          4. 如果指令不正确，则将该场景id和相关的代码添加到errorSceneList中
+          5. 最后返回errorSceneList和错误码
+          */
+         if(sceneCommandList.length > 0 && sceneList.length == 0){
+          returnData.errorCode = ERROR_CODE_SCENE_NOT_FOUND;
+          return resolve(returnData)
+         }else if(sceneList.length > 0 && sceneCommandList.length == 0){
+          //提醒用户直接写入全部指令
+          returnData.errorCode = ERROR_CODE_SCENE_NOT_FOUND;
+          return resolve(returnData)
+         }else if(sceneList.length > 0 && sceneCommandList.length > 0){
+          //先获取全部erp场景的总数
+          const erpSceneCommandList = await self.getErpSceneCommandList();
+          console.log(`erpSceneCommandList`,erpSceneCommandList);
+          //实际的运作方法
+          for(let j in sceneList){
+            let item = sceneList[j];
+            let scene_device_location = item.scene_device_location || [];
+            let templateName = item.scene_template;
+            let trigger = JSON.parse(item.trigger);
+            let action = JSON.parse(item.action);
+            let rcuGuid = self.getTheSceneRcu(item);
+            let deviceMap = {};
+            let deviceModel = '';
+            let bleList = [];
+            try {
+              deviceMap = erp.info.device[self.props.guid];
+              deviceModel = deviceMap.device_model;
+            } catch (error) {}
+            if (deviceModel == 'YO780') {
+              let thisCommandList = await self.saveActionCommand(item);
+              // console.log("thisCommandList",thisCommandList);
+              thisCommandList.forEach((item) => {
+                bleList.push({
+                  service: 'ff80',
+                  characteristic: 'ff81',
+                  data: item.command,
+                });
+              });
+            } else {
+              bleList = bleList.concat(await self.saveTriggetCommand(item,self.props.guid));
+            }
+            bleList.forEach((kitem) => {
+              const command = kitem.data.toLowerCase();
+              if(sceneCommandList.indexOf(command) == -1){
+                errorSceneList.push({
+                  sceneId: item.name,
+                  command: command,
+                  errorCode: ERROR_CODE_SCENE_COMMAND_NOT_CORRECT,
+                });
+              }
+            });
+          }
+
+          // 检查“蓝牙有，ERP 全集无”（即设备上多余的指令）
+          sceneCommandList.forEach((command) => {
+            // 排除掉一些系统预定义的查询回复或状态指令
+            const systemCommands = ['8f1300ff', '8f200000ff', '972303ff02', '972303ff00', '972303ff01', '8f1000ff','8f32ff'];
+            if (systemCommands.indexOf(command.toLowerCase()) === -1 && erpSceneCommandList.indexOf(command.toLowerCase()) === -1) {
+              //额外判断过滤一个检测，如果蓝牙有810c的指令，但是erp没有，则不用管
+              if(command.toLowerCase().startsWith('8f0c')){
+                return;
+              }
+              errorSceneList.push({
+                sceneId: 'Extra', 
+                command: command,
+                errorCode: ERROR_CODE_SCENE_COMMAND_NOT_FOUND,
+              });
+            }
+          });
+          returnData.errorSceneList = errorSceneList;
+          return resolve(returnData);
+         }else{
+          //没有场景需要检查
+          returnData.errorCode = 100;
+          returnData.errorSceneList = [];
+          return resolve(returnData);
+         }
+        }catch(error){
+          returnData.errorCode = ERROR_CODE_SCENE_COMMAND_NOT_CORRECT;
+          returnData.errorSceneList = [];
+          return resolve(returnData);
+        }
+      })
+      
+      
+    }
+
     //核心业务修改，需要补充指令的检查
     iotDeviceRepair.prototype.checkCoreTriggerCommand = function (triggerCommand) {
       let self = this;
@@ -357,8 +964,8 @@ window.iotDeviceRepair = (function () {
       try {
         let triggerList = JSON.parse(scenesMap.trigger);
         let actionList = JSON.parse(scenesMap.action);
-        let rcuGuid = getTheSceneRcu(scenesMap);
-        let oldMac = core_utils_get_mac_address_from_guid(guid);
+        let rcuGuid = self.getTheSceneRcu(scenesMap);
+        let oldMac = core_utils_get_mac_address_from_guid(self.props.guid);
         let bleList = [];
         let uiConfiguration = null;
         try {
@@ -472,7 +1079,7 @@ window.iotDeviceRepair = (function () {
         let actionMap = JSON.parse(scenesMap.action);
         let triggerMap = JSON.parse(scenesMap.trigger);
         let uiConfiguration = null;
-        let rcuGuid = getTheSceneRcu(scenesMap);
+        let rcuGuid = self.getTheSceneRcu(scenesMap);
         let oldMac = core_utils_get_mac_address_from_guid(self.props.guid);
         let commandList = [];
         try {
@@ -493,10 +1100,10 @@ window.iotDeviceRepair = (function () {
               command: uiConfigurationMap.toLocaleLowerCase(),
             });
           }
-          if (isset(uiConfiguration[`${guid}_scene_command`])) {
+          if (isset(uiConfiguration[`${self.props.guid}_scene_command`])) {
             commandList.push({
               guid: rcuGuid,
-              command: uiConfiguration[`${guid}_scene_command`].toLocaleLowerCase(),
+              command: uiConfiguration[`${self.props.guid}_scene_command`].toLocaleLowerCase(),
             });
           }
         }
@@ -601,7 +1208,129 @@ window.iotDeviceRepair = (function () {
       }
       return rcuGuid;
     };
+    //获取设备的设置项
+    iotDeviceRepair.prototype.getDeviceSettingType = function (guid, setting_type) {
+      let settings = erp.info.device[guid].settings;
+      if (settings && settings.length) {
+        let settingMap = settings.find((item) => item.setting_type == setting_type);
+        if (settingMap) {
+          return settingMap.setting;
+        } else {
+          return '';
+        }
+      } else {
+        return '';
+      }
+    };
+    //检查设备是否已经输入mqtt的用户与密码
+    iotDeviceRepair.prototype.checkDeviceMqttUsernameAndPassword = function () {
+      let self = this;
+      try {
+        const mqtts = erp.settings[erp.appId].mqtt_scheme;
+        if(mqtts == 'mqtts'){
+          let mqttUsername = self.findSettingValue('Server Username');
+          let mqttPassword = self.findSettingValue('Server Password');
+          //如果其中一个为空的情况，重新输入用户的账号密码，并重启设备
+          if(!mqttUsername || !mqttPassword){
+            return false;
+          }
+        }else{
+          return true;
+        }
+      } catch (error) {
+        console.error('Error checking device mqtt username and password:', error);
+      }
+    };
 
+    //执行输入mqtts的方法
+    iotDeviceRepair.prototype.executeInputMqttUsernameAndPassword = async function () {
+      let self = this;
+      try {
+        const mqtts = erp.settings[erp.appId].mqtt_scheme;
+        if(mqtts == 'mqtts'){
+          //注意，目前都是只能写死一个用户名称和密码
+          const mqttUsername = `iot-device-themira`;
+          const mqttPassword = `Uiop0987!@#`;
+          let server_username_data = '930200' + mqttUsername.length.toString(16).pad('0000') + mqttUsername.convertToHex();
+          let server_password_data = '930300' + mqttPassword.length.toString(16).pad('0000') + mqttPassword.convertToHex();
+          const bleList = [{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: server_username_data,
+          },{
+            service: 'ff80',
+            characteristic: 'ff81',
+            data: server_password_data,
+          }];
+          try {
+            await window.peripheral[self.props.guid].connect();
+            await window.peripheral[self.props.guid].write(bleList);
+            return true;
+          } catch (error) {
+            console.error('Error executing input mqtt username and password:', error);
+            return false;
+          }
+        }
+      } catch (error) {
+        console.error('Error executing input mqtt username and password:', error);
+      }
+    }
+
+    // 蓝牙本身读取固件的方法
+    iotDeviceRepair.prototype.readFirmware = ()=>{
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        try {
+          await window.peripheral[self.props.guid].connect();
+          const firmware = await window.peripheral[self.props.guid].getCurrentFirmware();
+          return resolve(firmware);
+        }catch(error){
+          return reject(error);
+        }
+      })
+    }
+
+    // 通过接口获取固件版本信息
+    iotDeviceRepair.prototype.getFirmwareFromApi = ()=>{
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        try {
+          const firmwareResponse = await http2.request({
+            url: encodeURI(`/api/method/appv6.getFirmware`),
+            method: 'GET',
+            responseType: 'json',
+            serializer: 'json',
+            params: {
+              model: self.props.repair_device_model,
+            },
+          });
+          if (firmwareResponse.data.firmware) {
+            const firmware = firmwareResponse.data.firmware;
+            return resolve(firmware);
+          }else{
+            return resolve(null);
+          }
+        }catch(error){
+          return reject(error);
+        }
+      })
+    }
+
+    // 获取设备上最新固件的方法
+    iotDeviceRepair.prototype.getCurrentFirmware = ()=>{
+      let self = this;
+      return new Promise(async (resolve, reject) => {
+        try {
+          const uuid = window.peripheral[self.props.guid].prop.id;
+          const mac = await self.utils.promisifyRead(uuid, '180a', '2a26');
+          const version = self.utils.extractVersion(mac.convertToAscii());
+          self.props.currentFirmware = version;
+          resolve(version);
+        }catch(error){
+
+        }
+      })
+    }
     // 检查设备是否需要OTA
     iotDeviceRepair.prototype.checkDeviceFirmwareVersionAndUpdate = async function () {
       let self = this;
@@ -614,8 +1343,8 @@ window.iotDeviceRepair = (function () {
         if (!ssid) {
           let rcu_device = self.findRcuDeviceFromDeviceTable(RCU_DEVICE_MODELS);
           if (rcu_device) {
-            let rcu_ssid = get_device_setting_type(rcu_device.guid, 'Wifi SSID');
-            let rcu_password = get_device_setting_type(rcu_device.guid, 'Wifi Password');
+            let rcu_ssid = self.getDeviceSettingType(rcu_device.name, 'Wifi SSID');
+            let rcu_password = self.getDeviceSettingType(rcu_device.name, 'Wifi Password');
             if (rcu_ssid) {
               ssid = rcu_ssid;
             }
@@ -738,7 +1467,7 @@ window.iotDeviceRepair = (function () {
       }
     };
     // 更新devicesetting的操作方法
-    iotDeviceRepair.prototype.updateDeviceSetting = async function () {
+    iotDeviceRepair.prototype.updateDeviceSetting = async function (titleType = 'Repair') {
       let self = this;
       let settingList = self.initSettingList();
       if (settingList.length > 0) {
@@ -753,14 +1482,14 @@ window.iotDeviceRepair = (function () {
             });
           });
           //开始更新setting,并显示UI进度条
-          self.utils.showProgress('Restore Device Setting', 0, settingList.length);
+          self.utils.showProgress(`${_(titleType)} ${_('Device Setting')}`, 0, settingList.length);
           let settingIndex = 1;
           let totalSettingCount = settingBleList.length;
           for (let i in settingBleList) {
             try {
               let setting = settingBleList[i];
               await window.peripheral[self.props.guid].write([setting]);
-              self.utils.showProgress('Restore Device Setting', settingIndex, totalSettingCount);
+              self.utils.showProgress(`${_('Device Setting Progress')}`, settingIndex, totalSettingCount);
               console.log('settingIndex', settingIndex);
               console.log('totalSettingCount', totalSettingCount);
               if (settingIndex == totalSettingCount) {
@@ -807,6 +1536,11 @@ window.iotDeviceRepair = (function () {
         return false;
       }
     };
+
+    // 设备检测的方法
+    iotDeviceRepair.prototype.check = async function (){
+      let self = this;
+    }
 
     // 等待时间的方法 - 返回Promise，参数错误返回rejected Promise
     iotDeviceRepair.prototype.sleep = function (ms) {

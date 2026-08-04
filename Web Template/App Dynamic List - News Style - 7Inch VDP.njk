@@ -1,0 +1,261 @@
+<template>
+  <yo-skeleton loading="${items{{ block.name }}.pagination.page === 0 && items{{ block.name }}.pagination.allowInfinite}">
+    ${items{{ block.name }}.pagination.items.length <= 0 && !items{{ block.name }}.pagination.allowInfinite && $h`
+    <no-record-found></no-record-found>
+    ` }
+    <!-- divider -->
+    ${items{{ block.name }}.pagination.page !== 0 && items{{ block.name }}.pagination.allowInfinite && $h`
+    <div class="preloader infinite-scroll-preloader"></div>
+    `}
+    <!-- divider -->
+
+    <div class="media-list mb-5" block-name="{{ block.name }}">
+      <style>
+        div[block-name='{{ block.name }}'] .is-not-read {
+          background: var(--fimobile-page-bg-1) !important;
+        }
+      </style>
+
+      ${items{{ block.name }}.pagination.items.map(e => $h`
+      <div class="block-title">
+        <span class="block-title-large mx-1">${ dayjs(e[0].map_time).format('D') }</span>
+        <span lang="en">${ _(formatMonth{{ block.name }}(e[0])) }</span>
+      </div>
+
+      <div class="card overflow-hidden notifications">
+        <div class="card-content list">
+          <ul>
+            ${e.map(li => $h`
+            <li key="${li.name}">
+              <a
+                href="#"
+                class="item-content ${li.map_islink ? 'item-link' : ''} ${!li._seen ? 'is-not-read' : ''}"
+                @click="${() => navigationRoute{{ block.name }}(li)}"
+              >
+                ${li.map_show_banner && $h`
+                <div class="item-media">
+                  ${li.map_image ? $h`
+                  <img src="${ erp.get_url(li.map_image) }" style="width: 40px; height: 40px; border-radius: 50%" />
+                  `: $h`
+                  <i class="material-icons" style="font-size: var(--f7-block-title-large-font-size)">collections</i>
+                  `}
+                </div>
+                `}
+
+                <div class="item-inner" style="word-break: break-word">
+                  <div class="item-title-row">
+                    <div class="item-title" style="word-break: break-word; white-space: normal" innerHTML="${ li.map_title }" lang="en">
+                      <!-- divider -->
+                    </div>
+                    <div class="item-after">
+                      ${ dayjs(li.map_time).format('HH:mm') }
+                      <div class="notification-dots-small ms-2 ps-1 position-relative">
+                        ${!li._seen && $h`
+                        <span
+                          class="badge color-green position-absolute"
+                          style="min-width: 10px; height: 10px; right: -5px; top: 5px"
+                        ></span>
+                        `}
+                      </div>
+                    </div>
+                  </div>
+                  <!-- divider -->
+                  ${li.map_subtitle && $h`
+                  <div class="text-muted" lang="en" innerHTML="${ li.map_subtitle }"></div>
+                  ` }
+                </div>
+              </a>
+            </li>
+            `)}
+          </ul>
+        </div>
+      </div>
+      `)}
+    </div>
+  </yo-skeleton>
+</template>
+
+<pre name="initialization">
+  hasMoreItems = false;
+
+  const news_type{{ block.name }} = '{{ block.web_template_values.news_type }}';
+
+  let request{{ block.name }} = '';
+
+  if (news_type{{ block.name }} === 'Blog Post') {
+    const now = DateFormatter.format(new Date(), 'Y-m-d H:i:s');
+    let flat = '';
+    try {
+      if (erp.info && erp.info.profile && erp.info.profile.flat) {
+        flat = erp.info.profile.flat;
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    const params = {
+      flat: flat,
+      limit: '${limit}',
+      start: '${page}',
+    };
+
+    if (ctx.$f7route.query.category) {
+      params['blog_category'] = ctx.$f7route.query.category;
+    }
+
+    request{{ block.name }} = encodeURI('/api/method/lincogn.mobile_app.api.blog_post.get_blog_posts') + app_core_encode_params(params);
+  } else if (news_type{{ block.name }} === 'Notification Log') {
+    const currentDate = new Date();
+    // 获取三个月前的日期
+    currentDate.setMonth(currentDate.getMonth() - 3);
+
+    request{{ block.name }} = encodeURI('/api/method/lincogn.mobile_app.api.notification.get_notifications') + app_core_encode_params({
+      limit: '${limit}',
+      limit_start: '${page}',
+      order_by: 'modified desc',
+      filters : JSON.stringify({
+        "document_type" : ["!=","Device Mail Log"],
+        "creation" : [">=", DateFormatter.format(currentDate, 'Y-m-d H:i:s')]
+      })
+    });
+  }
+
+  let now{{ block.name }} = new Date().getFullYear();
+  const formatMonth{{ block.name }} = (item) => {
+    const ist = dayjs(item.map_time);
+    if (ist.get('year') === now{{ block.name }}) {
+      return ist.format('MMM');
+    } else {
+      return ist.format('MMM (YYYY)');
+    }
+  }
+
+  const items{{ block.name }} = erp.script.app_core_list_request(
+    request{{ block.name }},
+    {
+      $update: $update,
+      limit: 20,
+      responseKey: 'message',
+      cacheKey: `Notification@{{ block.web_template_values.news_type }}@${erp.appId}@${users.current}`,
+      transformResponse: (items) => {
+        const dateMap = new Map();
+
+        if (news_type{{ block.name }} === 'Blog Post') {
+          items = items.filter((e) => e.hidden === undefined || !e.hidden);
+        }
+        //过滤expired_on
+        const now{{ block.name }}Time = dayjs();
+        items = items.filter((item) => {
+          if (item.expired_on) {
+            // 兼容 iOS：将 '-' 替换为 '/' 以确保解析稳定性
+            return dayjs(item.expired_on.replace(/-/g, '/')).isAfter(now{{ block.name }}Time);
+          }
+          return true;
+        });
+        items.forEach((item) => {
+          // mapping field
+          item.map_show_banner = false;
+
+          item.map_islink = true;
+          if (news_type{{ block.name }} === 'Blog Post') {
+            item.map_time = item.release_on || item.modified;
+            item.map_title = _(item.title);
+            item.map_subtitle = _(item.blog_intro);
+            item.map_image = item.banner;
+            item.map_show_banner = true;
+
+            // hook
+            item._seen = "[]";
+          } else if (news_type{{ block.name }} === 'Notification Log') {
+            item.map_time = item.modified;
+            item.map_title = _tran(item.subject);
+
+            if (item.type === 'Assignment' || item.type === 'Share' || (item.type === 'Alert' && !item.email_content && !item.content)) {
+              item.map_islink = false;
+            }
+          }
+
+          const datestr = item.map_time;
+          const date = datestr.split(' ')[0];
+    
+          if (dateMap.has(date)) {
+            dateMap.get(date).push(item);
+          } else {
+            dateMap.set(date, [item]);
+          }
+        });
+    
+        return Array.from(dateMap.values());
+      }
+    }
+  );
+
+  const navigationRoute{{ block.name }} = async (row) => {
+    if (!window.vdpMainView) {
+      return;
+    }
+
+    if (news_type{{ block.name }} === 'Blog Post') {
+      if (row.route.startsWith('mobile-app/')) {
+        window.vdpMainView.router.navigate('/' + row.route);
+      } else {
+        window.vdpMainView.router.navigate(`/mobile-app/rich-text-viewer-page?docname=${encodeURIComponent(row.name)}&title=${encodeURIComponent(row.title)}`);
+      }
+    } else if (news_type{{ block.name }} === 'Notification Log') {
+      await mark_as_read{{ block.name }}(row);
+
+      if (row.document_type === 'Blog Post') {
+        window.vdpMainView.router.navigate(`/mobile-app/rich-text-viewer-page?docname=${encodeURIComponent(row.document_name)}&title=${encodeURIComponent(row.map_title)}`);
+      } else if (row.map_islink) {
+        window.vdpMainView.router.navigate(`/mobile-app/rich-text-viewer-page?docname=${encodeURIComponent(row.name)}&doctype=${encodeURIComponent('Notification Log')}&title=${encodeURIComponent(row.map_title)}`);
+      }
+    }
+  }
+
+  async function mark_as_read{{ block.name }}(row) {
+    try {
+      if (!row._seen) {
+        const val = JSON.stringify([users[users.current].usr]);
+        const data = await http.request(encodeURI('/api/method/appv6.addSeen'), {
+          method: 'POST',
+          responseType: 'json',
+          serializer: 'json',
+          data: {
+            doctype: 'Notification Log',
+            docname: row.name
+          },
+        });
+
+        row._seen = val;
+        emitter.emit('app:notification:mark_as_read', row);
+        $update();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  $onMounted(() => {
+    items{{ block.name }}.loadMore();
+  });
+</pre>
+
+<pre name="refresh">
+  {% if block.web_template_values.tab_content %}
+  if ($(`.tab-active [block-name="{{ block.name }}"]`).length > 0) {
+    items{{ block.name }}.refresh(e, done);
+  }
+  {% else %}
+  items{{ block.name }}.refresh(e, done);
+  {% endif %}
+</pre>
+
+<pre name="loadmore">
+  {% if block.web_template_values.tab_content %}
+  if ($(`.tab-active [block-name="{{ block.name }}"]`).length > 0) {
+    items{{ block.name }}.loadMore();
+  }
+  {% else %}
+  items{{ block.name }}.loadMore();
+  {% endif %}
+</pre>

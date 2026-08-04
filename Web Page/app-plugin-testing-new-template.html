@@ -1,0 +1,349 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Plugin Template') }}</div>
+        <div class="right">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44" func="init_eruda">
+            <i class="icon material-icons">bug_report</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div id="vue-app" v-cloak></div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $ref = ctx.$ref,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    // ---------------------------------------------------------------------------------
+    // ----------------------------- 插件测试代码编写 -------------------------------------
+    // ---------------------------------------------------------------------------------
+
+    /**
+     * 配置对象，key为方法名，value为方法配置，符合 Capacitor Plugins设计的配置
+     * 例 https://capacitorjs.com/docs/apis/camera
+     *
+     * 如果不需要填写请清空，例如空对象{}，避免大老板扣问号
+     */
+    const defaultJSONConfig = {
+      getPhoto: {
+        quality: 60,
+        allowEditing: false,
+        resultType: 'uri',
+        saveToGallery: false,
+        source: 'CAMERA',
+      },
+      pickImages: {
+        quality: 60,
+        limit: 9,
+      },
+    };
+
+    /**
+     * 插件方法测试配置，每个Action拥有三个参数，
+     * method: 方法名，会对应获取配置
+     * description: 方法描述
+     * onClick: 方法执行函数
+     */
+    const pluginActions = [
+      {
+        method: 'getPhoto',
+        description: 'Prompt the user to pick a photo from an album, or take a new photo with the camera.',
+        /**
+         * @param config: 配置对象
+         * @param allConfig: 所有配置对象
+         * @param applyCfg: 用于合并配置对象的函数
+         */
+        onClick: async (config, allConfig, applyCfg) => {
+          console.log(config);
+          const ret = await Capacitor.Plugins.Camera.getPhoto(config);
+          console.log(ret);
+          applyCfg('getPhotoRet', ret);
+        },
+      },
+      {
+        method: 'pickImages',
+        description:
+          'Allows the user to pick multiple pictures from the photo gallery. On iOS 13 and older it only allows to pick one picture.',
+        onClick: async (config, allConfig) => {
+          console.log(config);
+          const ret = await Capacitor.Plugins.Camera.pickImages(config);
+          console.log(ret);
+        },
+      },
+    ];
+
+    /**
+     * 页面初始化时调用，插件如需初始化可在这里执行
+     */
+    async function init() {
+      // TODO
+    }
+
+    /**
+     * 页面销毁时调用，插件如需销毁可在这里执行
+     */
+    async function deinit() {
+      // TODO
+    }
+
+    // ---------------------------------------------------------------------------------
+    // ------------------- 以下UI模版无需更改，如有更新则直接覆盖以下代码即可 -------------------
+    // ---------------------------------------------------------------------------------
+
+    let globalVueApp = null;
+    const formSetting = {
+      web_form_fields: [
+        {
+          'fieldname': 'section_1',
+          'fieldtype': 'Column Break',
+          'label': 'Configuration',
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': '',
+        },
+        {
+          'fieldname': 'config',
+          'fieldtype': 'HTML',
+          'label': 'Configuration',
+          'allow_read_on_all_link_options': 0,
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': JSON.stringify(defaultJSONConfig, null, 2),
+        },
+        {
+          'fieldname': 'section_2',
+          'fieldtype': 'Column Break',
+          'label': 'Actions',
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': '',
+        },
+        {
+          'fieldname': 'action',
+          'fieldtype': 'HTML',
+          'label': 'Actions',
+          'allow_read_on_all_link_options': 0,
+          'reqd': 0,
+          'read_only': 0,
+          'show_in_filter': 0,
+          'hidden': 0,
+          'options': '',
+          'max_length': 0,
+          'max_value': 0,
+          'precision': '',
+          'default': '',
+        },
+      ],
+      button_label: 'Test',
+    };
+
+    ctx.$on('pageMounted', async (e, page) => {
+      globalVueApp = erp.script.core_app_basic_form_render(
+        {
+          web_form: formSetting,
+        },
+        page.el.querySelector('#vue-app'),
+        {},
+        {
+          'web_form.after_load': function () {
+            this.web_form.set_show_next_button(false);
+          },
+          'web_form.submit': function () {
+            /* Submit logic */
+          },
+          '$ui.config.$vnode': {
+            template: `
+            <div class="position-relative" style="width: 100%">
+              <textarea
+                type="text"
+                :required="reqd === 1"
+                :value="value"
+                style="height: 60vh; padding: 6px"
+                :style="{ border: invalid ? 'solid 1px red' : 'solid 1px #ccc' }"
+                @input="$emit('input', $event.target.value)"
+              ></textarea>
+
+              <div class="display-flex flex-direction-row justify-content-flex-start align-items-center" style="margin: 10px 0; gap: 10px">
+                <span class="badge bg-color-primary" style="padding: 10px 12px" @click="format">Format</span>
+                <span class="badge bg-color-primary" style="padding: 10px 12px" @click="save">Save</span>
+                <span class="badge bg-color-primary" style="padding: 10px 12px" @click="load">Load</span>
+              </div>
+            </div>
+            `,
+            props: ['value', 'reqd'],
+            data() {
+              return {
+                invalid: false,
+              };
+            },
+            watch: {
+              value(v) {
+                try {
+                  JSON.parse(v);
+                  this.invalid = false;
+                } catch (err) {
+                  this.invalid = true;
+                }
+              },
+            },
+            methods: {
+              format() {
+                try {
+                  const json = JSON.parse(this.value);
+                  this.$emit('input', JSON.stringify(json, null, 2));
+                } catch (err) {
+                  app.toast
+                    .create({
+                      text: `${err}`,
+                      closeTimeout: 2000,
+                    })
+                    .open();
+                }
+              },
+              async save() {
+                try {
+                  await db.set($f7route.path, this.value);
+                  app.toast
+                    .create({
+                      text: 'Saved',
+                      closeTimeout: 2000,
+                    })
+                    .open();
+                } catch (err) {
+                  app.toast
+                    .create({
+                      text: `${err}`,
+                      closeTimeout: 2000,
+                    })
+                    .open();
+                }
+              },
+              async load() {
+                try {
+                  const json = await db.get($f7route.path);
+                  this.$emit('input', json);
+                  app.toast
+                    .create({
+                      text: 'Loaded',
+                      closeTimeout: 2000,
+                    })
+                    .open();
+                } catch (err) {
+                  app.toast
+                    .create({
+                      text: `${err}`,
+                      closeTimeout: 2000,
+                    })
+                    .open();
+                }
+              },
+            },
+          },
+          '$ui.action.$vnode': {
+            template: `
+            <div class="position-relative" style="width: 100%">
+              <div v-if="actions.length === 0" class="text-color-gray">No actions define.</div>
+              <div class="display-flex flex-direction-column justify-content-center align-items-center" style="width: 100%" v-else>
+                <div v-for="action in actions" style="margin: 10px 0; width: 100%">
+                  <div class="button button-fill" style="text-transform: none !important" @click="callMethod(action)">{{ action.method }}</div>
+                  <div class="description" v-if="action.description" style="background-color: rgb(249, 250, 251); padding: 1rem 0; color: rgb(75, 85, 99)" v-html="action.description"></div>
+                </div>
+              </div>
+            </div>
+            `,
+            inject: ['getFrappe'],
+            data() {
+              return {
+                actions: pluginActions,
+              };
+            },
+            methods: {
+              async callMethod(act) {
+                const clickFn = act.onClick;
+                if (typeof clickFn === 'function') {
+                  const config = this.getFrappe().web_form.get_value('config');
+                  debugger
+                  try {
+                    const configObj = JSON.parse(config);
+
+                    const applyCfg = (key, newCfg) => {
+                      // merge
+                      configObj[key] = window.lodash.merge(configObj[key] || {}, newCfg || {});
+                      this.getFrappe().web_form.set_value('config', JSON.stringify(configObj, null, 2));
+                    };
+
+                    clickFn(configObj[act.method] || defaultJSONConfig[act.method] || {}, configObj, applyCfg);
+                  } catch (err) {
+                    app.dialog.alert('Config parse error: ' + err);
+                  }
+                } else {
+                  app.dialog.alert('Method not implemented.');
+                }
+              },
+            },
+          },
+        }
+      );
+
+      try {
+        await init();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    ctx.$onUnmounted(async () => {
+      globalVueApp && globalVueApp.$destroy();
+
+      try {
+        await deinit();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    return $render;
+  };
+</script>

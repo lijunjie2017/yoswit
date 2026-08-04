@@ -196,6 +196,46 @@ window.initSettingTemplate = ()=>{
             </div>
         </div>
     `;
+    setting_label = "Mesh Mode";
+    setting_label_template[setting_label] = `
+        <div 
+            class="auto-init card margin-bottom-half mx-0 my-3"
+            ref="{{ device }}"
+            init-func="iot_mode_setup_rcu_mesh_mode_init"
+            setting-type="{{ self_setting_data.setting_type }}"
+            setting-name="{{ self_setting_data.name }}"
+            setting-value="{{ self_setting_data.setting }}"
+            device-mode="{{device_mode }}"
+            button-group="{{device_button_group }}"
+            dependencies="{{self_setting_data.dependencies}}"
+            subdevice-name="{{profile_subdevice_name}}"
+            slot-index="{{slot_index}}"
+        >
+            <input name="rcu_mesh_mode" type="hidden" value="" />
+            <div class="card-content card-content-padding">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">bolt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                        {% if self_setting_data.setting != ""  %}
+                        <p class="setting-value text-muted size-12">{{_(self_setting_data.setting)}}</p>
+                        {% else %}
+                        <p class="setting-value text-muted size-12">{{_("Device Network")}}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <a id="action-rcu-mesh-mode" href="#" class="button button-fill button-44 color-theme button-raised">
+                            <i class="material-icons">navigate_next</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     setting_label = "Change Virtual Button";
     setting_label_template[setting_label] = `
         <div 
@@ -529,10 +569,8 @@ window.initSettingTemplate = ()=>{
                     </div>
                     <div class="col-auto">
                         <a 
-                            func="core_device_replace_search_device" 
-                            ref="{{device}}|{{device_name}}|{{device_model}}|{{settings}}|{{hexid}}|{{device_hex_batch}}|{{model_name}}|{{batch_name}}|{{profile_device_name}}" 
+                            href="/mobile-app/device-replace-page?guid={{device}}&title={{setting_title}}&name={{profile_subdevice_name}}&filter_value=60"
                             device-name="{{ profile_device_name }}" 
-                            href="#"
                             class="button button-fill button-44 color-theme button-raised "
                         >
                             <i class="material-icons">navigate_next</i>
@@ -1347,6 +1385,35 @@ window.initSettingTemplate = ()=>{
                     <div class="col-auto">
                         <a 
                         func="iot_device_ota_test"
+                        profile-device-name="{{ profile_device_name }}"
+                        profile-subdevice-name="{{ profile_subdevice_name }}"
+                        ref="{{ device }}" 
+                        href="#"
+                        class="button button-fill button-44 color-theme button-raised"
+                    >
+                        <i class="material-icons">navigate_next</i>
+                    </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    setting_label = "Enable Relay Mode";
+    setting_label_template[setting_label] = `
+        <div class="card margin-bottom-half mx-0 my-3" dependencies="{{self_setting_data.dependencies}}">
+            <div class="card-content card-content-padding">
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                            <i class="material-icons">restart_alt</i>
+                        </div>
+                    </div>
+                    <div class="col align-self-center no-padding-left">
+                        <h5 class="no-margin-bottom">{{ _(self_setting_data.setting_type) }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a 
+                        func="iot_device_relay_mode_on"
                         profile-device-name="{{ profile_device_name }}"
                         profile-subdevice-name="{{ profile_subdevice_name }}"
                         ref="{{ device }}" 

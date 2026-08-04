@@ -1,0 +1,735 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">${ _(docname) }</div>
+      </div>
+    </div>
+
+    <div class="page-content ptr-content" @ptr:refresh="${refresh}">
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
+
+      ${booking_data && $h`
+      <div class="card no-border facility-booking-content overflow-hidden">
+        ${booking_data.subscription && booking_data.subscription.docstatus === 0 && $h` ${booking_data.facility_type.image ? $h`
+        <div
+          class="card-header display-flex align-items-flex-center justify-content-center step-card"
+          style="background-image: url('${erp.get_url(booking_data.facility_type.image)}')"
+        >
+          <b class="size-22">${_("Summary Review")}</b>
+        </div>
+        `: $h`
+        <div class="card-header display-flex align-items-flex-center justify-content-center step-card bg-color-gray">
+          <b class="size-22">${_("Summary Review")}</b>
+        </div>
+        `} `}
+
+        <div class="card-content">
+          <!-- Payment -->
+          ${booking_data.subscription.docstatus !== 0 && booking_data.subscription.status === 'Pending Payment' &&
+          booking_data.subscription.mode_of_payment && showPayment.value && $h`
+          <!----------->
+          ${booking_data.subscription.reservation_expiry ? $h`
+          <p class="my-2 mx-4 size-15 text-align-center">
+            {{ _("Please pay before") }} <b>${ dayjs(booking_data.subscription.reservation_expiry).format('YYYY-MM-DD h:mm A') }</b>
+          </p>
+          ` : $h`
+          <p class="my-2 mx-4 size-15 text-align-center">${ booking_data.pos_invoice }</p>
+          `}
+
+          <div class="card mx-3 no-border bg-color-orange rounded-card mt-3 mb-3" style="overflow: visible">
+            <div class="card-content card-content-padding text-color-white">
+              <i class="material-icons text-color-white" style="position: absolute; right: 7px; top: 10px; font-size: 26px">error</i>
+              <h3 class="pe-3 me-1" style="line-height: 18px">${ _(booking_data.mode_of_payment.description) }</h3>
+            </div>
+          </div>
+          <!----------->
+          `}
+          <!----------->
+          ${!!booking_data.pos_invoice && booking_data.subscription.status === 'Pending Payment' && booking_data.mode_of_payment &&
+          booking_data.mode_of_payment.show_payment_code === 1 && showPayment.value && $h`
+          <div class="mx-3 my-2">
+            <div class="qr_code_preview mt-3 p-4" style="background-color: white">
+              <qr-code qrcode="${booking_data.pos_invoice}" encode style="width: 100%; height: 100%"></qr-code>
+            </div>
+
+            <a
+              href="#"
+              class="button button-fill color-theme-bg-blue mt-3 external"
+              func="controller_sharing_option"
+              message="{{ 'PAYMENT QR CODE' }}"
+              ref="${getQRCode(booking_data.pos_invoice, true)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">share</i>
+              {{ 'PAYMENT QR CODE' }}
+            </a>
+          </div>
+          `}
+          <!----------->
+          ${!!booking_data.pos_invoice && booking_data.subscription.status === 'Pending Payment' && booking_data.mode_of_payment &&
+          booking_data.mode_of_payment.show_payment_code !== 1 && showPayment.value && $h`
+          <div class="mx-3 my-2">
+            <a href="#" class="button button-fill color-theme-bg-blue mt-3 external" @click="${() => requestPaymentGatewayURL()}">
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">paid</i>
+              {{ _('PAYMENT') }}
+            </a>
+          </div>
+          `}
+          <!----------->
+          {# ${!!booking_data.pos_invoice && booking_data.subscription.status === 'Confirmed' && booking_data.facility_type.create_ticket
+          === 1 && $h`
+          <div class="mx-3 my-2">
+            <div class="qr_code_preview mt-3 p-4" style="background-color: white">
+              <qr-code qrcode="${booking_data.pos_invoice}" encode style="width: 100%; height: 100%"></qr-code>
+            </div>
+
+            <a
+              href="#"
+              class="button button-fill color-theme-bg-blue mt-3 external"
+              func="controller_sharing_option"
+              message="{{ 'TICKET COLLECTION CODE' }}"
+              ref="${getQRCode(booking_data.pos_invoice, true)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">share</i>
+              {{ 'TICKET COLLECTION CODE' }}
+            </a>
+          </div>
+          `} #}
+          <!----------->
+          {# ${booking_data.facility_type.create_ticket === 0 && booking_data.subscription.status === 'Confirmed' &&
+          booking_data.facility_type.access_control === 1 && $h`
+          <div class="mx-3 my-2">
+            <div class="qr_code_preview mt-3 p-4" style="background-color: white">
+              <qr-code qrcode="${booking_data.subscription.confirmation_code}" style="width: 100%; height: 100%"></qr-code>
+            </div>
+
+            <a
+              href="#"
+              class="button button-fill color-theme-bg-blue mt-3 external"
+              func="controller_sharing_option"
+              message="{{ 'ACCESS CODE' }}"
+              ref="${getQRCode(booking_data.pos_invoice, false)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">share</i>
+              {{ 'ACCESS CODE' }}
+            </a>
+          </div>
+          `} #}
+
+          <!-- Detail -->
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span>{{ _("Booking Details") | safe }}</span>
+            </div>
+            <div class="card-content">
+              <div class="list">
+                <ul>
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title"><i class="material-icons size-18">business</i>{{ _('Facility') }}</div>
+                        <div class="item-after">${ _(booking_data.subscription.facility) }</div>
+                      </div>
+                    </div>
+                  </li>
+
+                  ${booking_data.subscription.guest_flat && $h`
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title"><i class="material-icons size-18">apartment</i>{{ _('Guest Flat') }}</div>
+                        <div class="item-after">${ booking_data.subscription.guest_flat }</div>
+                      </div>
+                    </div>
+                  </li>
+                  `}
+
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title"><i class="material-icons size-18">schedule</i>{{ _('Timeslot') }}</div>
+                        <div class="item-after display-flex justify-content-flex-end flex-direction-column">
+                          <span class="py-1 text-align-right" style="border-radius: 2px">
+                            {{_("From")}}: ${ dayjs(booking_data.subscription.from_time).format('YYYY-MM-DD h:mm A') }
+                          </span>
+                          <span class="py-1 text-align-right" style="border-radius: 2px">
+                            {{_("To")}}: ${ dayjs(booking_data.subscription.to_time).format('YYYY-MM-DD h:mm A') }
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span>{{ _("Guest Information") | safe }}</span>
+            </div>
+            <div class="card-content">
+              <div class="list media-list">
+                <ul>
+                  <li>
+                    <div class="item-content px-2">
+                      <div class="item-media">
+                        <i class="material-icons text-color-gray size-48">account_circle</i>
+                      </div>
+                      <div class="item-inner pe-2">
+                        <div class="item-title-row">
+                          <div class="item-title"><strong>${ booking_data.subscription.guest_name }</strong></div>
+                          <div class="item-after"><strong>${ booking_data.subscription.guest_name }</strong></div>
+                        </div>
+                        <div class="item-subtitle">${ booking_data.subscription.guest_email }</div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div> -->
+
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span>{{ _("Payment Details") }}</span>
+            </div>
+            <div class="card-content">
+              <div class="list">
+                <ul>
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">monetization_on</i>
+                          {{ _('Total Amount') }}
+                        </div>
+                        <div class="item-after size-18">
+                          <strong>${ booking_data.subscription.price }</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">credit_card</i>
+                          {{ _('Payment Method') }}
+                        </div>
+
+                        <div class="item-after">
+                          <div class="row mt-2 payment-list">
+                            <label class="col-25 payment-box">
+                              <i class="material-icons size-22">add_card</i>
+                              <span class="mt-2">${ _(booking_data.subscription.mode_of_payment) }</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          ${booking_data.changelog && $h`
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span>{{ _("Records") }}</span>
+            </div>
+            <div class="card-content py-4">
+              <div class="timeline no-margin">
+                ${booking_data.changelog.map((ver) => $h`
+                <div class="timeline-item">
+                  <div class="timeline-item-divider"></div>
+                  <div class="timeline-item-content">
+                    <div class="timeline-item-time">${ ver[2] }</div>
+                    <div class="timeline-item-subtitle text-muted">
+                      {{ _('Status from') }}
+                      <span class="text-color-primary mx-1">${ ver[0] }</span>
+                      {{ _('to') }}
+                      <span class="text-color-primary mx-1">${ ver[1] }</span>
+                    </div>
+                  </div>
+                </div>
+                `)}
+              </div>
+            </div>
+          </div>
+          `}
+
+          <!-- divider -->
+
+          ${booking_data.facility && booking_data.facility.booking_terms_and_conditions && $h`
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span>{{ _("Terms and Conditions") }}</span>
+            </div>
+            <div class="card-content card-content-padding scrollable-content pe-3" style="height: 120px; overflow-y: auto">
+              <div style="word-break: break-word" innerHTML="${tran(booking_data.facility.booking_terms_and_conditions)}"></div>
+            </div>
+          </div>
+          `}
+        </div>
+
+        ${booking_data.subscription.docstatus === 0 && $h`
+        <div class="card-footer" style="flex-direction: column">
+          <div class="row">
+            <div class="col">
+              <a href="#" class="button button-fill" @click="${() => confirmBooking()}"> {{ _('CONFIRM')}} </a>
+            </div>
+          </div>
+        </div>
+        `}
+        <!----------->
+        ${booking_data.subscription.docstatus !== 0 && booking_data.subscription.status === 'Pending Payment' &&
+        booking_data.subscription.price > 0 && !isKtmarina && $h`
+        <div class="card-footer" style="flex-direction: column">
+          <div class="row">
+            <div class="col">
+              <a
+                href="#"
+                class="button button-fill"
+                style="background-color: #ff7130"
+                func="app_core_sharing_file"
+                message="${booking_data.pos_invoice}"
+                path="${booking_data.pos_invoice}.pdf"
+                ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${booking_data.pos_invoice}&format=App_Yoswit_POS_Invoice_V3"
+              >
+                <i class="material-icons me-2">file_download</i> {{ _('INVOICE')}}
+              </a>
+            </div>
+          </div>
+        </div>
+        `}
+        <!----------->
+        ${booking_data.subscription.docstatus !== 0 && booking_data.subscription.status === 'Confirmed' && booking_data.subscription.price >
+        0 && !isKtmarina && $h`
+        <div class="card-footer" style="flex-direction: column">
+          <div class="row">
+            <div class="col-100">
+              <a
+                href="#"
+                class="button button-fill"
+                style="background-color: #ff7130"
+                func="app_core_sharing_file"
+                message="${booking_data.pos_invoice}"
+                path="${booking_data.pos_invoice}.pdf"
+                ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${booking_data.pos_invoice}&format=App_Yoswit_POS_Invoice_V3"
+              >
+                <i class="material-icons me-2">file_download</i> {{ _('INVOICE')}}
+              </a>
+            </div>
+            <div class="col-100">
+              <a
+                href="#"
+                class="button button-fill mt-3"
+                style="background-color: #0f77ff"
+                func="app_core_sharing_file"
+                message="${booking_data.pos_invoice}"
+                path="${booking_data.pos_invoice}.pdf"
+                ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${booking_data.pos_invoice}&format=App_Yoswit_POS_Receipt_V3"
+              >
+                <i class="material-icons me-2">file_download</i> {{ _('RECEIPT')}}
+              </a>
+            </div>
+          </div>
+        </div>
+        `}
+      </div>
+      `}
+      <!----------->
+      ${isInit && !booking_data && $h`
+      <no-record-found></no-record-found>
+      `}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $ref = ctx.$ref,
+      $f7route = ctx.$f7route,
+      $update = ctx.$update,
+      $on = ctx.$on,
+      $onBeforeMount = ctx.$onBeforeMount,
+      $onMounted = ctx.$onMounted,
+      $onBeforeUpdate = ctx.$onBeforeUpdate,
+      $onUpdated = ctx.$onUpdated,
+      $onBeforeUnmount = ctx.$onBeforeUnmount,
+      $onUnmounted = ctx.$onUnmounted;
+
+    const docname = $f7route.query.docname;
+    const showPayment = $ref(false);
+
+    let booking_data = null;
+    let isInit = false;
+    let browserListener = null;
+    let browserPageLoadedListener = null;
+    let latestStatus = null;
+    let payment_gateway_url = null;
+
+    const isKtmarina = (() => {
+      try {
+        return erp.appId === 'com.yoswit.ktmarina';
+      } catch (e) {
+        return false;
+      }
+    })();
+
+    async function getData() {
+      try {
+        isInit = true;
+        const response = await http2.request({
+          url: encodeURI('/api/method/appv6.query_record'),
+          method: 'GET',
+          params: {
+            docname: docname,
+          },
+        });
+        booking_data = response.data;
+        booking_data.subscription = booking_data.doc;
+
+        updatePaymentVisibility();
+        subscribePaymentStatus();
+        notifyStatusChanged();
+
+        $update();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function getQRCode(qrcode, encode) {
+      const v = encode ? `55AA{{${btoa(qrcode)}}}99BB` : qrcode;
+      return erp.get_url(`/sqr?d=${v}`);
+    }
+
+    function updatePaymentVisibility() {
+      const subscription = booking_data && booking_data.subscription;
+      if (!subscription || subscription.status !== 'Pending Payment' || subscription.docstatus !== 1) {
+        showPayment.value = false;
+        return;
+      }
+
+      if (subscription.reservation_expiry) {
+        showPayment.value = dayjs().diff(subscription.reservation_expiry, 'minute') <= 5;
+        return;
+      }
+
+      showPayment.value = true;
+    }
+
+    function subscribePaymentStatus() {
+      if (!showPayment.value || !booking_data || !booking_data.pos_invoice || typeof mqtt === 'undefined') {
+        return;
+      }
+
+      mqtt.useSubscribe(booking_data.pos_invoice, {
+        pageCtx: ctx,
+        callback: () => {
+          setTimeout(() => {
+            getData();
+          }, 3000);
+        },
+      });
+    }
+
+    function notifyStatusChanged() {
+      const subscription = booking_data && booking_data.subscription;
+      if (!subscription) {
+        return;
+      }
+
+      if (latestStatus !== null && latestStatus !== subscription.status) {
+        notifyPageSeed();
+      }
+
+      latestStatus = subscription.status;
+    }
+
+    function notifyPageSeed() {
+      try {
+        window.pageRefresher.goup('Facility Booking Subscription');
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    let paymentRequestLock = false;
+    async function requestPaymentGatewayURL() {
+      if (paymentRequestLock) return;
+      paymentRequestLock = true;
+      try {
+        if (!booking_data || !booking_data.subscription) {
+          return;
+        }
+
+        const subscription = booking_data.subscription;
+        const modeOfPayment = booking_data.mode_of_payment;
+
+        if (subscription.mode_of_payment === 'Cheque') {
+          if (subscription.price > 0) {
+            app.dialog.alert(_('Please Make The Payment At The Resident Service Center.'));
+          }
+          return;
+        }
+
+        if (subscription.status === 'Confirmed' || subscription.status === 'Paid' || !showPayment.value) {
+          return;
+        }
+
+        if (!booking_data.pos_invoice || !modeOfPayment || modeOfPayment.show_payment_code === 1) {
+          return;
+        }
+
+        let cookie =
+          http2
+            .getCookieString()
+            .split(';')
+            .filter((item) => item.trim().startsWith('sid='))[0] || '';
+        cookie = cookie.trim();
+
+        const response = await http2.request({
+          url: encodeURI(
+            '/api/method/mpay_payment_integration.mpay_payment_integration.doctype.mpay_payment_gateway.get_mpay_payment_url'
+          ),
+          method: 'GET',
+          debug: true,
+          params: {
+            pos_invoice_docname: booking_data.pos_invoice,
+            paymethod: modeOfPayment.custom_payment_gateway_code || 0,
+            customizeddata: cookie,
+          },
+        });
+
+        payment_gateway_url = response.data.message;
+        $update();
+
+        if (Capacitor.getPlatform() === 'ios' && modeOfPayment.custom_payment_gateway_code == 42) {
+          window.open(payment_gateway_url, '_blank');
+        } else {
+          Capacitor.Plugins.InAppBrowser.openWebView({
+            url: payment_gateway_url,
+            toolbarType: 'navigation',
+            title: _(booking_data.pos_invoice),
+          });
+        }
+      } catch (error) {
+        console.error('requestPaymentGatewayURL', error);
+        app.toast.show({
+          text: _(error),
+          position: 'bottom',
+          closeTimeout: 2000,
+        });
+      } finally {
+        paymentRequestLock = false;
+      }
+    }
+
+    async function confirmBooking() {
+      try {
+        app.preloader.show();
+        await http2.request({
+          url: encodeURI('/api/resource/Facility Booking Subscription/' + docname),
+          method: 'PUT',
+          data: {
+            docstatus: 1,
+          },
+        });
+
+        await getData();
+        requestPaymentGatewayURL(); 
+        app.preloader.hide();
+      } catch (error) {
+        app.preloader.hide();
+
+        app.toast.show({
+          text: _(error),
+          position: 'bottom',
+          closeTimeout: 2000,
+        });
+      }
+    }
+
+    async function clickPickup() {
+      try {
+        app.preloader.show();
+        await http2.request({
+          url: encodeURI('/api/resource/Facility Booking Subscription/' + docname),
+          method: 'PUT',
+          data: {
+            status: 'In Use',
+          },
+        });
+
+        await getData();
+        app.preloader.hide();
+      } catch (error) {
+        app.preloader.hide();
+
+        app.toast.show({
+          text: _(error),
+          position: 'bottom',
+          closeTimeout: 2000,
+        });
+      }
+    }
+
+    async function refresh(e, done) {
+      try {
+        await getData();
+        done();
+      } catch (err) {
+        // ignore
+        done();
+      }
+    }
+
+    $onMounted(() => {
+      getData();
+      emitter.on('cap:app:resume', getData);
+
+      try {
+        browserListener = Capacitor.Plugins.InAppBrowser.addListener('closeEvent', () => {
+          getData();
+        });
+
+        browserPageLoadedListener = Capacitor.Plugins.InAppBrowser.addListener('browserPageLoaded', () => {
+          Capacitor.Plugins.InAppBrowser.executeScript({
+            code: `
+            window.confirm = function() { return true; };
+            `,
+          });
+        });
+      } catch (error) {
+        // ignore
+      }
+    });
+
+    $onUnmounted(() => {
+      try {
+        if (browserListener) {
+          browserListener.remove();
+        }
+      } catch (error) {
+        // ignore
+      }
+
+      try {
+        if (browserPageLoadedListener) {
+          browserPageLoadedListener.remove();
+        }
+      } catch (error) {
+        // ignore
+      }
+
+      emitter.off('cap:app:resume', getData);
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .size-16 {
+    font-size: 16px;
+  }
+  .size-20 {
+    font-size: 20px;
+  }
+  .rounded-card {
+    border-radius: 13px;
+    overflow: hidden;
+  }
+  .rounded-card .card-header {
+    color: white;
+  }
+  .payment-list {
+    justify-content: flex-start;
+  }
+  .payment-box {
+    border-radius: 8px;
+    padding: 10px 6px;
+    height: 70px;
+    margin: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    background-color: var(--f7-theme-color);
+    color: white;
+    flex: 1;
+  }
+  .payment-box span {
+    font-size: 10px;
+    margin-top: 5px;
+    line-height: 12px;
+  }
+  .door-list-box {
+    border: 1px solid var(--f7-messagebar-border-color);
+    border-radius: 5px;
+    margin-top: 5px !important;
+  }
+  .door-list-box .item-content .item-inner {
+    flex-direction: row;
+    align-items: center;
+  }
+  .door-list-box .item-inner:after {
+    content: '';
+    position: absolute;
+    background-color: var(--f7-list-item-border-color);
+    display: block;
+    z-index: 15;
+    top: auto;
+    right: auto;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    width: 100%;
+    transform-origin: 50% 100%;
+    transform: scaleY(calc(1 / var(--f7-device-pixel-ratio)));
+  }
+  .door_data_list {
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+  }
+  .facility-booking-content .item-content .item-title {
+    display: flex;
+    align-items: center;
+    flex: 1;
+  }
+  .facility-booking-content .item-content .item-title i {
+    margin-right: 3px;
+  }
+  .step-card {
+    color: #fff;
+    height: 150px;
+    font-size: 18px;
+    background-position: center;
+    background-size: cover;
+  }
+  .theme-color {
+    background-color: var(--f7-theme-color);
+  }
+  .size-15 {
+    font-size: 15px;
+  }
+</style>

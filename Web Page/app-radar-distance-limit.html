@@ -24,17 +24,17 @@
                   <li class="item-content item-input no-padding-left">
                     <div class="item-inner no-padding-right">
                       <div class="item-title item-label" style="padding: 10px 15px">{{ _("Radar Distance Limit") }}
-                        <div style="font-size: 12px; color: #999;">{{ _('(The larger the value, the closer the distance.)') }}</div>
+                        <div style="font-size: 12px; color: #999;">{{ _('(0% is the closest, 100% is the farthest.)') }}</div>
                       </div>
                       <div class="item-input-wrap pb-1">
                         <div class="display-flex flex-direction-row px-3">
                           <div
                             class="range-slider"
-                            data-min="50"
-                            data-max="500"
+                            data-min="0"
+                            data-max="100"
                             data-label="true"
-                            data-step="10"
-                            data-value="250"
+                            data-step="1"
+                            data-value="0"
                             data-scale="true"
                             data-scale-steps="5"
                             data-scale-sub-steps="5"
@@ -100,12 +100,12 @@
           async save() {
             //save in erp
             app.dialog.preloader();
-            console.log(this.rangeMap['radar-distance-limit'].getValue());
-            this.volumeUpper = this.rangeMap['radar-distance-limit'].getValue();
-            //return
-            let map = {
-              volume_upper: this.volumeUpper,
-            };
+            let percentage = this.rangeMap['radar-distance-limit'].getValue();
+            // 将百分比转换回实际数值 (100% -> 50, 0% -> 500)
+            this.volumeUpper = Math.round(500 - (percentage * 4.5));
+            
+            console.log('Percentage:', percentage, 'Actual Value:', this.volumeUpper);
+            
             try {
               await iot_ble_check_enable();
               await window.peripheral[guid].write([
@@ -116,7 +116,6 @@
                 },
               ]);
               await iot_device_setting_sync_server(guid, 'radar_distance_limit', this.volumeUpper);
-              //window.globalUpdate = true;
               app.dialog.close();
               app.dialog.alert(_('Save Successfully'));
             } catch (error) {
@@ -136,47 +135,39 @@
             }
             let key_1 = 'radar-distance-limit';
             setTimeout(() => {
-              this.initRangeSlider(key_1, '#ir-cool-setpoint-limit-lower-slider');
+              // 初始显示时，将实际数值转换为百分比
+              let initialPercentage = Math.round((500 - this.volumeUpper) / 4.5);
+              this.initRangeSlider(key_1, '#ir-cool-setpoint-limit-lower-slider', initialPercentage);
             }, 0);
           },
-          initRangeSlider(key, el) {
+          initRangeSlider(key, el, initialValue) {
             if (!isset(this.rangeMap[key])) {
-              console.log($(el));
               this.rangeMap[key] = app.range.create({
                 el: el,
-                value: this.volumeUpper,
-                min: 50,
-                max: 500,
-                step: 10,
+                value: initialValue,
+                min: 0,
+                max: 100,
+                step: 1,
                 draggableBar: false,
                 scale: true,
                 label: true,
                 scaleSteps: 5,
                 scaleSubSteps: 5,
                 formatScaleLabel: (v) => {
-                  if (v === 50 || v === 500) {
-                    return v + '';
-                  } else {
-                    return v;
-                  }
+                  return v + '%';
                 },
                 formatLabel: (v) => {
-                  return v + '';
+                  return v + '%';
                 },
                 on: {
                   change: (range) => {
-                    console.log(range);
-                    // let rangeList = range.getValue();
-                    // console.log(rangeList);
-                    // this.volumeLimit = rangeList[0];
-                    // this.volumeUpper = rangeList[1];
+                    // console.log(range.getValue());
                   },
                 },
               });
               if (this.rangeMap[key]) {
-                this.rangeMap[key].setValue(this.volumeUpper);
+                this.rangeMap[key].setValue(initialValue);
               }
-              console.log(this.rangeMap[key]);
             }
           },
         },

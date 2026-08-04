@@ -6,7 +6,7 @@ window.iot_check_profile_device = (type) => {
     if(type == 'rcu'){
       let check_devices_mode = ['Curtain Motor Ac','Thermostat','Hdmicec'];
       let profile_devices_filter = profile_devices.filter((item) => check_devices_mode.indexOf(item.device_mode) != -1 && !item.device);
-      debugger
+    //   debugger
       if(profile_devices_filter.length > 0){
         is_check = false;
       }
@@ -16,6 +16,7 @@ window.iot_check_profile_device = (type) => {
         is_check = false;
       }
     }
+    
     resolve(is_check);
   });
 };

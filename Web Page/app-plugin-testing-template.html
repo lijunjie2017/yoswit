@@ -18,6 +18,17 @@
       </div>
     </div>
 
+    <div class="toolbar tabbar toolbar-top">
+      <div class="toolbar-inner">
+        <a href="#tab-config" class="tab-link tab-link-active">
+          <span class="tabbar-label">Configuration</span>
+        </a>
+        <a href="#tab-actions" class="tab-link">
+          <span class="tabbar-label">Actions</span>
+        </a>
+      </div>
+    </div>
+
     <div class="page-content">
       <div id="vue-app" v-cloak></div>
     </div>
@@ -48,17 +59,97 @@
      *
      * 如果不需要填写请清空，例如空对象{}，避免大老板扣问号
      */
+     let testSid = `993db926c7005e068288a831f97a343a44f99644e318539f0c4aff4c`;
+    let testUrl = `https://192.168.50.177`;
     const defaultJSONConfig = {
-      getPhoto: {
-        quality: 60,
-        allowEditing: false,
-        resultType: 'uri',
-        saveToGallery: false,
-        source: 'CAMERA',
+      requestSetting: {
+        'device_id': deviceInfo.deviceId,
+        'url': 'http://192.168.50.177/api/method/lincogn.iot.api.key_card.key_card_issuer',
+        // 'local':true,
       },
-      pickImages: {
-        quality: 60,
-        limit: 9,
+      connect: {
+        'port': '/dev/ttyS9', //3399用S4，3568用S9
+        'baudate': 9600,
+      },
+      ulReadBlock: {
+        'addr': 0,
+      },
+      writeBlock: {
+        'addr': 4,
+        'data': 'a75114e8',
+        'cardPwd' : 'FFFFFFFFFFFF',
+      },
+      erpPrepareCard: {
+        'key_card_type': 'Key Card',
+        'card_id': ['042A59C2181D91'],
+        'doors': ['103'],
+        'expire_time': dayjs().add(1, 'hour').format('YYYYMMDDTHHmm'), //'20251016T2330',
+      },
+      visionlinePrepareCard: {
+        'url': 'https://192.168.50.23:443',
+        'createSessionBody': {
+          'username': 'sym',
+          'password': 'sym',
+        },
+        'prepareCardBody': {
+          'serialNumbers': ['042A59C2181D91'],
+          'doorOperations': [{ 'operation': 'guest', 'doors': ['103'] }],
+          'expireTime': dayjs().add(1, 'hour').format('YYYYMMDDTHHmm'), //'20251016T2330',
+          'format': 'rfid48', //rfid48,TLCode
+        },
+        'cardType': 'UL', //UL,S50,S70
+      },
+      writeTotalBlock: {
+        'data': [
+          {
+            'addr': 4,
+            'data': '00000000',
+          },
+          {
+            'addr': 5,
+            'data': '00000000',
+          },
+          {
+            'addr': 6,
+            'data': '00000000',
+          },
+          {
+            'addr': 7,
+            'data': '00000000',
+          },
+          {
+            'addr': 8,
+            'data': '00000000',
+          },
+          {
+            'addr': 9,
+            'data': '00000000',
+          },
+          {
+            'addr': 10,
+            'data': '00000000',
+          },
+          {
+            'addr': 11,
+            'data': '00000000',
+          },
+          {
+            'addr': 12,
+            'data': '00000000',
+          },
+          {
+            'addr': 13,
+            'data': '00000000',
+          },
+          {
+            'addr': 14,
+            'data': '00000000',
+          },
+          {
+            'addr': 15,
+            'data': '00000000',
+          },
+        ],
       },
     };
 
@@ -68,33 +159,652 @@
      * description: 方法描述
      * onClick: 方法执行函数
      */
-    const pluginActions = [
+     const pluginActions = [
       {
-        method: 'getPhoto',
-        description: 'Prompt the user to pick a photo from an album, or take a new photo with the camera.',
-        /**
-         * @param config: 配置对象
-         * @param allConfig: 所有配置对象
-         * @param applyCfg: 用于合并配置对象的函数
-         */
+        method: 'connect',
+        description: '连接发卡机',
         onClick: async (config, allConfig, applyCfg) => {
-          console.log(config);
-          const ret = await Capacitor.Plugins.Camera.getPhoto(config);
-          console.log(ret);
-          applyCfg('getPhotoRet', ret);
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.connect(config);
+            console.log(result);
+            app.dialog.alert(result.msg);
+          } catch (err) {
+            console.error(err);
+          }
         },
       },
       {
-        method: 'pickImages',
-        description:
-          'Allows the user to pick multiple pictures from the photo gallery. On iOS 13 and older it only allows to pick one picture.',
-        onClick: async (config, allConfig) => {
-          console.log(config);
-          const ret = await Capacitor.Plugins.Camera.pickImages(config);
-          console.log(ret);
+        method: 'disconnect',
+        description: '断开连接',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.disconnect();
+            console.log(result);
+            app.dialog.alert('disconnect complete');
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'autoIssuerCard',
+        description: '一键发卡',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            app.preloader.show();
+            let mySid = '';
+            if (allConfig.requestSetting.url.includes('192.168.50.177')) {
+              mySid = testSid;
+            } else {
+              const cookieStr = http2.getCookieString(erp.setting.app_api_url);
+              const cookieObj = http2.parseCookie(cookieStr);
+              mySid = cookieObj['sid'];
+            }
+            const params = {
+              'sid': mySid,
+              'device_id': allConfig.requestSetting.device_id,
+              'apiUrl': allConfig.requestSetting.url,
+              'key_card_type': allConfig.erpPrepareCard.key_card_type,
+              'doors': allConfig.erpPrepareCard.doors,
+              'expire_time': allConfig.erpPrepareCard.expire_time,
+              'cardPwd' : allConfig.writeBlock.cardPwd,
+              'port': allConfig.connect.port,
+              'baudate': allConfig.connect.baudate,
+            };
+            const result = await Capacitor.Plugins.CardIssuer.autoIssuerCard(params);
+            console.log(result);
+            app.dialog.alert(result.msg + result.cardId);
+          } catch (err) {
+            console.error(err);
+            app.dialog.alert(err);
+          } finally {
+            app.preloader.hide();
+          }
+        },
+      },
+      {
+        method: 'autoRecycleCard',
+        description: '开始一键回收卡片(前端回收)',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            app.preloader.show();
+            const params = {
+              'port': allConfig.connect.port,
+              'baudate': allConfig.connect.baudate,
+            };
+            const result = await Capacitor.Plugins.CardIssuer.autoRecycleCard(params);
+            console.log(result);
+            app.dialog.alert(result.msg);
+          } catch (err) {
+            console.error(err);
+            app.dialog.alert(err);
+          } finally {
+            app.preloader.hide();
+          }
+        },
+      },
+      {
+        method: 'getVersion',
+        description: '获取发卡机版本号',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.getVersion();
+            console.log(result);
+            app.dialog.alert(result.version);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'getStates',
+        description: '获取发卡机状态',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.getStates();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'moveToRead',
+        description: '移动卡片到读卡位置',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.moveToRead();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'moveToGet',
+        description: '移动卡片到取卡位置',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.moveToGet();
+            console.log(result);
+            // const sresult = await Capacitor.Plugins.CardIssuer.getStates();
+            // console.log(sresult);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'moveCardOut',
+        description: '吐卡',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.moveCardOut();
+            // const sresult = await Capacitor.Plugins.CardIssuer.getStates();
+            // console.log(sresult);
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'moveToCardBox',
+        description: '移动到发卡箱',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.moveToCardBox();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'moveToRecycleBox',
+        description: '移动到回收箱',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.moveToRecycleBox();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'reset',
+        description: '复位(connect时，发卡机会有一次复位)',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.reset();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'checkSetting',
+        description: '检查设置，进卡方式和复位方式',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.checkSetting();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'enterCardCommand',
+        description: '发送命令前端（吐卡位置）进卡，在命令进卡状态时使用',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.enterCardCommand();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'setManualEnterCard',
+        description: '设置发卡机手动进卡，表示需要通过enterCardCommand执行命令前端进卡',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.setManualEnterCard();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'setAutoEnterCard',
+        description: '设置发卡机前端自动感应进卡',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.setAutoEnterCard();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'resetNoAction',
+        description: '设置复位无动作',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.resetNoAction();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'resetToCardBox',
+        description: '设置复位到发卡箱',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.resetToCardBox();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'resetToRecycleBox',
+        description: '设置复位到回收箱',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.resetToRecycleBox();
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'detectCard',
+        description: '检测读卡区域是否存在卡片',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.detectCard();
+            console.log(result);
+            app.dialog.alert(result.msg);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'getCardType',
+        description: '检测卡片可读类型，不代表该卡就是这个类型',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.getCardType();
+            console.log(result.msg);
+            const visionlinePrepareCardConfig = allConfig.visionlinePrepareCard;
+            visionlinePrepareCardConfig.cardType = result.msg;
+            if (result.msg === 'UL') {
+              visionlinePrepareCardConfig.prepareCardBody.format = 'rfid48';
+            } else if (result.msg === 'S50' || result.msg === 'S70') {
+              visionlinePrepareCardConfig.prepareCardBody.format = 'TLCode';
+            }
+
+            applyCfg('visionlinePrepareCard', visionlinePrepareCardConfig);
+            app.dialog.alert(result.msg);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'getCardID',
+        description: '获取卡号',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.getCardID();
+            console.log(result);
+            app.dialog.alert(result.value);
+            const visionlinePrepareCardConfig = allConfig.visionlinePrepareCard;
+            visionlinePrepareCardConfig.prepareCardBody.serialNumbers = [result.value];
+            applyCfg('visionlinePrepareCard', visionlinePrepareCardConfig);
+            const erpPrepareCardConfig = allConfig.erpPrepareCard;
+            erpPrepareCardConfig.card_id = [result.value];
+            applyCfg('erpPrepareCard', erpPrepareCardConfig);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'ulReadBlock',
+        description: 'UltraLight卡片，读取block内容',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.ulReadBlock(config);
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'writeBlock',
+        description: 'UltraLight卡片，写入内容到block',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            const result = await Capacitor.Plugins.CardIssuer.writeBlock(config);
+            console.log(result);
+          } catch (err) {
+            console.error(err);
+          }
+        },
+      },
+      {
+        method: 'writeTotalBlock',
+        description: '请求卡片内容后，写入所有数据到卡片',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            app.preloader.show();
+            for (const item of config.data) {
+              console.log(item);
+              // 打印当前项
+              const result = await Capacitor.Plugins.CardIssuer.writeBlock(item);
+              console.log(result);
+              // 打印操作结果
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              // 等待 100 毫秒后继续下一个操作
+            }
+          } catch (err) {
+            console.error(err);
+          } finally {
+            app.preloader.hide();
+          }
+        },
+      },
+      {
+        method: 'erpPrepareCard',
+        description: '通过请求erp获取需要写入卡片的内容(仅支持UL卡)',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            app.preloader.show();
+
+            //原生请求方案
+            // const cookieStr = http2.getCookieString(erp.setting.app_api_url);
+            // const cookieObj = http2.parseCookie(cookieStr);
+            // const sid = cookieObj['sid'];//正式服使用
+
+            // let params = {
+            //     'apiUrl':allConfig.requestSetting.url,
+            //     'sid':testSid,
+            //     'key_card_type': config.key_card_type,
+            //     'device_id': [deviceInfo.deviceId],
+            //     'card_id': config.card_id,
+            //     'doors': config.doors,
+            //     'expire_time': config.expire_time,
+            // }
+
+            // const result = await Capacitor.Plugins.CardIssuer.erpPrepareCard(params);
+            // console.log('erpResponseWriteBlock',result);
+            // applyCfg('rlWriteTotalBlock', result);
+            // app.dialog.alert(_('Success!'));
+            // app.preloader.hide();
+
+            // return;
+
+            //js请求方案
+            const paramsForUrl = {
+              'device_id': [allConfig.requestSetting.device_id],
+              'key_card_type': 'Key Card',
+              'doors': config.doors,
+              'expire_time': config.expire_time,
+              'card_id': config.card_id,
+            };
+            const queryString = Object.keys(paramsForUrl)
+              .map((key) => {
+                let value = paramsForUrl[key];
+
+                // 关键步骤：如果值是数组，就将其转换为 JSON 字符串
+                if (Array.isArray(value)) {
+                  value = JSON.stringify(value);
+                }
+
+                // 我们只对 key 进行编码（以防万一），但对 value 不进行编码，
+                // 以保留服务器期望的原始 `[` `]` `"` 字符。
+                return `${encodeURIComponent(key)}=${value}`;
+              })
+              .join('&'); // 用 '&' 连接所有 "key=value" 对
+
+            // 4. 拼接成最终的完整地址
+            const fullUrl = `${allConfig.requestSetting.url}?${queryString}`;
+            console.log('生成的手动拼接 URL:', fullUrl);
+            const headers = {};
+            if (allConfig.requestSetting.url.includes('192.168.50.177')) {
+              headers['Cookie'] = 'sid=' + testSid;
+            }
+            const rs = await http.request(fullUrl, {
+              responseType: 'json',
+              method: 'GET',
+              headers: headers,
+            });
+            let result = rs.data.message;
+            console.log('erpResponse', result);
+            // 获取 visionlineULWriteBlock 配置
+            const visionlineULWriteBlockConfig = allConfig.writeTotalBlock || {};
+            // 确保 result 长度不超过 visionlineULWriteBlockConfig 长度
+            const minLength = Math.min(result.length, visionlineULWriteBlockConfig?.data.length);
+            // 直接使用 map 方法更新配置数据
+            visionlineULWriteBlockConfig?.data.slice(0, minLength).map((item, index) => {
+              item.data = result[index];
+              return item;
+            });
+            applyCfg('writeTotalBlock', visionlineULWriteBlockConfig);
+            app.dialog.alert(_('Success!'));
+
+            app.preloader.hide();
+            // console.log(result);
+          } catch (err) {
+            console.error(err);
+            app.preloader.hide();
+          }
+        },
+      },
+      {
+        method: 'visionlinePrepareCard',
+        description: '通过Visionline服务，获取需要写入卡片的内容',
+        onClick: async (config, allConfig, applyCfg) => {
+          try {
+            app.preloader.show();
+            // create session
+            await postToServer(config.url, `/api/v1/sessions`, config.createSessionBody, '', '', async (session) => {
+              if (session?.status === 201 && session?.data) {
+                console.log('createSessionRes', session.data);
+                // Prepare joiner cards for third party encoding
+                await postToServer(
+                  config.url,
+                  `/api/v1/cards?autoJoin=true&pendingImage=true&sendOnline=false`,
+                  config.prepareCardBody,
+                  session.data.accessKey,
+                  session.data.id,
+                  async (res) => {
+                    if (res?.status === 201 && res?.data?.encryptedImage) {
+                      const encryptedImage = res.data.encryptedImage;
+                      console.log('encryptedImage', encryptedImage);
+
+                      //   // 使用 match 方法按 8 个字符一组分组
+                      //   const result = encryptedImage.match(/.{1,8}/g) || [];
+                      //   console.log('result', result);
+                      //   // 获取 visionlineULWriteBlock 配置
+                      //   const visionlineULWriteBlockConfig = allConfig.writeTotalBlock || {};
+                      //   // 确保 result 长度不超过 visionlineULWriteBlockConfig 长度
+                      //   const minLength = Math.min(result.length, visionlineULWriteBlockConfig?.data.length);
+                      //   // 直接使用 map 方法更新配置数据
+                      //   visionlineULWriteBlockConfig?.data.slice(0, minLength).map((item, index) => {
+                      //     item.data = result[index];
+                      //     return item;
+                      //   });
+                      //   applyCfg('writeTotalBlock', visionlineULWriteBlockConfig);
+
+                      let finalWriteList = [];
+                      if (config.prepareCardBody.format === 'TLCode') {
+                        // >>>>>>>>> S50/S70 处理逻辑 (32位 + 跳过密码块) <<<<<<<<<
+                        const BLOCK_SIZE = 32; // 16字节 = 32 Hex字符
+                        let currentAddr = 4; // 从第1扇区第0块开始 (绝对地址4)
+
+                        for (let i = 0; i < encryptedImage.length; i += BLOCK_SIZE) {
+                          // 1. 检查当前地址是否为控制块 (3, 7, 11, 15...)
+                          // 公式: (addr + 1) % 4 === 0
+                          if ((currentAddr + 1) % 4 === 0) {
+                            console.log(`跳过控制块: ${currentAddr}`);
+                            currentAddr++; // 跳过，指向下一扇区第0块
+                          }
+
+                          // 2. 截取数据
+                          let chunk = encryptedImage.substring(i, i + BLOCK_SIZE);
+                          // 补全 (防止最后一段不足32位)
+                          if (chunk.length < BLOCK_SIZE) {
+                            chunk = chunk.padEnd(BLOCK_SIZE, '0');
+                          }
+
+                          // 3. 加入列表
+                          finalWriteList.push({
+                            addr: currentAddr,
+                            data: chunk,
+                          });
+
+                          currentAddr++;
+                        }
+                      } else {
+                        // >>>>>>>>> UL 处理逻辑 (8位 + 线性写入) <<<<<<<<<
+                        const chunks = encryptedImage.match(/.{1,8}/g) || [];
+                        finalWriteList = chunks.map((chunk, index) => ({
+                          addr: 4 + index, // UL卡从Page 4开始线性写
+                          data: chunk,
+                        }));
+                      }
+
+                      console.log('最终生成的写卡列表:', finalWriteList);
+
+                      // ================= Step 5: 更新配置并应用 =================
+                      // 获取原有的 writeTotalBlock 配置结构
+                      const visionlineWriteConfig = allConfig.writeTotalBlock || { data: [] };
+
+                      // 直接替换 data 数组，而不是 map 更新
+                      // 因为 S70 的数据量和地址可能和配置里预设的不一样
+                      visionlineWriteConfig.data = finalWriteList;
+
+                      applyCfg('writeTotalBlock', visionlineWriteConfig);
+                      app.dialog.alert(_('Success!'));
+                    }
+                  }
+                );
+              }
+            });
+          } catch (err) {
+            console.error(err);
+          } finally {
+            app.preloader.hide();
+          }
         },
       },
     ];
+    function setSignature(method, MD5Header, xDateHader, dateHader, uri, accessKey) {
+      // 构建要签名的字符串
+      let string_to_sign = method + '\n';
+
+      if (MD5Header) {
+        string_to_sign += MD5Header;
+      }
+      string_to_sign += '\n';
+
+      // 获取 contentType，如果没有明确提供，使用默认值
+      let contentType = 'application/json;charset=UTF-8';
+      string_to_sign += contentType;
+      string_to_sign += '\n';
+
+      if (xDateHader) {
+        string_to_sign += '\n' + 'x-aah-date' + ':' + xDateHader;
+      } else {
+        string_to_sign += dateHader;
+      }
+      string_to_sign += '\n' + uri;
+
+      // 生成 HMAC SHA1 签名
+      const hash = CryptoJS.HmacSHA1(string_to_sign, accessKey);
+      const hashInBase64 = CryptoJS.enc.Base64.stringify(hash);
+      return hashInBase64;
+    }
+    async function postToServer(url, uri, dataObj, accessKey, sessionID, func) {
+      app.preloader.show();
+      const requestContentBase64String = CryptoJS.MD5(JSON.stringify(dataObj)).toString(CryptoJS.enc.Base64);
+      const newTime = dayjs().subtract(8, 'hour');
+      const this_date = newTime.format('ddd, DD MMM YYYY HH:mm:ss [GMT]');
+      let signature = '';
+      let headerData = {
+        'Content-Type': 'application/json;charset=UTF-8',
+        'Content-MD5': requestContentBase64String,
+        'Date': this_date,
+        'X-Aah-Date': this_date,
+      };
+      if (accessKey) {
+        signature = setSignature('POST', requestContentBase64String, this_date, this_date, uri, accessKey);
+        headerData['Authorization'] = `AWS ${sessionID}:${signature}`;
+      }
+      try {
+        cordova.plugin.http.setServerTrustMode(
+          'nocheck',
+          () => {
+            http
+              .request(
+                encodeURI(url + uri),
+                {
+                  method: 'POST',
+                  serializer: 'utf8',
+                  responseType: 'json',
+                  headers: headerData,
+                  debug: true,
+                  data: JSON.stringify(dataObj),
+                },
+                () => {},
+                (error) => {
+                  console.err(error);
+                }
+              )
+              .then((response) => {
+                func(response);
+              });
+          },
+          (error) => {
+            // 处理 setServerTrustMode 方法本身可能出现的错误
+            app.dialog.alert(error);
+          }
+        );
+      } catch (err) {
+        app.dialog.alert(err);
+      } finally {
+        app.preloader.hide();
+      }
+    }
+
+    try {
+      await Capacitor.Plugins.CardIssuer.removeAllListeners();
+
+      await Capacitor.Plugins.CardIssuer.addListener('callback', (result) => {
+        console.log(result);
+        if(result.msg.includes('Card found at mouth') == false) {
+            app.preloader.hide();
+        }
+        app.dialog.alert(result.msg);
+      });
+    } catch (err) {
+      console.error(err);
+    }
 
     /**
      * 页面初始化时调用，插件如需初始化可在这里执行
@@ -118,20 +828,6 @@
     const formSetting = {
       web_form_fields: [
         {
-          'fieldname': 'section_1',
-          'fieldtype': 'Column Break',
-          'label': 'Configuration',
-          'reqd': 0,
-          'read_only': 0,
-          'show_in_filter': 0,
-          'hidden': 0,
-          'options': '',
-          'max_length': 0,
-          'max_value': 0,
-          'precision': '',
-          'default': '',
-        },
-        {
           'fieldname': 'config',
           'fieldtype': 'HTML',
           'label': 'Configuration',
@@ -145,20 +841,6 @@
           'max_value': 0,
           'precision': '',
           'default': JSON.stringify(defaultJSONConfig, null, 2),
-        },
-        {
-          'fieldname': 'section_2',
-          'fieldtype': 'Column Break',
-          'label': 'Actions',
-          'reqd': 0,
-          'read_only': 0,
-          'show_in_filter': 0,
-          'hidden': 0,
-          'options': '',
-          'max_length': 0,
-          'max_value': 0,
-          'precision': '',
-          'default': '',
         },
         {
           'fieldname': 'action',
@@ -180,6 +862,13 @@
     };
 
     ctx.$on('pageMounted', async (e, page) => {
+      // 翻译 toolbar 标签
+      const tabLinks = page.el.querySelectorAll('.toolbar.tabbar .tabbar-label');
+      if (tabLinks.length >= 2) {
+        tabLinks[0].textContent = _('Configuration');
+        tabLinks[1].textContent = _('Actions');
+      }
+
       globalVueApp = erp.script.core_app_basic_form_render(
         {
           web_form: formSetting,
@@ -189,13 +878,105 @@
         {
           'web_form.after_load': function () {
             this.web_form.set_show_next_button(false);
+            
+            // 使用轮询方式等待 Vue 组件渲染完成
+            let attempts = 0;
+            const maxAttempts = 50; // 最多尝试 50 次
+            const checkInterval = 100; // 每 100ms 检查一次
+            
+            const checkAndInitTabs = () => {
+              attempts++;
+              console.log(`Attempt ${attempts}: Checking for tab elements...`);
+              
+              const tabConfig = page.el.querySelector('#tab-config');
+              const tabActions = page.el.querySelector('#tab-actions');
+              
+              console.log('tabConfig:', tabConfig);
+              console.log('tabActions:', tabActions);
+              
+              if (tabConfig && tabActions) {
+                console.log('Tab elements found! Initializing...');
+                
+                // 获取 tabConfig 的父元素
+                const parentElement = tabConfig.parentElement;
+                console.log('Parent element:', parentElement);
+                
+                // 创建 tabs 容器
+                const tabsContainer = document.createElement('div');
+                tabsContainer.className = 'tabs';
+                tabsContainer.style.width = '100%';
+                tabsContainer.style.minHeight = '100px';
+                
+                // 在 tabConfig 的位置插入 tabs 容器
+                parentElement.insertBefore(tabsContainer, tabConfig);
+                
+                // 将两个 tab 移动到 tabs 容器中
+                tabsContainer.appendChild(tabConfig);
+                tabsContainer.appendChild(tabActions);
+                
+                console.log('tabsContainer created, style:', tabsContainer.style.cssText);
+                console.log('Parent element:', parentElement);
+                console.log('Parent element height:', parentElement.offsetHeight);
+                
+                console.log('Tabs container created and tabs moved');
+                
+                // 设置 tab 切换事件
+                const tabLinks = page.el.querySelectorAll('.toolbar.tabbar .tab-link');
+                console.log('Tab links found:', tabLinks.length);
+                
+                tabLinks.forEach((link, index) => {
+                  link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('=== Tab link clicked, index:', index);
+                    console.log('BEFORE switch - tabConfig innerHTML length:', tabConfig.innerHTML.length);
+                    console.log('BEFORE switch - tabActions innerHTML length:', tabActions.innerHTML.length);
+                    
+                    // 只切换这两个 tab 的 active 状态，不要查询所有的 .tab
+                    tabConfig.classList.remove('tab-active');
+                    tabActions.classList.remove('tab-active');
+                    
+                    // 移除所有 tab-link 的 active 状态
+                    tabLinks.forEach(l => l.classList.remove('tab-link-active'));
+                    
+                    // 添加 active 状态
+                    link.classList.add('tab-link-active');
+                    if (index === 0) {
+                      tabConfig.classList.add('tab-active');
+                      console.log('Switched to config tab');
+                      console.log('AFTER switch - tabConfig innerHTML length:', tabConfig.innerHTML.length);
+                      console.log('AFTER switch - tabConfig offsetHeight:', tabConfig.offsetHeight);
+                    } else {
+                      tabActions.classList.add('tab-active');
+                      console.log('Switched to actions tab');
+                      console.log('AFTER switch - tabActions innerHTML length:', tabActions.innerHTML.length);
+                      console.log('AFTER switch - tabActions offsetHeight:', tabActions.offsetHeight);
+                    }
+                  });
+                });
+                
+                console.log('Tab initialization complete!');
+              } else {
+                console.log(`Elements not ready yet. tabConfig: ${!!tabConfig}, tabActions: ${!!tabActions}`);
+                
+                if (attempts < maxAttempts) {
+                  setTimeout(checkAndInitTabs, checkInterval);
+                } else {
+                  console.error('Max attempts reached. Tab elements not found.');
+                }
+              }
+            };
+            
+            // 开始检查
+            setTimeout(checkAndInitTabs, checkInterval);
           },
           'web_form.submit': function () {
             /* Submit logic */
           },
           '$ui.config.$vnode': {
             template: `
-            <div class="position-relative" style="width: 100%">
+            <div id="tab-config" class="tab tab-active" style="width: 100%; padding: 8px; box-sizing: border-box;">
               <!-- Segmented View Switch -->
               <div class="segmented segmented-strong" style="margin-bottom: 16px">
                 <button class="button" :class="{ 'button-active': viewMode === 'form' }" @click="viewMode = 'form'" :title="_('Form View')">
@@ -248,18 +1029,9 @@
                             {{ Object.keys(configData[method] || {}).length }}
                           </span>
                         </div>
-                        <div class="display-flex" style="gap: 6px">
-                          <button class="button button-small button-fill" :class="isMethodEdit(method) ? 'color-blue' : 'color-gray'" @click="toggleMethodEdit(method)" :title="isMethodEdit(method) ? _('View Mode') : _('Edit Mode')">
-                            <i class="icon f7-icons" style="font-size: 14px" v-if="isMethodEdit(method)">eye</i>
-                            <i class="icon f7-icons" style="font-size: 14px" v-else>pencil</i>
-                          </button>
-                          <button class="button button-small button-fill" @click="showAddFieldDialog(method)" :title="_('Add Field')">
-                            <i class="icon f7-icons" style="font-size: 12px">plus</i>
-                          </button>
-                          <button class="button button-small button-fill color-red" @click="deleteMethod(method)" :title="_('Delete Method')">
-                            <i class="icon f7-icons" style="font-size: 12px">trash</i>
-                          </button>
-                        </div>
+                        <button class="method-menu-btn" @click="showMethodMenu(method)" :title="_('Options')">
+                          <i class="f7-icons">ellipsis</i>
+                        </button>
                       </div>
                       
                       <!-- Fields Table -->
@@ -267,7 +1039,7 @@
                         <thead>
                           <tr>
                             <th style="width: 30%">{{ _('Field Name') }}</th>
-                            <th style="width: 55%">{{ _('Value') }}</th>
+                            <th :style="{ width: isMethodEdit(method) ? '55%' : '70%' }">{{ _('Value') }}</th>
                             <th v-if="isMethodEdit(method)" style="width: 15%; text-align: center">{{ _('Actions') }}</th>
                           </tr>
                         </thead>
@@ -296,7 +1068,7 @@
                             </td>
                             
                             <!-- Value Column -->
-                            <td class="field-value-cell">
+                            <td class="field-value-cell" style="max-width: 0; overflow: visible;">
                               <!-- Edit Mode -->
                               <div v-if="isMethodEdit(method)">
                                 <!-- Boolean -->
@@ -320,46 +1092,86 @@
                                 />
                                 
                                 <!-- String -->
-                                <input 
-                                  v-else-if="typeof fieldValue === 'string'"
-                                  type="text"
-                                  :value="configData[method][fieldKey]"
-                                  @input="updateFieldDirect(method, fieldKey, $event.target.value)"
-                                  :placeholder="_('Enter text')"
-                                  class="table-input"
-                                />
+                                <div v-else-if="typeof fieldValue === 'string'" style="display: flex; gap: 8px; align-items: start;">
+                                  <textarea 
+                                    v-if="String(fieldValue).length > 50"
+                                    :value="configData[method][fieldKey]"
+                                    @input="updateFieldDirect(method, fieldKey, $event.target.value)"
+                                    :placeholder="_('Enter text')"
+                                    class="table-textarea"
+                                    :rows="Math.min(Math.ceil(String(fieldValue).length / 50), 4)"
+                                    style="flex: 1;"
+                                  ></textarea>
+                                  <input 
+                                    v-else
+                                    type="text"
+                                    :value="configData[method][fieldKey]"
+                                    @input="updateFieldDirect(method, fieldKey, $event.target.value)"
+                                    :placeholder="_('Enter text')"
+                                    class="table-input"
+                                    style="flex: 1;"
+                                  />
+                                  <button 
+                                    class="value-action-btn" 
+                                    @click="editFieldFullscreen(method, fieldKey, fieldValue)"
+                                    :title="_('Edit Fullscreen')"
+                                  >
+                                    <i class="f7-icons">arrow_up_left_and_arrow_down_right</i>
+                                  </button>
+                                </div>
                                 
                                 <!-- Complex types -->
-                                <textarea 
-                                  v-else
-                                  :value="JSON.stringify(configData[method][fieldKey], null, 2)"
-                                  @input="updateFieldJSON(method, fieldKey, $event.target.value)"
-                                  placeholder="JSON"
-                                  class="table-textarea"
-                                ></textarea>
+                                <div v-else style="display: flex; gap: 8px; align-items: start;">
+                                  <textarea 
+                                    :value="JSON.stringify(configData[method][fieldKey], null, 2)"
+                                    @input="updateFieldJSON(method, fieldKey, $event.target.value)"
+                                    placeholder="JSON"
+                                    class="table-textarea"
+                                    style="flex: 1;"
+                                  ></textarea>
+                                  <button 
+                                    class="value-action-btn" 
+                                    @click="editJSONFullscreen(method, fieldKey, fieldValue)"
+                                    :title="_('Edit Fullscreen')"
+                                  >
+                                    <i class="f7-icons">arrow_up_left_and_arrow_down_right</i>
+                                  </button>
+                                </div>
                               </div>
                               
                               <!-- View Mode -->
-                              <div v-else>
-                                <!-- Boolean -->
-                                <span v-if="typeof fieldValue === 'boolean'" class="badge" :class="fieldValue ? 'color-green' : 'color-gray'">
-                                  {{ fieldValue ? 'true' : 'false' }}
-                                </span>
+                              <div v-else style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; min-width: 0;">
+                                  <!-- Boolean -->
+                                  <span v-if="typeof fieldValue === 'boolean'" class="badge" :class="fieldValue ? 'color-green' : 'color-gray'">
+                                    {{ fieldValue ? 'true' : 'false' }}
+                                  </span>
+                                  
+                                  <!-- Number -->
+                                  <span v-else-if="typeof fieldValue === 'number'" class="value-text">
+                                    {{ fieldValue }}
+                                  </span>
+                                  
+                                  <!-- String -->
+                                  <span v-else-if="typeof fieldValue === 'string'" class="value-text">
+                                    {{ smartTruncate(fieldValue, 40) }}
+                                  </span>
+                                  
+                                  <!-- Complex types -->
+                                  <code v-else class="value-code">
+                                    {{ smartTruncate(JSON.stringify(fieldValue), 40) }}
+                                  </code>
+                                </div>
                                 
-                                <!-- Number -->
-                                <span v-else-if="typeof fieldValue === 'number'" class="value-text">
-                                  {{ fieldValue }}
-                                </span>
-                                
-                                <!-- String -->
-                                <span v-else-if="typeof fieldValue === 'string'" class="value-text" :title="fieldValue">
-                                  {{ truncateText(fieldValue, 50) }}
-                                </span>
-                                
-                                <!-- Complex types -->
-                                <code v-else class="value-code" :title="JSON.stringify(fieldValue)">
-                                  {{ truncateText(JSON.stringify(fieldValue), 50) }}
-                                </code>
+                                <!-- Action buttons for all types -->
+                                <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                                  <button class="value-action-btn" @click="viewFullValue(method, fieldKey, fieldValue)" :title="_('View & Edit')">
+                                    <i class="f7-icons">eye</i>
+                                  </button>
+                                  <button class="value-action-btn" @click="copyValue(fieldValue)" :title="_('Copy')">
+                                    <i class="f7-icons">doc_on_doc</i>
+                                  </button>
+                                </div>
                               </div>
                             </td>
                             
@@ -373,7 +1185,7 @@
                         </tbody>
                       </table>
                       <div v-else class="text-align-center" style="padding: 20px; background: #f7f7f8; border-radius: 8px">
-                        <p class="text-color-gray" style="margin: 0">{{ _('No fields yet') }}</p>
+                        <p class="text-color-gray" style="margin: 0">{{ _('No Fields Yet') }}</p>
                       </div>
                     </div>
                   </div>
@@ -396,11 +1208,8 @@
                     <button class="button button-fill color-orange" @click="resetConfig" :title="_('Reset to Default')">
                       <i class="icon f7-icons">arrow_counterclockwise</i>
                     </button>
-                    <button class="button button-fill color-green" @click="save" :title="_('Save')">
-                      <i class="icon f7-icons">floppy_disk</i>
-                    </button>
-                    <button class="button button-fill color-blue" @click="load" :title="_('Load')">
-                      <i class="icon f7-icons">folder</i>
+                    <button class="button button-fill color-blue" @click="saveAndLoad" :title="_('Save & Reload')">
+                      <i class="icon f7-icons">arrow_2_circlepath</i>
                     </button>
                   </div>
                 </div>
@@ -438,11 +1247,8 @@
                     <button class="button button-fill" @click="format" :title="_('Format')">
                       <i class="icon f7-icons">wand_stars</i>
                     </button>
-                    <button class="button button-fill color-green" @click="save" :title="_('Save')">
-                      <i class="icon f7-icons">floppy_disk</i>
-                    </button>
-                    <button class="button button-fill color-blue" @click="load" :title="_('Load')">
-                      <i class="icon f7-icons">folder</i>
+                    <button class="button button-fill color-blue" @click="saveAndLoad" :title="_('Save & Reload')">
+                      <i class="icon f7-icons">arrow_2_circlepath</i>
                     </button>
                   </div>
                 </div>
@@ -502,12 +1308,280 @@
               }
             },
             methods: {
-              // 截断长文本
+              // 智能截断长文本（显示开头和结尾）
+              smartTruncate(text, maxLength) {
+                if (!text) return '';
+                const str = String(text);
+                if (str.length <= maxLength) return str;
+                
+                // 显示前面部分和后面部分
+                const frontChars = Math.floor(maxLength * 0.6);
+                const backChars = Math.floor(maxLength * 0.3);
+                return str.substring(0, frontChars) + '...' + str.substring(str.length - backChars);
+              },
+              
+              // 截断长文本（保留用于其他地方）
               truncateText(text, maxLength) {
                 if (!text) return '';
                 const str = String(text);
                 if (str.length <= maxLength) return str;
                 return str.substring(0, maxLength) + '...';
+              },
+              
+              // 查看完整值（可编辑）
+              viewFullValue(method, fieldKey, value) {
+                const self = this;
+                const valueType = typeof value;
+                const isBoolean = valueType === 'boolean';
+                const isNumber = valueType === 'number';
+                const isString = valueType === 'string';
+                const displayValue = isString ? value : JSON.stringify(value, null, 2);
+                const isLongText = String(displayValue).length > 100;
+                
+                let isEditMode = false;
+                let currentDialog = null;
+                
+                const showDialog = (editMode) => {
+                  isEditMode = editMode;
+                  
+                  if (currentDialog) {
+                    currentDialog.close();
+                  }
+                  
+                  if (isEditMode) {
+                    // 编辑模式 - 根据类型显示不同的编辑器
+                    let editHTML = '';
+                    
+                    if (isBoolean) {
+                      // 布尔值 - 使用 toggle
+                      editHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+                          <span style="font-size: 15px; font-weight: 600;">Value:</span>
+                          <label class="toggle toggle-init">
+                            <input type="checkbox" id="view-edit-boolean" ${value ? 'checked' : ''}>
+                            <span class="toggle-icon"></span>
+                          </label>
+                        </div>
+                      `;
+                    } else if (isNumber) {
+                      // 数字 - 使用数字输入框
+                      editHTML = `
+                        <input type="number" id="view-edit-number" value="${value}" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 15px;" />
+                      `;
+                    } else {
+                      // 字符串或复杂类型 - 使用 textarea
+                      editHTML = `
+                        <textarea id="view-edit-textarea" style="width: 100%; min-height: ${isLongText ? '300px' : '200px'}; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical;">${displayValue}</textarea>
+                      `;
+                    }
+                    
+                    currentDialog = app.dialog.create({
+                      title: fieldKey + ' ' + _('(Edit)'),
+                      text: editHTML,
+                      buttons: [
+                        {
+                          text: _('Cancel'),
+                          onClick: () => {
+                            showDialog(false);
+                          }
+                        },
+                        {
+                          text: _('Save'),
+                          bold: true,
+                          onClick: () => {
+                            let newValue;
+                            
+                            if (isBoolean) {
+                              newValue = document.getElementById('view-edit-boolean').checked;
+                              self.updateFieldDirect(method, fieldKey, newValue);
+                            } else if (isNumber) {
+                              newValue = Number(document.getElementById('view-edit-number').value);
+                              self.updateFieldDirect(method, fieldKey, newValue);
+                            } else if (isString) {
+                              newValue = document.getElementById('view-edit-textarea').value;
+                              self.updateFieldDirect(method, fieldKey, newValue);
+                            } else {
+                              newValue = document.getElementById('view-edit-textarea').value;
+                              self.updateFieldJSON(method, fieldKey, newValue);
+                            }
+                            
+                            app.toast.create({
+                              text: _('Saved'),
+                              closeTimeout: 1500,
+                              position: 'center'
+                            }).open();
+                            currentDialog.close();
+                            currentDialog = null;
+                          }
+                        }
+                      ],
+                      on: {
+                        opened: () => {
+                          if (isNumber) {
+                            const input = document.getElementById('view-edit-number');
+                            if (input) {
+                              input.focus();
+                              input.select();
+                            }
+                          } else if (!isBoolean) {
+                            const textarea = document.getElementById('view-edit-textarea');
+                            if (textarea) {
+                              textarea.focus();
+                              textarea.setSelectionRange(0, textarea.value.length);
+                            }
+                          }
+                        }
+                      }
+                    });
+                  } else {
+                    // 查看模式
+                    currentDialog = app.dialog.create({
+                      title: fieldKey,
+                      text: `<div style="max-height: 400px; overflow-y: auto; text-align: left; word-break: break-all; white-space: pre-wrap; font-family: monospace; font-size: 13px; background: #f5f5f5; padding: 12px; border-radius: 8px;">${displayValue}</div>`,
+                      buttons: [
+                        {
+                          text: _('Copy'),
+                          onClick: () => {
+                            self.copyValue(value);
+                          }
+                        },
+                        {
+                          text: _('Edit'),
+                          onClick: () => {
+                            showDialog(true);
+                          }
+                        },
+                        {
+                          text: _('Close'),
+                          bold: true
+                        }
+                      ]
+                    });
+                  }
+                  
+                  currentDialog.open();
+                };
+                
+                showDialog(false);
+              },
+              
+              // 复制值到剪贴板
+              copyValue(value) {
+                const textToCopy = typeof value === 'string' ? value : JSON.stringify(value);
+                
+                // 使用现代 Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(textToCopy).then(() => {
+                    app.toast.create({
+                      text: _('Copied To Clipboard'),
+                      closeTimeout: 2000,
+                      position: 'center'
+                    }).open();
+                  }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    app.toast.create({
+                      text: _('Copy failed'),
+                      closeTimeout: 2000,
+                      position: 'center'
+                    }).open();
+                  });
+                } else {
+                  // 降级方案
+                  const textarea = document.createElement('textarea');
+                  textarea.value = textToCopy;
+                  textarea.style.position = 'fixed';
+                  textarea.style.opacity = '0';
+                  document.body.appendChild(textarea);
+                  textarea.select();
+                  try {
+                    document.execCommand('copy');
+                    app.toast.create({
+                      text: _('Copied To Clipboard'),
+                      closeTimeout: 2000,
+                      position: 'center'
+                    }).open();
+                  } catch (err) {
+                    console.error('Failed to copy:', err);
+                  }
+                  document.body.removeChild(textarea);
+                }
+              },
+              
+              // 全屏编辑字段
+              editFieldFullscreen(method, fieldKey, currentValue) {
+                const self = this;
+                const isLongText = String(currentValue).length > 100;
+                
+                app.dialog.create({
+                  title: fieldKey,
+                  text: `<textarea id="fullscreen-editor" style="width: 100%; min-height: ${isLongText ? '300px' : '150px'}; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical;">${currentValue}</textarea>`,
+                  buttons: [
+                    {
+                      text: _('Cancel')
+                    },
+                    {
+                      text: _('Save'),
+                      bold: true,
+                      onClick: () => {
+                        const newValue = document.getElementById('fullscreen-editor').value;
+                        self.updateFieldDirect(method, fieldKey, newValue);
+                        app.toast.create({
+                          text: _('Saved'),
+                          closeTimeout: 1500,
+                          position: 'center'
+                        }).open();
+                      }
+                    }
+                  ],
+                  on: {
+                    opened: () => {
+                      // 自动聚焦并选中全部文本
+                      const editor = document.getElementById('fullscreen-editor');
+                      if (editor) {
+                        editor.focus();
+                        editor.setSelectionRange(0, editor.value.length);
+                      }
+                    }
+                  }
+                }).open();
+              },
+              
+              // 全屏编辑 JSON
+              editJSONFullscreen(method, fieldKey, currentValue) {
+                const self = this;
+                const jsonString = JSON.stringify(currentValue, null, 2);
+                
+                app.dialog.create({
+                  title: fieldKey + ' (JSON)',
+                  text: `<textarea id="fullscreen-json-editor" style="width: 100%; min-height: 300px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical;">${jsonString}</textarea>`,
+                  buttons: [
+                    {
+                      text: _('Cancel')
+                    },
+                    {
+                      text: _('Save'),
+                      bold: true,
+                      onClick: () => {
+                        const newValue = document.getElementById('fullscreen-json-editor').value;
+                        self.updateFieldJSON(method, fieldKey, newValue);
+                        app.toast.create({
+                          text: _('Saved'),
+                          closeTimeout: 1500,
+                          position: 'center'
+                        }).open();
+                      }
+                    }
+                  ],
+                  on: {
+                    opened: () => {
+                      // 自动聚焦
+                      const editor = document.getElementById('fullscreen-json-editor');
+                      if (editor) {
+                        editor.focus();
+                      }
+                    }
+                  }
+                }).open();
               },
               
               // 判断某方法是否处于编辑模式
@@ -516,6 +1590,43 @@
               },
 
               // 切换某方法的编辑模式
+              // 显示方法操作菜单
+              showMethodMenu(method) {
+                const self = this;
+                
+                const buttons = [
+                  {
+                    text: _('Add Field'),
+                    icon: '<i class="f7-icons">plus</i>',
+                    onClick: () => {
+                      self.showAddFieldDialog(method);
+                    }
+                  },
+                  {
+                    text: _('Delete Method'),
+                    icon: '<i class="f7-icons">trash</i>',
+                    color: 'red',
+                    onClick: () => {
+                      self.deleteMethod(method);
+                    }
+                  }
+                ];
+                
+                const actions = app.actions.create({
+                  buttons: [
+                    buttons,
+                    [
+                      {
+                        text: _('Cancel'),
+                        bold: true
+                      }
+                    ]
+                  ]
+                });
+                
+                actions.open();
+              },
+              
               toggleMethodEdit(method) {
                 const current = !!this.editingMethods[method];
                 this.$set(this.editingMethods, method, !current);
@@ -572,7 +1683,7 @@
                 
                 if (newMethodName !== oldMethodName) {
                   if (this.configData[newMethodName]) {
-                    app.toast.create({ text: _('Method already exists'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Method Already Exists'), closeTimeout: 2000 }).open();
                     this.editingMethodName = '';
                     return;
                   }
@@ -609,7 +1720,7 @@
                 
                 if (newFieldKey !== oldFieldKey) {
                   if (this.configData[methodName].hasOwnProperty(newFieldKey)) {
-                    app.toast.create({ text: _('Field already exists'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Field Already Exists'), closeTimeout: 2000 }).open();
                     this.editingFieldKey = '';
                     return;
                   }
@@ -646,14 +1757,14 @@
                   }
                   
                   if (self.configData[methodName]) {
-                    app.toast.create({ text: _('Method already exists'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Method Already Exists'), closeTimeout: 2000 }).open();
                     return;
                   }
                   
                   self.$set(self.configData, methodName, {});
                   self.methods = Object.keys(self.configData);
                   
-                  app.toast.create({ text: _('Method added successfully'), closeTimeout: 2000 }).open();
+                  app.toast.create({ text: _('Method Added Successfully'), closeTimeout: 2000 }).open();
                 });
               },
               
@@ -666,7 +1777,7 @@
                     self.$delete(self.configData, methodName);
                     self.methods = Object.keys(self.configData);
                     
-                    app.toast.create({ text: _('Method deleted'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Method Deleted'), closeTimeout: 2000 }).open();
                   }
                 );
               },
@@ -702,7 +1813,7 @@
                         }
                         
                         if (self.configData[self.addFieldTargetMethod].hasOwnProperty(fieldName)) {
-                          app.toast.create({ text: _('Field already exists'), closeTimeout: 2000 }).open();
+                          app.toast.create({ text: _('Field Already Exists'), closeTimeout: 2000 }).open();
                           return false;
                         }
 
@@ -717,7 +1828,7 @@
                         }
 
                         self.updateFieldDirect(self.addFieldTargetMethod, fieldName, defaultValue);
-                        app.toast.create({ text: _('Field added successfully'), closeTimeout: 2000 }).open();
+                        app.toast.create({ text: _('Field Added Successfully'), closeTimeout: 2000 }).open();
                       }
                     }
                   ]
@@ -747,7 +1858,7 @@
                   _('Delete Confirmation'),
                   function() {
                     self.$delete(self.configData[methodName], fieldKey);
-                    app.toast.create({ text: _('Field deleted'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Field Deleted'), closeTimeout: 2000 }).open();
                   }
                 );
               },
@@ -760,7 +1871,7 @@
                   function() {
                     self.configData = JSON.parse(JSON.stringify(defaultJSONConfig));
                     self.methods = Object.keys(self.configData);
-                    app.toast.create({ text: _('Reset to default configuration'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Reset To Default Configuration'), closeTimeout: 2000 }).open();
                   }
                 );
               },
@@ -769,9 +1880,35 @@
                 try {
                   const json = JSON.parse(this.value);
                   this.$emit('input', JSON.stringify(json, null, 2));
-                  app.toast.create({ text: _('Formatted successfully'), closeTimeout: 2000 }).open();
+                  app.toast.create({ text: _('Formatted Successfully'), closeTimeout: 2000 }).open();
                 } catch (err) {
                   app.toast.create({ text: _('Format failed: ') + err.message, closeTimeout: 2000 }).open();
+                }
+              },
+              
+              // 保存并重新加载配置
+              async saveAndLoad() {
+                try {
+                  // 先保存
+                  console.log('save', this.value);
+                  await db.set($f7route.path, this.value);
+                  
+                  // 再加载
+                  const json = await db.get($f7route.path);
+                  if (json) {
+                    this.$emit('input', json);
+                    app.toast.create({ 
+                      text: _('Saved And Reloaded Successfully'), 
+                      closeTimeout: 2000,
+                      position: 'center'
+                    }).open();
+                  }
+                } catch (err) {
+                  app.toast.create({ 
+                    text: _('Operation failed: ') + err.message, 
+                    closeTimeout: 2000,
+                    position: 'center'
+                  }).open();
                 }
               },
               
@@ -779,7 +1916,7 @@
                 try {
                   console.log('save', this.value);
                   await db.set($f7route.path, this.value);
-                  app.toast.create({ text: _('Saved successfully'), closeTimeout: 2000 }).open();
+                  app.toast.create({ text: _('Saved Successfully'), closeTimeout: 2000 }).open();
                 } catch (err) {
                   app.toast.create({ text: _('Save failed: ') + err.message, closeTimeout: 2000 }).open();
                 }
@@ -790,9 +1927,9 @@
                   const json = await db.get($f7route.path);
                   if (json) {
                   this.$emit('input', json);
-                    app.toast.create({ text: _('Loaded successfully'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Loaded Successfully'), closeTimeout: 2000 }).open();
                   } else {
-                    app.toast.create({ text: _('No saved configuration'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('No Saved Configuration'), closeTimeout: 2000 }).open();
                   }
                 } catch (err) {
                   app.toast.create({ text: _('Load failed: ') + err.message, closeTimeout: 2000 }).open();
@@ -803,9 +1940,9 @@
                 try {
                   if (navigator.clipboard) {
                     navigator.clipboard.writeText(this.formattedJSON);
-                    app.toast.create({ text: _('Copied to clipboard'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Copied To Clipboard'), closeTimeout: 2000 }).open();
                   } else {
-                    app.toast.create({ text: _('Browser does not support copy'), closeTimeout: 2000 }).open();
+                    app.toast.create({ text: _('Browser Does Not Support Copy'), closeTimeout: 2000 }).open();
                   }
                 } catch (err) {
                   app.toast.create({ text: _('Copy failed'), closeTimeout: 2000 }).open();
@@ -855,12 +1992,62 @@
           },
           '$ui.action.$vnode': {
             template: `
-            <div class="position-relative" style="width: 100%">
-              <div v-if="actions.length === 0" class="text-color-gray">No actions define.</div>
-              <div class="display-flex flex-direction-column justify-content-center align-items-center" style="width: 100%" v-else>
-                <div v-for="action in actions" style="margin: 10px 0; width: 100%">
-                  <div class="button button-fill" style="text-transform: none !important" @click="callMethod(action)">{{ action.method }}</div>
-                  <div class="description" v-if="action.description" style="background-color: rgb(249, 250, 251); padding: 1rem 0; color: rgb(75, 85, 99)" v-html="action.description"></div>
+            <div id="tab-actions" class="tab" style="width: 100%; padding: 8px; box-sizing: border-box;">
+              <div class="block-title" style="margin: 8px 8px 12px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #8e8e93;">{{ _('Plugin Methods') }}</div>
+              
+              <div v-if="actions.length === 0" class="block text-align-center text-color-gray">
+                <p>{{ _('No Actions Available') }}</p>
+              </div>
+              
+              <!-- 极简卡片设计 -->
+              <div class="action-grid-simple" v-else>
+                <div 
+                  class="action-card-simple" 
+                  v-for="action in actions" 
+                  :key="action.method"
+                  :class="{ 'is-executing': executing === action.method }"
+                  @click="callMethod(action)"
+                  :disabled="executing === action.method"
+                >
+                  <button 
+                    v-if="action.description"
+                    class="action-info-badge"
+                    @click.stop="showDescription(action)"
+                  >
+                    <i class="f7-icons">info_circle</i>
+                  </button>
+                  
+                  <div class="action-card-icon">
+                    <i class="f7-icons" v-if="executing === action.method">arrow_2_circlepath</i>
+                    <i class="f7-icons" v-else>play_fill</i>
+                  </div>
+                  
+                  <div class="action-card-name">{{ action.method }}</div>
+                </div>
+              </div>
+              
+              <div v-if="results.length > 0" style="margin-top: 24px;">
+                <div class="block-title" style="display: flex; justify-content: space-between; align-items: center; margin: 0 8px 10px; padding-right: 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93;">
+                  <span>{{ _('Execution Results') }}</span>
+                  <button class="clear-results-btn" @click.prevent="clearResults" :title="_('Clear')">
+                    <i class="f7-icons">trash</i>
+                  </button>
+                </div>
+                
+                <div class="card" v-for="(result, index) in results" :key="index" style="margin: 8px; border-radius: 12px; overflow: hidden;">
+                  <div class="card-header" :class="result.success ? 'text-color-green' : 'text-color-red'">
+                    <i class="f7-icons" style="margin-right: 4px;">{{ result.success ? 'checkmark_circle' : 'xmark_circle' }}</i>
+                    {{ result.method }}
+                    <span style="margin-left: auto; font-size: 12px; opacity: 0.7;">{{ result.time }}</span>
+                  </div>
+                  <div class="card-content card-content-padding">
+                    <div v-if="result.success">
+                      <small class="text-color-gray">{{ _('Duration') }}: {{ result.duration }}ms</small>
+                    </div>
+                    <div v-else style="color: #ff3b30; font-size: 13px; word-break: break-word;">
+                      {{ result.error }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -869,30 +2056,61 @@
             data() {
               return {
                 actions: pluginActions,
+                results: [],
+                executing: null,
               };
             },
             methods: {
+              showDescription(action) {
+                app.dialog.alert(action.description || _('No description'), action.method);
+              },
+              
               async callMethod(act) {
                 const clickFn = act.onClick;
-                if (typeof clickFn === 'function') {
-                  const config = this.getFrappe().web_form.get_value('config');
-                  debugger
-                  try {
-                    const configObj = JSON.parse(config);
-
-                    const applyCfg = (key, newCfg) => {
-                      // merge
-                      configObj[key] = window.lodash.merge(configObj[key] || {}, newCfg || {});
-                      this.getFrappe().web_form.set_value('config', JSON.stringify(configObj, null, 2));
-                    };
-
-                    clickFn(configObj[act.method] || defaultJSONConfig[act.method] || {}, configObj, applyCfg);
-                  } catch (err) {
-                    app.dialog.alert('Config parse error: ' + err);
-                  }
-                } else {
-                  app.dialog.alert('Method not implemented.');
+                if (typeof clickFn !== 'function') {
+                  app.dialog.alert(_('Method not implemented'));
+                  return;
                 }
+                
+                this.executing = act.method;
+                const config = this.getFrappe().web_form.get_value('config');
+                
+                try {
+                  const configObj = JSON.parse(config);
+                  
+                  const applyCfg = (key, newCfg) => {
+                    // merge
+                    configObj[key] = window.lodash.merge(configObj[key] || {}, newCfg || {});
+                    this.getFrappe().web_form.set_value('config', JSON.stringify(configObj, null, 2));
+                  };
+                  
+                  const startTime = Date.now();
+                  await clickFn(configObj[act.method] || defaultJSONConfig[act.method] || {}, configObj, applyCfg);
+                  const duration = Date.now() - startTime;
+                  
+                  this.results.unshift({
+                    method: act.method,
+                    time: new Date().toLocaleTimeString(),
+                    duration: duration,
+                    success: true,
+                  });
+                  
+                  app.toast.create({ text: _('Execution successful'), closeTimeout: 1500 }).open();
+                } catch (err) {
+                  console.error(err);
+                  this.results.unshift({
+                    method: act.method,
+                    time: new Date().toLocaleTimeString(),
+                    error: err.message || String(err),
+                    success: false,
+                  });
+                  app.dialog.alert(_('Execution failed') + ': ' + (err.message || err));
+                } finally {
+                  this.executing = null;
+                }
+              },
+              clearResults() {
+                this.results = [];
               },
             },
           },
@@ -921,6 +2139,44 @@
 </script>
 
 <style>
+  /* Toolbar Tabbar 样式 */
+  .toolbar.tabbar.toolbar-top {
+    top: var(--f7-navbar-height);
+  }
+  
+  .page-content {
+    padding-top: calc(var(--f7-navbar-height) + var(--f7-toolbar-height));
+  }
+  
+  .toolbar.tabbar .tabbar-label {
+    font-size: 15px;
+    font-weight: 500;
+  }
+  
+  .toolbar.tabbar .tab-link {
+    color: var(--f7-text-color);
+  }
+  
+  .toolbar.tabbar .tab-link-active {
+    color: var(--f7-theme-color);
+  }
+  
+  /* Tab 内容样式 */
+  .tabs {
+    width: 100%;
+    min-height: 100px;
+  }
+  
+  .tab {
+    display: none;
+  }
+  
+  .tab.tab-active {
+    display: block;
+    width: 100%;
+    min-height: 100px;
+  }
+  
   .code-block {
     background: #1e293b;
     color: #10b981;
@@ -1003,6 +2259,7 @@
   
   .config-list-table .field-value-cell {
     vertical-align: middle;
+    position: relative;
   }
   
   /* 表格输入框样式 */
@@ -1039,26 +2296,22 @@
   
   /* 只读模式下的值显示样式 */
   .value-text {
-    display: -webkit-box;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: block;
     max-width: 100%;
-    white-space: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     overflow-wrap: anywhere;
     word-break: break-word;
     color: #1c1c1e;
   }
   
   .value-code {
-    display: -webkit-box;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: block;
     max-width: 100%;
-    white-space: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     overflow-wrap: anywhere;
     word-break: break-word;
     background-color: #f5f5f7;
@@ -1067,6 +2320,57 @@
     font-family: monospace;
     font-size: 12px;
     color: #007aff;
+  }
+  
+  /* 值操作按钮样式 */
+  .value-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(var(--f7-theme-color-rgb), 0.1);
+    color: var(--f7-theme-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .value-action-btn .f7-icons {
+    font-size: 16px;
+  }
+  
+  .value-action-btn:active {
+    background: rgba(var(--f7-theme-color-rgb), 0.2);
+    transform: scale(0.92);
+  }
+  
+  /* 方法菜单按钮样式 */
+  .method-menu-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(0, 0, 0, 0.04);
+    color: #1c1c1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  
+  .method-menu-btn .f7-icons {
+    font-size: 20px;
+  }
+  
+  .method-menu-btn:active {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(0.92);
   }
 
   @media (max-width: 640px) {
@@ -1085,5 +2389,173 @@
   
   .field-name-cell strong:hover {
     opacity: 0.8;
+  }
+  
+  /* 执行中的旋转动画 */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .button [class*="arrow_2_circlepath"] {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* 极简卡片设计 */
+  .action-grid-simple {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 8px;
+  }
+  
+  .action-card-simple {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 16px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    user-select: none;
+  }
+  
+  .action-card-simple:active {
+    transform: scale(0.96);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .action-card-simple:not([disabled]):hover {
+    border-color: var(--f7-theme-color);
+    box-shadow: 0 4px 16px rgba(var(--f7-theme-color-rgb), 0.15);
+  }
+  
+  .action-card-simple[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .action-card-simple.is-executing {
+    border-color: var(--f7-theme-color);
+    background: linear-gradient(135deg, rgba(var(--f7-theme-color-rgb), 0.05), rgba(var(--f7-theme-color-rgb), 0.02));
+    box-shadow: 0 0 0 3px rgba(var(--f7-theme-color-rgb), 0.1), 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+  
+  .action-info-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(108, 117, 125, 0.1);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s ease;
+    z-index: 2;
+  }
+  
+  .action-info-badge .f7-icons {
+    font-size: 16px;
+    color: #6c757d;
+  }
+  
+  .action-info-badge:active {
+    background: rgba(108, 117, 125, 0.2);
+    transform: scale(0.9);
+  }
+  
+  .action-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--f7-theme-color), var(--f7-theme-color-shade));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(var(--f7-theme-color-rgb), 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  .action-card-simple:active .action-card-icon {
+    transform: scale(0.9);
+  }
+  
+  .action-card-icon .f7-icons {
+    font-size: 24px;
+    color: #fff;
+  }
+  
+  .action-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1c1c1e;
+    text-align: center;
+    line-height: 1.3;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .action-card-simple.is-executing .action-card-name {
+    color: var(--f7-theme-color);
+  }
+  
+  /* 非常小的屏幕才单列显示 */
+  @media (max-width: 320px) {
+    .action-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* 美化结果卡片 */
+  #tab-actions .card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+  
+  #tab-actions .card-header {
+    font-weight: 600;
+    font-size: 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  /* 清除按钮样式 */
+  .clear-results-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .clear-results-btn .f7-icons {
+    font-size: 18px;
+  }
+  
+  .clear-results-btn:active {
+    background: rgba(255, 59, 48, 0.2);
+    transform: scale(0.9);
   }
 </style>

@@ -32,14 +32,14 @@ window.towngasSoap = (function () {
   }
   function towngasSoap(soapObject) {
     this.props = {
-      domian: 'https://frappe.cecgaming.com/',
+      domian: 'https://onetgc.mob-mob.com/',
       logApi: '/api/method/towngas_soap_client.api.get_call_result',
       loginApi: '/api/method/towngas_soap_client.api.call_wsdl_method',
       loginMethod: 'Login',
       tempControllerAppService: 'TempControllerAppService',
       equAppService: 'EquAppService',
       methodName: soapObject && soapObject.methodName ? soapObject.methodName : '',
-      appToken: 'token 9609c88e4794227:5b6d3a6ddc683cf',
+      appToken: 'token 350d4a93d0b3918:a72f336fb3ff0d9',
       userToken: '',
       expiresIn: '',
       expiresNow: '',

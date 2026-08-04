@@ -124,6 +124,28 @@
                               <i class="material-icons" style="line-height: 25px!important;">logout</i>
                           </div>
                         </a>
+                        <a class="right" v-if="subItem.thermostatActionType" v-on:click="chooseTemplate(subItem)">
+                          <div
+                            class="button button-raised button-big circle rf-sensor" 
+                          >
+                            <i class="material-icons" style="line-height: 25px!important;" v-if="subItem.thermostatActionType == 'sync_occupancy'">cable</i>
+                            <i class="material-icons" style="line-height: 25px!important;" v-else>commit</i>
+                          </div>
+                        </a>
+                        <a class="right" v-on:click="${()=>physicalLock(subItem, subItem.ref)}" v-if="subItem.mainType == 60">
+                          <div class="button button-raised button-big circle rf-sensor">
+                              <i class="material-icons" style="line-height: 25px!important;" v-if="subItem.ref == 1">lock</i>
+                              <i class="material-icons" style="line-height: 25px!important;" v-if="subItem.ref == 0">lock_open_right</i>
+                          </div>
+                        </a>
+                        <a class="right" v-on:click="${()=>virtualOpenClose(subItem)}" v-if="subItem.mainType == 70">
+                          <a
+                            :class="subItem.ref == 0?'off_flag':subItem.ref == 1?'on_flag':'pause_flag'"
+                            :onoff="subItem.ref"
+                          >
+                            <div class="button button-raised button-big onoff"></div>
+                          </a>
+                        </a>
                         <a class="right" v-if="subItem.mainType == 15">
                           <div class="button button-raised button-big circle rf-sensor">
                               <i class="material-icons" style="line-height: 30px!important;font-size: 30px!important;">check</i>
@@ -505,6 +527,12 @@
                   { value: '02', text: 'TOGGLE', type: 4 },
                   { value: '50', text: 'CHECKOUT', type: 50 },
                 ];
+              }else if(button_group.startsWith('TOGGLE GANG')){
+                chooseList = [
+                  { value: '01', text: 'ON/OFF', type: 2 },
+                  { value: '02', text: 'TOGGLE', type: 4 },
+                  { value: '60', text: 'Physical Lock', type: 60 },
+                ];
               } else if (button_group.startsWith('Thermostat')) {
                 chooseList = [
                   { value: '01', text: 'ON/OFF', type: 2 },
@@ -538,6 +566,10 @@
               item.mainType = labelItem.type;
               item.chooseStatus = true;
               item.buttonBoxType = 0;
+              if (button_group.startsWith('Thermostat')) {
+                delete item.thermostatActionType;
+                delete item.syncOccupancyState;
+              }
               // default on/off ref
               item.ref = defaultRef;
               // handle special templates similar to home_ui_click_touch_app_save
@@ -667,7 +699,7 @@
               //choose status
               item.chooseStatus = false;
               let model = item.device_model;
-              if (model == 'YO360' || model == 'M360s') {
+              if (model == 'YO360' || model == 'M360s' || item.device_button_group.includes("Air Conditioner")) {
                 item.modeStr = 2;
                 item.speedVaule = 4;
                 item.temperature = 26;
@@ -826,6 +858,8 @@
             subItem.mainType = 1;
             subItem.buttonBoxType = 0;
             subItem.chooseStatus = false;
+            delete subItem.thermostatActionType;
+            delete subItem.syncOccupancyState;
           },
           chooseTemplate(subItem) {
             this.clickStatus = true;
@@ -870,6 +904,14 @@
                   type: 50,
                 },
               ];
+            }else if(button_group.startsWith('TOGGLE GANG')){
+              chooseList = [
+                {
+                  value: '60',
+                  text: 'PHYSICAL LOCK',
+                  type: 60,
+                },
+              ];
             } else if (button_group.startsWith('Thermostat')) {
               chooseList = [
                 {
@@ -881,6 +923,28 @@
                   value: '50',
                   text: 'CHECKOUT',
                   type: 50,
+                },
+                {
+                  value: '71',
+                  text: 'Sync Occupancy',
+                  type: 71,
+                  thermostatActionType: 'sync_occupancy',
+                  syncOccupancyState: 0,
+                },
+                {
+                  value: '72',
+                  text: 'Sync Unoccupied',
+                  type: 72,
+                  thermostatActionType: 'sync_unoccupied',
+                  syncOccupancyState: 1,
+                },
+              ];
+            }else if(button_group.includes("Air Conditioner")){
+              chooseList = [
+                {
+                  value: '01',
+                  text: 'ON/OFF',
+                  type: 2,
                 },
               ];
             } else if (button_group.startsWith('RCU DIMMING') || button_group.startsWith('DIMMING')) {
@@ -923,6 +987,24 @@
                 },
               ];
               //this.home_ui_click_touch_app_save(chooseList[0]);
+            }else if(button_group.startsWith('OPENCLOSE GANG')){
+              chooseList = [
+                  {
+                    value: '1',
+                    text: 'ON',
+                    type: 70, 
+                  },
+                  {
+                    value: '0',
+                    text: 'OFF',
+                    type: 70,
+                  },
+                  {
+                    value: '2',
+                    text: 'PAUSE',
+                    type: 70,
+                  }
+                ]
             }else if(button_group.startsWith('RCU OPENCLOSE GANG')){
               this.home_ui_click_touch_app_save({value: '01',text: 'OPEN/CLOSE',type: 7,});
               return;
@@ -951,7 +1033,6 @@
               ];
             }
             this.labelList = chooseList;
-            debugger
             if(this.$popupItem){
               this.$popupItem.open();
             }else{
@@ -1032,18 +1113,16 @@
             if (item.ref == 0) {
               item.ref = 1;
               barValue = 100;
-              if (isset(hideBottomBar)) hideBottomBar = false;
+              hideBottomBar = false;
             } else {
               item.ref = 0;
               barValue = 0;
-              if (isset(hideBottomBar)) hideBottomBar = true;
+              hideBottomBar = true;
             }
             if (item.device_button_group.startsWith('DIMMING') || item.device_button_group.startsWith('RCU DIMMING')) {
               barStatus = true;
               if(item.ref == 1){item.ref = barValue};
-            }
-            if (item.device_button_group.startsWith('Thermostat')) {
-              hideBottomBar = true;
+              hideBottomBar = null;
             }
             if (barStatus) {
               this.changeBarUI(item.device, item.device_button_group, barValue);
@@ -1078,9 +1157,16 @@
               let mackey = core_utils_get_mac_address_from_guid(device, true);
               let command = ``;
               //on off and the rcu on off
-              debugger
               if (device_button_group.startsWith('Thermostat')) {
-                if(item.chooseType == 50){
+                const isThermostatSyncAction = item.thermostatActionType === 'sync_occupancy' || item.thermostatActionType === 'sync_unoccupied';
+                if (isThermostatSyncAction) {
+                  const stateHex = item.thermostatActionType === 'sync_unoccupied' ? '01' : '00';
+                  item.syncOccupancyState = stateHex === '01' ? 1 : 0;
+                  item.action_command = `02${mackey}9721037d${stateHex}`;
+                  delete item.thermostat_mode;
+                  delete item.thermostat_fan;
+                  delete item.thermostat_temp;
+                }else if(item.chooseType == 50){
                   item.action_command = `02${mackey}13059721038001059721038000`;
                 }else{
                   item.action_command = `02${mackey}9403000001${parseInt(ref).toString(16).pad('00')}`;
@@ -1153,10 +1239,38 @@
                 if(item.virtualId){
                   item.name = `${item.name}-${item.virtualId}`;
                 }
+              }else if(device_button_group.includes("Air Conditioner")){
+                //计算空调的指令
+                /*
+                ** 首先获取空调的公用指令
+                ** 然后根据空调的状态计算指令
+                */
+                let device_button_groups = erp.info.device_button_group || {};
+                let device_button_commands = erp.info.device_command || {};
+                for (let i in device_button_groups) {
+                  device_button_groups[i].device_command = {};
+                  if (isset(device_button_groups[i].button_group_sub_list[0])) {
+                    let command_name = device_button_groups[i].button_group_sub_list[0].device_command;
+                    device_button_groups[i].device_command = device_button_commands[command_name];
+                  }
+                }
+                const command_item = device_button_groups[device_button_group].device_command['function'];
+                let ref_command = iot_ble_generate_ir_code(command_item,"ARC_ON_OFF",`${item.temperature},${item.speedVaule},0,0,${item.ref},${item.modeStr}`)
+                //进行指令拆分
+                const dateSetLen = 36;
+                const count_batch = Math.ceil(ref_command.length / dateSetLen);
+                let len = 0;
+                const commands = [];
+                for (let i = 0; i < count_batch; i++) {
+                  len = i * dateSetLen + dateSetLen > ref_command.length ? ref_command.length - i * dateSetLen : dateSetLen;
+                
+                  commands.push(`87${(count_batch - 1 - i).toString(16).pad("00")}${ref_command.substring(i * dateSetLen, i * dateSetLen + len)}`);
+                }
+                command = `02${mackey}${commands.join('')}`;
+                item.action_command = command;
               }
             });
             console.log('this_list', this_list);
-            debugger
             //send to page
             if(type == 5){
               emitter.emit('save_device_status', {
@@ -1179,7 +1293,6 @@
           },
           home_ui_click_touch_app_save(labelItem) {
             this.clickStatus = false;
-            debugger
             if(this.$popupItem){
               this.$popupItem.close(50)
             }
@@ -1195,9 +1308,27 @@
                 item.chooseStatus = true;
               }
             });
+            const isThermostatSyncAction =
+              thisSubItem.device_button_group.startsWith('Thermostat') &&
+              (labelItem.thermostatActionType === 'sync_occupancy' || labelItem.thermostatActionType === 'sync_unoccupied');
+            if (thisSubItem.device_button_group.startsWith('Thermostat')) {
+              if (isThermostatSyncAction) {
+                thisSubItem.thermostatActionType = labelItem.thermostatActionType;
+                thisSubItem.syncOccupancyState = labelItem.syncOccupancyState;
+                thisSubItem.ref = labelItem.syncOccupancyState;
+                thisSubItem.chooseType = 0;
+                delete thisSubItem.thermostat_mode;
+                delete thisSubItem.thermostat_fan;
+                delete thisSubItem.thermostat_temp;
+              } else {
+                delete thisSubItem.thermostatActionType;
+                delete thisSubItem.syncOccupancyState;
+              }
+            }
             thisSubItem.buttonBoxType = 0;
-            
-            if (
+            if (isThermostatSyncAction) {
+              thisSubItem.buttonBoxType = 0;
+            } else if (
               type == 2 &&
               (thisSubItem.device_button_group.startsWith('DIMMING') || thisSubItem.device_button_group.startsWith('RCU DIMMING'))
             ) {
@@ -1207,7 +1338,7 @@
               thisSubItem.turnlight = value;
               thisSubItem.ref = 100;
               thisSubItem.chooseType = 4;
-            } else if (type == 2 && thisSubItem.device_button_group.startsWith('Thermostat')) {
+            } else if (type == 2 && (thisSubItem.device_button_group.startsWith('Thermostat') || thisSubItem.device_button_group.includes("Air Conditioner"))) {
               thisSubItem.buttonBoxType = 3;
             }else if(type == 4 && thisSubItem.device_button_group.startsWith("RCU ONOFF GANG")){
               thisSubItem.ref = 2;
@@ -1232,6 +1363,9 @@
             }else if(type > 9){
               thisSubItem.chooseType = 9;
               thisSubItem.ref = value;
+              if(type == 60){
+                thisSubItem.ref = 1;
+              }
             } else { 
               thisSubItem.buttonBoxType = 0;
             }
@@ -1239,6 +1373,14 @@
             if (isset(this.$popupItem)) {
               this.$popupItem.close();
             }
+          },
+          physicalLock(device_item, ref){
+            if(ref == 0){
+              device_item.ref = 1;
+            }else{
+              device_item.ref = 0;
+            }
+            this.$set(this.subdevices,thisSubIndex,thisSubItem);
           },
           toScene(device_item){
             let {device_mode,device_model,local_ip,gateway,device,device_button_group,title,imgUrl,mac_address,room_name,config} = device_item;
@@ -1312,6 +1454,14 @@
   }
   .off_flag > .button.onoff:after {
     content: 'OFF';
+  }
+  .pause_flag > .button.onoff {
+    background-color: var(--f7-block-strong-bg-color);
+    color: #8e8d93;
+    border-color: #8e8d93;
+  }
+  .pause_flag > .button.onoff:after {
+    content: 'PAUSE';
   }
   .popup .list ul::before,.popup .list ul::after{
     content: none;

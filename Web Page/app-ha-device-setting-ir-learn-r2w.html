@@ -279,7 +279,7 @@
                     }
                   }
                   if (item.code) {
-                    item.code = `97210700${item.code}3075`;
+                    item.code = `9721070001${item.code}3075`;
                   }
                 }
               }
@@ -375,15 +375,33 @@
                   console.log('learneddata', data);
                   let rs = data.rs;
                   if (data.guid == guid && rs.length > 8) {
-                    if (rs.substring(6, 8) == '00') {
-                      // 获取到数据后立即清除监听器，避免重复处理
-                      emitter.off(`ir_learned_code`, this._sendIrCodeFun);
-                      this._sendIrCodeFun = null;
-                      this.learnCode = `97210700${this.learnCode ? this.learnCode : ''}${rs.substring(8, rs.length)}`;
-                      app.dialog.close();
-                      this.showCode(this.learnCode);
-                    } else {
-                      this.learnCode += rs.substring(8, rs.length);
+                    const startStr = rs.substring(0, 2);
+                    if(startStr == '1c'){
+                      if (rs.substring(2, 4) == '00') {
+                        // 获取到数据后立即清除监听器，避免重复处理
+                        emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                        this.learnCode += rs.substring(4, rs.length-2);
+                        this.learnCode = `9721070001${this.learnCode}`;
+                        this._sendIrCodeFun = null;
+                        app.dialog.close();
+                        console.log('learnCode', this.learnCode);
+                        this.showCode(this.learnCode);
+                      } else {
+                        this.learnCode += rs.substring(12, rs.length);
+                      }
+                    }else{
+                      if (rs.substring(6, 8) == '00') {
+                        // 获取到数据后立即清除监听器，避免重复处理
+                        emitter.off(`ir_learned_code`, this._sendIrCodeFun);
+                        this.learnCode += rs.substring(8, rs.length);
+                        this.learnCode = `9721070001${this.learnCode}`;
+                        this._sendIrCodeFun = null;
+                        app.dialog.close();
+                        console.log('learnCode', this.learnCode);
+                        this.showCode(this.learnCode);
+                      } else {
+                        this.learnCode += rs.substring(8, rs.length);
+                      }
                     }
                   }
                 };
@@ -391,7 +409,7 @@
 
               emitter.off(`ir_learned_code`, this._sendIrCodeFun);
               emitter.on(`ir_learned_code`, this._sendIrCodeFun);
-              let data = '972107';
+              let data = '9721070000';
               await window.peripheral[guid].write([
                 {
                   service: 'ff80',

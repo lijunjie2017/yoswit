@@ -9,7 +9,7 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Command Debug') }}</div>
+        <div class="title">{{ _('Command Debug') }}</div> 
         <div class="right">
           <a class="link icon-only" @click="${()=>clickWifi()}">
             <i class="icon material-icons md-only">wifi</i>
@@ -24,6 +24,26 @@
         <div class="main-box">
           <div class="list list-strong-ios list-dividers-ios inset-ios">
             <ul>
+              <li>
+                <label class="item-checkbox item-content"> 
+                  <input type="checkbox" v-model="serialTransmitEnabled" />
+                  <i class="icon icon-checkbox"></i>
+                  <div class="item-inner">
+                    <div class="item-title">{{_("Serial transmit")}}</div>
+                  </div>
+                </label>
+              </li>
+              <li class="item-content item-input" v-if="serialTransmitEnabled">
+                <div class="item-inner">
+                  <div class="item-title item-label">{{_("COM Port")}}</div>
+                  <div class="item-input-wrap input-dropdown-wrap">
+                    <select v-model.number="comPost">
+                      <option :value="1">COM 1</option>
+                      <option :value="2">COM 2</option>
+                    </select>
+                  </div>
+                </div>
+              </li>
               <div class="item-input-wrap">
                 <textarea placeholder="command" v-model="command" style="padding: 15px"></textarea>
               </div>
@@ -71,6 +91,7 @@
     let vueApp = null;
     window.htmi_log_list = [];
     const { guid } = $f7route.query;
+    const serialTransmitStorageKey = 'haCommandDebugSerialTransmitEnabled';
     const clickWifi = () => {
       vueApp.$checkScene();
     };
@@ -81,11 +102,18 @@
           command: '',
           notifications: [],
           wifiStatus: false,
+          serialTransmitEnabled: false,
+          comPost: 1,
         },
         computed: {},
-        watch: {},
+        watch: {
+          serialTransmitEnabled(value) {
+            localStorage.setItem(serialTransmitStorageKey, value ? '1' : '0');
+          },
+        },
         mounted() {
           Vue.prototype.$checkScene = this.checkScene;
+          this.serialTransmitEnabled = localStorage.getItem(serialTransmitStorageKey) === '1';
           this.postNotifications();
         },
         methods: {
@@ -93,8 +121,27 @@
             this.wifiStatus = !this.wifiStatus;
             app.dialog.alert('wifiStatus is ' + this.wifiStatus ? 'ON' : 'OFF');
           },
+          getPostCommand() {
+            if (!this.serialTransmitEnabled) {
+              return this.command;
+            }
+            const strList = [this.command];
+            const comHex = parseInt(this.comPost).toString(16).padStart(2, '0');
+            return `972102${comHex}${strList[0].toLowerCase()}`;
+          },
+          formatNotification(notification) {
+            if (typeof notification === 'string') {
+              if (notification.startsWith('972202')) {
+                return notification.slice(8);
+              }
+              if (notification.startsWith('972102')) {
+                return notification.slice(6);
+              }
+            }
+            return notification;
+          },
           async postCommand() {
-            let command = this.command;
+            let command = this.getPostCommand();
             try {
               if (this.wifiStatus) {
                 //get the gateway
@@ -199,7 +246,7 @@
               'ff82',
               (rs) => {
                 console.log('rs', rs);
-                this.notifications.push(rs);
+                this.notifications.push(this.formatNotification(rs));
               },
               (err) => {
                 reject(err);
@@ -226,3 +273,14 @@
     return $render;
   };
 </script>
+
+<style>
+  .serial-com-select {
+    border: 1px solid var(--f7-list-item-after-text-color, #8e8e93);
+    border-radius: 4px;
+    color: var(--f7-list-item-title-text-color, #000);
+    font-size: 15px;
+    min-width: 88px;
+    padding: 4px 8px;
+  }
+</style>

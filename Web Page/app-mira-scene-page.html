@@ -9,9 +9,28 @@
             <span class="if-not-md">Back</span>
           </a>
         </div>
-        <div class="title">{{ _('Hotel Control - Guest Mode') }}</div>
-        <div class="right" style="display: none">
-          <a href="/mobile-app/scene-guid-list-test-for-mira" class="button button-fill text-color-theme bg-color-white button-44">
+        <!-- <div class="title">{{ _('Hotel Control - Guest Mode') }}</div> -->
+        <div class="title sliding">
+					<div class="logo-small">
+						<img src="{{ frappe.get_url(nav_app_logo_image) if nav_app_logo_image else appSetting.iconImageUri }}" />
+						<a @click="${()=>openProfileList()}" class="link">
+							${erp.info.profile ? $h`
+							<font class="profile_title" style="text-overflow: ellipsis; max-width: 110px; overflow: hidden">
+								${ tran(erp.info.profile.profile_name) }
+							</font>
+							` : $h`
+							<font class="profile_title" style="text-overflow: ellipsis; max-width: 110px; overflow: hidden"> ${ tran('Default') } </font>
+							`}
+              ${isPermissionGranted ? $h`
+							<div class="home-title-profile-popover" style="margin-left: 5px">
+								<i class="icon f7-icons" style="font-size: 14px">chevron_down</i>
+							</div>
+              ` : ''}
+						</a>
+					</div>
+				</div>
+        <div class="right" style="opacity: 0;">
+          <a  class="button button-fill text-color-theme bg-color-white button-44">
             <i class="material-icons">menu</i>
           </a>
         </div>
@@ -42,6 +61,7 @@
                           :enable="item.enable"
                           :radar-status="item.radar_status"
                           :name="item.name"
+                          :loading="item.loading"
                           v-on:change-scene-enable="changeSceneEnableParent"
                           v-on:change-dnd="changeDndParent"
                           v-on:change-virtual-id="changeVirtualIdParent"
@@ -96,6 +116,7 @@
                           :name="item.name"
                           :status="item.device_status"
                           :device-attachment-status="item.device_attachment_status"
+                          :loading="item.loading"
                           v-on:change-air-temp="changeAirTempParent"
                           v-on:change-air-mode="changeAirModeParent"
                           v-on:onoff-click-item="onoffClickParent"
@@ -122,6 +143,7 @@
                         <div class="iconbtn swipeout-content" style="width: 100%">
                           <dnd-button
                             :type="item.buttonType"
+                            :title="item.title"
                             :guid="item.device"
                             :config="item.config"
                             :password="item.password"
@@ -131,6 +153,7 @@
                             :self-icon="item.selfIcon"
                             :device-attachment-status="item.device_attachment_status"
                             :show-title="item.show_title"
+                            :loading="item.loading"
                             v-on:get-password="getPasswordParent"
                             v-on:to-ble-setting="toBleSettingParent"
                           ></dnd-button>
@@ -170,7 +193,7 @@
                         >
                           <li class="swipeout display-flex" style="border-radius: 15px">
                             <div class="iconbtn swipeout-content" style="width: 100%">
-                              <dnd-button
+                        <dnd-button
                                 :type="item.buttonType"
                                 :guid="item.device"
                                 :button-group="item.device_button_group"
@@ -180,6 +203,7 @@
                                 :self-icon-off="item.selfIconOff"
                                 :device-attachment-status="item.device_attachment_status"
                                 :show-title="item.show_title"
+                                :loading="item.loading"
                                 v-on:change-air-temp="changeAirTempParent"
                                 v-on:change-air-mode="changeAirModeParent"
                                 v-on:onoff-click-item="onoffClickParent"
@@ -220,6 +244,7 @@
                             :self-icon-off="item.selfIconOff"
                             :device-attachment-status="item.device_attachment_status"
                             :show-title="item.show_title"
+                            :loading="item.loading"
                             v-on:click-curtain="clickCurtainParent"
                           ></dnd-button>
                         </div>
@@ -247,8 +272,41 @@
       $update = ctx.$update;
 
     let vueApp = null;
-    const { guid, subdevice } = $f7route.query;
+    let subscribedTopics = [];
 
+    const mqttSubscribe = (topic, qos, secure) => {
+      core_mqtt_subscribe(topic, qos, secure);
+      if (!subscribedTopics.includes(topic)) {
+        subscribedTopics.push(topic);
+      }
+    };
+
+    const mqttUnsubscribeAll = () => {
+      subscribedTopics.forEach(topic => {
+        core_mqtt_unsubscribe(topic, false); // 根据 core_mqtt_subscribe 的调用，这里 secure 传 false
+      });
+      subscribedTopics = [];
+    };
+    const { guid, subdevice } = $f7route.query;
+    const isHomePage = !!$f7route.query.is_home_page;
+	  const isBackPage = $f7route.query.is_back_page;
+    let isPermissionGranted = false;
+    const checkPermission = () => {
+      let roleList = erp.info.user.roles || [];
+      roleList.forEach(item=>{
+        if(item.role == "Profile Manager"){
+          isPermissionGranted = true;
+          $update();
+        }
+      })
+    }
+    checkPermission();
+    const openProfileList = () => {
+      //check if permission is granted
+      if(isPermissionGranted){
+        mainView.router.navigate('/mobile-app/profile-list');
+      }
+    }
     /*
     this is the component of the dnd-button
     */
@@ -262,7 +320,7 @@
         <img :src="fileUrl+'new_clean_'+(cleanStatus != 0 ?'on':'off')+'.png'" alt="thermostat" style="width: 25px;height: 25px;" />
       </button>
     </div>
-    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" 
+    <div class="buttonStatus display-flex justify-content-center align-content-center align-items-center" 
     :style="{width: '100%',height: '80px',padding: '0 20px','background-color': enable ? 'rgba(0,0,0,0)' : 'grey'}" 
     v-else-if="type == 'radar'">
       <button class="button button-raised button-big circle radar-btn display-flex flex-direction-column" style="padding:5px 0px;" @click="changeSceneEnable(name)">
@@ -290,7 +348,7 @@
         <img :src="fileUrl+(status != 0?selfIconOff:selfIcon)+'.png'" :style="{'width':'30px','height':'30px'}" />
       </button>
     </div>
-    <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center" style="width: 100%;height: 80px;padding: 0 20px;" v-else-if="type == 'master'">
+    <div class="buttonStatus display-flex justify-content-center align-content-center align-items-center" style="width: 100%;height: 80px;padding: 0 20px;" v-else-if="type == 'master'">
       <button :class="['button button-raised button-big circle', status != 0 ? 'btn-bg' : '']" @click="changeVirtualId(name,status,1)">
         <i class="material-icons" style="font-size: 30px;color: #000;">
           power_settings_new 
@@ -299,8 +357,12 @@
     </div>
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center"
      style="width: 100%;height: 90px;padding: 0 20px;position: relative;" v-else-if="type == 'toggle'">
-      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeVirtualId(name,status,2)">
-        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" :style="{'width': buttonGroup.startsWith('SCENE VIRTUAL SLEEP')?'25px':'30px','height': buttonGroup.startsWith('SCENE VIRTUAL SLEEP')?'25px':'30px'}" />
+      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" 
+              :style="{ 'pointer-events': loading ? 'none' : 'auto', 'position': 'relative' }"
+              @click="changeVirtualId(name,status,2)">
+        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" 
+             :style="{'width': buttonGroup.startsWith('SCENE VIRTUAL SLEEP')?'25px':'30px','height': buttonGroup.startsWith('SCENE VIRTUAL SLEEP')?'25px':'30px', 'visibility': loading ? 'hidden' : 'visible'}" />
+        <div v-if="loading" class="refined-spinner"></div>
       </button>
       <div style="position: absolute;top: 0;right: 10px;color: #8e8d93;background-color: var(--f7-block-strong-bg-color);font-size: 20px;font-weight: 600;" 
       v-if="showTitle"
@@ -310,8 +372,12 @@
     </div>
     <div class="buttonStatus display-flex justify-content-space-between align-content-center align-items-center"
      style="width: 100%;height: 90px;padding: 0 20px;position: relative;" v-else-if="type == 'click'">
-      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" @click="changeSceneId(name)">
-        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" :style="{'width': '30px','height': '30px'}" />
+      <button :class="['button button-raised button-big circle display-flex', status != 0 ? 'btn-bg' : '']" 
+              :style="{ 'pointer-events': loading ? 'none' : 'auto', 'position': 'relative' }"
+              @click="changeSceneId(name)">
+        <img :src="fileUrl+ble_button_group_icon_map()[buttonGroup][status != 0 ? 'off_icon' : 'on_icon']+'.png'" 
+             :style="{'width': '30px','height': '30px', 'visibility': loading ? 'hidden' : 'visible'}" />
+        <div v-if="loading" class="refined-spinner"></div>
       </button>
       <div style="position: absolute;top: 0;right: 10px;color: #8e8d93;background-color: var(--f7-block-strong-bg-color);font-size: 20px;font-weight: 600;" 
       v-if="showTitle"
@@ -320,7 +386,7 @@
       </div>
     </div>
     <!-- opclose -->
-    <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose'">
+    <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose' && !buttonGroup.includes('REVERSE')">
       <div class="display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="height:100%;">
         <button :class="['button button-raised button-big circle display-flex',status == 100 || status == 99 ? 'btn-bg' : '']" style="margin-bottom:10px;" @click="clickCurtain(name,1)">
           <img :src="fileUrl+selfIcon+'.png'" :style="{'width': '30px','height': '30px'}" />
@@ -331,6 +397,18 @@
       </div>
     </div>
     <!-- opclose end -->
+    <!-- opclose REVERSE -->
+    <div class="buttonStatus" :opclose-reverse=status style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'opclose' && buttonGroup.includes('REVERSE')">
+      <div class="display-flex flex-direction-column justify-content-center align-content-center align-items-center" style="height:100%;">
+        <button :class="['button button-raised button-big circle display-flex',status == 0 || status == 1 ? 'btn-bg' : '']" style="margin-bottom:10px;" @click="clickCurtain(name,1)">
+          <img :src="fileUrl+selfIcon+'.png'" :style="{'width': '30px','height': '30px'}" />
+        </button>
+        <button :class="['button button-raised button-big circle display-flex',status == 100 || status == 99 ? 'btn-bg' : '']" @click="clickCurtain(name,0)">
+          <img :src="fileUrl+selfIconOff+'.png'" :style="{'width': '30px','height': '30px'}" />
+        </button>
+      </div>
+    </div>
+    <!-- opclose REVERSE end -->
     <div class="buttonStatus" style="width: 100%;height: 150px;padding: 0 20px;" v-else-if="type == 'dimming'">
       <div style="height:100%;">
         <div :class="['range-slider','rangeslider','range-slider-init']" 
@@ -355,8 +433,14 @@
         </i>
       </div>
     </div>
-    <div class="buttonStatus music-player-card" style="width: 100%;height: 100px;padding: 0 20px;" v-else-if="type == 'music'">
-      <div class="music-icon">
+    <div class="buttonStatus" style="width: 100%;padding: 0px 10px;" v-else-if="type == 'music'">
+      <div class="display-flex justify-content-center align-items-center">
+        <div class="music-player-card-title" style="padding: 0px 10px;">
+          <h3 class="tv-title ellipsis">{{title}}</h3>
+        </div>
+      </div>
+      <div class="music-player-card" style="width: 100%;height: 100px;padding: 0px;">
+        <div class="music-icon">
             <i class="f7-icons" style="font-size: 30px;">music_note_2</i>
         </div>
         
@@ -377,6 +461,7 @@
                 <i class="material-icons" style="font-size: 30px;">{{config?config:'phone_iphone'}}</i>
             </button>
         </div>
+      </div>
     </div>
     <div class="buttonStatus" style="width: 100%;height: 320px;padding: 0 20px;" v-else-if="type == 'tv'">
       <h3 class="tv-title ellipsis">{{title}}</h3>
@@ -541,6 +626,10 @@
         config: {
           type: String,
           default: '',
+        },
+        loading: {
+          type: Boolean,
+          default: false,
         },
       },
       data() {
@@ -902,6 +991,24 @@
           musicDeviceList: [],
           controlUpdateMap: true,
           clickStates: new Map(),
+          bedroomMode:{
+            "master" : null,
+            "sub_100": null,
+            "sub_50" : null,
+            "sub_25" : null,
+            "lastActiveSub" : '',
+            "invincibleUntil": 0,
+            "loadingTimer": null
+          },
+          livingMode:{
+            "master" : null,
+            "sub_100": null,
+            "sub_50" : null,
+            "sub_25" : null,
+            "lastActiveSub" : '',
+            "invincibleUntil": 0,
+            "loadingTimer": null
+          },
         },
         computed: {},
         watch: {},
@@ -923,6 +1030,7 @@
             await this.initScan();
             await this.initSubdevice();
             await this.initData();
+            this.initBedroomAndLivingMode();
           },
           //获取用户角色
           getRolePermision(){
@@ -937,6 +1045,55 @@
               }
             });
             return haveAppDeveloper;
+          },
+          //获取卧室和客厅模式
+          async initBedroomAndLivingMode() {
+            this.anthorDeviceList.forEach(item => {
+                // 初始化 loading 状态
+                if (item.device_button_group.includes('SCENE VIRTUAL')) {
+                    this.$set(item, 'loading', false);
+                }
+                // 通过业务特有的标识（比如按钮组名称）来建立“拨号盘”
+                if (item.device_button_group.includes('SCENE VIRTUAL BEDROOM')) {
+                    this.bedroomMode.master = item; // 这里存的是引用，修改它 UI 会直接变
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL 100') && !item.title.toLowerCase().includes('living')) {
+                    this.bedroomMode.sub_100 = item;
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL 50') && !item.title.toLowerCase().includes('living')) {
+                    this.bedroomMode.sub_50 = item;
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL 25') && !item.title.toLowerCase().includes('living')) {
+                    this.bedroomMode.sub_25 = item;
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL LIVING')) {
+                    this.livingMode.master = item;
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL 50') && item.title.toLowerCase().includes('living')) {
+                    this.livingMode.sub_50 = item;
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL 25') && item.title.toLowerCase().includes('living')) {
+                    this.livingMode.sub_25 = item;
+                }
+                if (item.device_button_group.includes('SCENE VIRTUAL 100') && item.title.toLowerCase().includes('living')) {
+                    this.livingMode.sub_100 = item;
+                }
+            });
+          },
+          checkIsBedroomAndLivingMode(subdevice_name){
+            // 检查是否属于卧室模式
+            for (let key in this.bedroomMode) {
+                if (this.bedroomMode[key] && this.bedroomMode[key].name === subdevice_name) {
+                    return { mode: 'bedroom', type: key };
+                }
+            }
+            // 检查是否属于客厅模式
+            for (let key in this.livingMode) {
+                if (this.livingMode[key] && this.livingMode[key].name === subdevice_name) {
+                    return { mode: 'living', type: key };
+                }
+            }
+            return null;
           },
           async showRoom(item, status) {
             console.log('name', item.name);
@@ -967,10 +1124,10 @@
               this.musicDeviceList.forEach((musicItem) => {
                 musicItem.roomHidden = false;
                 //if the room is the living room,will find the entrance bathroom speaker,if in bedroom,will find the bedroom speaker
-                if(room_title.toLowerCase().includes('living') && musicItem.room_name.toLowerCase().includes('entrance')){
+                if(room_title.toLowerCase().includes('living') && (musicItem.room_name.toLowerCase().includes('entrance') || musicItem.room_name.toLowerCase().includes('living') || musicItem.room_name.toLowerCase().includes('toilet'))){
                   musicItem.roomHidden = true;
                 }
-                if(room_title.toLowerCase().includes('bedroom') && musicItem.room_name.toLowerCase().includes('bathroom') && !musicItem.room_name.toLowerCase().includes('entrance')){
+                if(room_title.toLowerCase().includes('bedroom') && (musicItem.room_name.toLowerCase().includes('bathroom') || musicItem.room_name.toLowerCase().includes('bedroom')) && !musicItem.room_name.toLowerCase().includes('entrance')){
                   musicItem.roomHidden = true;
                 }
               });
@@ -1065,32 +1222,10 @@
             let [virtual_id_for_bedroom_mode, virtual_id_for_living_mode] = this.getVirtualIdForBedroomAndLivingMode();
             console.log('virtual_id_for_bedroom_mode', virtual_id_for_bedroom_mode);
             console.log('virtual_id_for_living_mode', virtual_id_for_living_mode);
-            // let virtual_id_for_living_mode = {
-            //   '90': 0,
-            //   '91': 0,
-            //   '92': 0,
-            // };
-
-            // let virtual_id_for_bedroom_mode = {
-            //   '94': 0,
-            //   '95': 0,
-            //   '96': 0,
-            // };
-            // let virtual_id_for_living_mode = {
-            //   '90': 0,
-            //   '91': 0,
-            //   '92': 0,
-            // };
             //if the device have two room list
             let mutiway_room_status = false;
             if(this.roomList.length == 2){
               mutiway_room_status = true;
-              //13, 14 ,15 +86
-              // virtual_id_for_bedroom_mode = {
-              //   '99': 0,
-              //   '100': 0,
-              //   '101': 0,
-              // }
             }
             this.anthorDeviceList.forEach((item) => {
               if (item.device == guid && item.config && item.device_button_group.includes('SCENE VIRTUAL')) {
@@ -1099,28 +1234,35 @@
                 if(is_update_by_mqtt){
                   status = window.peripheral[guid].prop.status.mobmob;
                 }
-                console.log('status', status);
-                console.log('gang', gang);
                 let thisStatus = status[0][gang];
+                
+                // 检查是否在无敌时间内
+                let modeInfo = this.checkIsBedroomAndLivingMode(item.name);
+                if (modeInfo) {
+                    let modeObj = modeInfo.mode === 'bedroom' ? this.bedroomMode : this.livingMode;
+                    // 只要收到该模式下的任何状态包，就清除该模式的所有 loading
+                    ['sub_100', 'sub_50', 'sub_25'].forEach(key => {
+                        if (modeObj[key]) this.$set(modeObj[key], 'loading', false);
+                    });
+                    if (modeObj.loadingTimer) {
+                        clearTimeout(modeObj.loadingTimer);
+                        modeObj.loadingTimer = null;
+                    }
+
+                    if (Date.now() < modeObj.invincibleUntil) {
+                        // 在无敌时间内，跳过更新，保留本地手动设置的状态
+                        return;
+                    }
+                }
+
                 item.device_status = thisStatus;
+                $update();
                 if(isset(virtual_id_for_bedroom_mode) && isset(virtual_id_for_bedroom_mode[gang])){
                   virtual_id_for_bedroom_mode[gang].device_status = thisStatus;
                 }
                 if(isset(virtual_id_for_living_mode) && isset(virtual_id_for_living_mode[gang])){
                   virtual_id_for_living_mode[gang].device_status = thisStatus;
                 }
-                // if(mutiway_room_status){
-                //   if([99,100,101].indexOf(parseInt(gang)) != -1){
-                //     virtual_id_for_bedroom_mode[gang] = thisStatus;
-                //   }
-                //   if([90,91,92].indexOf(parseInt(gang)) != -1){
-                //     virtual_id_for_living_mode[gang] = thisStatus;
-                //   }
-                // }else{
-                //   if([94,95,96].indexOf(parseInt(gang)) != -1){
-                //     virtual_id_for_bedroom_mode[gang] = thisStatus;
-                //   }
-                // }
               }
             });
             //check if the virtual id is 94(100%),(95)50%,(96)25%
@@ -1158,15 +1300,6 @@
                         item.device_status = 1;
                       }
                     }
-                    // if(gang == '94'){
-                    //   item.device_status = 1;
-                    // }
-                    // if(gang == '95'){
-                    //   item.device_status = 0;
-                    // }
-                    // if(gang == '96'){
-                    //   item.device_status = 0;
-                    // }
                   }
                 })
               }else{
@@ -1199,7 +1332,7 @@
           },
           async initData() {
             try {
-              let list = erp.info.profile.profile_subdevice;
+              let list = cloneDeep(this.totalSubdevices);
               let devices = cloneDeep(erp.info.profile.profile_device);
               let mapList = list.filter((item) => {
                 return item.guest_mode == 1;
@@ -1414,6 +1547,8 @@
                   item.device_button_group != 'Hdmicec' &&
                   item.device_button_group != 'OPENCLOSE WIFI UART' &&
                   item.device_button_group != 'OPENCLOSE UART' &&
+                  item.device_button_group != 'OPENCLOSE WIFI UART REVERSE' &&
+                  item.device_button_group != 'OPENCLOSE UART REVERSE' &&
                   !item.device_button_group.startsWith('RCU DIMMING') &&
                   !item.device_mode.startsWith('Music Player')
               );
@@ -1447,7 +1582,7 @@
               // only show the same room
               if(this.roomList.length > 1){
                 musicDeviceList.forEach((item) => {
-                  if(item.room_name.toLowerCase().includes('entrance') && this.roomList[0].title.toLowerCase().includes('living')){
+                  if((item.room_name.toLowerCase().includes('entrance') || item.room_name.toLowerCase().includes('living') || item.room_name.toLowerCase().includes('toilet')) && this.roomList[0].title.toLowerCase().includes('living')){
                     item.roomHidden = true;
                   }else{
                     item.roomHidden = false;
@@ -1536,6 +1671,7 @@
               console.log('anthorList', this.anthorDeviceList);
               await this.initRange();
               console.log('rangeList', this.rangeList);
+              console.log('this.rangeBarDeviceList', this.rangeBarDeviceList);
               this.initGateway();
               //this page top is dnd clean radar master button
             } catch (error) {
@@ -1669,7 +1805,7 @@
               setTimeout(() => {
                 let completed = 0; // 完成计数器
                 const total = this.rangeBarDeviceList.filter(
-                  (item) => item.buttonType === 'dimming' || item.buttonType === 'opclose'
+                  (item) => item.buttonType === 'dimming'
                 ).length; // 需要处理的总数
 
                 if (total === 0) {
@@ -1678,7 +1814,7 @@
                 }
                 
                 this.rangeBarDeviceList.forEach((item) => {
-                  if (item.buttonType === 'dimming' || item.buttonType === 'opclose') {
+                  if (item.buttonType === 'dimming') {
                     const key = `range_box_${item.device}_${item.device_button_group}`;
 
                     if (!this.rangeList[key]) {
@@ -1785,6 +1921,7 @@
             });
             this.tvAndThermostatList.forEach((item) => {
               if (item.device == p.guid) {
+                // debugger
                 this.update_subdevice_by_peripheral(item, p, true);
               }
             });
@@ -1835,6 +1972,7 @@
               const vp = {};
               subdevice.signalRfresh = false; //refresh the signal item
               subdevice.device_virtual_status = isset(subdevice.status) ? subdevice.status : 0;
+              subdevice.loading = false; // 初始化 loading 属性
               this.update_subdevice_by_device_button_group(subdevice, device_button_groups[subdevice['device_button_group']]);
               this.update_subdevice_by_subdevice_function(subdevice, subdevice.function);
               this.update_peripheral_by_subdevice(vp, subdevice);
@@ -1932,7 +2070,8 @@
           async update_subdevice_by_peripheral(s, p, render_status = true) {
             let device_status = p.guid ? peripheral[p.guid].getGangStatus(s.device_button_group) : 0;
             let device_config = p.guid ? peripheral[p.guid].getGangConfig(s.name) : 'ir|0|25,1,2,1,0,1'; //ir|0|25,1,2,1,0,1
-            if (p.guid == '3234656334613039343766651203751d') {
+            if (p.guid == '6534623036333266633437321203611d') {
+              debugger
               console.log('device_status', device_status);
             }
             s['device_config'] = device_config;
@@ -1993,9 +2132,9 @@
                   if (device_status > 100) {
                     device_status = 0;
                   } else {
-                    device_status = peripheral[p.guid].prop.status.control[0][48];
+                    //device_status = peripheral[p.guid].prop.status.control[0][48];
                   }
-                  //s.device_status = device_status;
+                  s.device_status = device_status;
                 }
                 let key = `range_box_${s.device}_${s.device_button_group}`;
                 if (isset(this.rangeList[key])) {
@@ -2039,7 +2178,7 @@
                 if (!isset(gatewayMap[`${gatewayhash}`])) {
                   gatewayMap[`${gatewayhash}`] = true;
                   const cmd_topic = `cmd/${gatewayhash}`;
-                  core_mqtt_subscribe(cmd_topic, 0, false);
+                  mqttSubscribe(cmd_topic, 0, false);
                   emitter.off(cmd_topic);
                   emitter.on(cmd_topic, this.on_gateway_commands_received);
                   //if find this mobile as hub,should update the UI page
@@ -2065,13 +2204,13 @@
                   } else {
                     will_topic = `will/${md5(md5(profile_device[i].gateway.toLowerCase()))}`;
                   }
-                  core_mqtt_subscribe(will_topic, 1, false);
+                  mqttSubscribe(will_topic, 1, false);
                   emitter.off(will_topic);
                   emitter.on(will_topic, this.on_gateway_will_changed);
 
                   //get the devices' status from gateway
                   const status_topic = `status/${gatewayhash}`;
-                  core_mqtt_subscribe(status_topic, 1, false);
+                  mqttSubscribe(status_topic, 1, false);
                   emitter.off(status_topic);
                   emitter.on(status_topic, this.on_gateway_device_changed);
 
@@ -2160,6 +2299,7 @@
                 let deviceItem = window.peripheral[guid].prop;
                 let manufacturing_data = deviceInfo.manufacturing_data || deviceInfo.ctrl_data;
                 if (isset(deviceObj.Thermostat)) {
+                  // debugger
                   if ((deviceItem.rssi >= 0 || !isset(deviceItem.rssi)) && isset(data.retain) && !data.retain) {
                     //have no ble
                     let thermostat = deviceObj.Thermostat;
@@ -2225,6 +2365,7 @@
                   if (hexModel == '0361' || hexModel == '0351') {
                     //curtain motor
                     if (isset(peripheral[guid])) {
+                      debugger
                       peripheral[guid].onChangeGateway(deviceInfo);
                     }
                   } else if (hexModel == '0348') {
@@ -2255,6 +2396,9 @@
                       return;
                     }
                     let virtualDataList = manufacturing_data.split('130510');
+                    if(virtualDataList.length == 1){
+                        virtualDataList = manufacturing_data.split("13051e");
+                    }
                     let rcuStatus = virtualDataList[1];
                     let statusByteList = this.splitBytesAndConvertToBinaryArray(rcuStatus.substring(0,32));
                     console.log('statusByteList', statusByteList);
@@ -2264,53 +2408,29 @@
                       let gang = this.getVirtualIdForPeripheral(parseInt(this_index).toString(16).pad('00'));
                       window.peripheral[guid].prop.status.mobmob[0][gang] = item;
                     });
+                    let mobmobData = deviceItem.status['mobmob'][0];
+                    let controlData = deviceItem.status['control'][0];
                     const originalDate = this.parseDateSafe(deviceInfo.date);
-                    const modifiedDate = new Date(originalDate.getTime() - 30000);
+                    const modifiedDate = new Date(originalDate.getTime() - 5000);
                     let date_str = this.formatDateWithMillis(modifiedDate);
+
                     window.peripheral[guid].prop.status.mobmob[1] = date_str;
-                    if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]){
-                      window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
-                      
+                    let gangLocks = deviceItem.status.gang_control[0];
+                    mobmobData.forEach((val, i) => {
+                        // 核心判断：只有当 MQTT 上报时间 >= 该通道自己的无敌时间，才允许更新
+                        if (date_str >= gangLocks[i]) {
+                            controlData[i] = val;
+                        }
+                        // 如果还没到无敌时间，controlData[i] 保持手动点击的状态不变
+                    });
+                    if (date_str >= deviceItem.status['control'][1]) {
+                        deviceItem.status['control'][1] = date_str;
                     }
-                    this.updateListVirtualIdStatus(guid,true);
-                    // this.topDeviceList.forEach((item) => {
-                    //   if (item.device == guid) {
-                    //     //item.device_status = statusByteList[item.config - 1];
-                    //     if (item.config) {
-                    //       if (item.config.length < 4) {
-                    //         let this_index = parseInt(item.config, 16);
-                    //         item.device_status = statusByteList[this_index - 1];
-                    //         //check if have the clen
-                    //         if (isset(item.clean_status)) {
-                    //           let this_clean_index = parseInt(item.clean_virtual_id, 16);
-                    //           item.clean_status = statusByteList[this_clean_index - 1];
-                    //         }
-                    //       }
-                    //     }
-                    //   }
-                    // });
-                    // //check the anthor device
-                    // this.anthorDeviceList.forEach((item) => {
-                    //   if (item.device == guid) {
-                    //     if (item.config) {
-                    //       if (item.config.length < 4) {
-                    //         let this_index = parseInt(item.config, 16);
-                    //         item.device_status = statusByteList[this_index - 1];
-                    //         //check if have the clen
-                    //         // if (isset(item.clean_status)) {
-                    //         //   let this_clean_index = parseInt(item.clean_virtual_id, 16);
-                    //         //   item.clean_status = statusByteList[this_clean_index - 1];
-                    //         // }
-                    //       }
-                    //     }
-                    //   }
-                    // });
-                    // $(`.home-scanned-peripheral[guid="${guid}"][button_group="SCENE MUTIWAY ONOFF GANG1"]`).each(function (item) {
-                    //   let config = $(this).attr('config') * 1;
-                    //   $(this)
-                    //     .find('.rcu-virtual-button')
-                    //     .attr('ref', statusByteList[config - 1]);
-                    // });
+                    // if (deviceItem.status['mobmob'][1] >= deviceItem.status['control'][1]){
+                    //   window.peripheral[guid].prop.status.control[0] = window.peripheral[guid].prop.status.mobmob[0];
+                      
+                    // }
+                    this.updateListVirtualIdStatus(guid,false);
                     //randar
                     let inputDataList = manufacturing_data.split('110304');
                     let inputStatus = inputDataList[1].substring(0, 8);
@@ -2550,7 +2670,7 @@
             if (isset(erp.info.profile)) {
               const profilehash = md5(md5(erp.info.profile.name));
               const cmd_topic = `status/${profilehash}`;
-              core_mqtt_subscribe(cmd_topic, 0, false);
+              mqttSubscribe(cmd_topic, 0, false);
               emitter.off(cmd_topic);
               emitter.on(cmd_topic, this.on_profile_topic_received);
             }
@@ -3289,6 +3409,37 @@
               }
               console.log(sceneId);
               if (sceneId) {
+                //判断一下是否是点击BedroomAndLivingMode
+                let modeInfo = this.checkIsBedroomAndLivingMode(name);
+                
+                // 如果是卧室/客厅模式按钮，且是点击 sub 档位
+                if (modeInfo && modeInfo.type !== 'master') {
+                    let modeObj = modeInfo.mode === 'bedroom' ? this.bedroomMode : this.livingMode;
+                    
+                    // 1. 立即停止任何正在进行的 loading
+                    if (modeObj.loadingTimer) {
+                        clearTimeout(modeObj.loadingTimer);
+                        modeObj.loadingTimer = null;
+                    }
+
+                    // 2. 立即修改本地 UI 状态：亮自己，灭他人
+                    ['sub_100', 'sub_50', 'sub_25'].forEach(key => {
+                        if (modeObj[key]) {
+                            this.$set(modeObj[key], 'loading', false);
+                            modeObj[key].device_status = (key === modeInfo.type) ? 1 : 0;
+                        }
+                    });
+
+                    // 3. 把 master 亮起来
+                    if (modeObj.master) modeObj.master.device_status = 1;
+
+                    // 4. 设置无敌时间（3秒）
+                    modeObj.invincibleUntil = Date.now() + 3000;
+                    
+                    // 5. 强制触发 UI 刷新
+                    $update();
+                }
+
                 let command = `8f0200${parseInt(sceneId).toString(16).pad('00')}`;
                 await window.peripheral[guid].rcuDoScene([
                   {
@@ -3319,16 +3470,62 @@
             if (subdevice) {
               guid = subdevice.device;
               v_id = subdevice.config;
+              
+              // 关键修复：点击的按钮本身状态立即改变
               subdevice.device_status = status;
+
+              // 判断是否是 Bedroom 或 Living 模式的按钮
+              let modeInfo = this.checkIsBedroomAndLivingMode(name);
+              if (modeInfo) {
+                  let modeObj = modeInfo.mode === 'bedroom' ? this.bedroomMode : this.livingMode;
+                  if (modeInfo.type === 'master') {
+                      // 1. 点击 master：sub 档位开启 loading，不设无敌时间，依赖回调点亮
+                      ['sub_100', 'sub_50', 'sub_25'].forEach(key => {
+                          if (modeObj[key]) {
+                              this.$set(modeObj[key], 'loading', true);
+                          }
+                      });
+                      
+                      // 立即触发 UI 更新显示加载圈
+                      $update();
+
+                      if (modeObj.loadingTimer) clearTimeout(modeObj.loadingTimer);
+                      modeObj.loadingTimer = setTimeout(() => {
+                          ['sub_100', 'sub_50', 'sub_25'].forEach(key => {
+                              if (modeObj[key]) this.$set(modeObj[key], 'loading', false);
+                          });
+                          $update();
+                      }, 8000);
+                  } else {
+                      // 2. 点击 sub 档位：立即修改本地状态，关闭 loading，设置无敌时间
+                      if (modeObj.loadingTimer) {
+                          clearTimeout(modeObj.loadingTimer);
+                          modeObj.loadingTimer = null;
+                      }
+                      ['sub_100', 'sub_50', 'sub_25'].forEach(key => {
+                          if (modeObj[key]) {
+                              this.$set(modeObj[key], 'loading', false);
+                              modeObj[key].device_status = (key === modeInfo.type) ? 1 : 0;
+                          }
+                      });
+                      // master 如果是关的，也要亮起来
+                      if (modeObj.master) modeObj.master.device_status = 1;
+                      
+                      // 只有点击 Sub 档位才设置无敌时间
+                      modeObj.invincibleUntil = Date.now() + 3000;
+                  }
+                  $update();
+              }
             }
             //save the local status
             let gang = this.getVirtualIdForPeripheral(v_id);
-            window.peripheral[guid].prop.status.control[0][gang] = status ? 1 : 0;
+            // window.peripheral[guid].prop.status.control[0][gang] = status ? 1 : 0;
             try {
               let command = `972103${v_id}${status ? '01' : '00'}`;
               await window.peripheral[guid].rcuDoScene([
                 {
-                  gang: 1,
+                  gang: gang,
+                  value: status ? 1 : 0,
                   command: command,
                 },
               ]);
@@ -3340,10 +3537,16 @@
                 command: command
               };
               window.upload_device_control_log(guid, status?'1':'0', control_source, name, device_type_map);
-              //update the profile subdevice
-              // await this.updateProfileSubdevice(name, subdevice);
             } catch (error) {
               console.log('error', error);
+              // 指令发送失败，立即清除该模式下的 loading
+              let modeInfo = this.checkIsBedroomAndLivingMode(name);
+              if (modeInfo) {
+                  let modeObj = modeInfo.mode === 'bedroom' ? this.bedroomMode : this.livingMode;
+                  ['sub_100', 'sub_50', 'sub_25'].forEach(key => {
+                      if (modeObj[key]) modeObj[key].loading = false;
+                  });
+              }
             }
             await this.updateProfileSubdevice(name, {
               status: `${status ? '1' : '0'}`,
@@ -3455,6 +3658,14 @@
                   command: command,
                 },
               ]);
+              setTimeout(function(){
+                window.peripheral[guid].rcuDoScene([
+                    {
+                      gang: 1,
+                      command: `9381`,
+                    },
+                  ]);  
+              },3000)
               //update the control log
               let control_source = await bleHelper.getControlSource(guid);
               let device_type_map = {
@@ -3544,6 +3755,7 @@
                 config: `scene_id=${scene_id}&enable=${enable}`,
               });
             } catch (err) {
+              app.dialog.alert(erp.get_log_description(err));
               console.log('err', err);
             }
           },
@@ -3554,10 +3766,11 @@
     $on('pageBeforeRemove', (e, page) => {});
 
     $onUnmounted(() => {
+      mqttUnsubscribeAll();
       if (vueApp) {
+        emitter.off('on_peripheral_changed',vueApp.onPeripheralChanged);
         vueApp.$destroy();
       }
-      emitter.off('on_peripheral_changed');
     });
 
     return $render;
@@ -3565,8 +3778,32 @@
 </script>
 
 <style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .refined-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    position: absolute;
+    box-sizing: border-box;
+  }
+  /* 当父级按钮是激活状态时，底色圆环变淡白色 */
+  .btn-bg .refined-spinner {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top: 2px solid #fff;
+  }
   .guest-box {
     margin-top: 6px;
+  }
+  @media (min-device-width: 768px){
+    .guest-box {
+      margin-top: 16px;
+    }
   }
   .guest-mode-item {
     padding: 0px 10px;
@@ -4202,7 +4439,6 @@
     padding: 20px;
     display: flex;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   .music-icon {

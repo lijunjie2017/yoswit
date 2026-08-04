@@ -299,7 +299,13 @@ class FirmwareUpgradeUtils {
     });
 
     // 邮箱配置
-    const email = gateway.split('-')[1];
+      const emailLength = gateway.split('-').length;
+      let email = '';
+      if(emailLength>2){
+        email = gateway.split('-')[1]+gateway.split('-')[2];  
+      }else{
+        email = gateway.split('-')[1];
+      }
     const emailData = '932200' + email.length.toString(16).pad('0000') + email.convertToHex();
     bleList.push({
       service: 'ff80',
@@ -632,10 +638,16 @@ window.device_firmware_upgrade_component = {
       return new Promise((resolve, reject) => {
         let timeoutId = null;
         let isOnline = false;
+        //添加逻辑，如果固件版本号小于13的话，无法通过蓝牙获取wifi信息，直接返回true
+        if (parseFloat(this.current_firmware) < 13) {
+          return resolve(true);
+        }
         const handleWillMessage = (data) => {
           try {
             const rs = data.rs;
-            const jsonData = JSON.parse(this.utils.hexToPlainText(rs.substring(10)));
+            const ipJson = this.utils.hexToPlainText(rs.substring(10,rs.length));
+            console.log("ipJson",ipJson)
+            const jsonData = JSON.parse(ipJson);
             if (jsonData.ipv4) {
               isOnline = true;
               completeCheck(true);
@@ -659,6 +671,15 @@ window.device_firmware_upgrade_component = {
         const delayedWriteTimer = setTimeout(async () => {
           this.utils.timers.delete(delayedWriteTimer);
           try {
+            await peripheral[this.guid].connect();
+            if (deviceInfo.operatingSystem != 'ios') {
+                await ble.requestMtu(
+                  peripheral[this.guid].prop.id,
+                  512,
+                  () => {},
+                  () => {}
+                );
+              }
             await window.peripheral[this.guid].write([
               {
                 service: 'ff80',
@@ -722,6 +743,9 @@ window.device_firmware_upgrade_component = {
               throw new Error('Invalid gateway format: ' + this.gateway);
             }
             let email = list[1];
+            if(list.length>2){
+                email = list[1]+'-'+list[2]
+            }
             console.log('email', email);
             const data = '932200' + email.length.toString(16).pad('0000') + email.convertToHex();
 
@@ -1196,12 +1220,30 @@ window.device_firmware_upgrade_component = {
         this.updatePercent();
         await this.utils.sleep(15000);
         emitter.emit('ha:device:firmware:upgrade', { guid: this.guid });
-        this.updateStatusFun('Success');
-        this.uploadLogStatus = false;
+        
         //if success, will reset the wifi info
         if (this.model && (this.model.includes('RCU Scene Button') || this.model.includes('RF Sensor'))) {
           await this.iotResetWifi();
         }
+        //成功后需要判断是否含有ota成功后需要写入的指令
+        const hexid = this.guid.substring(this.guid.length - 6, this.guid.length - 2);
+        const device_model = erp.doctype.device_model[hexid.toUpperCase()];
+        const device_default_config_list = device_model.device_default_config;
+        const command_list = device_default_config_list.filter(item=>item.device_command == "OTA_SETUP");
+        const ble_list = [];
+        command_list.forEach(items=>{
+            ble_list.push({
+                service: 'ff80',
+                characteristic: 'ff81',
+                data: items.description,
+            })
+        })
+        if(ble_list.length){
+            this.uploadLog = _('Update some config...');
+            await window.peripheral[this.guid].write(ble_list);
+        }
+        this.updateStatusFun('Success');
+        this.uploadLogStatus = false;
         this.$emit('update-status', true);
       } catch (err) {
         // 确保关闭任何可能存在的preloader
@@ -1405,7 +1447,7 @@ window.device_firmware_upgrade_component = {
       await this.getFirmwareInfomation();
       try {
         if (this.isLogged) {
-          this.isDeveloper = erp.info.user.roles.some((e) => e.role.includes('Developer'));
+        //   this.isDeveloper = erp.info.user.roles.some((e) => e.role.includes('Developer'));
         }
       } catch (error) {
         console.error(error);
@@ -1445,7 +1487,7 @@ window.device_firmware_upgrade_component = {
           this.current_firmware = '0.0.0'; // 默认值
         }
       }
-      if (this.current_firmware === this.latest_firmware || !this.latest_firmware) {
+      if (this.current_firmware === this.latest_firmware || !this.latest_firmware || this.current_firmware > this.latest_firmware) {
         this.isLatest = true;
       } else {
         this.isLatest = false;

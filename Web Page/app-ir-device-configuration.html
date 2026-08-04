@@ -1456,11 +1456,12 @@
               }
               initStatus = true;
             }catch(error){
-              app.dialog.confirm(_('The plugin is not ready. Go back to the home page.'),()=>{
-                  mainView.router.back();
-                },()=>{
+            //   app.dialog.confirm(_('The plugin is not ready. Go back to the home page.'),()=>{
+            //       mainView.router.back();
+            //     },()=>{
                   
-                })
+            //     })
+            initStatus = true;
             }
             if(!initStatus){
               return false;
@@ -2123,6 +2124,8 @@
           async clickDeviceType(type) {
             this.deviceType = type;
             if(type == 'rf443'){
+              $('.ir-btn-collect').addClass('device-none');
+              $(".manufacturing-btn-refresh").addClass('device-none');
               this.rfActiveStatus = true;
               return;
             }

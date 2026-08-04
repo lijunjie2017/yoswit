@@ -618,7 +618,7 @@
         computed:{
           // 展示列表：保证 master 排最后
           displayRcuDeviceList(){
-            const list = cloneDeep(this.rcuDeviceList || []);
+            const list = [...(this.rcuDeviceList || [])];
             return list.sort((a,b)=>{
               if(a.masterSlaveStatus === b.masterSlaveStatus) return 0;
               if(a.masterSlaveStatus === 'master') return 1;
@@ -1954,11 +1954,14 @@
                 `${_('Set')} ${deviceTitle} ${_('as Slave?')}`,
                 () => {
                   this.finalStatusActive = (this.mainRcuConfig && this.viaConfig);
-                  subItem.masterSlaveStatus = 'slave';
-                  // 设置为从机时自动分配序号（若未设置）
-                  if(!subItem.slaveIndex){
-                    subItem.slaveIndex = this.getAutoSlaveIndex();
-                  }
+                  this.rcuDeviceList.forEach(item => {
+                    if(item.name === subItem.name) {
+                      item.masterSlaveStatus = 'slave';
+                      if(!item.slaveIndex) {
+                        item.slaveIndex = this.getAutoSlaveIndex();
+                      }
+                    }
+                  });
                   // 检查是否还有 Master，如果没有则提示
                   const hasMaster = this.rcuDeviceList.some(item => item.masterSlaveStatus === 'master');
                   if(!hasMaster && this.rcuDeviceList.length > 0){
@@ -2063,7 +2066,7 @@
                   if(used.has(chosen)){
                     return;
                   }
-                  item.slaveIndex = chosen;
+                  this.$set(item, 'slaveIndex', chosen);
                 },
                 open: (p) => {
                   // 打开时同步当前值到 picker

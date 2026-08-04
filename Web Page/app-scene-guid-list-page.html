@@ -1677,11 +1677,70 @@
             console.log('item', item);
             app.dialog.preloader();
             let list = item.scene_device_location;
-            for (let i in list) {
+            //专门需要判断雷达的场景，如果是雷达的场景就需要走Action的id
+            const scene_template = item.scene_template;
+            let executeStatus = true;
+            let rcuGuid = '';
+            if(scene_template == 'Welcome Scene' || scene_template == 'RCU Radar'){
+              executeStatus = false;
+              const actionJson = JSON.parse(item.action);
+              const keyList = Object.keys(actionJson);
+              console.log("keyList", keyList);
+              let actionId = '';
+              for(let i in keyList){
+                if(isset(erp.info.device[keyList[i]])){
+                  rcuGuid = keyList[i];
+                }
+                const value = actionJson[keyList[i]];
+                if(isset(value.scene_id)){
+                  actionId = value.scene_id;
+                  break;
+                }
+              }
+              console.log("actionId", actionId);
+              if(actionId){
+                let command = `8f0200${parseInt(actionId).toString(16).pad('00')}`;
+                try {
+                  await window.peripheral[rcuGuid].write([
+                    {
+                      service: 'ff80',
+                      characteristic: 'ff81',
+                      data: command,
+                    },
+                  ]);
+                  app.dialog.close();
+                  app.dialog.alert(_('Execution successful'));
+                } catch (error) {
+                  console.log(error);
+                  app.dialog.close();
+                  app.dialog.alert(_(erp.get_log_description(error)));
+                }
+              }else{
+                app.dialog.close();
+                executeStatus = true;
+              }
+            }
+            if(!executeStatus)return;
+            //需要过滤掉不是rcu的设备
+            const rcuList = [];
+            for(let i in list){
+              let deviceMap = erp.info.device[list[i].device];
+              if(deviceMap.device_mode == 'RCU Controller' || deviceMap.device_model == 'YO780'){
+                rcuList.push(list[i]);
+              }
+            }
+            if(!rcuList.length){
+              app.dialog.close();
+              app.dialog.alert(_('Sorry, this scene cannot execute.'));
+              return;
+            }
+            let rcuExecuteStatus = true;
+            let rcuExecuteError = '';
+            for (let i in rcuList) {
               let command = `8f0200${parseInt(list[i].storage_id).toString(16).pad('00')}`;
               console.log('command', command);
               try {
-                await window.peripheral[list[i].device].write([
+                await window.peripheral[rcuList[i].device].write([
                   {
                     service: 'ff80',
                     characteristic: 'ff81',
@@ -1690,12 +1749,18 @@
                 ]);
               } catch (error) {
                 console.log(error);
+                rcuExecuteStatus = false;
+                rcuExecuteError = error;
                 app.dialog.close();
-                app.dialog.alert(_(erp.get_log_description(error)));
+                
               }
             }
             app.dialog.close();
-            app.dialog.alert(_('Execution successful'));
+            if(rcuExecuteStatus){
+              app.dialog.alert(_('Execution successful'));
+            }else{
+              app.dialog.alert(_(erp.get_log_description(rcuExecuteError)));
+            }
             return;
           },
           toScene() {

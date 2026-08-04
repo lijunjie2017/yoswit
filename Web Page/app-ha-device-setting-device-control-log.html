@@ -32,18 +32,17 @@
       {% raw %}
       <div id="device-control-log-box" v-cloak>
         <!-- Time Filter Status Bar -->
-        <div class="block time-filter-status" v-if="is_time_filtered" style="background-color: var(--f7-theme-color-bg); padding: 8px 16px; margin: 0; border-radius: 0;">
-          <div class="display-flex justify-content-space-between align-items-center">
-            <div>
-              <span class="text-color-theme">{{ _('Filter Active:') }}</span>
-              <span class="text-muted" style="margin-left: 10px;">
-                <span v-if="start_time">{{ _('From') }} {{ start_time }}</span>
-                <span v-if="end_time"> {{ _('To') }} {{ end_time }}</span>
-              </span>
+        <div class="block time-filter-status" v-if="is_time_filtered" style="padding: 10px 16px; margin: 0; background: #f4f4f4;">
+          <div class="display-flex align-items-center flex-wrap">
+            <div class="chip chip-outline color-theme" style="height: auto; padding: 4px 12px; border-radius: 8px;">
+              <div class="chip-label">
+                <i class="icon f7-icons size-14" style="margin-right: 4px;">calendar</i>
+                <span v-if="start_time && end_time">{{ start_time.substring(0, 16) }} ~ {{ end_time.substring(0, 16) }}</span>
+                <span v-else-if="start_time">{{ _('From') }} {{ start_time.substring(0, 16) }}</span>
+                <span v-else-if="end_time">{{ _('To') }} {{ end_time.substring(0, 16) }}</span>
+              </div>
+              <a href="#" class="chip-delete" v-on:click="clearTimeFilter"></a>
             </div>
-            <a href="#" class="link" @click="clearTimeFilter" style="color: var(--f7-theme-color);">
-              <i class="icon f7-icons">xmark_circle_fill</i>
-            </a>
           </div>
         </div>
         <div class="list p-2">
@@ -234,7 +233,7 @@
           <h3>{{_('Thats it, no more data available.')}}</h3>
         </div>
       <!-- Time Filter Popup -->
-      <div class="popup">
+      <div class="popup popup-tablet-fullscreen">
         <div class="view">
           <div class="page">
             <div class="navbar">
@@ -242,52 +241,83 @@
               <div class="navbar-inner">
                 <div class="left">
                   <a href="#" class="link popup-close">
-                    <i class="icon icon-back"></i>
-                    <span class="if-not-md">{{ _('Cancel') }}</span>
+                    <i class="icon f7-icons" style="font-size: 22px">xmark</i>
                   </a>
                 </div>
-                <div class="title">{{ _('Filter By Time') }}</div>
+                <div class="title" style="font-weight: 600">{{ _('Filter By Time') }}</div>
                 <div class="right">
-                  <a href="#" class="link" v-on:click="applyTimeFilter"><i class="icon f7-icons" style="font-size: 25px">checkmark</i></a>
                 </div>
               </div>
             </div>
-            <div class="page-content">
-              <div class="block">
-                <div class="list no-hairlines-md">
-                  <ul>
-                    <li>
-                      <div class="item-content item-input">
-                        <div class="item-inner">
-                          <div class="item-title item-label">{{ _('Start Time') }}</div>
-                          <div class="item-input-wrap">
-                            <input type="text" id="start-time-input" :placeholder="_('Select start time')" readonly />
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                    <li>
-                      <div class="item-content item-input">
-                        <div class="item-inner">
-                          <div class="item-title item-label">{{ _('End Time') }}</div>
-                          <div class="item-input-wrap">
-                            <input type="text" id="end-time-input" :placeholder="_('Select end time')" readonly />
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  </ul>
+            <div class="page-content" style="background-color: #f6f7f9;">
+              <!-- Quick Options Section -->
+              <div class="block-title" style="margin-top: 25px; margin-bottom: 10px; font-weight: 500; color: #666;">{{ _('Quick Selection') }}</div>
+              <div class="block" style="margin-top: 10px; margin-bottom: 25px;">
+                <div class="quick-filter-grid">
+                  <a href="#" class="quick-filter-btn" v-on:click="quickFilterToday">
+                    <i class="icon f7-icons">today</i>
+                    <span>{{ _('Today') }}</span>
+                  </a>
+                  <a href="#" class="quick-filter-btn" v-on:click="quickFilterYesterday">
+                    <i class="icon f7-icons">calendar</i>
+                    <span>{{ _('Yesterday') }}</span>
+                  </a>
+                  <a href="#" class="quick-filter-btn" v-on:click="quickFilterLast3Days">
+                    <i class="icon f7-icons">calendar_badge_plus</i>
+                    <span>{{ _('Last 3 Days') }}</span>
+                  </a>
+                  <a href="#" class="quick-filter-btn" v-on:click="quickFilterLast7Days">
+                    <i class="icon f7-icons">calendar_grid</i>
+                    <span>{{ _('Last 7 Days') }}</span>
+                  </a>
+                  <a href="#" class="quick-filter-btn" v-on:click="quickFilterLast15Days">
+                    <i class="icon f7-icons">calendar_circle</i>
+                    <span>{{ _('Last 15 Days') }}</span>
+                  </a>
+                  <a href="#" class="quick-filter-btn clear" v-on:click="clearTimeFilterInput">
+                    <i class="icon f7-icons">trash</i>
+                    <span>{{ _('Reset') }}</span>
+                  </a>
                 </div>
               </div>
-              <div class="block">
-                <div class="row">
-                  <div class="col-50">
-                    <a href="#" class="button button-outline button-round" v-on:click="clearTimeFilter">{{ _('Clear') }}</a>
-                  </div>
-                  <div class="col-50">
-                    <a href="#" class="button button-fill button-round" v-on:click="quickFilterToday">{{ _('Today') }}</a>
-                  </div>
-                </div>
+
+              <!-- Date Input Section -->
+              <div class="block-title" style="margin-bottom: 10px; font-weight: 500; color: #666;">{{ _('Custom Range') }}</div>
+              <div class="list inset no-hairlines-between" style="margin-top: 0; margin-bottom: 30px;">
+                <ul style="border-radius: 15px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                  <li>
+                    <div class="item-content item-input">
+                      <div class="item-media">
+                        <i class="icon f7-icons color-theme" style="font-size: 20px">calendar_badge_plus</i>
+                      </div>
+                      <div class="item-inner">
+                        <div class="item-title item-label" style="font-size: 11px; color: #8e8e93; text-transform: uppercase;">{{ _('Start Time') }}</div>
+                        <div class="item-input-wrap">
+                          <input type="text" id="start-time-input" :placeholder="_('Tap to select...')" readonly style="font-size: 15px; font-weight: 500;" />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="item-content item-input">
+                      <div class="item-media">
+                        <i class="icon f7-icons color-theme" style="font-size: 20px">calendar_badge_minus</i>
+                      </div>
+                      <div class="item-inner">
+                        <div class="item-title item-label" style="font-size: 11px; color: #8e8e93; text-transform: uppercase;">{{ _('End Time') }}</div>
+                        <div class="item-input-wrap">
+                          <input type="text" id="end-time-input" :placeholder="_('Tap to select...')" readonly style="font-size: 15px; font-weight: 500;" />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="block" style="margin-top: 40px;">
+                <button class="button button-fill button-large custom-apply-btn" v-on:click="applyTimeFilter">
+                  {{ _('Apply Filter') }}
+                </button>
               </div>
             </div>
           </div>
@@ -375,40 +405,50 @@
 
           initDatePicker() {
             const self = this;
+            
+            const commonParams = {
+              openIn: 'sheet',
+              timePicker: true,
+              closeOnSelect: false,
+              // formatValue 是 F7 控制输入框显示的最高优先级方法
+              formatValue: function (values) {
+                if (!values || !values[0]) return '';
+                const date = new Date(values[0]);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+              }
+            };
+
             $f7.calendar.create({
+              ...commonParams,
               inputEl: '#start-time-input',
-              openIn: 'sheet',
-              dateFormat: 'yyyy-mm-dd HH:mm',
-              timePicker: true,
-              closeOnSelect: false,
               on: {
                 change: function(calendar, value) {
-                  console.log('value', value);
-                  self.start_time = value;
+                  if (value && value.length > 0) {
+                    self.start_time = self.formatDateTime(new Date(value[0]));
+                  }
                 }
               }
             });
 
             $f7.calendar.create({
+              ...commonParams,
               inputEl: '#end-time-input',
-              openIn: 'sheet',
-              dateFormat: 'yyyy-mm-dd HH:mm',
-              timePicker: true,
-              closeOnSelect: false,
               on: {
                 change: function(calendar, value) {
-                  self.end_time = value;
+                  if (value && value.length > 0) {
+                    self.end_time = self.formatDateTime(new Date(value[0]));
+                  }
                 }
               }
             });
 
-            // Set initial values if they exist
-            if (self.start_time) {
-              document.getElementById('start-time-input').value = self.start_time;
-            }
-            if (self.end_time) {
-              document.getElementById('end-time-input').value = self.end_time;
-            }
+            // 初始化显示
+            self.updateInputValues();
           },
 
           applyTimeFilter() {
@@ -429,32 +469,93 @@
           },
 
           clearTimeFilter() {
+            console.log('Clearing time filter...');
             this.start_time = '';
             this.end_time = '';
             this.is_time_filtered = false;
-            document.getElementById('start-time-input').value = '';
-            document.getElementById('end-time-input').value = '';
+            
+            // 安全更新输入框的值
+            this.updateInputValues();
 
-            // Reset pagination and fetch new data
+            // 重置分页和状态
             this.start = 0;
             this.log_list = [];
             allowInfinite = true;
             hasMoreItems = true;
             this.more_data = false;
 
-            $f7.popup.close('.popup');
+            // 只有当弹窗打开时才尝试关闭
+            if ($f7.popup.get('.popup')) {
+              $f7.popup.close('.popup');
+            }
+            
             this.getData();
           },
 
           quickFilterToday() {
             const today = new Date();
-            const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0);
-            const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59);
+            const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+            const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
             this.start_time = this.formatDateTime(startDate);
             this.end_time = this.formatDateTime(endDate);
-            document.getElementById('start-time-input').value = this.start_time;
-            document.getElementById('end-time-input').value = this.end_time;
+            this.updateInputValues();
+            this.applyTimeFilter();
+          },
+
+          quickFilterYesterday() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0);
+            const endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+
+            this.start_time = this.formatDateTime(startDate);
+            this.end_time = this.formatDateTime(endDate);
+            this.updateInputValues();
+            this.applyTimeFilter();
+          },
+
+          quickFilterLast3Days() {
+            this.setQuickRange(3);
+          },
+
+          quickFilterLast7Days() {
+            this.setQuickRange(7);
+          },
+
+          quickFilterLast15Days() {
+            this.setQuickRange(15);
+          },
+
+          setQuickRange(days) {
+            const today = new Date();
+            const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+            const startDate = new Date(today.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+            startDate.setHours(0, 0, 0, 0);
+
+            this.start_time = this.formatDateTime(startDate);
+            this.end_time = this.formatDateTime(endDate);
+            this.updateInputValues();
+            this.applyTimeFilter();
+          },
+
+          clearTimeFilterInput() {
+            this.start_time = '';
+            this.end_time = '';
+            this.updateInputValues();
+          },
+
+          updateInputValues() {
+            // 在输入框中只显示到分钟 YYYY-MM-DD HH:mm，隐藏秒数以保持 UI 整洁
+            const displayStart = this.start_time ? this.start_time.substring(0, 16) : '';
+            const displayEnd = this.end_time ? this.end_time.substring(0, 16) : '';
+            
+            if (document.getElementById('start-time-input')) {
+              document.getElementById('start-time-input').value = displayStart;
+            }
+            if (document.getElementById('end-time-input')) {
+              document.getElementById('end-time-input').value = displayEnd;
+            }
           },
 
           formatDateTime(date) {
@@ -463,8 +564,9 @@
             const day = String(date.getDate()).padStart(2, '0');
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
 
-            return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes;
+            return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
           },
 
           async refreshFun() {
@@ -582,32 +684,39 @@
             //console.log("this.button_gang",this.button_gang);
           },
           async getData() {
-            // let reqUrl = encodeURI(
-            //   '/api/resource/Device Control Log?fields=["*"]&filters=[["profile_subdevice","=","' + profile_subdevice + '"]]'
-            // );
+            // 将参数构造为对象，通过 POST 提交
+            const postData = {
+              device: this.guid,
+              start: this.start,
+              page_length: this.page_length
+            };
 
-            // Build URL with time filter parameters
-            let apiUrl = `/api/method/appv6.geControlAndStatusList?device=${this.guid}&start=${this.start}&page_length=${this.page_length}`;
-
-            // Add time filter parameters if they exist
+            // 只有在有值的情况下才添加时间过滤参数
             if (this.start_time) {
-              apiUrl += `&start_time=${encodeURIComponent(this.start_time)}`;
+              postData.start_time = this.start_time;
             }
             if (this.end_time) {
-              apiUrl += `&end_time=${encodeURIComponent(this.end_time)}`;
+              postData.end_time = this.end_time;
             }
 
             http2
               .request({
-                url: encodeURI(apiUrl),
-                method: 'GET',
+                url: '/api/method/appv6.geControlAndStatusList',
+                method: 'POST',
+                data: postData,
                 responseType: 'json',
+                debug: true,
                 timeout: 60
               })
               .then((log_data) => {
-                // console.log(log_data);
-                let list = log_data.data.data;
-                //check if the device is attached
+                // 根据截图，responseData 是最外层对象，包含 data (内部有 data 列表和 total) 和 message
+                const responseData = log_data.data || {};
+                const innerData = responseData.data || {};
+                
+                let list = innerData.data || [];
+                let total = innerData.total || 0;
+
+                // check if the device is attached
                 list.forEach((item) => {
                   item.is_show_status = true;
                   let deviceMap = peripheral[item.device];
@@ -623,11 +732,8 @@
                     }
                     let device_model = device_type_map.device_type;
                     item.command_type = device_type_map.command_type;
-                    //compare the device details
-                    // console.log(device_type_map);
+                    
                     if (isset(device_type_map.Info)) {
-                      console.log('device_type_map.Info', device_type_map.Info);
-                      //this is the device status log
                       let this_guid = device_type_map.Device.guid;
                       let deviceMap = peripheral[this_guid];
                       device_map = device_type_map.Device;
@@ -640,33 +746,27 @@
                       }
                       if (isset(device_map['trigger_data']) && device_map['trigger_data']) {
                         let trigger_data = device_map['trigger_data'];
-                        console.log('trigger_data', trigger_data);
                         let obj_map = this.renderRcuScene(trigger_data, device_map.guid);
                         if (obj_map) {
                           item.is_show_status = false;
                           item = Object.assign(item, obj_map);
-                          console.log('item', item);
                           return;
                         }
                       }
                       if(this.device_model == 'YO780'){
-                        console.log('this.button_group',this.button_group);
                         if(this.button_group == 'ONOFF GANG'){
                           item.is_show_status = false;
                           item.control_source = 'MobMob';
                           item.command_type = 'device_status_log_onoff';
                         }else{
-                          let obj = this.getGangAndSlotByButtonGroup(this.button_group);
                           item.is_show_status = false;
                           item.control_source = 'MobMob';
                           item.command_type = 'device_status_log_onoff';
                           item.gang_1 = this.renerRcuStatusForButtonGroup(device_type_map.Device.ctrl_data,this.button_group);
-                          console.log('item.gang_1',item.gang_1);
                         }
                         return
                       }
-                      // console.log(gangList);
-                      //get the device model info and button group
+                      
                       let device_default_template_list = [];
                       if (erp.doctype.device_model[deviceMap.prop.hexModel.toUpperCase()]) {
                         device_default_template_list =
@@ -676,18 +776,12 @@
                         let device_button_group = kitem.device_button_group;
                         let device_mode = kitem.mode;
                         let gang = bleHelper.getGangId(device_button_group);
-                        // console.log("gang",gang);
                         if (device_button_group.startsWith('ONOFF GANG') && device_mode != 'Geomagnetic') {
                           item.is_show_status = false;
                           item.control_source = 'MobMob';
                           item.command_type = 'device_status_log_onoff';
-                          this_gang = device_button_group.replace('ONOFF GANG', '') * 1;
-                          //this only show the subdevice button group
                           item[`gang_1`] = gangList[this.button_gang];
-                          if(device_mode == 'RCU Controller' && !device_button_group.includes("RCU")){
-                            // item.count_num = this.countNumFunc(device_type_map.ctrl_data);
-                          }else if(device_mode == 'RCU Controller' && device_button_group.includes("RCU")){
-                            //getGangAndSlotByButtonGroup
+                          if(device_mode == 'RCU Controller' && device_button_group.includes("RCU")){
                             let obj = this.getGangAndSlotByButtonGroup(device_button_group);
                             item.gang = obj.gang;
                             item.slot = obj.slot;
@@ -725,46 +819,24 @@
                           item.command_type = 'device_status_log_hdmicec';
                           item.control_source = 'MobMob';
                           item.hdmicec = 0;
-                          console.log('device_type_map.Info.ctrl_data', device_type_map.Info.ctrl_data);
                           if (device_type_map.Device.ctrl_data != '8000') {
                             item.hdmicec = 1;
                           }
                         }
                         if (gang == 42) {
-                          //means theomostat
-                          let mode_str = 4;
-                          let mode_img = ``;
-                          let speed_img = '';
-                          let temp_img = '';
-                          let room_temp_img = '';
-                          let humidity_img = '';
-                          power = gangList[42];
-                          mode = gangList[43];
-                          fan = gangList[44];
-                          temp = gangList[45];
-                          room_temp = gangList[46];
-                          humidity = gangList[47];
-                          if (mode == 1) {
-                            mode_str = 5;
-                          } else if (mode == 2) {
-                            mode_str = 2;
-                          }
                           item.control_source = 'MobMob';
                           item.command_type = 'device_status_log_thermostat';
                           item.device_model = 'YO360';
                           item.is_show_status = false;
-                          item.mode = mode;
-                          item.speed = fan;
-                          item.temperature = temp;
-                          item.room_temperature = room_temp;
-                          item.humidity = humidity;
+                          item.mode = gangList[43];
+                          item.speed = gangList[44];
+                          item.temperature = gangList[45];
+                          item.room_temperature = gangList[46];
+                          item.humidity = gangList[47];
                         }
                       });
-                      // console.log("item",item);
                     } else {
-                      //this is the device control log
                       if (device_model == 'YO360' || device_model == 'm360s') {
-                        //console.log(item.device_attachment_status);
                         let objMap = this.fliterThermostatData(device_type_map.device_attachment_status || '');
                         if (!isset(objMap)) {
                           return;
@@ -798,32 +870,30 @@
                     }
                   }
                 });
-                //console.log("list",list);
+
+                // 处理分页展示逻辑
                 if (list.length && !allowInfinite) {
+                  // 加载更多
                   this.log_list = this.log_list.concat(list);
-                  allowInfinite = true;
                 } else if (list.length && allowInfinite) {
+                  // 首次加载或刷新
                   this.log_list = list;
-                  allowInfinite = true;
-                  $update();
-                } else if (!list.length) {
+                }
+
+                // 更新加载状态
+                if (this.log_list.length >= total || list.length < this.page_length) {
                   allowInfinite = false;
                   hasMoreItems = false;
-                  if (!refresh_data && this.log_list.length) {
-                    // let toast = $f7.toast.create({
-                    //   text: 'No more data',
-                    //   closeTimeout: 2000,
-                    // });
-                    // toast.open();
+                  if (this.log_list.length > 0) {
                     this.more_data = true;
                   }
-                  $update();
+                } else {
+                  allowInfinite = true;
+                  hasMoreItems = true;
+                  this.more_data = false;
                 }
-                if (list.length < 10) {
-                  hasMoreItems = false;
-                  $update();
-                }
-                console.log('this.log_list', this.log_list);
+
+                $update();
               })
               .catch((e) => {
                 console.log(e);
@@ -1164,5 +1234,63 @@
     color: #999;
     text-align: center;
     padding: 20px 0;
+  }
+  .time-filter-status .chip {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  /* Quick Filter Grid */
+  .quick-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .quick-filter-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    padding: 12px 8px;
+    border-radius: 12px;
+    color: #333;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .quick-filter-btn:active {
+    background: #f0f0f0 !important;
+    transform: scale(0.95);
+  }
+  .quick-filter-btn .icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+    color: var(--f7-theme-color);
+  }
+  .quick-filter-btn span {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .quick-filter-btn.clear .icon {
+    color: #ff3b30;
+  }
+
+  /* Main Apply Button */
+  .custom-apply-btn {
+    height: 52px !important;
+    border-radius: 26px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(var(--f7-theme-color-rgb), 0.3) !important;
+    text-transform: none !important;
+  }
+
+  /* Input Tweaks */
+  .list.inset {
+    margin-left: 16px;
+    margin-right: 16px;
   }
 </style>

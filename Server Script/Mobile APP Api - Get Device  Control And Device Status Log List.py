@@ -1,97 +1,91 @@
 # 性能优化说明：
-# 对于10万+数据，建议添加以下数据库索引以提升查询性能：
-# CREATE INDEX idx_device_control_device_timestamp ON `tabDevice Control Log` (device, timestamp DESC);
-# CREATE INDEX idx_device_status_device_timestamp ON `tabDevice Status Log` (device, timestamp DESC);
+# 1. 采用 "Top-N" 优化策略：在 UNION 内部先 LIMIT，大幅减少数据库临时表大小
+# 2. 消除 N+1 查询：改用批量查询方式获取详细数据
+# 3. 索引建议：(device, timestamp DESC)
 
-device_value = frappe.form_dict.device
-start = int(frappe.form_dict.start) or 0  # 默认从0开始
-page_length = int(frappe.form_dict.page_length) or 20  # 默认返回20条数据
+# 1. 提取参数
+device_value = frappe.form_dict.get('device')
+start = frappe.utils.cint(frappe.form_dict.get('start', 0))
+page_length = frappe.utils.cint(frappe.form_dict.get('page_length', 20))
+start_time = frappe.form_dict.get('start_time')
+end_time = frappe.form_dict.get('end_time')
 
-# 查询逻辑：合并Device Control Log + Device Status Log
+# 2. 动态构造 WHERE 
+where_parts = ["device = %(device)s"]
+params = {"device": device_value, "limit_val": start + page_length}
 
-# 获取两个日志表的总记录数
-control_total = frappe.db.count('Device Control Log', filters={"device": device_value})
-status_total = frappe.db.count('Device Status Log', filters={"device": device_value})
-total_count = control_total + status_total
+if start_time:
+    where_parts.append("`timestamp` >= %(start_time)s")
+    params["start_time"] = start_time
+if end_time:
+    where_parts.append("`timestamp` <= %(end_time)s")
+    params["end_time"] = end_time
 
-# 智能分页策略：为确保合并排序的准确性，需要取足够的数据
-# 计算合理的查询数量，确保能获取到正确的分页结果
-fetch_size = max(start + page_length * 2, 100)  # 取更多数据确保分页准确
+where_clause = " WHERE " + " AND ".join(where_parts)
 
-# 查询Device Control Log数据（按时间倒序）
-control_list = frappe.get_all(
-    'Device Control Log',
-    filters={"device": device_value},
-    fields=['*'],
-    start=0,  # 从最新开始取
-    page_length=fetch_size,
-    order_by='timestamp DESC'
-)
+# 3. 核心 SQL 优化：双层 LIMIT 策略 (Top-N Merge)
+# 这样数据库只需要从每个表取出前 N 条进行排序，而不需要扫描整个结果集
+union_query = f"""
+    SELECT * FROM (
+        (SELECT name, `timestamp`, 'Device Control Log' as doctype FROM `tabDevice Control Log` {where_clause} ORDER BY `timestamp` DESC LIMIT %(limit_val)s)
+        UNION ALL
+        (SELECT name, `timestamp`, 'Device Status Log' as doctype FROM `tabDevice Status Log` {where_clause} ORDER BY `timestamp` DESC LIMIT %(limit_val)s)
+    ) AS temp_logs
+    ORDER BY `timestamp` DESC
+    LIMIT {start}, {page_length}
+"""
 
-# 查询Device Status Log数据（按时间倒序）
-status_list = frappe.get_all(
-    'Device Status Log',
-    filters={"device": device_value},
-    fields=['*'],
-    start=0,  # 从最新开始取
-    page_length=fetch_size,
-    order_by='timestamp DESC'
-)
+# 执行联合查询获取当前页的索引信息
+paged_refs = frappe.db.sql(union_query, params, as_dict=True)
 
-# 安全的时间戳获取函数
-def get_timestamp_for_sort(log_item):
-    """安全获取时间戳用于排序"""
-    timestamp = log_item.get('timestamp')
-    if timestamp is None:
-        timestamp = log_item.get('creation', log_item.get('modified', '1970-01-01'))
-    return timestamp
+# 4. 消除 N+1 查询：批量获取数据
+# 按 Doctype 归类 ID
+ref_map = {"Device Control Log": [], "Device Status Log": []}
+order_list = [] # 记录原始顺序
+for ref in paged_refs:
+    ref_map[ref['doctype']].append(ref['name'])
+    order_list.append((ref['doctype'], ref['name']))
 
-# 合并并排序所有日志
-all_logs = sorted(
-    control_list + status_list,
-    key=get_timestamp_for_sort,
-    reverse=True
-)
+# 批量拉取两个表的数据
+details_data = {}
+for doctype, names in ref_map.items():
+    if not names: continue
+    # 一次查询获取该类型的所有行
+    rows = frappe.get_all(doctype, filters={'name': ['in', names]}, fields=['*'])
+    for r in rows:
+        details_data[f"{doctype}_{r['name']}"] = r
 
-# 正确的分页：从合并排序后的结果中取对应页面的数据
-combined_list = all_logs[start:start + page_length]
+# 按照 order_list 恢复原始排序
+combined_list = []
+for doctype, name in order_list:
+    key = f"{doctype}_{name}"
+    if key in details_data:
+        combined_list.append(details_data[key])
 
-# 构造分页响应结构（合并版本，返回Control Log + Status Log）
-# 添加详细调试信息
-def identify_log_type(log_item):
-    """识别日志类型"""
-    name = log_item.get('name', '')
-    doctype = log_item.get('doctype', '')
-    if 'control' in str(doctype).lower() or 'control' in name.lower():
-        return 'control'
-    elif 'status' in str(doctype).lower() or 'status' in name.lower():
-        return 'status'
-    else:
-        return 'unknown'
+# 5. 总数统计优化
+# 只有在数据极其庞大且索引正确的情况下，COUNT(*) 才比较快
+count_query = f"""
+    SELECT 
+        (SELECT COUNT(*) FROM `tabDevice Control Log` {where_clause}) + 
+        (SELECT COUNT(*) FROM `tabDevice Status Log` {where_clause}) as total
+"""
+total_result = frappe.db.sql(count_query, params)
+total_count = total_result[0][0] if total_result else 0
 
-# 统计合并结果中各类型日志的数量
-control_count_in_result = len([log for log in combined_list if identify_log_type(log) == 'control'])
-status_count_in_result = len([log for log in combined_list if identify_log_type(log) == 'status'])
-
-# 获取时间戳信息用于调试
-combined_timestamps = [log.get('timestamp', 'N/A') for log in combined_list[:10]]
-
+# 6. 构造响应
 frappe.response.update({
-    "data": combined_list,
-    "total": total_count,  # Control Log + Status Log 总记录数
-    "start": start,
-    "page_length": page_length,
-    "actual_returned": len(combined_list),  # 实际返回的数据条数
-    "debug_info": {
-        "control_logs_fetched": len(control_list),
-        "status_logs_fetched": len(status_list),
-        "control_in_result": control_count_in_result,
-        "status_in_result": status_count_in_result,
-        "fetch_size_used": fetch_size,
-        "combined_timestamps": combined_timestamps,
-        "note": "返回Device Control Log + Device Status Log合并后按时间排序的结果"
-    }
+    "data": {
+        "data": combined_list,
+        "total": total_count,
+        "start": start,
+        "page_length": page_length
+    },
+    "message": "success"
 })
 
-# 优化完成：现在API返回Device Control Log + Device Status Log合并后的数据，按时间排序
+# 优化说明：
+# - 无论数据库多大，数据库仅扫描索引并返回 20 条结果给 Python。
+# - 解决了时间过滤下，原先“只取前100条”可能导致数据不全的问题。
+# - 当 combined_list 为空时，前端会自动显示 "No Records Found"。
+
 

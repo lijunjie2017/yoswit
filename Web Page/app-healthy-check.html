@@ -1,0 +1,1375 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title">{{ _('Healthy Check') }}</div>
+        <div class="right">
+          <a href="#" class="link icon-only text-color-theme healthy-refresh-btn" @click="${()=>{healthyCheckRefresh()}}">
+            <i class="icon material-icons healthy-refresh-icon">construction</i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <!-- 进度条移出列表，固定在页面顶部 -->
+        <div class="refresh-progress-bar" v-if="isRefreshing">
+          <div class="progress-fill" :style="{ width: progressPercent + '%', animation: 'none' }"></div>
+        </div>
+
+        <div class="main-box">
+          <div class="list list-strong list-outline list-dividers-ios no-margin-top">
+            
+            <!-- 统计汇总栏 -->
+            <div class="summary-bar" v-if="checkedCount > 0">
+              <div class="summary-item">
+                <span class="label">{{ _('Total') }}:</span>
+                <span class="value">{{ devicesList.length }}</span>
+              </div>
+              <div class="summary-item text-color-green">
+                <span class="label">{{ _('Healthy') }}:</span>
+                <span class="value">{{ successCount }}</span>
+              </div>
+              <div class="summary-item text-color-red">
+                <span class="label">{{ _('Errors') }}:</span>
+                <span class="value">{{ errorCount }}</span>
+              </div>
+            </div>
+            
+            <ul class="manufacturing-steps-list">
+              <li 
+                v-for="(item, index) in viewList" 
+                :key="item.isRoom ? 'room-' + item.room_id + index : item.device"
+                v-bind:data-device-guid="item.isRoom ? '' : item.device"
+                :class="[
+                  item.isRoom ? 'room' : 'manufacturing-steps manufacturing-step1',
+                  !item.isRoom && item.check_status === 'checking' ? 'status-checking' : '',
+                  !item.isRoom && item.check_status === 'success' ? 'status-success' : '',
+                  !item.isRoom && item.check_status === 'error' ? 'status-error' : ''
+                ]"
+              >
+                <!-- 房间展示 -->
+                <div v-if="item.isRoom" class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title-row">
+                      <div class="item-title">
+                        <i class="room-collapse material-icons">expand_more</i>
+                        {{ item.room_name }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 设备展示 -->
+                <div v-else class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title">
+                      <span class="device-title">{{tran(item.title)}}</span>
+                      <span class="device-title firmware-version">({{item.device_firmware || '?.?'}})</span>
+                      <p>
+                        <span class="room-title text-color-gray">{{item.device_model}}</span>
+                        <span class="room-title text-color-gray">-</span>
+                        <span class="room-title text-color-gray">{{item.device_name}}</span>
+                      </p>
+                      <p class="error-log" :class="item.check_status === 'error' ? 'text-color-red' : 'text-color-gray'" v-on:click="showErrorDetail(item)">
+                        <span v-if="item.check_status === 'checking'" class="task-loading-wrapper">
+                          <span class="pulse-dot"></span>
+                          <span class="task-loading-text">{{ item.error_log }}</span>
+                        </span>
+                        <span v-else>{{ item.error_log || _('Ready to check') }}</span>
+                      </p>
+                      <!-- 检查报告汇总 -->
+                      <div class="sub-task-report" v-if="item.check_status !== 'idle'">
+                        <div 
+                          v-for="(task, tIdx) in item.sub_tasks" 
+                          :key="tIdx" 
+                          class="task-badge"
+                          :class="[
+                            'task-' + task.status,
+                            task.status === 'error' ? 'clickable' : ''
+                          ]"
+                          v-on:click="retrySubTask(item, task)"
+                        >
+                          <i class="material-icons" v-if="task.status === 'error' || task.icon">{{ task.status === 'error' ? 'refresh' : task.icon }}</i>
+                          <span class="task-badge-letter" v-else>{{ (task.label || '').charAt(0) }}</span>
+                          <span>{{ task.label }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="item-after">
+                      <i class="icon material-icons status-icon" :class="[
+                        item.check_status === 'checking' ? 'rotating text-color-blue' : '',
+                        item.check_status === 'success' ? 'text-color-green' : '',
+                        item.check_status === 'error' ? 'text-color-red' : '',
+                        item.check_status === 'idle' ? 'text-color-gray' : ''
+                      ]">
+                        {{ 
+                          item.check_status === 'checking' ? 'sync' : 
+                          item.check_status === 'success' ? 'check_circle' : 
+                          item.check_status === 'error' ? 'error' : 'watch_later' 
+                        }}
+                      </i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { subdevice } = $f7route.query;
+    const healthyCheckRefresh = () => {
+      if (vueApp && vueApp.isRefreshing) {
+        vueApp.stopHealthyCheck();
+      } else {
+        // 如果已经有检测进度（且没跑完），询问是续检还是重检
+        const checkedCount = vueApp.checkedCount;
+        const total = vueApp.devicesList.length;
+        
+        if (checkedCount > 0 && checkedCount < total) {
+          app.dialog.create({
+            title: _('Resume Check'),
+            text: _('Previous check was interrupted. Would you like to resume from where you left off or restart from the beginning?'),
+            buttons: [
+              {
+                text: _('Restart'),
+                color: 'red',
+                onClick: () => vueApp.$healthyCheckRefresh(false)
+              },
+              {
+                text: _('Resume'),
+                bold: true,
+                onClick: () => vueApp.$healthyCheckRefresh(true)
+              },
+              {
+                text: _('Cancel'),
+                color: 'gray'
+              }
+            ]
+          }).open();
+        } else {
+          vueApp.$healthyCheckRefresh(false);
+        }
+      }
+    };
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          devicesList: [],
+          isRefreshing: false,
+          progressPercent: 0,
+          shouldStop: false, // 强制停止标识
+        },
+        computed: {
+          // 统计已检查完成的总数
+          checkedCount() {
+            return this.devicesList.filter(d => d.check_status === 'success' || d.check_status === 'error').length;
+          },
+          // 统计成功的总数
+          successCount() {
+            return this.devicesList.filter(d => d.check_status === 'success').length;
+          },
+          // 统计失败的总数
+          errorCount() {
+            return this.devicesList.filter(d => d.check_status === 'error').length;
+          },
+          // 将分组后的数据打平成一维数组
+          viewList() {
+            const list = [];
+            const groups = this.groupedList;
+            groups.forEach((group) => {
+              if (group.room_device_list.length > 0) {
+                // 插入房间占位项
+                list.push({
+                  isRoom: true,
+                  room_id: group.room_id,
+                  room_name: group.room_name,
+                });
+                // 插入设备项
+                group.room_device_list.forEach((device) => {
+                  list.push({
+                    isRoom: false,
+                    ...device,
+                  });
+                });
+              }
+            });
+            return list;
+          },
+          groupedList() {
+            // 1. 获取所有的房间
+            const profile_room = cloneDeep(erp.info.profile.profile_room || []);
+            const devices = this.devicesList;
+
+            // 2. 以房间数组为基准建立初始分组
+            const result = profile_room.map((room) => {
+              return {
+                room_name: tran(room.title),
+                room_id: room.name,
+                room_device_list: [],
+              };
+            });
+
+            // 3. 准备一个“未指派”分组
+            const unassignedGroup = {
+              room_name: _('Unassigned'),
+              room_id: 'unassigned',
+              room_device_list: [],
+            };
+
+            // 4. 将设备分发到对应的房间里
+            devices.forEach((device) => {
+              const targetRoom = result.find((r) => r.room_id === device.profile_room);
+              if (targetRoom) {
+                targetRoom.room_device_list.push(device);
+              } else {
+                unassignedGroup.room_device_list.push(device);
+              }
+            });
+
+            if (unassignedGroup.room_device_list.length > 0) {
+              result.push(unassignedGroup);
+            }
+
+            return result;
+          },
+        },
+        watch: {},
+        mounted() {
+          this.$healthyCheckRefresh = (isResume) => {
+            this.healthyCheckRefresh(isResume);
+          };
+          this.init();
+        },
+        methods: {
+          showErrorDetail(device) {
+            if (device.check_status === 'error' && (device.error_log || (device.error_list && device.error_list.length > 0))) {
+              let errorContent = '';
+              
+              if (device.error_list && device.error_list.length > 0) {
+                // 如果是场景列表错误，渲染更精细的列表 UI
+                const listItems = device.error_list.map(item => `
+                  <li class="item-content" style="padding-left: 16px; min-height: 48px;">
+                    <div class="item-media" style="min-width: 32px;">
+                      <i class="material-icons text-color-red" style="font-size: 20px;">error_outline</i>
+                    </div>
+                    <div class="item-inner" style="padding: 8px 16px 8px 0;">
+                      <div class="item-title" style="font-size: 14px; font-weight: 500; color: #333;">${item}</div>
+                    </div>
+                  </li>
+                `).join('');
+
+                errorContent = `
+                  <div class="list no-hairlines no-margin" style="
+                    max-height: 350px; 
+                    overflow-y: auto; 
+                    background: #fff;
+                    border: 1px solid #eee;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+                  ">
+                    <ul style="background: transparent;">
+                      ${listItems}
+                    </ul>
+                  </div>
+                `;
+              } else {
+                // 普通错误显示：优化背景和字体排版
+                errorContent = `
+                  <div class="error-detail-content" style="
+                    padding: 18px;
+                    background: #fdf2f2;
+                    border: 1px solid #fbd5d5;
+                    border-radius: 12px;
+                    color: #c81e1e;
+                    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    word-break: break-all;
+                    white-space: pre-wrap;
+                  ">
+                    ${device.error_log}
+                  </div>
+                `;
+              }
+
+              // 如果有冗余指令，使用更柔和的备注卡片样式
+              if (device.has_extra_commands) {
+                errorContent += `
+                  <div style="
+                    margin-top: 16px; 
+                    padding: 12px 16px; 
+                    background: #fffcf0; 
+                    border-radius: 10px; 
+                    border: 1px solid #fef3c7; 
+                    color: #92400e; 
+                    font-size: 12px; 
+                    display: flex; 
+                    align-items: center;
+                    line-height: 1.4;
+                  ">
+                    <i class="material-icons" style="font-size: 18px; margin-right: 10px; color: #f59e0b;">warning_amber</i>
+                    <span>${_('Found extra/redundant commands on device. These may need to be cleared.')}</span>
+                  </div>
+                `;
+              }
+
+              const sheetHtml = `
+                <div class="sheet-modal error-detail-sheet" style="height: auto; max-height: 85vh; border-radius: 20px 20px 0 0;">
+                  <div class="toolbar" style="background: transparent;">
+                    <div class="toolbar-inner">
+                      <div class="left" style="padding-left: 20px;">
+                        <span style="font-size: 17px; font-weight: 700; color: #111;">${_('Diagnostic Report')}</span>
+                      </div>
+                      <div class="right">
+                        <a class="link sheet-close" style="font-weight: 600; padding-right: 20px;">${_('Done')}</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="sheet-modal-inner">
+                    <div class="page-content">
+                      <div class="block" style="margin: 10px 16px 24px 16px;">
+                        ${errorContent}
+                        <div style="margin-top: 24px; text-align: center; opacity: 0.5;">
+                          <p style="font-size: 11px; color: #666; letter-spacing: 0.5px; text-transform: uppercase;">
+                            ${_('Troubleshooting data provided by system')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+
+              const sheet = app.sheet.create({
+                content: sheetHtml,
+                push: true,
+                backdrop: true,
+                swipeToClose: true,
+              });
+              
+              sheet.open();
+            }
+          },
+          //这里需要判断每个设备对应的子任务
+          getDeviceSubTasks(device_mode,device_model) {
+            /*
+            ** 1. 当前需要考虑的是RCU、RCU Scene Button、酒店的wifi设备、普通的开关检查
+            ** 2. RCU对应的是:Connect;Mesh;Wifi;Firmware;Setting;Scene;Disconnect;
+            ** 3. RCU Scene Button对应的是:Connect;Mesh;Firmware;Setting;Scene;Disconnect;  
+            ** 4. 酒店的wifi设备:Connect;Wifi;Firmware;Setting;Scene;Disconnect;
+            ** 5. 普通的开关检查/其他蓝牙产品:Connect;Firmware;Setting;Disconnect;
+            */
+            let subTasks = [];
+            if (device_mode.includes('RCU Controller') || device_model.includes('YO780')) {
+              subTasks = [
+                {key: 'conn', label: _('Connect'), icon: 'bluetooth'}, 
+                {key: 'email', label: _('Email'), icon: 'alternate_email'}, 
+                {key: 'mesh', label: _('Mesh'), icon: 'hub', noConfirm: true},
+                {key: 'setting', label: _('Setting'), icon: 'settings'},  
+                {key: 'wifi', label: _('Wifi'), icon: 'wifi'}, 
+                {key: 'mqtt', label: _('Mqtt'), icon: ''}, 
+                {key: 'firmware', label: _('Firmware'), icon: 'upgrade'}, 
+                {key: 'scene', label: _('Scene'), icon: 'auto_awesome'}, 
+                {key: 'disconnect', label: _('Disconnect'), icon: 'close'}
+              ];
+            } else if (device_mode.includes('RCU Scene Button')) {
+              subTasks = [
+                {key: 'conn', label: _('Connect'), icon: 'bluetooth'}, 
+                {key: 'mesh', label: _('Mesh'), icon: 'hub', noConfirm: true}, 
+                {key: 'firmware', label: _('Firmware'), icon: 'upgrade'}, 
+                {key: 'setting', label: _('Setting'), icon: 'settings'}, 
+                {key: 'scene', label: _('Scene'), icon: 'auto_awesome'}, 
+                {key: 'disconnect', label: _('Disconnect'), icon: 'close'}
+              ];
+            } else if (device_mode.includes('Thermostat') || device_mode.includes('Curtain Motor Ac') || device_mode.includes('Music Player') || device_mode.includes('Hdmicec')) {
+              subTasks = [
+                {key: 'conn', label: _('Connect'), icon: 'bluetooth'}, 
+                {key: 'email', label: _('Email'), icon: 'alternate_email'}, 
+                {key: 'setting', label: _('Setting'), icon: 'settings'},
+                {key: 'wifi', label: _('Wifi'), icon: 'wifi'}, 
+                {key: 'mqtt', label: _('Mqtt'), icon: ''}, 
+                {key: 'firmware', label: _('Firmware'), icon: 'upgrade'}, 
+                {key: 'scene', label: _('Scene'), icon: 'auto_awesome'}, 
+                {key: 'disconnect', label: _('Disconnect'), icon: 'close'}
+              ];
+            } else {
+              subTasks = [
+                {key: 'conn', label: _('Connect'), icon: 'bluetooth'}, 
+                {key: 'firmware', label: _('Firmware'), icon: 'upgrade'}, 
+                {key: 'setting', label: _('Setting'), icon: 'settings'}, 
+                {key: 'disconnect', label: _('Disconnect'), icon: 'close'}
+              ];
+            }
+            return subTasks;
+          },
+          // --- 核心业务逻辑执行器 ---
+          async runSubTaskLogic(device, task, deviceRepair) {
+            const guid = device.device;
+            let isTaskSuccess = false;
+            let currentError = '';
+            let reason = ''; // 增加原因代码
+
+            try {
+              if (task.key == 'conn') {
+                await window.peripheral[guid].connect();
+                isTaskSuccess = true;
+              } else if (task.key == 'mesh') {
+                const meshResult = await deviceRepair.checkMesh();
+                if (meshResult.success) {
+                  isTaskSuccess = true;
+                } else {
+                  isTaskSuccess = false;
+                  currentError = meshResult.message || _('Mesh check failed.');
+                  reason = 'mesh_error';
+                  // 附加诊断数据
+                  return { 
+                    success: false, 
+                    error: currentError, 
+                    reason: reason,
+                    diagnostics: {
+                      rcu_mesh: meshResult.rcu_mesh_num,
+                      local_mesh: meshResult.self_mesh_num,
+                      type: meshResult.reason
+                    }
+                  };
+                }
+              }else if(task.key == 'wifi'){
+                isTaskSuccess = await deviceRepair.checkWifiStatus();
+                if(!isTaskSuccess){
+                  const wifiResult = await deviceRepair.repairWifi();
+                  reason = 'wifi_error';
+                  if(wifiResult == 101){
+                    currentError = _('Wifi connection failed. Please restart the device.');
+                  }else if(wifiResult == 102){
+                    currentError = _('Wifi connection failed. Please reset the device.');
+                  }else if(wifiResult == 103){
+                    currentError = _('Wifi connection failed. Please input the wifi information.');
+                  }else{
+                    currentError = _('Wifi connection failed.');
+                  }
+                  return { success: false, error: currentError, reason: reason, code: wifiResult };
+                }
+              }else if(task.key == 'email'){
+                isTaskSuccess = await deviceRepair.checkWifiEmail();
+                if(!isTaskSuccess){
+                  reason = 'email_error';
+                  currentError = _('Email configuration mismatch.');
+                  return { success: false, error: currentError, reason: reason };
+                }
+              }else if(task.key == 'mqtt'){
+                isTaskSuccess = deviceRepair.checkMqttConnection();
+                if (!isTaskSuccess) {
+                  currentError = _('Mqtt connection failed.');
+                  reason = 'mqtt_error';
+                  const needsConfig = !deviceRepair.checkDeviceMqttUsernameAndPassword();
+                  return { success: false, error: currentError, reason: reason, needsConfig: needsConfig };
+                }
+              } else if (task.key == 'disconnect') {
+                await window.peripheral[guid].disconnect();
+                await new Promise(r => setTimeout(r, 2000));
+                isTaskSuccess = true;
+              } else if (task.key == 'firmware') {
+                // --- 针对 Firmware 的特殊处理：版本对比 ---
+                this.$set(device, 'error_log', _('Checking firmware version...'));
+                // 获取当前版本
+                const currentFirmware = await deviceRepair.readFirmware();
+                const latestFirmwareMap = await deviceRepair.getFirmwareFromApi();
+                let latestFirmware = latestFirmwareMap['name'];
+                if(latestFirmware){
+                  latestFirmware = window.peripheral[guid].getFirmwareNo(latestFirmware)
+                }
+                if(latestFirmware > currentFirmware){
+                  this.$set(device, 'device_firmware', `${currentFirmware} ➜ ${latestFirmware}`);
+                  currentError = _('New Version Available') + ': v' + latestFirmware;
+                  isTaskSuccess = false;
+                  reason = 'update_available'; // 标记为有更新
+                }else{
+                  this.$set(device, 'error_log', _('Latest Version') + ': v' + currentFirmware);
+                  isTaskSuccess = true;
+                }
+              } else if (task.key == 'setting') {
+                await deviceRepair.updateDeviceSetting('Checking');
+                isTaskSuccess = true;
+              } else if (task.key == 'scene') {
+                const sceneResult = await deviceRepair.checkCoreSceneCommand();
+                console.log("sceneResult", sceneResult);
+                if (sceneResult.errorSceneList.length > 0) {
+                  // 1. 提取去重后的场景标题或 ID
+                  const errorScenes = [...new Set(sceneResult.errorSceneList
+                    .filter(e => e.sceneId !== 'Extra')
+                    .map(e => {
+                      const scene = erp.info.scene[e.sceneId];
+                      return scene ? tran(scene.title) : e.sceneId;
+                    }))];
+                  
+                  // 2. 构造主列表显示的摘要信息
+                  const errorCount = errorScenes.length;
+                  const hasExtra = sceneResult.errorSceneList.some(e => e.sceneId === 'Extra');
+                  
+                  let summary = '';
+                  if (errorCount > 0) {
+                    summary = errorCount + ' ' + (errorCount > 1 ? _('Scenes Error') : _('Scene Error'));
+                  }
+                  if (hasExtra) {
+                    summary += (summary ? ' + ' : '') + _('Extra Data');
+                  }
+
+                  return { 
+                    success: false, 
+                    error: summary || _('Scene command error'), 
+                    reason: 'scene_command_not_found',
+                    errorList: errorScenes,
+                    hasExtra: hasExtra
+                  };
+                } else if (sceneResult.errorCode !== 100) {
+                   return { success: false, error: _('Scene data mismatch or not found.'), reason: 'scene_error' };
+                } else {
+                  return { success: true, error: _('All scene commands are correct.'), reason: 'scene_command_correct' };
+                }
+              } else {
+                // 模拟其他子项的检测耗时和结果
+                await new Promise((resolve) => setTimeout(resolve, 400 + Math.random() * 400));
+                isTaskSuccess = Math.random() > 0.1;
+                if (!isTaskSuccess) currentError = _('Failed at') + ' ' + task.label;
+              }
+            } catch (error) {
+              isTaskSuccess = false;
+              currentError = erp.get_log_description(error);
+            }
+
+            return { success: isTaskSuccess, error: currentError, reason: reason };
+          },
+          // --- 统一的错误处理与弹窗引导 ---
+          async promptUserForTaskError(device, task, result, groupName, deviceRepair) {
+            const isUpdate = task.key === 'firmware' && result.reason === 'update_available';
+            const isSceneError = task.key === 'scene' && result.reason === 'scene_command_not_found';
+            const isMeshError = task.key === 'mesh' && result.reason === 'mesh_error';
+            const isWifiError = task.key === 'wifi' && result.reason === 'wifi_error';
+            const isMqttError = task.key === 'mqtt' && result.reason === 'mqtt_error';
+            const isEmailError = task.key === 'email' && result.reason === 'email_error';
+            
+            let dialogTitle = _('Check Failed');
+            let confirmBtnText = _('Retry');
+            let statusText = _('Failed');
+            let promptText = _('Would you like to retry? Click Skip to continue next task.');
+            let errorDisplayHtml = `
+              <div style="
+                max-height: 150px; 
+                overflow-y: auto; 
+                background: #f8f8f8; 
+                padding: 10px; 
+                border-radius: 4px; 
+                font-size: 13px; 
+                color: #d32f2f;
+                word-break: break-all;
+                border: 1px solid #eee;
+              ">
+                ${_(result.error)}
+              </div>
+            `;
+
+            if (isUpdate) {
+              dialogTitle = _('New Firmware');
+              confirmBtnText = _('Update');
+              statusText = _('Available');
+              promptText = _('A new firmware version is available. Would you like to update now?');
+              errorDisplayHtml = `
+                <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; color: #2196f3; font-size: 13px; border: 1px solid #bbdefb;">
+                  ${_(result.error)}
+                </div>
+              `;
+            } else if (isSceneError) {
+              dialogTitle = _('Repair Scenes');
+              confirmBtnText = _('Repair');
+              statusText = _('Error');
+              promptText = _('The following scenes need to be synchronized. Would you like to repair them now?');
+              
+              const listItems = (result.errorList || []).map(item => `
+                <div style="display: flex; align-items: center; margin-bottom: 4px; font-size: 12px;">
+                  <i class="material-icons" style="font-size: 14px; margin-right: 6px; color: #f44336;">error_outline</i>
+                  <span>${item}</span>
+                </div>
+              `).join('');
+
+              errorDisplayHtml = `
+                <div style="
+                  max-height: 160px; 
+                  overflow-y: auto; 
+                  background: #fff5f5; 
+                  padding: 10px; 
+                  border-radius: 6px; 
+                  border: 1px solid #ffe3e3;
+                ">
+                  ${listItems}
+                  ${result.hasExtra ? `
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ffe3e3; color: #f57f17; font-size: 11px; display: flex; align-items: center;">
+                      <i class="material-icons" style="font-size: 14px; margin-right: 6px;">warning</i>
+                      ${_('Extra redundant data found')}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            } else if (isMeshError && result.diagnostics) {
+              dialogTitle = _('Mesh Diagnostic');
+              confirmBtnText = _('Retry');
+              statusText = _('Error');
+              promptText = _('Mesh status is abnormal. Please ensure RCU is correctly configured.');
+              
+              const { rcu_mesh, local_mesh, type } = result.diagnostics;
+              errorDisplayHtml = `
+                <div style="background: #fff5f5; padding: 12px; border-radius: 8px; border: 1px solid #ffe3e3;">
+                  <div style="font-size: 13px; color: #d32f2f; margin-bottom: 10px; font-weight: 600;">${_(result.error)}</div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #eee; text-align: center;">
+                      <div style="font-size: 10px; color: #999; text-transform: uppercase;">RCU Mesh</div>
+                      <div style="font-size: 18px; font-weight: 700; color: #333;">${rcu_mesh}</div>
+                    </div>
+                    <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #eee; text-align: center;">
+                      <div style="font-size: 10px; color: #999; text-transform: uppercase;">Local Mesh</div>
+                      <div style="font-size: 18px; font-weight: 700; color: ${rcu_mesh === local_mesh ? '#4caf50' : '#f44336'};">${local_mesh}</div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else if (isWifiError) {
+              dialogTitle = _('Repair Wifi');
+              confirmBtnText = _('Repair');
+              statusText = _('Error');
+              promptText = _('Wifi connection issue detected. Would you like to attempt a repair?');
+              
+              errorDisplayHtml = `
+                <div style="background: #fff5f5; padding: 12px; border-radius: 8px; border: 1px solid #ffe3e3;">
+                  <div style="font-size: 13px; color: #d32f2f; margin-bottom: 8px; font-weight: 600;">${_(result.error)}</div>
+                  <div style="font-size: 12px; color: #666; line-height: 1.4;">
+                    ${result.code === 101 ? _('Suggestion: Device might need a restart to reconnect.') : 
+                      result.code === 102 ? _('Suggestion: Device might need a reset if credentials are correct.') : 
+                      result.code === 103 ? _('Suggestion: Please ensure Wifi SSID and Password are configured in settings.') : 
+                      _('Suggestion: Attempting to re-send Wifi configuration might fix the issue.')}
+                  </div>
+                </div>
+              `;
+            } else if (isMqttError) {
+              dialogTitle = result.needsConfig ? _('Configure MQTT') : _('MQTT Error');
+              confirmBtnText = result.needsConfig ? _('Repair') : _('Retry');
+              statusText = _('Error');
+              promptText = result.needsConfig 
+                ? _('MQTT credentials missing or incorrect. Would you like to apply default configuration?') 
+                : _('MQTT connection failed. Would you like to try again?');
+              
+              errorDisplayHtml = `
+                <div style="background: #fff5f5; padding: 12px; border-radius: 8px; border: 1px solid #ffe3e3;">
+                  <div style="font-size: 13px; color: #d32f2f; margin-bottom: 8px; font-weight: 600;">${_(result.error)}</div>
+                  <div style="font-size: 12px; color: #666; line-height: 1.4;">
+                    ${result.needsConfig ? _('Suggestion: Device needs MQTT username and password to connect to server.') : _('Suggestion: Check if the device is connected to the internet and server is reachable.')}
+                  </div>
+                </div>
+              `;
+            } else if (isEmailError) {
+              dialogTitle = _('Repair Email');
+              confirmBtnText = _('Repair');
+              statusText = _('Error');
+              promptText = _('Email configuration issue detected. Repairing will restart the device. Would you like to proceed?');
+              
+              errorDisplayHtml = `
+                <div style="background: #fff5f5; padding: 12px; border-radius: 8px; border: 1px solid #ffe3e3;">
+                  <div style="font-size: 13px; color: #d32f2f; margin-bottom: 8px; font-weight: 600;">${_(result.error)}</div>
+                  <div style="font-size: 12px; color: #666; line-height: 1.4;">
+                    ${_('Suggestion: Update device email to match your profile email.')}
+                  </div>
+                </div>
+              `;
+            }
+
+            const confirmed = await new Promise((resolve) => {
+              app.dialog.create({
+                title: dialogTitle,
+                content: `
+                  <div style="margin-bottom: 12px;">
+                    <div style="font-size: 12px; color: #8e8e93; margin-bottom: 2px;">${groupName}</div>
+                    <strong>${tran(device.title)}</strong> - ${task.label} ${statusText}
+                  </div>
+                  ${errorDisplayHtml}
+                  <div style="margin-top: 12px; font-size: 13px; color: #666; line-height: 1.4;">
+                    ${promptText}
+                  </div>
+                `,
+                buttons: [
+                  { text: _('Skip'), color: 'gray', onClick: () => resolve(false) },
+                  { text: confirmBtnText, bold: true, onClick: () => resolve(true) }
+                ]
+              }).open();
+            });
+
+            if (confirmed) {
+              if (isUpdate) {
+                this.$set(device, 'error_log', _('Updating Firmware...'));
+                const updateRes = await deviceRepair.checkDeviceFirmwareVersionAndUpdate();
+                if (updateRes !== true) {
+                  app.dialog.alert(_('Firmware update failed'), _('Update Failed'));
+                  return false;
+                }
+              }
+
+              if (isWifiError) {
+                this.$set(device, 'error_log', _('Repairing Wifi...'));
+                const repairRes = await deviceRepair.executeWifiRepair(result.code);
+                if (!repairRes) {
+                  app.dialog.alert(_('Wifi repair failed. Please check if SSID/Password are set correctly.'), _('Repair Failed'));
+                  return false;
+                }
+                
+                // 收到回调后，等待10s后再重新运行检测wifi的方法
+                for (let i = 10; i > 0; i--) {
+                  this.$set(device, 'error_log', _('Waiting for reconnection...') + ` (${i}s)`);
+                  await deviceRepair.sleep(1000);
+                }
+                const wifiResult = await deviceRepair.checkWifiStatus();
+                if(wifiResult){
+                  return true;
+                }else{
+                  return false;
+                }
+              }
+
+              if (isMqttError && result.needsConfig) {
+                this.$set(device, 'error_log', _('Configuring MQTT...'));
+                const mqttRes = await deviceRepair.executeInputMqttUsernameAndPassword();
+                if (!mqttRes) {
+                  app.dialog.alert(_('MQTT configuration failed'), _('Repair Failed'));
+                  return false;
+                }
+                // 等待 5s 让设备建立连接
+                for (let i = 5; i > 0; i--) {
+                  this.$set(device, 'error_log', _('Waiting for MQTT...') + ` (${i}s)`);
+                  await deviceRepair.sleep(1000);
+                }
+                // 复检状态
+                const mqttStatus = deviceRepair.checkMqttConnection();
+                return !!mqttStatus;
+              }
+
+              if (isEmailError) {
+                this.$set(device, 'error_log', _('Repairing Email...'));
+                const repairRes = await deviceRepair.updateEmailForDeviceAndProfile();
+                if (!repairRes) {
+                  app.dialog.alert(_('Email repair failed.'), _('Repair Failed'));
+                  return false;
+                }
+                
+                // 修复过程会对设备进行重启，完成后进行下一项的检查
+                for (let i = 15; i > 0; i--) {
+                  this.$set(device, 'error_log', _('Device restarting...') + ` (${i}s)`);
+                  await deviceRepair.sleep(1000);
+                }
+                
+                // 重新检查
+                const emailResult = await deviceRepair.checkWifiEmail();
+                if(emailResult){
+                  return true;
+                }else{
+                  return false;
+                }
+              }
+
+              return true; 
+            }
+            return false;
+          },
+          async retrySubTask(item, task) {
+            if (this.isRefreshing || task.status !== 'error') return;
+
+            // 找到原始设备对象，保证状态更新能同步到 devicesList
+            // 因为 item 是 viewList 里的临时解构对象，对其直接 $set 不会影响原始数据源
+            const device = this.devicesList.find(d => d.device === item.device);
+            if (!device) return;
+
+            const deviceRepair = new iotDeviceRepair({
+                guid: device.device,
+                profile_device_name: device.profile_device,
+                profile_subdevice_name: device.name, 
+                repair_device_model: device.device_model
+            });
+
+            const group = this.groupedList.find(g => g.room_id === device.profile_room);
+            const groupName = group ? group.room_name : '';
+            const startIndex = device.sub_tasks.indexOf(task);
+            if (startIndex === -1) return;
+
+            let stopChain = false;
+
+            for (let i = startIndex; i < device.sub_tasks.length; i++) {
+              if (stopChain) break;
+              const currentTask = device.sub_tasks[i];
+              let taskProcessed = false;
+
+              while (!taskProcessed) {
+                this.$set(currentTask, 'status', 'checking');
+                this.$set(device, 'check_status', 'checking');
+                this.$set(device, 'error_log', _('Retrying') + ' ' + currentTask.label + '...');
+
+                const result = await this.runSubTaskLogic(device, currentTask, deviceRepair);
+
+                if (result.success) {
+                  this.$set(currentTask, 'status', 'success');
+                  taskProcessed = true;
+                } else {
+                  this.$set(currentTask, 'status', 'error');
+                  this.$set(device, 'error_log', _(result.error));
+                  this.$set(device, 'error_list', result.errorList || []);
+                  this.$set(device, 'has_extra_commands', !!result.hasExtra);
+
+                  const confirmed = await this.promptUserForTaskError(device, currentTask, result, groupName, deviceRepair);
+                  if (!confirmed) {
+                    stopChain = true;
+                    taskProcessed = true;
+                    
+                    // 如果重试的是连接任务且跳过，则不再重试后续任务
+                    if (currentTask.key === 'conn') {
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+
+            const hasError = device.sub_tasks.some(t => t.status === 'error');
+            this.$set(device, 'check_status', hasError ? 'error' : 'success');
+            if (!hasError) {
+              this.$set(device, 'error_log', _('All Passed'));
+              app.toast.create({ text: _('Device Recovered'), closeTimeout: 1500 }).open();
+            }
+          },
+          async healthyCheckRefresh(isResume = false) {
+            if (this.isRefreshing) return;
+            this.isRefreshing = true;
+            this.progressPercent = 0;
+            this.shouldStop = false;
+
+            // Navbar 在 Vue 作用域外，使用 Dom7 手动操作
+            // 正在运行时，将按钮切换为“停止”状态，不禁用，允许点击
+            $('.healthy-refresh-btn').removeClass('disabled');
+            $('.healthy-refresh-icon').text('stop_circle').addClass('text-color-red').removeClass('rotating');
+
+            // 1. 根据模式决定是否重置
+            if (!isResume) {
+              this.devicesList.forEach((device) => {
+                this.$set(device, 'check_status', 'idle');
+                this.$set(device, 'error_log', '');
+                this.$set(device, 'error_list', []);
+                this.$set(device, 'has_extra_commands', false);
+                this.$set(device, 'sub_tasks', []);
+              });
+            } else {
+              // 续检模式：将那些之前被强制停止（显示 Terminated）的设备恢复为 idle，以便重新触发检测
+              this.devicesList.forEach((device) => {
+                if (device.error_log === _('Terminated')) {
+                  this.$set(device, 'check_status', 'idle');
+                  this.$set(device, 'error_log', '');
+                  this.$set(device, 'error_list', []);
+                  this.$set(device, 'has_extra_commands', false);
+                }
+              });
+            }
+
+            // 2. 模拟逐个检测
+            const groups = this.groupedList;
+            const totalDevices = this.devicesList.length;
+            
+            // 初始进度计算（续检模式下可能已经有部分完成了）
+            let checkedCount = this.devicesList.filter(d => d.check_status === 'success' || d.check_status === 'error').length;
+            this.progressPercent = Math.floor((checkedCount / totalDevices) * 100);
+
+            for (const group of groups) {
+              if (this.shouldStop) break; // 检查停止信号
+              for (const device of group.room_device_list) {
+                if (this.shouldStop) break; // 检查停止信号
+
+                // --- 核心改动：如果是续检模式，跳过已经检测成功或失败的设备 ---
+                if (isResume && (device.check_status === 'success' || device.check_status === 'error')) {
+                  continue;
+                }
+
+                const guid = device.device;
+                // 定义检查类
+                const deviceRepair = new iotDeviceRepair({
+                    guid: guid,
+                    profile_device_name: device.profile_device,
+                    profile_subdevice_name: device.name, 
+                    repair_device_model: device.device_model
+                });
+                // 定义子任务定义
+                const taskDefs = this.getDeviceSubTasks(device.device_mode,device.device_model);
+                // 自动滚动到当前正在检测的设备
+                this.$nextTick(() => {
+                  const el = page.el.querySelector(`[data-device-guid="${guid}"]`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                });
+
+                this.$set(device, 'check_status', 'checking');
+                // 初始化该设备的子任务列表（带状态）
+                const subTasks = taskDefs.map(t => ({ ...t, status: 'pending' }));
+                this.$set(device, 'sub_tasks', subTasks);
+
+                let deviceHasError = false;
+                let deviceErrorLog = '';
+                let skipRemainingTasks = false;
+                // 逐个执行子任务
+                for (const task of subTasks) {
+                  if (this.shouldStop || skipRemainingTasks) break; // 检查停止信号或跳过标志
+                  let taskProcessed = false;
+                  while (!taskProcessed) {
+                    if (this.shouldStop) {
+                      taskProcessed = true;
+                      break;
+                    }
+                    this.$set(task, 'status', 'checking');
+                    this.$set(device, 'error_log', _('Checking') + ' ' + task.label + '...');
+                    
+                    // 执行共用逻辑
+                    const result = await this.runSubTaskLogic(device, task, deviceRepair);
+
+                    if (result.success) {
+                      this.$set(task, 'status', 'success');
+                      taskProcessed = true; // 成功，进入下一个子项
+                    } else {
+                      this.$set(task, 'status', 'error');
+                      this.$set(device, 'error_log', _(result.error));
+                      // 存储结构化错误信息
+                      this.$set(device, 'error_list', result.errorList || []);
+                      this.$set(device, 'has_extra_commands', !!result.hasExtra);
+                      deviceErrorLog = _(result.error);
+
+                      // 如果该项配置了不需要确认（如 Mesh），则直接标记错误并跳到下一项
+                      if (task.noConfirm) {
+                        deviceHasError = true;
+                        taskProcessed = true;
+                        continue;
+                      }
+
+                      // 核心逻辑：出现错误时弹窗询问 (使用统一的弹窗方法)
+                      const confirmed = await this.promptUserForTaskError(device, task, result, group.room_name, deviceRepair);
+
+                      if (!confirmed) {
+                        deviceHasError = true;
+                        taskProcessed = true; 
+                        
+                        // 如果第一步（连接）就失败且用户选择跳过，设置跳过标志并退出循环
+                        if (task.key === 'conn') {
+                          skipRemainingTasks = true;
+                          break; 
+                        }
+                      } else {
+                        // 如果点击了 Repair/Retry/Update，while 循环会自动重新运行 runSubTaskLogic 验证结果
+                      }
+                      // 如果点击重试（confirmed 为 true），则留在 while 循环再次执行检测
+                    }
+                  }
+                }
+
+                if (this.shouldStop) {
+                    this.$set(device, 'check_status', 'idle');
+                    this.$set(device, 'error_log', _('Terminated'));
+                    break;
+                }
+
+                // 更新最终状态
+                this.$set(device, 'check_status', deviceHasError ? 'error' : 'success');
+                this.$set(device, 'error_log', deviceHasError ? deviceErrorLog : _('All Passed'));
+
+                checkedCount++;
+                this.progressPercent = Math.floor((checkedCount / totalDevices) * 100);
+
+                await new Promise((resolve) => setTimeout(resolve, 300));
+              }
+            }
+
+            this.progressPercent = 100;
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            this.isRefreshing = false;
+            
+            // 恢复按钮状态
+            $('.healthy-refresh-btn').removeClass('disabled');
+            $('.healthy-refresh-icon').text('construction').removeClass('text-color-red');
+
+            const toastText = this.shouldStop ? _('Healthy check terminated') : _('Healthy check completed');
+            app.toast.create({ text: toastText, closeTimeout: 2000 }).open();
+          },
+          stopHealthyCheck() {
+            app.dialog.confirm(_('Are you sure you want to stop the check? Remaining tasks will be cancelled.'), _('Terminate'), () => {
+                this.shouldStop = true;
+                // 如果当前正好卡在弹窗 confirm 处，手动关闭所有 dialog 触发 promise 往下走
+                app.dialog.close();
+            });
+          },
+          /*----------------- 设备逐项检查的业务逻辑  --------------------------*/
+          checkMeshForSubTask(device) {
+            /*
+            注意，mesh的核心检查逻辑：
+            1. 先需要获取房间中主RCU，如果没有定义主RCU，则默认只有一个RCU
+            2. 获取主RCU的mesh的数量，所有的判断都是依赖这个数量去作判断
+            3. 如果RCU上的mesh数量为0,提示用户先修复RCU,否则就是自身存在问题
+            */
+          },
+          /*----------------- 设备逐项检查的业务结束  --------------------------*/
+          init() {
+            const profile_device = cloneDeep(erp.info.profile.profile_device);
+            const profile_subdevice = cloneDeep(erp.info.profile.profile_subdevice);
+            const profile_room = erp.info.profile.profile_room || [];
+
+            // 房间顺序：room_id -> 在 profile_room 中的下标（排序最前的为 0）
+            const roomOrder = new Map();
+            profile_room.forEach((room, index) => {
+              roomOrder.set(room.name, index);
+            });
+            const getRoomIndex = (roomId) => roomOrder.has(roomId) ? roomOrder.get(roomId) : Infinity;
+
+            // 使用 Map 进行快速匹配去重；同一 device 出现多房间时，保留房间排序最前的那条
+            const deviceMap = new Map();
+            profile_device.forEach(d => deviceMap.set(d.name, d));
+
+            const uniqueList = new Map();
+            profile_subdevice.forEach((sub) => {
+              if (!sub.device) return;
+              const parent = deviceMap.get(sub.profile_device) || {};
+              sub.device_model = parent.device_model || '';
+              sub.device_name = parent.device_name || '';
+              sub.device_firmware = (erp.info.device[sub.device] && erp.info.device[sub.device].firmware) || '1.0';
+
+              this.$set(sub, 'check_status', 'idle');
+              this.$set(sub, 'error_log', '');
+              this.$set(sub, 'error_list', []);
+              this.$set(sub, 'has_extra_commands', false);
+
+              const existing = uniqueList.get(sub.device);
+              if (!existing) {
+                uniqueList.set(sub.device, sub);
+                return;
+              }
+              // 同一 device 已存在：仅当当前 sub 的房间在 profile_room 里更靠前时，才替换
+              if (getRoomIndex(sub.profile_room) < getRoomIndex(existing.profile_room)) {
+                uniqueList.set(sub.device, sub);
+              }
+            });
+
+            this.devicesList = Array.from(uniqueList.values());
+          },
+        },
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {});
+
+    $onUnmounted(() => {
+      if (vueApp) {
+        vueApp.$destroy();
+      }
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .device-title {
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .firmware-version {
+    font-size: 11px;
+    color: #8e8e93;
+    font-weight: normal;
+    margin-left: 6px;
+    background: rgba(0,0,0,0.03);
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: middle;
+    transition: all 0.3s;
+  }
+  .status-error .firmware-version {
+    color: #f44336;
+    background: rgba(244, 67, 54, 0.08);
+    font-weight: 600;
+  }
+  .error-log {
+    font-size: 13px;
+    margin: 4px 0 0 0;
+    padding-left: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 18px;
+    max-width: 240px; /* 限制最大宽度，防止挤压 */
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .error-log:active {
+    opacity: 0.7;
+  }
+
+  .manufacturing-steps {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border-left: 3px solid transparent; /* 预留左侧色条位置 */
+  }
+
+  /* 正在检测：柔和的蓝色渐变 + 扫光 */
+  .status-checking {
+    background: linear-gradient(90deg, rgba(33, 150, 243, 0.12) 0%, rgba(33, 150, 243, 0.02) 100%) !important;
+    border-left-color: #2196f3;
+  }
+  .status-checking::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(33, 150, 243, 0.15), transparent);
+    animation: scan-line 1.5s infinite linear;
+  }
+
+  /* 检测成功：优雅的翠绿色渐变 */
+  .status-success {
+    background: linear-gradient(90deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.02) 100%) !important;
+    border-left-color: #4caf50;
+    /* 移除 translateX(4px) 防止宽度溢出 */
+  }
+
+  /* 检测失败：柔和的珊瑚红渐变 + 震动 */
+  .status-error {
+    background: linear-gradient(90deg, rgba(244, 67, 54, 0.15) 0%, rgba(244, 67, 54, 0.02) 100%) !important;
+    border-left-color: #f44336;
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  /* 悬浮/激活态的阴影增强 */
+  .status-success, .status-error, .status-checking {
+    box-shadow: inset 4px 0 10px -6px rgba(0,0,0,0.1);
+  }
+
+  @keyframes scan-line {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+    40%, 60% { transform: translate3d(3px, 0, 0); }
+  }
+
+  .status-icon {
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  }
+  .rotating {
+    animation: spin 1.2s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* 列表顶部进度条 - 优化为固定位置且不占位 */
+  .refresh-progress-bar {
+    height: 3px;
+    background: rgba(33, 150, 243, 0.1);
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #2196f3;
+    width: 30%;
+    animation: progress-move 2s infinite ease-in-out;
+  }
+  @keyframes progress-move {
+    0% { left: -30%; width: 30%; }
+    50% { width: 60%; }
+    100% { left: 100%; width: 30%; }
+  }
+
+  .disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .no-margin-top {
+    margin-top: 0 !important;
+  }
+
+  /* 统计汇总栏样式 */
+  .summary-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    background: #fff;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 13px;
+  }
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .summary-item .label {
+    opacity: 0.6;
+  }
+  .summary-item .value {
+    font-weight: 600;
+  }
+
+  /* 检查报告徽章样式 */
+  .sub-task-report {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    min-height: 24px;
+  }
+  .task-badge {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    background: rgba(0,0,0,0.03);
+    color: #bbb;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .task-badge i {
+    font-size: 14px !important;
+    margin-right: 4px;
+  }
+  .task-badge-letter {
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+    width: 14px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  
+  /* 状态颜色 */
+  .task-pending { opacity: 0.5; }
+  .task-checking {
+    background: rgba(33, 150, 243, 0.08);
+    color: #2196f3;
+    border-color: rgba(33, 150, 243, 0.2);
+    animation: pulse 1.5s infinite;
+  }
+  .task-success {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+    animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .task-error {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+    border-color: rgba(244, 67, 54, 0.2);
+    animation: shake 0.4s ease;
+  }
+
+  /* 可点击的重试状态 - 扩展点击热区 */
+  .task-badge.clickable::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    bottom: -8px;
+    left: -4px;
+    right: -4px;
+  }
+  
+  .task-badge.clickable {
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.1);
+  }
+  .task-badge.clickable:active {
+    transform: scale(0.92);
+    background: rgba(244, 67, 54, 0.2);
+    box-shadow: none;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+  @keyframes pop-in {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  
+  .task-loading-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #2196f3;
+    border-radius: 50%;
+    animation: dot-pulse 1s infinite ease-in-out;
+  }
+
+  @keyframes dot-pulse {
+    0% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
+    50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 0 6px rgba(33, 150, 243, 0); }
+    100% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+  }
+
+  .task-loading-text {
+    display: inline-block;
+    color: #2196f3;
+    font-weight: 500;
+    /* 渐变流光效果 */
+    background: linear-gradient(90deg, #2196f3, #64b5f6, #2196f3);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 2s linear infinite;
+  }
+
+  @keyframes shine {
+    to { background-position: 200% center; }
+  }
+</style>

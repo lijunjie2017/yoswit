@@ -1,0 +1,994 @@
+<template>
+  <div class="page">
+    <div class="navbar active">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner">
+        <div class="left">
+          <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+            <i class="icon icon-back"></i>
+          </a>
+        </div>
+        <div class="title">{{ _('Dehumidifier Remote') }}</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      {% raw %}
+      <div id="vue-app" v-cloak>
+        <div class="remote-layout">
+          <!-- Remote Display Screen -->
+          <div class="remote-screen-card">
+            <div class="screen-header">
+              <div class="brand-group">
+                <span class="brand">YOSWIT</span>
+                <span class="baud-display">B:{{ '9600' }}</span>
+              </div>
+              <div class="screen-timer-bar">
+                <!-- <div class="timer-indicator" :class="{ 'active': timerOn > 0 }">
+                  <i class="material-icons">alarm_on</i>
+                  <span>{{ formatTimer(timerOn) }}</span>
+                </div>
+                <div class="timer-indicator" :class="{ 'active': timerOff > 0 }">
+                  <i class="material-icons">alarm_off</i>
+                  <span>{{ formatTimer(timerOff) }}</span>
+                </div> -->
+              </div>
+              <div class="connection-dots">
+                <i class="f7-icons" :class="wifiConnected ? 'wifi-online' : 'status-offline'">wifi</i>
+                <i class="material-icons" :class="btConnected ? 'bt-online' : 'status-gray'">bluetooth</i>
+              </div>
+            </div>
+            
+            <div class="screen-main" :class="{ 'screen-off': !isOn }">
+              <!-- Humidity Adjustment Row -->
+              <div class="adjustment-section">
+                <div class="target-label">{{ _('HUMIDITY SETTING') }}</div>
+                <div class="adjust-control">
+                  <div class="ctrl-btn minus" v-on:click="adjustHumidity(-5)">
+                    <div class="ctrl-btn-wrapper">
+                      <i class="material-icons">remove</i>
+                    </div>
+                  </div>
+                  <div class="main-num">
+                    <span v-if="isOn" class="val">{{ targetHumidity }}</span>
+                    <span v-if="isOn" class="unit">%</span>
+                    <span v-else class="val-off">--</span>
+                  </div>
+                  <div class="ctrl-btn plus" v-on:click="adjustHumidity(5)">
+                    <div class="ctrl-btn-wrapper">
+                      <i class="material-icons">add</i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- <div class="screen-divider"></div> -->
+
+              <!-- Temperature Adjustment Row -->
+              <!-- <div class="adjustment-section">
+                <div class="target-label">{{ _('TEMPERATURE SETTING') }}</div>
+                <div class="adjust-control">
+                  <div class="ctrl-btn minus" v-on:click="adjustTemp(-1)">
+                    <div class="ctrl-btn-wrapper">
+                      <i class="material-icons">remove</i>
+                    </div>
+                  </div>
+                  <div class="main-num">
+                    <span v-if="isOn" class="val">{{ targetTemp }}</span>
+                    <span v-if="isOn" class="unit">°C</span>
+                    <span v-else class="val-off">--</span>
+                  </div>
+                  <div class="ctrl-btn plus" v-on:click="adjustTemp(1)">
+                    <div class="ctrl-btn-wrapper">
+                      <i class="material-icons">add</i>
+                    </div>
+                  </div>
+                </div>
+              </div> -->
+
+              <!-- Status Footer -->
+              <div class="screen-footer" v-if="isOn">
+                <div class="footer-item">
+                  <i class="material-icons">{{ currentModeInfo.icon }}</i>
+                  <span>{{ _(currentModeInfo.name.toUpperCase()) }}</span>
+                </div>
+                <div class="footer-item wind-gear">
+                  <i class="material-icons">speed</i>
+                  <span class="wind-dots">
+                    <span v-for="n in 5" :key="n" class="wind-dot" :class="{ on: n <= (Number(windSpeed) || 1) }"></span>
+                  </span>
+                </div>
+                <!-- <div class="footer-item" :class="{ 'color-theme': swingEnabled }">
+                  <i class="material-icons">swap_calls</i>
+                  <span>{{ swingEnabled ? _('SWING') : _('FIXED') }}</span>
+                </div> -->
+              </div>
+              
+              <!-- Fixed: Forced Control Status Display -->
+              <!-- <div class="screen-sub-footer" :class="{ 'warning-status': forcedStatus !== 0 }" v-if="isOn">
+                <i class="material-icons">{{ forcedStatusList[forcedStatus].icon }}</i>
+                <span class="status-text">{{ _(forcedStatusList[forcedStatus].name.toUpperCase()) }}</span>
+              </div> -->
+            </div>
+          </div>
+
+          <!-- Main Control Buttons -->
+          <div class="remote-keypad">
+            <div class="control-group">
+            <div class="function-grid">
+              <div class="key-item" :class="{ 'active': isOn }" v-on:click="togglePower">
+                <div class="key-icon">
+                  <i class="material-icons">power_settings_new</i>
+                </div>
+                <div class="key-label">{{ _('Power') }}</div>
+              </div>
+              <div class="key-item" v-on:click="cycleMode">
+                <div class="key-icon">
+                  <i class="material-icons">tune</i>
+                </div>
+                <div class="key-label">{{ _('Mode') }}</div>
+              </div>
+              <div class="key-item" v-on:click="cycleWind">
+                <div class="key-icon">
+                  <div class="key-icon-wrapper">
+                    <i class="material-icons">speed</i>
+                  </div>
+                </div>
+                <div class="key-label">{{ _('Wind') }}</div>
+              </div>
+              <!-- <div class="key-item" :class="{ 'active': swingEnabled }" v-on:click="toggleSwing">
+                <div class="key-icon">
+                  <div class="key-icon-wrapper">
+                    <i class="material-icons">swap_calls</i>
+                  </div>
+                </div>
+                <div class="key-label">{{ _('Swing') }}</div>
+              </div> -->
+              <!-- <div class="key-item" :class="{ 'active': timerOn > 0 }" v-on:click="cycleTimerOn">
+                <div class="key-icon">
+                  <div class="key-icon-wrapper">
+                    <i class="material-icons">alarm_on</i>
+                  </div>
+                  <i v-if="timerOn > 0" class="material-icons reset-badge" v-on:click.stop="resetTimerOn">cancel</i>
+                </div>
+                <div class="key-label">{{ _('Timer ON') }}</div>
+              </div> -->
+              <!-- <div class="key-item" :class="{ 'active': timerOff > 0 }" v-on:click="cycleTimerOff">
+                <div class="key-icon">
+                  <div class="key-icon-wrapper">
+                    <i class="material-icons">alarm_off</i>
+                  </div>
+                  <i v-if="timerOff > 0" class="material-icons reset-badge" v-on:click.stop="resetTimerOff">cancel</i>
+                </div>
+                <div class="key-label">{{ _('Timer OFF') }}</div>
+              </div> -->
+            </div>
+            </div>
+
+            <!-- Forced Control Section (Integrated 0-3 Status) -->
+            <!-- <div class="forced-control-section">
+              <div class="section-tag">{{ _('FORCED CONTROL') }}</div>
+              <div class="segmented-remote">
+                <button 
+                  class="button" 
+                  :class="{ 'active': forcedStatus === 0 }"
+                  v-on:click="setForcedStatus(0)"
+                >
+                  <span>{{ _('Auto') }}</span>
+                </button>
+                <button 
+                  class="button" 
+                  :class="{ 'active': forcedStatus === 1 }"
+                  v-on:click="setForcedStatus(1)"
+                >
+                  <span>{{ _('Dehumid') }}</span>
+                </button>
+                <button 
+                  class="button" 
+                  :class="{ 'active': forcedStatus === 2 }"
+                  v-on:click="setForcedStatus(2)"
+                >
+                  <span>{{ _('Humid') }}</span>
+                </button>
+                <button 
+                  class="button" 
+                  :class="{ 'active': forcedStatus === 3 }"
+                  v-on:click="setForcedStatus(3)"
+                >
+                  <span>{{ _('Vent') }}</span>
+                </button>
+              </div>
+            </div> -->
+          </div>
+
+          <!-- Baud Rate Section (Card Style) -->
+          <!-- <div class="settings-group">
+            <div class="section-tag">{{ _('BAUD RATE') }}</div>
+            <div class="segmented-remote">
+              <button 
+                class="button" 
+                :class="{ 'active': baudRate === 0 }"
+                v-on:click="setBaudRate(0)"
+              >
+                <span>1200</span>
+              </button>
+              <button 
+                class="button" 
+                :class="{ 'active': baudRate === 1 }"
+                v-on:click="setBaudRate(1)"
+              >
+                <span>2400</span>
+              </button>
+              <button 
+                class="button" 
+                :class="{ 'active': baudRate === 2 }"
+                v-on:click="setBaudRate(2)"
+              >
+                <span>4800</span>
+              </button>
+              <button 
+                class="button" 
+                :class="{ 'active': baudRate === 3 }"
+                v-on:click="setBaudRate(3)"
+              >
+                <span>9600</span>
+              </button>
+            </div>
+          </div> -->
+        </div>
+      </div>
+      {% endraw %}
+    </div>
+  </div>
+</template>
+
+<script>
+  export default async (props, ctx) => {
+    const $f7 = ctx.$f7,
+      $f7route = ctx.$f7route,
+      $onUnmounted = ctx.$onUnmounted,
+      $on = ctx.$on;
+
+    let vueApp = null;
+    const { guid, subdevice } = $f7route.query;
+
+    $on('pageMounted', (e, page) => {
+      vueApp = new Vue({
+        el: page.el.querySelector('#vue-app'),
+        data: {
+          btConnected: false,
+          wifiConnected: false,
+          isOn: false,
+          targetHumidity: 50,
+          targetTemp: 25,
+          mode: 0, 
+          modeList: [
+            { name: 'Dehumidify', icon: 'invert_colors_off' },
+            { name: 'Ventilation', icon: 'air' }
+          ],
+          windSpeed: 1,
+          swingEnabled: false,
+          timerOn: 0,
+          timerOff: 0,
+          baudRate: 0, 
+          baudRateList: ['1200', '2400', '4800', '9600'],
+          forcedStatus: 0,
+          timerOnEnd: null, // Timestamp when Timer ON triggers
+          timerOffEnd: null, // Timestamp when Timer OFF triggers
+          forcedStatusList: [
+            { id: 0, name: 'Auto Status', icon: 'sync_alt' },
+            { id: 1, name: 'Forced Dehumid', icon: 'air_purifier' },
+            { id: 2, name: 'Forced Humid', icon: 'opacity' },
+            { id: 3, name: 'Forced Vent', icon: 'toys' }
+          ],
+          protocolType: 'default', // 'default' or 'new'
+          protocolConfigs: {
+            'default': {
+              registers: { power: 0x1001, humidity: 0x1004, mode: 0x101c, wind: 0x1002, temp: 0x101b, swing: 0x000D, timerOn: 0x0010, timerOff: 0x0011, forced: 0x0012, baud: 0x000E },
+              mapping: {
+                power: (isOn) => isOn ? 0x0001 : 0x0000,
+                humidity: (v) => v,
+                mode: (idx) => [0, 6][idx],
+                wind: (v) => v,
+                temp: (v) => v,
+                swing: (v) => v ? 1 : 0,
+                timer: (h, m) => (h << 8) | m,
+                forced: (v) => v,
+                baud: (v) => v
+              },
+              range: { humidity: [30, 80], temp: [16, 32] },
+              features: { temp: true, timer: true, forced: true, swing: true, baud: true }
+            },
+            'new': {
+              registers: { power: 0x00ee, humidity: 0x0001, mode: 0x000f, wind: 0x000b },
+              mapping: {
+                power: (isOn) => isOn ? 0x00aa : 0x0055,
+                humidity: (v) => v,
+                mode: (idx) => [2, 1][idx],
+                wind: (v) => v
+              },
+              range: { humidity: [10, 95] },
+              features: { temp: false, timer: false, forced: false, swing: false, baud: false }
+            }
+          }
+        },
+        computed: {
+          currentModeInfo() {
+            return this.modeList[this.mode];
+          },
+          currentConfig() {
+            return this.protocolConfigs[this.protocolType];
+          }
+        },
+        methods: {
+          async init() {
+            if (window.peripheral[guid]) {
+              this.btConnected = window.peripheral[guid].prop.connected;
+            }
+            this.checkWifi();
+            this.detectProtocol();
+            await this.loadPresets();
+            this.startTimerInterval();
+          },
+          detectProtocol() {
+            try {
+              const subdevices = erp?.info?.profile?.profile_subdevice || [];
+              const currentSub = subdevices.find(item => item.name === subdevice);
+              if (currentSub && currentSub.device_button_group === "Lift485_Dehumidifier_Dba") {
+                this.protocolType = 'new';
+              } else {
+                this.protocolType = 'default';
+              }
+              console.log('Detected protocol type:', this.protocolType);
+            } catch (e) {
+              console.error('Detect protocol failed', e);
+              this.protocolType = 'default';
+            }
+          },
+          async savePresets() {
+            try {
+              const presets = {
+                isOn: this.isOn,
+                targetHumidity: this.targetHumidity,
+                targetTemp: this.targetTemp,
+                mode: this.mode,
+                windSpeed: this.windSpeed,
+                swingEnabled: this.swingEnabled,
+                baudRate: this.baudRate,
+                forcedStatus: this.forcedStatus,
+                timerOnEnd: this.timerOnEnd,
+                timerOffEnd: this.timerOffEnd
+              };
+              await db.set(`dehumidifier_presets_${guid}`, JSON.stringify(presets));
+            } catch (e) {
+              console.error('Save presets failed', e);
+            }
+          },
+          async loadPresets() {
+            try {
+              let res = await db.get(`dehumidifier_presets_${guid}`);
+              if (res) {
+                const presets = JSON.parse(res);
+                this.isOn = presets.isOn ?? false;
+                this.targetHumidity = presets.targetHumidity ?? 50;
+                this.targetTemp = presets.targetTemp ?? 25;
+                this.mode = (presets.mode === 1 ? 1 : 0);
+                this.windSpeed = Number(presets.windSpeed) || 1;
+                this.swingEnabled = presets.swingEnabled ?? false;
+                this.baudRate = presets.baudRate ?? 0;
+                this.forcedStatus = presets.forcedStatus ?? 0;
+                this.timerOnEnd = presets.timerOnEnd || null;
+                this.timerOffEnd = presets.timerOffEnd || null;
+                this.refreshTimers();
+              }
+            } catch (e) {
+              console.error('Load presets failed', e);
+            }
+          },
+          refreshTimers() {
+            const now = Date.now();
+            if (this.timerOnEnd) {
+              const diff = Math.max(0, Math.floor((this.timerOnEnd - now) / 60000));
+              this.timerOn = diff;
+              if (diff === 0) this.timerOnEnd = null;
+            }
+            if (this.timerOffEnd) {
+              const diff = Math.max(0, Math.floor((this.timerOffEnd - now) / 60000));
+              this.timerOff = diff;
+              if (diff === 0) this.timerOffEnd = null;
+            }
+          },
+          startTimerInterval() {
+            // Update remaining time display every minute
+            this._timerInterval = setInterval(() => {
+              this.refreshTimers();
+            }, 60000);
+          },
+          cleanupWifiListener() {
+            if (this._wifiTopic && this._wifiChangeHandler) {
+              emitter.off(this._wifiTopic, this._wifiChangeHandler);
+            }
+            this._wifiTopic = null;
+            this._wifiChangeHandler = null;
+          },
+          checkWifi() {
+            this.cleanupWifiListener();
+            const profileDevice = (erp?.info?.profile?.profile_device && cloneDeep(erp.info.profile.profile_device)) || [];
+            const profileDeviceMap = profileDevice.find(item => item.device === guid);
+            if (!profileDeviceMap) {
+              this.wifiConnected = false;
+              return;
+            }
+            const gateway = profileDeviceMap.gateway;
+            if (!gateway) {
+              this.wifiConnected = false;
+              return;
+            }
+            const will_topic = `will/${md5(md5(gateway))}`;
+            try { core_mqtt_subscribe(will_topic, 1, false); } catch (e) {}
+            this._wifiTopic = will_topic;
+            this._wifiChangeHandler = (data = {}) => {
+              if (typeof data.message === 'string' && data.message.includes("Online")) {
+                this.wifiConnected = true;
+              } else if (typeof data.message === 'string' && data.message.includes("Offline")) {
+                this.wifiConnected = false;
+              }
+            };
+            emitter.on(this._wifiTopic, this._wifiChangeHandler);
+          },
+          toggleBt() { this.btConnected = !this.btConnected; },
+          togglePower() { 
+            const nextState = !this.isOn;
+            this.sendCommand('power', nextState, nextState ? 'Power On' : 'Power Off').then(() => {
+              this.isOn = nextState;
+            });
+          },
+          adjustHumidity(val) {
+            let newHumid = this.targetHumidity + val;
+            const range = this.currentConfig.range.humidity;
+            if (newHumid >= range[0] && newHumid <= range[1]) {
+              this.sendCommand('humidity', newHumid, 'Humidity').then(() => {
+                this.targetHumidity = newHumid;
+              });
+            }
+          },
+          adjustTemp(val) {
+            if (!this.currentConfig.features.temp) return;
+            let newTemp = this.targetTemp + val;
+            const range = this.currentConfig.range.temp;
+            if (newTemp >= range[0] && newTemp <= range[1]) {
+              this.sendCommand('temp', newTemp, 'Temperature').then(() => {
+                this.targetTemp = newTemp;
+              });
+            }
+          },
+          cycleMode() {
+            const nextIdx = (this.mode + 1) % this.modeList.length;
+            this.sendCommand('mode', nextIdx, 'Work Mode').then(() => {
+              this.mode = nextIdx;
+            });
+          },
+          cycleWind() {
+            const cur = Number(this.windSpeed) || 1;
+            const nextSpeed = cur >= 5 ? 1 : cur + 1;
+            this.sendCommand('wind', nextSpeed, 'Wind Speed').then(() => {
+              this.windSpeed = nextSpeed;
+            });
+          },
+          toggleSwing() {
+            if (!this.currentConfig.features.swing) return;
+            const nextState = !this.swingEnabled;
+            this.sendCommand('swing', nextState, 'Swing').then(() => {
+              this.swingEnabled = nextState;
+            });
+          },
+          setForcedStatus(status) {
+            if (!this.currentConfig.features.forced) return;
+            this.sendCommand('forced', status, 'Mode').then(() => {
+              this.forcedStatus = status;
+            });
+          },
+          setBaudRate(rateIdx) {
+            if (!this.currentConfig.features.baud) return;
+            this.sendCommand('baud', rateIdx, 'Baud Rate').then(() => {
+              this.baudRate = rateIdx;
+            });
+          },
+          formatTimer(mins) {
+            if (mins === 0) return '--';
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+          },
+          cycleTimerOn() {
+            if (!this.currentConfig.features.timer) return;
+            let nextMins = this.timerOn + 30;
+            if (nextMins > 1440) nextMins = 0;
+            
+            const h = Math.floor(nextMins / 60);
+            const m = nextMins % 60;
+            const val = this.currentConfig.mapping.timer(h, m);
+            
+            this.sendCommand('timerOn', val, 'Timer ON').then(() => {
+              this.timerOn = nextMins;
+              this.timerOnEnd = nextMins > 0 ? Date.now() + (nextMins * 60000) : null;
+            });
+          },
+          cycleTimerOff() {
+            if (!this.currentConfig.features.timer) return;
+            let nextMins = this.timerOff + 30;
+            if (nextMins > 1440) nextMins = 0;
+
+            const h = Math.floor(nextMins / 60);
+            const m = nextMins % 60;
+            const val = this.currentConfig.mapping.timer(h, m);
+
+            this.sendCommand('timerOff', val, 'Timer OFF').then(() => {
+              this.timerOff = nextMins;
+              this.timerOffEnd = nextMins > 0 ? Date.now() + (nextMins * 60000) : null;
+            });
+          },
+          resetTimerOn() {
+            if (!this.currentConfig.features.timer) return;
+            this.sendCommand('timerOn', 0, 'Cancel Timer ON').then(() => {
+              this.timerOn = 0;
+              this.timerOnEnd = null;
+            });
+          },
+          resetTimerOff() {
+            if (!this.currentConfig.features.timer) return;
+            this.sendCommand('timerOff', 0, 'Cancel Timer OFF').then(() => {
+              this.timerOff = 0;
+              this.timerOffEnd = null;
+            });
+          },
+          // CRC16 Implementation
+          modbusCRC16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+              crc ^= data[i];
+              for (let j = 0; j < 8; j++) {
+                if (crc & 0x0001) {
+                  crc >>= 1;
+                  crc ^= 0xA001;
+                } else {
+                  crc >>= 1;
+                }
+              }
+            }
+            return {
+              low: crc & 0xFF,
+              high: (crc >> 8) & 0xFF
+            };
+          },
+          // Build Frame
+          buildFrame(action, val) {
+            const config = this.currentConfig;
+            const reg = config.registers[action];
+            if (reg === undefined) return null;
+
+            let finalVal = val;
+            if (config.mapping[action]) {
+              finalVal = config.mapping[action](val);
+            }
+
+            const deviceAddr = 0x01;
+            const funcCode = 0x06;
+            const frame = [
+              deviceAddr,
+              funcCode,
+              (reg >> 8) & 0xFF,
+              reg & 0xFF,
+              (finalVal >> 8) & 0xFF,
+              finalVal & 0xFF
+            ];
+            const crc = this.modbusCRC16(frame);
+            const fullFrame = [...frame, crc.low, crc.high];
+            return fullFrame.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+          },
+          // Send Command
+          async sendCommand(action, val, label) {
+            const frameStr = this.buildFrame(action, val);
+            if (!frameStr) {
+              console.warn(`Action ${action} not supported in current protocol`);
+              return;
+            }
+            const hexNoSpace = frameStr.replace(/\s+/g, '').toLowerCase();
+            
+            try {
+              // 整体发送指令，不进行分割
+              await window.peripheral[guid].doHdmiCec([{
+                gang: 1,
+                command: `8602${hexNoSpace}`,
+              }]);
+              
+              let control_source = await bleHelper.getControlSource(guid);
+              window.upload_device_control_log(guid, 1, control_source, subdevice, {
+                command_type: 'SET',
+                device_type: 'DEHUMIDIFIER485',
+                command: hexNoSpace,
+                device_command: `${action}_${val}`,
+                button_name: label,
+              });
+
+            } catch (error) {
+              console.error('Command send failed:', error);
+              if (error == 7200) {
+                erp.script.iot_entry_class_password_verify(guid, label).then(() => {});
+              } else {
+                const errorMsg = (typeof erp !== 'undefined' && erp.get_log_description) 
+                  ? _(erp.get_log_description(error)) 
+                  : (error.message || error);
+                $f7.dialog.alert(errorMsg);
+              }
+            }
+          }
+        },
+        watch: {
+          isOn() { this.savePresets(); },
+          targetHumidity() { this.savePresets(); },
+          targetTemp() { this.savePresets(); },
+          mode() { this.savePresets(); },
+          windSpeed() { this.savePresets(); },
+          swingEnabled() { this.savePresets(); },
+          baudRate() { this.savePresets(); },
+          forcedStatus() { this.savePresets(); },
+          timerOnEnd() { this.savePresets(); },
+          timerOffEnd() { this.savePresets(); }
+        },
+        mounted() { this.init(); }
+      });
+    });
+
+    $on('pageBeforeRemove', (e, page) => {
+      if (vueApp && vueApp.cleanupWifiListener) vueApp.cleanupWifiListener();
+    });
+
+    $onUnmounted(() => {
+      if (vueApp && vueApp._timerInterval) clearInterval(vueApp._timerInterval);
+      if (vueApp && vueApp.cleanupWifiListener) vueApp.cleanupWifiListener();
+      if (vueApp) vueApp.$destroy();
+    });
+
+    return $render;
+  };
+</script>
+
+<style>
+  .remote-layout {
+    padding-bottom: 40px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Screen Styles */
+  .remote-screen-card {
+    background: #e0e5ec;
+    margin: 16px;
+    padding: 16px;
+    border-radius: 24px;
+    box-shadow: inset 6px 6px 12px #bec3c9, inset -6px -6px 12px #ffffff;
+    border: 8px solid #d1d9e6;
+  }
+
+  .screen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.7;
+  }
+
+  .screen-header .brand {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .brand-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-shrink: 0;
+    gap: 1px;
+  }
+
+  .baud-display {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(0,0,0,0.5);
+    font-family: 'Courier New', Courier, monospace;
+    background: rgba(0,0,0,0.06);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+
+  .screen-timer-bar {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .timer-indicator {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(0,0,0,0.25);
+  }
+
+  .timer-indicator i {
+    font-size: 17px !important;
+  }
+
+  .timer-indicator.active {
+    color: #e67e22; 
+    text-shadow: 0 0 2px rgba(230, 126, 34, 0.4);
+  }
+
+  .timer-indicator span {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: -0.5px;
+  }
+
+  .connection-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .connection-dots i {
+    font-size: 18px !important;
+  }
+
+  .connection-dots i.f7-icons {
+    font-size: 16px !important;
+  }
+
+  /* Connection Status Colors */
+  .wifi-online { color: #2ecc71 !important; opacity: 1 !important; text-shadow: 0 0 3px rgba(46, 204, 113, 0.4); }
+  .bt-online { color: #0066cc !important; opacity: 1 !important; text-shadow: 0 0 3px rgba(52, 152, 219, 0.4); }
+  .status-offline { color: #e74c3c !important; opacity: 1 !important; }
+  .status-gray { color: #7f8c8d !important; opacity: 0.6 !important; }
+
+  .screen-main {
+    text-align: center;
+    background: #b8c6d1; /* Slightly darker for better contrast */
+    padding: 16px 12px;
+    border-radius: 12px;
+    box-shadow: inset 2px 2px 6px rgba(0,0,0,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    transition: background 0.3s;
+  }
+
+  .screen-main.screen-off {
+    background: #a5b1bb;
+    box-shadow: inset 4px 4px 10px rgba(0,0,0,0.2);
+  }
+
+  .screen-main.screen-off .target-label {
+    opacity: 0.3;
+  }
+
+  .val-off {
+    font-size: 42px;
+    font-weight: 400;
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1;
+    color: rgba(0,0,0,0.1);
+  }
+
+  .adjustment-section { padding: 4px 0; }
+  .screen-divider { height: 1px; background: rgba(0,0,0,0.08); margin: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.2); }
+
+  .target-label { font-size: 10px; font-weight: 700; color: #444; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .adjust-control { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+
+  .ctrl-btn {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: #d1d9e6; border-radius: 50%;
+    box-shadow: 2px 2px 5px #bec3c9, -2px -2px 5px #ffffff;
+    cursor: pointer; color: #444;
+  }
+
+  .ctrl-btn i { font-size: 20px; }
+
+  .main-num { flex: 1; color: #1a252f; }
+  .main-num .val { font-size: 42px; font-weight: 400; font-family: 'Courier New', Courier, monospace; line-height: 1; }
+  .main-num .unit { font-size: 14px; margin-left: 2px; font-weight: 700; }
+
+  .screen-footer {
+    display: flex; justify-content: space-around;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px dashed rgba(0,0,0,0.15);
+    font-size: 11px; font-weight: 700; color: #333;
+  }
+
+  .footer-item { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: center; }
+  .footer-item i { font-size: 16px; }
+  .wind-gear .wind-dots { display: flex; gap: 2px; align-items: center; }
+  .wind-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,0,0,0.2); }
+  .wind-dot.on { background: var(--f7-theme-color, #333); }
+  .footer-item.color-theme { color: var(--f7-theme-color); text-shadow: 0 0 1px rgba(0,0,0,0.1); }
+
+  /* Fixed Status Bar Layout */
+  .screen-sub-footer {
+    margin-top: 8px; padding: 6px 10px;
+    font-size: 11px; font-weight: 700;
+    color: #444; 
+    display: flex; 
+    flex-direction: row; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px;
+    border-radius: 6px; 
+    background: rgba(0,0,0,0.05);
+    white-space: nowrap;
+  }
+
+  .screen-sub-footer i {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .status-text {
+    flex-shrink: 0;
+  }
+
+  .screen-sub-footer.warning-status { color: #c0392b; background: rgba(192, 57, 43, 0.12); }
+
+  /* Keypad Styles */
+  .remote-keypad { padding: 10px 16px; }
+
+  .control-group {
+    background: #d1d9e6;
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: inset 3px 3px 6px #bec3c9, inset -3px -3px 6px #ffffff;
+  }
+  .function-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .key-item { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+  .key-icon {
+    width: 44px; height: 44px; background: #e0e5ec; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 3px 3px 6px #bec3c9, -3px -3px 6px #ffffff; color: #666;
+    position: relative;
+  }
+
+  .reset-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 16px !important;
+    color: #e74c3c !important;
+    background: #e0e5ec;
+    border-radius: 50%;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+    z-index: 10;
+  }
+
+  .key-item.active .key-icon { box-shadow: inset 2px 2px 4px #bec3c9, inset -2px -2px 4px #ffffff; color: var(--f7-theme-color); }
+  .key-label { font-size: 10px; font-weight: 600; color: #777; }
+
+  .forced-control-section { margin-top: 20px; }
+  .section-tag { font-size: 10px; font-weight: bold; color: #999; margin-bottom: 8px; text-align: center; }
+
+  .segmented-remote {
+    display: flex; background: #d1d9e6; border-radius: 20px; padding: 4px;
+    box-shadow: inset 4px 4px 8px #bec3c9, inset -4px -4px 8px #ffffff;
+  }
+  .segmented-remote .button {
+    flex: 1; border: none; background: transparent; font-size: 10px; font-weight: bold;
+    color: #777; height: 32px; border-radius: 16px;
+  }
+  .segmented-remote .button.active {
+    background: #e0e5ec; color: var(--f7-theme-color);
+    box-shadow: 3px 3px 6px #bec3c9, -3px -3px 6px #ffffff;
+  }
+
+  .settings-group { margin-top: 24px; padding: 0 16px; }
+  .size-10 { font-size: 10px; }
+  .size-12 { font-size: 12px; }
+  .size-14 { font-size: 14px; }
+
+  /* Loading Overlay */
+  .key-icon-wrapper {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(224, 229, 236, 0.8);
+    border-radius: 12px;
+    z-index: 2;
+  }
+
+  .icon-loading-overlay i {
+    font-size: 20px !important;
+    color: var(--f7-theme-color);
+  }
+
+  .ctrl-btn-wrapper {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ctrl-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(209, 217, 230, 0.8);
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .power-key-wrapper {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .power-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(224, 229, 236, 0.8);
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  /* Loading Animation */
+  .icon-loading {
+    display: inline-block;
+    font-size: 20px !important;
+  }
+  @keyframes icon-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .disabled {
+    pointer-events: none;
+    opacity: 0.8;
+  }
+
+  /* Disable ripple effect */
+  .ripple-wave {
+    display: none !important;
+  }
+</style>

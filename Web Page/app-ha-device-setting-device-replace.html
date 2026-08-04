@@ -1068,7 +1068,7 @@
                 console.log('obj', obj);
                 settings = obj.data.data.settings;
                 //change the ble name
-                let bleNameMap = settings.find((item) => item.setting_type == 'Ble Name');
+                let bleNameMap = settings.find((item) => item.setting_type.toLowerCase() == 'ble name');
                 if (bleNameMap) {
                   let value = bleNameMap.setting;
                   let nameList = value.split('/');
@@ -1545,6 +1545,19 @@
               //if rcu,replace the Action,replace the trigger,replace the Scene Device Location,replace the Scene Virtual Button,replace the Scene Subscribe Address,replace Condition,replace the UI Configuration
             });
           },
+          //find the main rcu device 
+          findMainRcuDevice() {
+            return new Promise(async (resolve, reject) => {
+              let mainRcuDevice = '';
+              let profileDevice = cloneDeep(erp.info.profile.profile_device);
+              profileDevice.forEach((item) => {
+                if((item.device_mode == 'RCU Controller' || item.device_model == 'YO780') && item.network_id == '101'){
+                  mainRcuDevice = item.device;
+                }
+              });
+              resolve(mainRcuDevice);
+            });
+          },
           repalceRcuSceneActionCommandForWifiDevice() {
             /*
             1. find the scene of the wifi device 
@@ -1693,6 +1706,20 @@
                       'location': '',
                     },
                   });
+                  //找到目标rcu，更新
+                  let targetRcuDevice = await this.findMainRcuDevice();
+                  if(targetRcuDevice){
+                    await http2.request(`/api/method/appv6.updateProfileDeviceWarning`, {
+                      method: 'POST',
+                      serializer: 'json',
+                      debug: true,
+                      data: {
+                        'profile_name': erp.info.profile.name,
+                        'device' : targetRcuDevice,
+                        'warning' : '1'
+                      },
+                    });
+                  }
                 }
                 resolve(1);
               } catch (error) {
@@ -3602,6 +3629,33 @@
                     'location': '1 write',
                   },
                 });
+                let targetRcuDevice = await this.findMainRcuDevice();
+                if(targetRcuDevice){
+                  await http2.request(`/api/method/appv6.updateProfileDeviceWarning`, {
+                    method: 'POST',
+                    serializer: 'json',
+                    debug: true,
+                    data: {
+                      'profile_name': erp.info.profile.name,
+                      'device' : targetRcuDevice,
+                      'warning' : '0'
+                    },
+                  });
+                }
+              }else{
+                //检测如果当前是rcu设备的话，需要先把自己的状态改成warning
+                if(model_name == 'YO780'){
+                  await http2.request(`/api/method/appv6.updateProfileDeviceWarning`, {
+                    method: 'POST',
+                    serializer: 'json',
+                    debug: true,
+                    data: {
+                      'profile_name': erp.info.profile.name,
+                      'device' : this.targetGuid,
+                      'warning' : '1'
+                    },
+                  });
+                }
               }
               //check if the profile is repalce
               // await http2.request(`/api/method/clear_profile_copy_from`, {

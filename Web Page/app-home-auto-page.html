@@ -475,6 +475,7 @@
 
 <script>
 let filter_value = -60;
+
 //defined components
 const renderSignalItem = (props, {
 	$h
@@ -882,6 +883,7 @@ const renderSwipeRightPanel = (props, {
 };
 
 let engineerModeStatus = false;
+
 let wifiInfoMap = {
 	ssid : '',
 	password : ''
@@ -1483,7 +1485,7 @@ const renderMainButton = (props, {
 							})
 						}
 					
-				}else if(kitem.device_model == 'M86-DP'){
+				}else if(kitem.device_model.includes('M86-DP')){
 					peripheral[kitem.device].doDnd([{
 						gang: bleHelper.getGangId(kitem.device_button_group),
 						on: props.kitem.device_status
@@ -2322,7 +2324,7 @@ const renderMainButton = (props, {
 				`;
 		}else if(props.kitem.device_mode == 'RCU Scene Button'){
 			//should check if the model is the M86-DP
-			if(props.kitem.device_model == 'M86-DP'){
+			if(props.kitem.device_model.includes('M86-DP')){
 				return () => $h`
 					<div class="control-panel-right" style="">
 						<a class="on_flag off_flag" ref="${props.kitem.device_status}" @click="${() => click_onoff(props.kitem)}">
@@ -2371,7 +2373,23 @@ const renderMainButton = (props, {
 					</div>
 				`;
 		}
-	}else if(props.kitem.device_button_group.startsWith('Hdmicec')){
+	}else if(props.kitem.device_button_group.startsWith('Lift485_Dehumidifier')){
+    return () => $h`
+				<div class="control-panel-right" style="">
+					<a href="/mobile-app/dehumidifier-page?guid=${props.kitem.device}&subdevice=${props.kitem.name}" class="right" >
+						<div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">view_sidebar</i></div></div>
+					</a>
+				</div>
+				`;
+  }else if(props.kitem.device_button_group.startsWith('Lift485')){
+    return () => $h`
+				<div class="control-panel-right" style="">
+					<a href="/mobile-app/lift485-page?guid=${props.kitem.device}&subdevice=${props.kitem.name}" class="right" >
+						<div class="button button-raised button-big circle"><div><i class="material-icons" style="font-size:20px;position:relative;top:5px;">view_sidebar</i></div></div>
+					</a>
+				</div>
+				`;
+  }else if(props.kitem.device_button_group.startsWith('Hdmicec')){
 		return () => $h`
 				<div class="control-panel-right" style="">
 					<a href="/mobile-app/hdmicec-page?guid=${props.kitem.device}&subdevice=${props.kitem.name}" class="right" >
@@ -3689,7 +3707,7 @@ const renderBottomButton = (props, {
 	} else if (device_button_group.startsWith("OPENCLOSE UART") || device_button_group.startsWith("OPENCLOSE WIFI UART")) {
 		
 		return () => $h`
-				<li class="device home-scanned-peripheral home-scanned-peripheral-smart display-flex curtain-subdevice" direction="standard" style="${(props.kitem.disappear || !props.kitem.page_disappear)?'display:none!important;':''}" guid="${
+				<li class="device home-scanned-peripheral home-scanned-peripheral-smart display-flex curtain-subdevice" direction="standard" style="${props.kitem.disappear?'opacity:0!important;':''}" guid="${
 					props.kitem.device
 				}" bluetooth="${props.kitem.bluetooth}" mobmob="${props.kitem.mobmob || 0}" mesh="${props.kitem.network_id>0?1:0}">
 						<div class="row padding-tb flex-direction-column justify-content-center">
@@ -4234,7 +4252,7 @@ export default async (props, ctx) => {
 		let networkChangeFun;
 		let updateTime = 0;
 		let fixedTop = 0;
-		
+		let engineerMode = false;
 	//if wifi failed change the wifi status
 	if(networkChangeFun){
 		emitter.off("onNetworkChange",networkChangeFun)
@@ -4373,8 +4391,6 @@ export default async (props, ctx) => {
 	let idleTimer;
 	const IDLE_TIME = 20000;
 	let unassigned_subdevices = [];
-	
-	let engineerMode = false;
 	let hasMoreItems = true;
 	let allowInfinite = true;
 	let allowItem = 10;
@@ -4924,6 +4940,8 @@ export default async (props, ctx) => {
 				let bleCurtainMotorCommandList = [];
 				let bleOpenCloseCommandList = [];
 				let toggleGang1CommandList = [];
+        let bleIrCommandList = [];
+        let bleLiftList = [];
 				let deviceList = deviceMap[guids];
 				for(let i in deviceList){
 					let ref = deviceList[i].ref;
@@ -4935,28 +4953,35 @@ export default async (props, ctx) => {
 							gang : gang,
 							on : ref
 						})
-					}else if(button_group.startsWith("RCU ONOFF GANG")){
+					}
+					if(button_group.startsWith("RCU ONOFF GANG")){
 						bleRcuOnoffCommandList.push({
 							gang : gang,
 							on : ref
 						})
-					}else if(button_group.startsWith("DIMMING")){
+					}
+					if(button_group.startsWith("DIMMING")){
+						const dimmingValue = Math.ceil((ref/100)*255);
 						bleDimmingCommandList.push({
 							gang : gang,
-							value : ref
+							value : dimmingValue
 						})
-					}else if(button_group.startsWith("RCU DIMMING")){
+					}
+					if(button_group.startsWith("RCU DIMMING")){
+						const dimmingValue = Math.ceil((ref/100)*255);
 						bleRcuDimmingCommandList.push({
 							gang : gang,
-							value : ref
+							value : dimmingValue
 						})
-					}else if(button_group.startsWith("TOGGLE GANG1")){
+					}
+					if(button_group.startsWith("TOGGLE GANG1")){
 						//default run 7s
 						toggleGang1CommandList.push({
 							gang : gang,
 							on : 1
 						})
-					}else if(button_group.startsWith("Thermostat")){
+					}
+					if(button_group.startsWith("Thermostat")){
 						let device_attachment_status = `${deviceList[i].ref},${deviceList[i].modeStr},${deviceList[i].speedVaule},${deviceList[i].temperature},${deviceList[i].temperature},0`;
 						let commandList = tindyThermostatCommand(device_attachment_status);
 						if(ref){
@@ -4974,21 +4999,24 @@ export default async (props, ctx) => {
 								command : `940300000100`
 							})
 						}
-					}else if(button_group.startsWith("OPENCLOSE UART REVERSE") || button_group.startsWith("OPENCLOSE WIFI UART REVERSE")){
+					}
+					if(button_group.startsWith("OPENCLOSE UART REVERSE") || button_group.startsWith("OPENCLOSE WIFI UART REVERSE")){
 						let command = tindyCurtainMotor(guid,button_group,parseInt(100-ref));
 						bleCurtainMotorCommandList.push({
 							gang: gang,
 							value: ref,
 							command: command
 						})
-					}else if(button_group.startsWith("OPENCLOSE UART") || button_group.startsWith("OPENCLOSE WIFI UART")){
+					}
+					if(button_group.startsWith("OPENCLOSE UART") || button_group.startsWith("OPENCLOSE WIFI UART")){
 						let command = tindyCurtainMotor(guid,button_group,ref);
 						bleCurtainMotorCommandList.push({
 							gang: gang,
 							value: ref,
 							command: command
 						})
-					}else if(button_group.startsWith("OPENCLOSE GANG") || button_group.startsWith.startsWith("RCU OPENCLOSE GANG")){
+					}
+					if(button_group.startsWith("OPENCLOSE GANG") || button_group.startsWith("RCU OPENCLOSE GANG")){
 						let deviceSettings = cloneDeep(erp.info.device[guid].settings);
 						let runTime = 10;
 						deviceSettings.forEach(settingItem=>{
@@ -5009,6 +5037,61 @@ export default async (props, ctx) => {
 							direction: direction
 						})
 					}
+					if(button_group.includes('Air Conditioner')){
+            //这里是调用空调指令的方法
+            /*
+            ** 首先获取空调的公用指令
+            ** 然后根据空调的状态计算指令
+            */
+            let device_button_groups = erp.info.device_button_group || {};
+            let device_button_commands = erp.info.device_command || {};
+            for (let i in device_button_groups) {
+              device_button_groups[i].device_command = {};
+              if (isset(device_button_groups[i].button_group_sub_list[0])) {
+                let command_name = device_button_groups[i].button_group_sub_list[0].device_command;
+                device_button_groups[i].device_command = device_button_commands[command_name];
+              }
+            }
+            const command_item = device_button_groups[button_group].device_command['function'];
+            let ref_command = iot_ble_generate_ir_code(command_item,"ARC_ON_OFF",`${deviceList[i].temperature},${deviceList[i].speedVaule},0,0,${deviceList[i].ref},${deviceList[i].modeStr == '0'?4:deviceList[i].modeStr == '1'?5:deviceList[i].modeStr}`)
+            console.log("ref_command",ref_command);
+            bleIrCommandList.push({
+              gang: 1,
+              command: ref_command
+            })
+          }
+					if(button_group.startsWith('Lift485_Dehumidifier')){
+            //这里是调用lift485的方法,直接写死开和关的指令
+            const offCommand = `8602010610010000dcca`;
+            const onCommand = `86020106100100011d0a`;
+            const offDbaCommand = `860201060000000089ca`;
+            const onDbaCommand = `8602010600000001480a`;
+            if(button_group.includes('Dba')){
+              if(ref == 0){
+                bleLiftList.push({
+                  gang: 1,
+                  command: offDbaCommand
+                })
+              }else{
+                bleLiftList.push({
+                  gang: 1,
+                  command: onDbaCommand
+                })
+              }
+            }else{
+              if(ref == 0){
+                bleLiftList.push({
+                  gang: 1,
+                  command: offCommand
+                })
+              }else{
+                bleLiftList.push({
+                  gang: 1,
+                  command: onCommand
+                })
+              }
+            }
+          }
 				}
 				bleDeviceMap[guids] = {
 					bleOnoffCommandList,
@@ -5018,7 +5101,9 @@ export default async (props, ctx) => {
 					bleThermostatCommandList,
 					bleCurtainMotorCommandList,
 					bleOpenCloseCommandList,
-					toggleGang1CommandList
+					toggleGang1CommandList,
+					bleIrCommandList,
+					bleLiftList
 				}
 			}
 			console.log("bleDeviceMap[guids]",bleDeviceMap);
@@ -5040,7 +5125,18 @@ export default async (props, ctx) => {
 						for(let j in bleDeviceMap[guid].bleOpenCloseCommandList){
 							peripheral[guid].openClose(bleDeviceMap[guid].bleOpenCloseCommandList[j].gang,bleDeviceMap[guid].bleOpenCloseCommandList[j].direction,true)
 						}
-					}else if(bleDeviceMap[guid].toggleGang1CommandList.length){
+					}else if(bleDeviceMap[guid].bleIrCommandList.length){
+            for(let j in bleDeviceMap[guid].bleIrCommandList){
+              peripheral[guid].sendIR(bleDeviceMap[guid].bleIrCommandList[j].command)
+            }
+          }else if(bleDeviceMap[guid].bleLiftList.length){
+            for(let j in bleDeviceMap[guid].bleLiftList){
+              peripheral[guid].doHdmiCec([{
+                gang: 1,
+                command : bleDeviceMap[guid].bleLiftList[j].command
+              }])
+            }
+          }else if(bleDeviceMap[guid].toggleGang1CommandList.length){
 						peripheral[guid].onoff(bleDeviceMap[guid].toggleGang1CommandList);
 						setTimeout(()=>{
 							peripheral[guid].onoff([{
@@ -5175,6 +5271,10 @@ export default async (props, ctx) => {
 	}
 	//check if rcu scene have wifi device and the mac address is not correct
 	window.EngineerModeCheck = (onlyOta = false)=>{
+	    if(!onlyOta){
+	        mainView.router.navigate('/mobile-app/smart-healthy-check');
+	        return;
+	    }
 		//find all the device 
 		let profile_device = erp.info.profile.profile_device;
 		let sceneMap = cloneDeep(erp.info.scene);
@@ -7135,11 +7235,19 @@ export default async (props, ctx) => {
 						this_gang = tp.device_button_group.replace("OPENCLOSE GANG","");
 					}else if(tp.device_button_group.startsWith("Thermostat")){
 						this_gang = "";
-					}
+					}else if(tp.device_button_group.startsWith("Lift485_Dehumidifier")){
+						this_gang = "";
+          }
 					let title = `${erp.doctype.device_model[p.hexModel].name} ${this_gang}`;
 					if(tp.device_button_group.startsWith("IR Setup")){
 						title = `${this_gang}`;
 					}
+          if(tp.device_button_group.startsWith("Lift485")){
+            title = _(`Lift485`)
+          }
+          if(tp.device_button_group.startsWith("Lift485_Dehumidifier")){
+            title = _(`Dehumidifier485`)
+          }
 					if(tp.device_button_group.startsWith("RCU DIMMING")){
 					    if(!main_rcu) continue;
 						let rcu_gang = tp.device_button_group.replace("RCU DIMMING","");
@@ -8653,12 +8761,12 @@ export default async (props, ctx) => {
 		scan();
 		//check if the wifi device is compelte
 		window.iot_check_profile_device('rcu').then((is_check)=>{
+		    let rcu_device = erp.info.profile.profile_device.find((item)=>{
+				return (item.device_mode == 'RCU Controller' || item.device_model == 'YO780') && item.network_id == '101' && item.device;
+			});
 			//check if scene all have been write the rcu device
-			if(is_check && erp.info.profile.location != '1 write' && erp.info.profile.copy_from){
+			if(is_check && rcu_device.warning == 1){
 				//find the rcu device
-				let rcu_device = erp.info.profile.profile_device.find((item)=>{
-					return (item.device_mode == 'RCU Controller' || item.device_model == 'YO780') && item.device;
-				});
 				if(rcu_device){
 					//find the device
 					let rcu_sub_device = subdevices.find((item)=>{

@@ -1,10 +1,76 @@
 erp.peripheral_timer_settimeout = [];
 erp.init_gangs = [];
-for(let i = 0; i < 152; i++){
+for(let i = 0; i < 363; i++){
 	erp.init_gangs.push(0);
 }
 if(!isset(window.peripheral)){
     window.peripheral = {};
+}
+if (typeof erp.profileSwitchInProgress === 'undefined') {
+    erp.profileSwitchInProgress = false;
+}
+
+if (!window.peripheralStoreQueue) {
+    window.peripheralStoreQueue = (function () {
+        const queue = [];
+        let isExecuting = false;
+
+        const runNext = async () => {
+            if (isExecuting) return;
+            isExecuting = true;
+            while (queue.length) {
+                const { fn, options, resolve } = queue.shift();
+                const shouldSkip = erp.profileSwitchInProgress && options.skipDuringSwitch !== false;
+                if (shouldSkip) {
+                    if (typeof resolve === 'function') resolve(false);
+                    continue;
+                }
+                let executed = false;
+                try {
+                    await fn();
+                    executed = true;
+                } catch (error) {
+                    console.error('PeripheralStoreQueue error', error);
+                } finally {
+                    if (typeof resolve === 'function') resolve(executed);
+                }
+            }
+            isExecuting = false;
+        };
+
+        return {
+            enqueue(fn, options = {}) {
+                if (erp.profileSwitchInProgress && options.skipDuringSwitch !== false) {
+                    return Promise.resolve(false);
+                }
+                return new Promise((resolve) => {
+                    queue.push({ fn, options, resolve });
+                    runNext();
+                });
+            },
+            clear() {
+                while (queue.length) {
+                    const task = queue.shift();
+                    if (task && typeof task.resolve === 'function') {
+                        task.resolve(false);
+                    }
+                }
+            },
+            isIdle() {
+                return !isExecuting && queue.length === 0;
+            },
+        };
+    })();
+}
+
+if (typeof erp.cancelPeripheralTimers !== 'function') {
+    erp.cancelPeripheralTimers = function () {
+        if (!Array.isArray(erp.peripheral_timer_settimeout)) return;
+        for (const timeoutId of erp.peripheral_timer_settimeout) {
+            clearTimeout(timeoutId);
+        }
+        erp.peripheral_timer_settimeout = [];
+    };
 }
 window.Peripheral = (function() {
     function Peripheral(p) {
@@ -41,7 +107,8 @@ window.Peripheral = (function() {
                 last:[
 									erp.init_gangs, //io0 - io7, pwm1 - pwm4, rcu onoff 1 - 20, rcu dimming 1 - 10, Thermostat 1-6(ref,mode,fan,set_temp,reality_temp,humidity),curtain motor 48,Radar 49,RCU output 50-83,Geomagnetic 84,parking lock 85,Door Sensor 86
                     '1970-01-01 00:00:00'
-                ]
+                ],
+                gang_control:[new Array(363).fill('1970-01-01 00:00:00'),'1970-01-01 00:00:00' ]
             },
 			config:{    
 			    
@@ -343,6 +410,14 @@ window.Peripheral = (function() {
         	}
         }, 10);
     };
+    Peripheral.prototype.tindySlot = function(num){
+        if (num < 1 || num > 50) return null;
+        const group = Math.floor((num - 1) / 5);
+        const pos = ((num - 1) % 5) + 1;
+        const highMap = [0x0, 0x2, 0x4, 0x6, 0x8, 0xa, 0xb, 0xc, 0xd, 0xe];
+        const high = highMap[group];
+        return ((high << 4) | pos).toString(16).padStart(2, '0').toLowerCase();
+    };
     Peripheral.prototype.onConnectionChanged = function(state) {
         if(state=='connecting'){
             this.prop.connecting = true;
@@ -392,18 +467,25 @@ window.Peripheral = (function() {
         let storechecksum = md5(JSON.stringify(emitProp));
         if(!self.lastStorechecksum || self.lastStorechecksum!=storechecksum){
             self.lastStorechecksum = storechecksum;
-            
+
+            if (erp.profileSwitchInProgress) {
+                return;
+            }
+
             const timeoutId = setTimeout(function(){
-                //console.log("running Class");
-                db.get('peripheral').then((data)=>{
+                if (erp.profileSwitchInProgress) return;
+                if (!window.peripheralStoreQueue) return;
+                window.peripheralStoreQueue.enqueue(async () => {
+                    if (erp.profileSwitchInProgress) return;
+                    //console.log("running Class");
                     let storedPeripheral = {};
-                    if(data){
-                        try{
+                    try{
+                        const data = await db.get('peripheral');
+                        if(data){
                             storedPeripheral = JSON.parse(data);
-                        }catch(e){
-                            
                         }
-                    }else{
+                    }catch(e){
+                        storedPeripheral = {};
                     }
                     let storeProp = JSON.parse(JSON.stringify(self.getProp()));
                     delete storeProp.rssi;
@@ -413,20 +495,21 @@ window.Peripheral = (function() {
                     delete storeProp.characteristics;
                     delete storeProp.connecting;
                     delete storeProp.is_mobmob;
-										delete storeProp.is_mobile_gateway;
+                    delete storeProp.is_mobile_gateway;
                     delete storeProp.is_mesh;
                     delete storeProp.manufactureData;
                     delete storeProp.connected;
-                    
-                    
+
                     storedPeripheral[self.prop.guid] = storeProp;
-					if(storeProp.guid == '6430326561623565353434651201791b'){
-						//console.log("storedPeripheralRan",storedPeripheral);
-					}
-                    db.set('peripheral', JSON.stringify(storedPeripheral));
-                });
-                erp.peripheral_timer_settimeout.push(timeoutId)
+                    if(storeProp.guid == '6430326561623565353434651201791b'){
+                        //console.log("storedPeripheralRan",storedPeripheral);
+                    }
+                    try{
+                        await db.set('peripheral', JSON.stringify(storedPeripheral));
+                    }catch(e){}
+                }, { skipDuringSwitch: true });
             }, 10);
+            erp.peripheral_timer_settimeout.push(timeoutId);
         }
         if(emitProp.hexModel != '0179'){
 					delete emitProp.status.control;
@@ -708,6 +791,10 @@ window.Peripheral = (function() {
     				    emitter.emit('key_card_id',{
     				        rs : data
     				    })
+    				}else if(data.startsWith('990')){
+    				    emitter.emit('upload/notify',{
+    				        rs : data
+    				    })
     				}else if(data.startsWith('932d000018')){
     				    emitter.emit('wifi_mac_address',{
     				        rs : data,
@@ -715,6 +802,11 @@ window.Peripheral = (function() {
     				    })
     				}else if(data.startsWith('972207') || data.startsWith('8900')){
     				    emitter.emit('ir_learned_code',{
+    				        rs : data,
+    				        guid : self.prop.guid
+    				    })
+    				}else if(data.startsWith('97220600')){
+    				    emitter.emit('ir_learned_code_for_rf433',{
     				        rs : data,
     				        guid : self.prop.guid
     				    })
@@ -760,7 +852,7 @@ window.Peripheral = (function() {
     					$("li.home-scanned-peripheral[guid='"+self.prop.guid+"']").find(".score").text(parseInt(score,16));
     				}else if(data.startsWith("9329")){
     				    emitter.emit('iot/wifi/info',{"rs" : data})
-    				}else if(data.startsWith("8f20") || data.startsWith("8f22") || data.startsWith("8f10") || data.startsWith("8f12") || data.startsWith("972303") || data.startsWith("8f13") ){
+    				}else if(data.startsWith("8f20") || data.startsWith("8f22") || data.startsWith("8f10") || data.startsWith("8f12") || data.startsWith("972303") || data.startsWith("8f13") || data.startsWith("8f32") || data.startsWith("8f0c")){
     				    emitter.emit('iot/scene/from/ble',{"rs" : data})
     				    emitter.emit('get/device/notification',{"rs" : data})
     				}else if(data.startsWith('933000') || data.startsWith('932200')){
@@ -1158,7 +1250,7 @@ window.Peripheral = (function() {
     	return new Promise((resolve, reject) => {
     		Promise.race([
     			self.doConnect(),
-    			self.timeout(10000).then(() => {
+    			self.timeout(30000).then(() => {
     			    self.disconnect();
     				throw 7001;
     			})
@@ -1491,7 +1583,7 @@ window.Peripheral = (function() {
         const self = this;
         
 	    for(let g of gangs){
-	        if(g.gang<12 || g.gang>31) continue;
+	        if(g.gang<12 || g.gang>292) continue;
 	        if(g.on){
 				self.prop.status.control[0][g.gang] = 1;
 			}else{
@@ -1528,11 +1620,14 @@ window.Peripheral = (function() {
 				let data = [0,0,0,0,0,0,0,0];
 				let controls = {};
 				let commands = [];
-				
+				debugger;
 			    for(let g of gangs){
-			        if(g.gang<12 || g.gang>31) continue;
+			        if(g.gang<12 || g.gang>292) continue;
 			        
 			        let targetSlot = Math.ceil((g.gang-11) / 4);
+			        if(g.gang >131){
+			            targetSlot = Math.ceil((g.gang-131) / 4);
+			        }
 			        if(!isset(controls[targetSlot])){
 			            controls[targetSlot] = {
 			                slot: targetSlot,
@@ -1553,7 +1648,8 @@ window.Peripheral = (function() {
 			    
 			    for(let slot in controls){
     			    data = parseInt(controls[slot].data.join(""), 2).toString(16).toUpperCase().pad("00");
-    				data = `02${self.prop.mac_reverse_key}971f${slot.pad("00")}8000${data}00`;
+    			    
+    				data = `02${self.prop.mac_reverse_key}971f${self.tindySlot(slot)}8000${data}00`;
     				commands.push({
     					service: service,
     					characteristic: characteristic,
@@ -1582,9 +1678,12 @@ window.Peripheral = (function() {
 				let commands = [];
 				
 			    for(let g of gangs){
-			        if(g.gang<12 || g.gang>31) continue;
+			        if(g.gang<12 || g.gang>292) continue;
 			        
 			        let targetSlot = Math.ceil((g.gang-11) / 4);
+			        if(g.gang >131){
+			            targetSlot = Math.ceil((g.gang-131) / 4);
+			        }
 			        if(!isset(controls[targetSlot])){
 			            controls[targetSlot] = {
 			                slot: targetSlot,
@@ -1605,7 +1704,7 @@ window.Peripheral = (function() {
 			    
 			    for(let slot in controls){
     			    data = parseInt(controls[slot].data.join(""), 2).toString(16).toUpperCase().pad("00");
-    				data = `02${self.prop.mac_reverse_key}971f${slot.pad("00")}8000${data}00`;
+    				data = `02${self.prop.mac_reverse_key}971f${self.tindySlot(slot)}8000${data}00`;
     				commands.push({
     					service: service,
     					characteristic: characteristic,
@@ -1637,9 +1736,12 @@ window.Peripheral = (function() {
 				let commands = [];
 				
 			    for(let g of gangs){
-			        if(g.gang<12 || g.gang>31) continue;
+			        if(g.gang<12 || g.gang>292) continue;
 			        
 			        let targetSlot = Math.ceil((g.gang-11) / 4);
+			        if(g.gang >131){
+			            targetSlot = Math.ceil((g.gang-131) / 4);
+			        }
 			        if(!isset(controls[targetSlot])){
 			            controls[targetSlot] = {
 			                slot: targetSlot,
@@ -1660,7 +1762,7 @@ window.Peripheral = (function() {
 			    
 			    for(let slot in controls){
     			    data = parseInt(controls[slot].data.join(""), 2).toString(16).toUpperCase().pad("00");
-    				data = `02${self.prop.mac_reverse_key}971f${slot.pad("00")}8000${data}00`;
+    				data = `02${self.prop.mac_reverse_key}971f${self.tindySlot(slot)}8000${data}00`;
     				commands.push({
 						action: "write",
 						guid: findGuid,
@@ -2235,10 +2337,11 @@ Peripheral.prototype.rcuDoScene = function(gangs) {
 	const self = this;
 	
 	for(let g of gangs){
-		if(g.gang<49 || g.gang>82) continue;
+		if(g.gang<49 || g.gang>214) continue;
 		self.prop.status.control[0][g.gang] = g.value;
+		self.prop.status.gang_control[0][g.gang] = DateFormatter.format((new Date(new Date().getTime() + 5000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 	}
-		self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
+	self.prop.status.control[1] = DateFormatter.format((new Date(new Date().getTime() + 5000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000");
 		
 	return new Promise((resolve, reject) => {
 		const action = {
@@ -3036,7 +3139,7 @@ return new Promise((resolve, reject) => {
 				let data = JSON.parse(JSON.stringify(self.getLatestStatus()));
 				self.prop.status.control[0] = data[0];
 	    for(let g of gangs){
-	        if(g.gang<32 || g.gang>41) continue;
+	        if(g.gang<32 || g.gang>363) continue;
 	        self.prop.status.control[0][g.gang] = g.value;
 			if(g.value > 0){
 			    self.prop.status.last[0][g.gang] = g.value;
@@ -3072,18 +3175,24 @@ return new Promise((resolve, reject) => {
 				let commands = [];
 				
 			    for(let g of gangs){
-			        if(g.gang<32 || g.gang>41) continue;
+			        if(g.gang<32 || g.gang>363) continue;
 			        
 			        let targetSlot = Math.ceil((g.gang-31) / 2);
-			        targetSlot = targetSlot.toString();
-			        
+			        if(g.gang > 282){
+			           targetSlot = Math.ceil((g.gang-282) / 2);
+			        }
+			        targetSlot = self.tindySlot(targetSlot);
 			        self.prop.status.control[0][g.gang] = g.value;
     			    data = g.value.toString(16).toUpperCase().pad("00");
-    				data = `02${self.prop.mac_reverse_key}971f${targetSlot.pad("00")}892${(g.gang%2)}${data}`;
+    			    let gang_simple = `892${(g.gang%2)}`;
+    			    if(g.gang > 51){
+    			        gang_simple = `892${((g.gang*1+1)%2)}`
+    			    }
+    				data = `02${self.prop.mac_reverse_key}971f${targetSlot}${gang_simple}${data}`;
     				commands.push({
     					service: service,
     					characteristic: characteristic,
-    					data: data,
+    					data: data.toLowerCase(),
     				});
 			    }
 			    
@@ -3106,18 +3215,25 @@ return new Promise((resolve, reject) => {
 				let commands = [];
 				
 			    for(let g of gangs){
-			        if(g.gang<32 || g.gang>41) continue;
+			        if(g.gang<32 || g.gang>363) continue;
 			        
 			        let targetSlot = Math.ceil((g.gang-31) / 2);
-			        targetSlot = targetSlot.toString();
+			        if(g.gang > 282){
+			           targetSlot = Math.ceil((g.gang-282) / 2);
+			        }
+			        targetSlot = self.tindySlot(targetSlot);
 			        
 			        self.prop.status.control[0][g.gang] = g.value;
     			    data = g.value.toString(16).toUpperCase().pad("00");
-    				data = `02${self.prop.mac_reverse_key}971f${targetSlot.pad("00")}892${(g.gang%2)}${data}`;
+    			    let gang_simple = `892${(g.gang%2)}`;
+    				if(g.gang > 51){
+    			        gang_simple = `892${((g.gang*1+1)%2)}`
+    			    }
+    				data = `02${self.prop.mac_reverse_key}971f${targetSlot}${gang_simple}${data}`;
     				commands.push({
     					service: service,
     					characteristic: characteristic,
-    					data: data,
+    					data: data.toLowerCase(),
     				});
 			    }
 					
@@ -3143,14 +3259,21 @@ return new Promise((resolve, reject) => {
 				let commands = [];
 				
 			    for(let g of gangs){
-			        if(g.gang<32 || g.gang>41) continue;
+			        if(g.gang<32 || g.gang>363) continue;
 			        
 			        let targetSlot = Math.ceil((g.gang-31) / 2);
-			        targetSlot = targetSlot.toString();
+			        if(g.gang > 282){
+			           targetSlot = Math.ceil((g.gang-282) / 2);
+			        }
+			        targetSlot = self.tindySlot(targetSlot);
 			        
 			        self.prop.status.control[0][g.gang] = g.value;
     			    data = g.value.toString(16).toUpperCase().pad("00");
-    				data = `02${self.prop.mac_reverse_key}971f${targetSlot.pad("00")}892${(g.gang%2)}${data}`;
+    			    let gang_simple = `892${(g.gang%2)}`;
+    				if(g.gang > 51){
+    			        gang_simple = `892${((g.gang*1+1)%2)}`
+    			    }
+    				data = `02${self.prop.mac_reverse_key}971f${targetSlot}${gang_simple}${data}`;
     				commands.push({
 						action: "write",
 						guid: findGuid,
@@ -3739,9 +3862,11 @@ return new Promise((resolve, reject) => {
 
 		const doMOBMOBSendIR = (data) => {
     		return new Promise((resolve, reject) => {
-				const findGuid = self.findDefaultConnect();
-
+				let findGuid = self.findDefaultConnect();
     			const commands = [];
+    			if(!findGuid){
+    			    findGuid = self.prop.guid
+    			}
 				if(findGuid != self.prop.guid){
 					const dateSetLen = 22;
 					const count_batch = Math.ceil(data.length / dateSetLen);
@@ -4088,7 +4213,7 @@ return new Promise((resolve, reject) => {
         // press = true / false, true = pressed, false = release
         let gangs = [];
         data = data.split("_");
-        
+        debugger
         if(press){
             if(direction=='open'){
                 gangs.push({gang:(data[0]*1+11), on:true});
@@ -4572,11 +4697,57 @@ return new Promise((resolve, reject) => {
                 DateFormatter.format((new Date(new Date().getTime() + 15000)), "Y-m-d H:i:s")+"."+(new Date().getMilliseconds() % 1000).toString().pad("0000")
             ]
         });
-        
-        let res = (await db.get('peripheral')) || null;
-        if (isset(res)) {
-            const storedPeripheral = JSON.parse(res);
-            
+        if (erp.profileSwitchInProgress) {
+            return;
+        }
+        if (!window.peripheralStoreQueue) {
+            let res = (await db.get('peripheral')) || null;
+            if (isset(res)) {
+                let storedPeripheral = {};
+                try{
+                    storedPeripheral = JSON.parse(res);
+                }catch(e){
+                    storedPeripheral = {};
+                }
+
+                let storeProp = JSON.parse(JSON.stringify(self.prop));
+                delete storeProp.rssi;
+                delete storeProp.rssilv;
+                delete storeProp.lastDiscoverDate;
+                delete storeProp.services;
+                delete storeProp.characteristics;
+                delete storeProp.connecting;
+                delete storeProp.is_mobmob;
+                delete storeProp.is_mobile_gateway;
+                delete storeProp.is_mesh;
+                delete storeProp.manufactureData;
+                delete storeProp.connected;
+
+                storedPeripheral[self.prop.guid] = storeProp;
+                try{
+                    await db.set('peripheral', JSON.stringify(storedPeripheral));
+                }catch(e){}
+            }
+            return;
+        }
+        await window.peripheralStoreQueue.enqueue(async () => {
+            if (erp.profileSwitchInProgress) return;
+            let res = null;
+            try{
+                res = await db.get('peripheral');
+            }catch(e){
+                res = null;
+            }
+            if (!isset(res)) {
+                return;
+            }
+            let storedPeripheral = {};
+            try{
+                storedPeripheral = JSON.parse(res);
+            }catch(e){
+                storedPeripheral = {};
+            }
+
             let storeProp = JSON.parse(JSON.stringify(self.prop));
             delete storeProp.rssi;
             delete storeProp.rssilv;
@@ -4585,14 +4756,16 @@ return new Promise((resolve, reject) => {
             delete storeProp.characteristics;
             delete storeProp.connecting;
             delete storeProp.is_mobmob;
-						delete storeProp.is_mobile_gateway;
+            delete storeProp.is_mobile_gateway;
             delete storeProp.is_mesh;
             delete storeProp.manufactureData;
             delete storeProp.connected;
-            
+
             storedPeripheral[self.prop.guid] = storeProp;
-            db.set('peripheral', JSON.stringify(storedPeripheral));
-        }
+            try{
+                await db.set('peripheral', JSON.stringify(storedPeripheral));
+            }catch(e){}
+        }, { skipDuringSwitch: true });
     };
     Peripheral.prototype.setMqttGangConfig = async function(subdevice_name, config){
         const self = this;
@@ -4600,11 +4773,57 @@ return new Promise((resolve, reject) => {
             this.prop.config[subdevice_name] = {};
         }
         self.prop.config[subdevice_name]['mqtt'] = config
-        
-        let res = (await db.get('peripheral')) || null;
-        if (isset(res)) {
-            const storedPeripheral = JSON.parse(res);
-            
+        if (erp.profileSwitchInProgress) {
+            return;
+        }
+        if (!window.peripheralStoreQueue) {
+            let res = (await db.get('peripheral')) || null;
+            if (isset(res)) {
+                let storedPeripheral = {};
+                try{
+                    storedPeripheral = JSON.parse(res);
+                }catch(e){
+                    storedPeripheral = {};
+                }
+
+                let storeProp = JSON.parse(JSON.stringify(self.prop));
+                delete storeProp.rssi;
+                delete storeProp.rssilv;
+                delete storeProp.lastDiscoverDate;
+                delete storeProp.services;
+                delete storeProp.characteristics;
+                delete storeProp.connecting;
+                delete storeProp.is_mobmob;
+                delete storeProp.is_mobile_gateway;
+                delete storeProp.is_mesh;
+                delete storeProp.manufactureData;
+                delete storeProp.connected;
+
+                storedPeripheral[self.prop.guid] = storeProp;
+                try{
+                    await db.set('peripheral', JSON.stringify(storedPeripheral));
+                }catch(e){}
+            }
+            return;
+        }
+        await window.peripheralStoreQueue.enqueue(async () => {
+            if (erp.profileSwitchInProgress) return;
+            let res = null;
+            try{
+                res = await db.get('peripheral');
+            }catch(e){
+                res = null;
+            }
+            if (!isset(res)) {
+                return;
+            }
+            let storedPeripheral = {};
+            try{
+                storedPeripheral = JSON.parse(res);
+            }catch(e){
+                storedPeripheral = {};
+            }
+
             let storeProp = JSON.parse(JSON.stringify(self.prop));
             delete storeProp.rssi;
             delete storeProp.rssilv;
@@ -4613,14 +4832,16 @@ return new Promise((resolve, reject) => {
             delete storeProp.characteristics;
             delete storeProp.connecting;
             delete storeProp.is_mobmob;
-						delete storeProp.is_mobile_gateway;
+            delete storeProp.is_mobile_gateway;
             delete storeProp.is_mesh;
             delete storeProp.manufactureData;
             delete storeProp.connected;
-            
+
             storedPeripheral[self.prop.guid] = storeProp;
-            await db.set('peripheral', JSON.stringify(storedPeripheral));
-        }
+            try{
+                await db.set('peripheral', JSON.stringify(storedPeripheral));
+            }catch(e){}
+        }, { skipDuringSwitch: true });
         self.onPropChanged();
     };
     Peripheral.prototype.getGangConfig = function(subdevice_name){
@@ -4711,26 +4932,232 @@ return new Promise((resolve, reject) => {
     Peripheral.prototype.findRoute = function(){
         const self = this;
         
-    	return new Promise((resolve, reject) => {
-            if(self.prop.connected){ // bluetooth direct control
-                resolve(self.route.BLUETOOTH);
-            // }else if(!isset(self.prop.firmware)){ //no firmware, suppose bluetooth connect is required
-            //     resolve(self.route.BLUETOOTH);
-            }else if(self.prop.gateway != "" && self.prop.is_mobmob){ //use gateway
-                resolve(self.route.MOBMOB);
-            }else if(self.prop.network_id > 0){ //at leave mesh connected
-                if(!self.findLead() || self.findLead() == self.prop.guid){
-                    resolve(self.route.BLUETOOTH);
-                }else{
-                    resolve(self.route.MESH);
-                }
-            }else if(!isset(self.prop.rssi) || !isset(self.prop.lastDiscoverDate) || (isset(self.prop.disappear) && self.prop.disappear)){ //device is not here
-                resolve(self.route.NA);
-            }else{ // bluetooth connect and control
-                resolve(self.route.BLUETOOTH);
-            }
-    	});
+				return new Promise((resolve, reject) => {
+					if(self.prop.connected){ // bluetooth direct control
+							resolve(self.route.BLUETOOTH);
+					// }else if(!isset(self.prop.firmware)){ //no firmware, suppose bluetooth connect is required
+					//     resolve(self.route.BLUETOOTH);
+					}else if(self.prop.gateway != "" && self.prop.is_mobmob){ //use gateway
+							resolve(self.route.MOBMOB);
+					}else if(self.prop.gateway != "" && !self.prop.is_mobmob){ //有 gateway 但 is_mobmob 为 false，进行心跳检测
+							// console.log(`设备 ${self.prop.guid || self.prop.id} 检测到 gateway，执行心跳检测`);
+							self.heartbeatCheck().then(isOnline => {
+									if(isOnline) {
+											// MQTT 在线，更新 is_mobmob 并使用 MOBMOB 路由
+											// console.log(`设备 ${self.prop.guid || self.prop.id} 心跳检测通过，MOBMOB 在线`);
+											self.prop.is_mobmob = 1;
+											resolve(self.route.MOBMOB);
+									} else {
+											// MQTT 离线，继续其他判断
+											console.log(`设备 ${self.prop.guid || self.prop.id} 心跳检测失败，继续其他路由判断`);
+											self.continueFindRoute(resolve);
+									}
+							}).catch(err => {
+									// console.error(`设备 ${self.prop.guid || self.prop.id} 心跳检测出错:`, err);
+									// 出错时继续其他判断
+									self.continueFindRoute(resolve);
+							});
+					}else if(self.prop.network_id > 0){ //at leave mesh connected
+							if(!self.findLead() || self.findLead() == self.prop.guid){
+									resolve(self.route.BLUETOOTH);
+							}else{
+									resolve(self.route.MESH);
+							}
+					}else if(!isset(self.prop.rssi) || !isset(self.prop.lastDiscoverDate) || (isset(self.prop.disappear) && self.prop.disappear)){ //device is not here
+							resolve(self.route.NA);
+					}else{ // bluetooth connect and control
+							resolve(self.route.BLUETOOTH);
+					}
+				});
     };
+		/**
+		 * 继续路由判断（用于心跳检测失败后）
+		 */
+		Peripheral.prototype.continueFindRoute = function(resolve){
+			const self = this;
+
+			if(self.prop.network_id > 0){ //at leave mesh connected
+					if(!self.findLead() || self.findLead() == self.prop.guid){
+							resolve(self.route.BLUETOOTH);
+					}else{
+							resolve(self.route.MESH);
+					}
+			}else if(!isset(self.prop.rssi) || !isset(self.prop.lastDiscoverDate) || (isset(self.prop.disappear) && self.prop.disappear)){ //device is not here
+					resolve(self.route.NA);
+			}else{ // bluetooth connect and control
+					resolve(self.route.BLUETOOTH);
+			}
+		};
+
+		/**
+		 * 网关设备心跳检测 - 用于解决服务器重启后 will/topic 清空的问题
+		 * 通过对比 status/topic 消息的 MD5 值来判断设备是否在线
+		 * @returns {Promise<boolean>} 返回 true 表示设备在线，false 表示设备离线
+		 */
+		Peripheral.prototype.heartbeatCheck = function(){
+			const self = this;
+
+			// 只处理有 gateway 的设备
+			if(!self.prop.gateway || self.prop.gateway === "") {
+					// console.log(`设备 ${self.prop.guid || self.prop.id} 无 gateway，跳过心跳检测`);
+					return Promise.resolve(false);
+			}
+
+			// console.log(`开始网关设备心跳检测: ${self.prop.guid || self.prop.id}, gateway: ${self.prop.gateway}`);
+
+			return new Promise((resolve, reject) => {
+					const gatewayId = self.prop.gateway;
+					const gatewayTopic = md5(md5(gatewayId));
+					const statusTopic = `status/${gatewayTopic}`;
+					const cmdTopic = `cmd/${gatewayTopic}`;
+
+					let firstMessageMD5 = null;
+					let checkComplete = false;
+					let hasNewMessage = false;
+					let messageListener = null;
+					let timeoutId = null;
+
+					// 清理函数：移除监听器和订阅
+					const cleanup = () => {
+							if (messageListener) {
+									emitter.off(statusTopic, messageListener);
+									messageListener = null;
+							}
+							if (timeoutId) {
+									clearTimeout(timeoutId);
+									timeoutId = null;
+							}
+							core_mqtt_unsubscribe(statusTopic, true);
+					};
+
+					// 定义发送 Pubmsg 的助手函数
+					const sendPubmsg = () => {
+							return core_mqtt_publish(cmdTopic, {
+									"command": "Pubmsg",
+									"function": "bleHelper.pubmsg",
+									"params": "",
+									"callback": "",
+									"raw": ""
+							}, 0, false, false, false);
+					};
+
+					// 1. 订阅 status/topic
+					core_mqtt_subscribe(statusTopic, 0, true)
+							.then(() => {
+									console.log(`已订阅 ${statusTopic}，准备发送第一次 Pubmsg 触发指令`);
+									
+									// 2. 发送第一次 Pubmsg 指令触发网关上报最新状态
+									sendPubmsg().then(() => {
+											// console.log(`已发送第一次触发指令到 ${cmdTopic}`);
+									}).catch(err => {
+											// console.error(`发送第一次触发指令失败:`, err);
+									});
+							})
+							.catch(err => {
+									// console.error(`订阅 ${statusTopic} 失败:`, err);
+									resolve(false);
+									return;
+							});
+
+					// 设置超时处理（30秒观察窗口）
+					timeoutId = setTimeout(() => {
+							if (!checkComplete) {
+									// console.log(`网关设备 ${gatewayId} 观察窗口超时`);
+									checkComplete = true;
+
+									if (!hasNewMessage) {
+											// console.log(`网关设备 ${gatewayId} 未收到任何新消息，设备可能离线`);
+											self.handleOfflineStatus();
+									}
+
+									// 清理
+									cleanup();
+
+									// 返回 false（设备离线）
+									resolve(false);
+							}
+					}, 30000); // 30秒观察窗口
+
+					// 3. 监听 MQTT 消息
+					messageListener = (message) => {
+							if (checkComplete) return;
+							
+							try {
+									const currentMD5 = md5(message.message);
+
+									if (firstMessageMD5 === null) {
+											// 第一次收到消息（可能是保留消息，或者是第一次 Pubmsg 的响应）
+											// console.log(`网关设备 ${gatewayId} 收到第一笔消息，MD5: ${currentMD5}`);
+											firstMessageMD5 = currentMD5;
+
+											// 收到第一笔后，立刻发送第二次 Pubmsg！
+											// 这确保了一定会产生“第二笔”消息用于对比，解决了无 Retained 消息时逻辑断层的问题
+											// console.log(`发送第二次 Pubmsg 以获取对比状态...`);
+											sendPubmsg().catch(err => console.error(`发送第二次触发指令失败:`, err));
+
+									} else {
+											// 第二次及以后收到的消息（响应 Pubmsg 指令后发布的最新消息）
+											// console.log(`网关设备 ${gatewayId} 收到第二笔消息，MD5: ${currentMD5}`);
+
+											// 判定逻辑：只要能收到第二笔消息，说明网关能响应我们的实时指令，必在线
+											hasNewMessage = true;
+
+											if (currentMD5 !== firstMessageMD5) {
+													// console.log(`✓ MD5 不同！判定为最新消息，设备在线`);
+											} else {
+													// console.log(`! MD5 虽然相同，但收到了第二次指令响应，判定网关活跃`);
+											}
+
+											// 4. 发送 will/topic 唤醒设备重新上线
+											console.log(`发送唤醒指令到 will/${gatewayTopic}`);
+											core_mqtt_publish(
+													`will/${gatewayTopic}`,
+													{"status": "online"},
+													0,
+													true,
+													false,
+													true
+											);
+
+											checkComplete = true;
+
+											// 清理
+											cleanup();
+
+											// 返回 true（设备在线）
+											resolve(true);
+									}
+							} catch (error) {
+									// console.error(`处理网关设备 ${gatewayId} 消息时出错:`, error);
+									checkComplete = true;
+									cleanup();
+									resolve(false);
+							}
+					};
+
+					// 注册消息监听器
+					emitter.on(statusTopic, messageListener);
+			});
+		};
+
+		/**
+		* 处理设备离线状态
+		*/
+		Peripheral.prototype.handleOfflineStatus = function(){
+			const self = this;
+			console.log(`设备 ${self.prop.guid || self.prop.id} 标记为离线状态`);
+
+			// 可以在这里添加离线处理逻辑，例如：
+			// - 更新设备状态
+			// - 发送通知
+			// - 更新UI显示
+			// - 记录日志等
+
+			// 示例：更新设备状态
+			if(isset(self.prop.status)) {
+					// self.prop.status.online = false;
+			}
+		};
     Peripheral.prototype.findLead = function(){
         const self = this;
 
@@ -4804,8 +5231,33 @@ return new Promise((resolve, reject) => {
         
         this.onPropChanged();
     };
-
-
+    
+    
+    Peripheral.prototype.getCurrentFirmware = function(){
+        const self = this;
+        return new Promise((resolve, reject) => {
+            let service="180a", characteristic="2a26";
+		    if(isset(self.prop.characteristics)){
+    		    for(let c of self.prop.characteristics){
+                    if(c.characteristic.toLowerCase() == "2a26" || c.characteristic.toLowerCase() == "2a28"){
+                        service = c.service;
+                        characteristic = c.characteristic;
+                    }
+    		    }
+		    }
+			ble.read(self.prop.id, service, characteristic,
+                function(data){
+                    let firmware = data.convertToAscii().toLowerCase();
+	                self.prop.firmware = firmware;
+                    self.prop.firmwareNo = self.getFirmwareNo(firmware);
+                    return resolve(self.getFirmwareNo(firmware));
+                },
+                function(failure){
+                    return reject("Failed to read Firmware");
+                }
+            );
+    	});
+    }
     Peripheral.prototype.doConnect = function() {
         const self = this;
     	const connect = () => {
@@ -5138,17 +5590,32 @@ return new Promise((resolve, reject) => {
         };
         
         const enableMtu = ()=>{
+            if (self.mtuTimer) {
+                clearTimeout(self.mtuTimer);
+                self.mtuTimer = null;
+            }
             return new Promise((resolve, reject) => {
-                
+                self.mtuTimer = setTimeout(() => {
+                    self.mtuTimer = null;
+                    reject('MTU request timeout after 2000ms');
+                }, 2000);
+                const cleanup = () => {
+                    if (self.mtuTimer) {
+                        clearTimeout(self.mtuTimer);
+                        self.mtuTimer = null;
+                    }
+                };
                 ble.requestMtu(
                   self.prop.id,
                   512,
                   () => {
                     console.log('request mtu success');
+                    cleanup();
                     resolve(true);
                   },
                   (error) => {
                     if(error){
+                      cleanup();
                       reject(error);
                     }
                   }

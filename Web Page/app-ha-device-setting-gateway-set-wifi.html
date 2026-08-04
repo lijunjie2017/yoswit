@@ -46,7 +46,7 @@
                             v-on:focus="showWifiInfo"
                           />
                           <div class="wifi-box" v-if="wifiShowStatus">
-                            <div class="list">
+                            <div class="list" style="padding:0px 10px;z-index:100;background:#fff">
                               <ul style="padding-left: 0px">
                                 <li v-for="(kitem,kindex) in localWifiList" :key="kindex" v-on:click="clickWifiBox(kitem.ssid)">
                                   <a class="item-content" style="padding-left: 0px">
@@ -107,7 +107,11 @@
                 <div class="col align-self-center no-padding-left">
                   <h5 class="no-margin-bottom">{{_('WiFi Information')}}</h5>
                 </div>
-                <div class="col-auto"></div>
+                <div class="col-auto" v-on:click="init()">
+                    <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                    <i class="material-icons">refresh</i>
+                  </div>
+                </div>
               </div>
               <div style="margin-top: 10px">
                 <div class="list">
@@ -197,8 +201,10 @@
           setting: {
             ssid: '',
             ssid_password: '',
-            email: erp.info.profile.profile_email?erp.info.profile.profile_email:erp.info.profile.owner,
-            server_url: erp.settings[erp.appId].mqtt_scheme?erp.settings[erp.appId].mqtt_scheme+'://'+erp.settings[erp.appId].mqtt_server:'mqtt://' + erp.settings[erp.appId].mqtt_server,
+            email: erp.info.profile.profile_email ? erp.info.profile.profile_email : erp.info.profile.owner,
+            server_url: erp.settings[erp.appId].mqtt_scheme
+              ? erp.settings[erp.appId].mqtt_scheme + '://' + erp.settings[erp.appId].mqtt_server
+              : 'mqtt://' + erp.settings[erp.appId].mqtt_server,
             port: erp.settings[erp.appId].mqtt_port,
             username: '',
             server_password: '',
@@ -255,10 +261,11 @@
                 let bleList = [];
                 this.setting.ssid = '';
                 this.setting.ssid_password = '';
-                for(let i in this.wifiInfo){
-                  this.wifiInfo[i] = "";
+                for (let i in this.wifiInfo) { 
+                  this.wifiInfo[i] = '';
                 }
-                let ssid_data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
+                let ssid_utf_8 = this.stringToUtf8Hex(this.setting.ssid);
+                let ssid_data = '932000' + (ssid_utf_8.length / 2).toString(16).pad('0000') + ssid_utf_8;
                 let ssid_password_data =
                   '932100' + this.setting.ssid_password.length.toString(16).pad('0000') + this.setting.ssid_password.convertToHex();
                 bleList.push({
@@ -294,9 +301,7 @@
                   app.dialog.alert(_(erp.get_log_description(error)));
                 }
               },
-              () => {
-
-              }
+              () => {}
             );
           },
           showWifiInfo() {
@@ -358,21 +363,22 @@
             this.saveLocalWifi();
             try {
               await iot_ble_check_enable();
-              if(deviceInfo.operatingSystem != 'ios'){
+              if (deviceInfo.operatingSystem != 'ios') {
                 await ble.requestMtu(
                   peripheral[guid].prop.id,
                   512,
-                  ()=>{
+                  () => {
                     console.log('requestMtu success');
                   },
-                  ()=>{
+                  () => {
                     console.log('requestMtu error');
-                  },
-                )
+                  }
+                );
               }
               let bleList = [];
               //ssid
-              let ssid_data = '932000' + this.setting.ssid.length.toString(16).pad('0000') + this.setting.ssid.convertToHex();
+              let ssid_utf_8 = this.stringToUtf8Hex(this.setting.ssid);
+              let ssid_data = '932000' + (ssid_utf_8.length / 2).toString(16).pad('0000') + ssid_utf_8;
               bleList.push({
                 service: 'ff80',
                 characteristic: 'ff81',
@@ -413,16 +419,14 @@
                 data: port_data,
               });
               //if mira, default username and password
-              if(erp.appId.toLowerCase().includes('mira')){
-                debugger
+              if (erp.appId.toLowerCase().includes('mira')) {
+                debugger;
                 let server_username = `iot-device-themira`;
                 let server_password = `Uiop0987!@#`;
                 console.log('server_username', server_username);
                 console.log('server_password', server_password);
-                let server_username_data =
-                '930200' + server_username.length.toString(16).pad('0000') + server_username.convertToHex();
-                let server_password_data =
-                '930300' + server_password.length.toString(16).pad('0000') + server_password.convertToHex();
+                let server_username_data = '930200' + server_username.length.toString(16).pad('0000') + server_username.convertToHex();
+                let server_password_data = '930300' + server_password.length.toString(16).pad('0000') + server_password.convertToHex();
                 bleList.push({
                   service: 'ff80',
                   characteristic: 'ff81',
@@ -439,15 +443,15 @@
               //post to erp data
               let profile_device = erp.info.profile.profile_device;
               let mac = core_utils_get_mac_address_from_guid(guid, false);
-              profile_device.forEach((item)=>{
-                if(item.name == device_name){
+              profile_device.forEach((item) => {
+                if (item.name == device_name) {
                   item.gateway = `${mac.toLowerCase()}-${this.setting.email.toLowerCase()}`;
                 }
-              })
+              });
               let url = `/api/resource/Profile/${erp.info.profile.name}`;
               let method = 'PUT';
               let data = {
-                profile_device : profile_device
+                profile_device: profile_device,
               };
               await http.request(url, {
                 method: method,
@@ -457,13 +461,18 @@
                 contentType: 'application/json',
               });
               //post to erp
-              await iot_device_setting_sync_server(guid, null, null, true, {
+              let erpData = {
                 'Wifi SSID': this.setting.ssid,
                 'Wifi Password': this.setting.ssid_password,
                 'Email Address': this.setting.email || 'null',
                 'Server Port': this.setting.port || 'null',
                 'Server URI': this.setting.server_url || 'null',
-              });
+              }
+              if(this.setting.server_url.toLowerCase().includes("mqtts")){
+                erpData['Server Username'] = 'iot-device-themira';
+                erpData['Server Password'] = 'Uiop0987!@#';
+              }
+              await iot_device_setting_sync_server(guid, null, null, true,erpData);
               //update the device gateway
               await http.request(`/api/method/appv6.checkDeviceGateways`, {
                 method: 'POST',
@@ -524,16 +533,55 @@
 
             return plainText;
           },
+          stringToUtf8Hex(str) {
+            let utf8Bytes;
+            if (typeof TextEncoder !== 'undefined') {
+              // 现代浏览器和 Node.js
+              const encoder = new TextEncoder();
+              utf8Bytes = encoder.encode(str);
+            } else {
+              // 兼容旧环境（如旧版 IE）
+              utf8Bytes = [];
+              for (let i = 0; i < str.length; i++) {
+                let code = str.charCodeAt(i);
+
+                if (code < 0x80) {
+                  // 单字节字符
+                  utf8Bytes.push(code);
+                } else if (code < 0x800) {
+                  // 双字节字符
+                  utf8Bytes.push(0xc0 | (code >> 6));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                } else if (code < 0x10000) {
+                  // 三字节字符（包括大部分中文字符）
+                  utf8Bytes.push(0xe0 | (code >> 12));
+                  utf8Bytes.push(0x80 | ((code >> 6) & 0x3f));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                } else {
+                  // 四字节字符
+                  utf8Bytes.push(0xf0 | (code >> 18));
+                  utf8Bytes.push(0x80 | ((code >> 12) & 0x3f));
+                  utf8Bytes.push(0x80 | ((code >> 6) & 0x3f));
+                  utf8Bytes.push(0x80 | (code & 0x3f));
+                }
+              }
+              utf8Bytes = new Uint8Array(utf8Bytes);
+            }
+            // 转换为十六进制字符串
+            return Array.from(utf8Bytes)
+              .map((byte) => byte.toString(16).padStart(2, '0'))
+              .join('');
+          },
           async getJsonData() {
             try {
               await peripheral[guid].connect();
-              if(deviceInfo.operatingSystem != 'ios'){
+              if (deviceInfo.operatingSystem != 'ios') {
                 await ble.requestMtu(
                   peripheral[guid].prop.id,
                   512,
-                  ()=>{},
-                  ()=>{},
-                )
+                  () => {},
+                  () => {}
+                );
               }
               await ble.startNotification(
                 peripheral[guid].prop.id,

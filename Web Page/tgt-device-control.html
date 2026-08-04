@@ -26,7 +26,7 @@
           </div>
           <div
             class="top-item"
-            :class="{ muted: !btConnected }"
+            :class="{ muted: !btConnected, 'bt-connected': btConnected }"
             v-on:click="toggleBt"
             :aria-label="btConnected ? _('Bluetooth connected') : _('Bluetooth disconnected')"
           >
@@ -255,9 +255,10 @@
                   </div>
                 </div>
                 <div class="knob-actions">
-                  <a class="knob-btn" v-on:click="changeLevel('left', -1)"><i class="icon f7-icons">minus</i></a>
-                  <div class="knob-value">{{ leftLevel }}</div>
-                  <a class="knob-btn" v-on:click="changeLevel('left', 1)"><i class="icon f7-icons">plus</i></a>
+                  <a class="burner-close-btn" :class="{ disabled: !leftBurnerOn }" v-on:click="closeBurner('left')">
+                    <i class="icon f7-icons">power</i>
+                    <span>{{ _('Close') }}</span>
+                  </a>
                 </div>
               </div>
               <div class="knob-ctrl">
@@ -273,9 +274,10 @@
                   </div>
                 </div>
                 <div class="knob-actions">
-                  <a class="knob-btn" v-on:click="changeLevel('right', -1)"><i class="icon f7-icons">minus</i></a>
-                  <div class="knob-value">{{ rightLevel }}</div>
-                  <a class="knob-btn" v-on:click="changeLevel('right', 1)"><i class="icon f7-icons">plus</i></a>
+                  <a class="burner-close-btn" :class="{ disabled: !rightBurnerOn }" v-on:click="closeBurner('right')">
+                    <i class="icon f7-icons">power</i>
+                    <span>{{ _('Close') }}</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -398,6 +400,8 @@
           chartInstance: null,
           chartDataSeed: null,
           viewportWidth: 0,
+          deviceMode: '',
+          guid : '',
         },
         computed: {
           wifiConnected() {
@@ -472,6 +476,25 @@
           initSmartWaterHeaterStatus() {
             //
           },
+          initYoswitSmartStoveStatus() {
+            // 我们自己的模组：默认点火并展示在线状态
+            this.isOffline = false;
+            this.leftLevel = 1;
+            this.rightLevel = 1;
+            this.leftBurnerOn = true;
+            this.rightBurnerOn = true;
+            this.leftIgniting = true;
+            this.rightIgniting = true;
+            //判断蓝牙连接状态
+            if(window.peripheral[this.guid]){
+              this.btConnected = window.peripheral[this.guid].prop.connected;
+            }
+            // 点火动画结束后还原状态
+            setTimeout(() => {
+              this.leftIgniting = false;
+              this.rightIgniting = false;
+            }, 520);
+          },
           async initSmartStoveStatus() {
             //get config
             let subdevices = cloneDeep(erp.info.profile.profile_subdevice);
@@ -481,6 +504,15 @@
               return;
             }
             try {
+              //获取device mode进行判断，如果是TGT Wifi Control就是我们自己的模组，否则就是官方的模组
+              let device_mode = subdeviceMap.device_mode;
+              this.deviceMode = device_mode;
+              this.guid = subdeviceMap.device;
+              if(device_mode == 'TGT Wifi Control'){
+                //我们自己的模组
+                this.initYoswitSmartStoveStatus();
+                return;
+              }
               let config = JSON.parse(subdeviceMap.config);
               if (!config) {
                 app.dialog.alert(_('Config not found'));
@@ -600,6 +632,43 @@
                 this[onKey] = false;
                 this[extKey] = false;
               }, 360); // 熄火过渡
+            }
+          },
+          async closeBurner(side) {
+            const isLeft = side === 'left';
+            const onKey = isLeft ? 'leftBurnerOn' : 'rightBurnerOn';
+            const extKey = isLeft ? 'leftExtinguishing' : 'rightExtinguishing';
+            const levelKey = isLeft ? 'leftLevel' : 'rightLevel';
+            
+            // 只在开火状态下才执行关闭
+            if (!this[onKey]) return;
+            
+            this[extKey] = true;
+            //发送蓝牙信号
+            if(this.deviceMode == 'TGT Wifi Control'){
+              //我们自己的模组
+              let gang = 1;
+              if(side !== 'left'){
+                gang = 2;
+              }
+              try{
+                await window.peripheral[this.guid].onoff([
+                  {
+                    gang : gang,
+                    on: false
+                  },
+                ]);
+                setTimeout(() => {
+                  this[onKey] = false;
+                  this[extKey] = false;
+                  this[levelKey] = 0;
+                }, 360); // 熄火过渡
+              }catch(error){
+                app.dialog.alert(_(erp.get_log_description(error)));
+                return;
+              }
+            }else{
+              //发送官方的wifi
             }
           },
           changeLevel(side, delta) {
@@ -1086,6 +1155,9 @@
   }
   .top-item.muted {
     color: var(--f7-color-gray, #9e9e9e);
+  }
+  .top-item.bt-connected {
+    color: #0066CC;
   }
   .device-header {
     margin: 8px 0 4px;
@@ -1750,7 +1822,7 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-top: 2px;
+    margin-top: 8px;
   }
   .knob-btn {
     width: 48px;
@@ -1771,6 +1843,46 @@
     font-weight: 800;
     font-size: 16px;
   }
+  /* 关闭炉头按钮 */
+  .burner-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 
+      0 6px 20px rgba(238, 90, 111, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: 
+      all 180ms ease,
+      transform 120ms ease;
+    user-select: none;
+  }
+  .burner-close-btn .icon {
+    font-size: 18px;
+    color: #fff;
+  }
+  .burner-close-btn:active:not(.disabled) {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 4px 12px rgba(238, 90, 111, 0.4);
+  }
+  .burner-close-btn.disabled {
+    background: linear-gradient(135deg, #e0e5eb 0%, #d1d6dc 100%);
+    color: rgba(0, 0, 0, 0.3);
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .burner-close-btn.disabled .icon {
+    color: rgba(0, 0, 0, 0.3);
+  }
   @media (max-width: 360px) {
     .knob-btn {
       width: 44px;
@@ -1778,6 +1890,13 @@
     }
     .knob-value {
       width: 44px;
+    }
+    .burner-close-btn {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    .burner-close-btn .icon {
+      font-size: 16px;
     }
   }
 

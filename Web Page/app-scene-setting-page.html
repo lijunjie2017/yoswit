@@ -257,6 +257,28 @@
               </div>
             </div>
           </li>
+          <li class="radio-box card">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">{{_("Occupancy")}}</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <label class="item-checkbox item-checkbox-icon-start item-content">
+                  <input type="checkbox" name="demo-checkbox-occupied" value="0" @change="${(event)=>toggleOccupancyStatus(0, event.target.checked)}" />
+                  <i class="icon icon-checkbox"></i>
+                </label>
+              </div>
+            </div>
+          </li>
+          <li class="radio-box card">
+            <div class="timer-item item-content display-flex justify-content-space-between align-items-center">
+              <div class="item-title">{{_("Unoccupied")}}</div>
+              <div class="timer-choose display-flex justify-content-flex-end align-items-center">
+                <label class="item-checkbox item-checkbox-icon-start item-content">
+                  <input type="checkbox" name="demo-checkbox-unoccupied" value="1" @change="${(event)=>toggleOccupancyStatus(1, event.target.checked)}" />
+                  <i class="icon icon-checkbox"></i>
+                </label>
+              </div>
+            </div>
+          </li>
         </ul>
       </div>
     </div>
@@ -276,6 +298,7 @@
       $onBeforeUnmount = ctx.$onBeforeUnmount,
       $onUnmounted = ctx.$onUnmounted;
     const { button_group, display_name, mac_address, model, mode, img_url, room_name, guid, gateway ,config} = $f7route.query;
+    const OCCUPANCY_VIRTUAL_ID = 125;
     console.log($f7route.query);
     const showTimeBox = (index)=>{
       if(index == 1){
@@ -294,6 +317,12 @@
         }
       }
     }
+    const toggleOccupancyStatus = (state, checked) => {
+      if (checked) {
+        const otherInput = state === 0 ? 'input[name="demo-checkbox-unoccupied"]' : 'input[name="demo-checkbox-occupied"]';
+        $(otherInput).prop('checked', false);
+      }
+    };
     const saveTrigger = () => {
       if (mode == 'Thermostat') {
         let temp = $(`input[name="temperature"]`).val();
@@ -302,6 +331,9 @@
         let hum_less = $(`input[name="humidity-less"]`).val();
         let temp_length = $(`input[name="demo-checkbox"]:checked`).length;
         let hum_length = $(`input[name="demo-checkbox-hum"]:checked`).length;
+        let occupiedLength = $(`input[name="demo-checkbox-occupied"]:checked`).length;
+        let unoccupiedLength = $(`input[name="demo-checkbox-unoccupied"]:checked`).length;
+        let occupancyState = occupiedLength ? 0 : unoccupiedLength ? 1 : undefined;
         let data = {
           mode: mode,
           guid: guid,
@@ -324,6 +356,14 @@
         if(!hum_length){
           delete data.hum;
           delete data.hum_less;
+        }
+        if (occupiedLength && unoccupiedLength) {
+          app.dialog.alert(_('Select only one occupancy state.'));
+          return;
+        }
+        if (isset(occupancyState)) {
+          data.occupancyVirtualId = OCCUPANCY_VIRTUAL_ID;
+          data.occupancyState = occupancyState * 1;
         }
         emitter.emit('trigger_save',data);
       }else{

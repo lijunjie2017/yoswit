@@ -1,0 +1,107 @@
+<template>
+  <yo-skeleton loading="${gi(`{{ block.name }}`).loadingRef.value}">
+    ${!gi(`{{ block.name }}`).loadingRef.value && gi(`{{ block.name }}`).categoryRef.value.length <= 0 && $h`
+    <no-record-found></no-record-found>
+    `}
+    <!-- -- -->
+
+    <div class="media-list mb-5 py-2" block-name="{{ block.name }}">
+      ${gi(`{{ block.name }}`).categoryRef.value.map(e => $h`
+      <div class="card overflow-hidden notifications no-border" style="margin-top: 1.25rem; margin-bottom: 1.25rem">
+        <div class="card-content list">
+          <ul>
+            <li>
+              <a
+                href="/mobile-app/app-news-by-category-page?docname=${encodeURIComponent(e.title)}&category=${encodeURIComponent(e.name)}"
+                class="item-content item-link"
+              >
+                {% if display_category_image === 'Yes' %}
+                <div class="item-media">
+                  ${e.preview_image ? $h`
+                  <img src="${ erp.get_url(e.preview_image) }" style="width: 34px; height: 34px; border-radius: 50%" />
+                  `: $h`
+                  <i class="material-icons" style="font-size: 34px">collections</i>
+                  `}
+                </div>
+                {% endif %}
+
+                <div
+                  class="item-inner display-flex flex-direction-row align-items-center justify-content-center"
+                  style="word-break: break-word; margin-left: 0.75rem"
+                >
+                  <div class="item-title-row" style="width: 100%">
+                    <div class="item-title" style="word-break: break-word; white-space: normal; font-weight: bold; font-size: 1rem">
+                      ${ _(e.title) }
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      `)}
+    </div>
+  </yo-skeleton>
+</template>
+
+<script name="initialization">
+  'use script';
+
+  hasMoreItems = false;
+
+  function gi(key) {
+    return items[key];
+  }
+
+  items[`{{ block.name }}`] = (() => {
+    const categoryRef = ctx.$ref([]);
+    const loadingRef = ctx.$ref(true);
+
+    async function load() {
+      try {
+        loadingRef.value = true;
+        const resp = await http2.request({
+          url: encodeURI('/api/resource/Blog Category'),
+          method: 'GET',
+          params: {
+            fields: JSON.stringify(['title', 'description', 'name', 'preview_image']),
+            filters: JSON.stringify([['published', '=', 1]]),
+            limit: 100,
+            order_by: 'custom_sort_order asc',
+          },
+        });
+
+        categoryRef.value = resp.data.data;
+      } catch (error) {
+        console.error(error);
+      } finally {
+        loadingRef.value = false;
+      }
+    }
+
+    return {
+      categoryRef,
+      loadingRef,
+      load,
+    };
+  })();
+
+  ctx.$onMounted(() => {
+    items[`{{ block.name }}`].load();
+  });
+</script>
+
+<script name="refresh">
+  'use script';
+
+  if ($(`.tab-active [block-name="{{ block.name }}"]`).length > 0) {
+    items[`{{ block.name }}`].load().then(() => done());
+    done();
+  } else if ($('.page.page-current .tabbar').length <= 0) {
+    items[`{{ block.name }}`].then(() => done());
+    done();
+  } else {
+    done();
+  }
+</script>

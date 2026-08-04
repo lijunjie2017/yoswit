@@ -1,0 +1,1117 @@
+<template>
+<div class="page">
+  <div class="navbar active">
+    <div class="navbar-bg"></div>
+    <div class="navbar-inner sliding">
+      <div class="left">
+        <a href="#" class="button button-fill text-color-theme bg-color-white button-44 back">
+          <i class="icon icon-back"></i>
+          <span class="if-not-md">Back</span>
+        </a>
+      </div>
+      <div class="title">${ _(docname) }</div>
+      <div class="right">
+        ${record && record.doc.docstatus !== 0 && record.doc.status === 'Pending Payment' && record.doc.mode_of_payment &&
+        showPayment.value && $h`
+        <i class="material-icons text-color-orange" style="font-size: 32px">error</i>
+        `}
+      </div>
+    </div>
+  </div>
+
+  <div class="page-content ptr-content" @ptr:refresh="${refresh}">
+    <div class="ptr-preloader">
+      <div class="preloader"></div>
+      <div class="ptr-arrow"></div>
+    </div>
+
+    <yo-skeleton loading="${isLoading}" type="detail">
+      ${!record && !isLoading && $h`
+      <no-record-found></no-record-found>
+      `}
+      <!-- divider -->
+      ${record && $h`
+      <div class="card no-border facility-booking-content overflow-hidden">
+        ${record.doc && record.doc.docstatus === 0 && $h` ${record.facility_type.image ? $h`
+        <div
+          class="card-header display-flex align-items-flex-center justify-content-center step-card"
+          style="background-image: url('${erp.get_url(record.facility_type.image)}')"
+        >
+          <b class="size-22"> {{ _("Summary Review") | safe }}</b>
+        </div>
+        `: $h`
+        <div class="card-header display-flex align-items-flex-center justify-content-center step-card bg-color-gray">
+          <b class="size-22"> {{ _("Summary Review") | safe }}</b>
+        </div>
+        `} `}
+
+        <div class="card-content">
+          <!-- Payment -->
+          ${record.doc.docstatus !== 0 && record.doc.status === 'Pending Payment' && record.doc.mode_of_payment && showPayment.value &&
+          $h`
+          <!------>
+          <div class="card mx-3 no-border bg-color-orange rounded-card mt-3 mb-3" style="overflow: visible">
+            <div class="card-content text-color-white display-flex flex-direction-column p-3">
+              ${record.doc.reservation_expiry ? $h`
+              <h3 class="text-align-center" style="line-height: 18px; font-size: 15px">
+                {{ _("Please pay before") }} <b>${ dayjs(record.doc.reservation_expiry).format('YYYY-MM-DD h:mm A') }</b>
+              </h3>
+              ` : $h`
+              <h3 class="text-align-center" style="line-height: 18px; font-size: 15px">${ record.pos_invoice }</h3>
+              `}
+
+              <!--<i class="material-icons text-color-white" style="position: absolute; right: 7px; top: 10px; font-size: 26px">error</i>-->
+              <h3 class="mt-2 text-align-center" style="line-height: 18px">${ _(record.mode_of_payment.description) }</h3>
+            </div>
+          </div>
+          <!------>
+          `}
+          <!------>
+          ${!!record.pos_invoice && record.doc.status === 'Pending Payment' && record.mode_of_payment &&
+          record.mode_of_payment.show_payment_code === 1 && showPayment.value && $h`
+          <div class="mx-3 my-2">
+            <div class="qr_code_preview mt-3 p-4" style="background-color: white">
+              <qr-code qrcode="${record.pos_invoice}" encode style="width: 100%; height: 100%"></qr-code>
+            </div>
+
+            <a
+              href="#"
+              class="button button-fill color-theme-bg-blue mt-3 external"
+              func="controller_sharing_option"
+              message="{{ _('PAYMENT QR CODE') }}"
+              ref="${getQRCode(record.pos_invoice, true)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">share</i>
+              {{ _('PAYMENT QR CODE') }}
+            </a>
+          </div>
+          `}
+          <!------>
+          ${!!record.pos_invoice && record.doc.status === 'Pending Payment' && record.mode_of_payment &&
+          record.mode_of_payment.show_payment_code !== 1 && showPayment.value && $h`
+          <div class="mx-3 my-2">
+            <a href="#" class="button button-fill color-theme-bg-blue mt-3 external" @click="${() => requestPaymentGatewayURL()}">
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">paid</i>
+              {{ _('PAYMENT') }}
+            </a>
+          </div>
+          `}
+          <!------>
+          ${!!record.pos_invoice && record.doc.status === 'Confirmed' && showQrCode2.value && $h`
+          <div class="mx-3 my-2">
+            <div class="qr_code_preview mt-3 p-4" style="background-color: white">
+              <qr-code qrcode="${record.pos_invoice}" encode style="width: 100%; height: 100%"></qr-code>
+            </div>
+
+            <a
+              href="#"
+              class="button button-fill color-theme-bg-blue mt-3 external"
+              func="controller_sharing_option"
+              message="{{ _('TICKET COLLECTION CODE') }}"
+              ref="${getQRCode(record.pos_invoice, true)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">share</i>
+              {{ _('TICKET COLLECTION CODE') }}
+            </a>
+            <a
+              href="#"
+              class="button button-fill mt-3 external"
+              style="background-color: #0f77ff"
+              @click="${() => addToCalendar(record.doc)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">calendar_month</i>
+              {{ _('add to calender') }}
+            </a>
+          </div>
+          `}
+          <!------>
+          ${record.doc.status === 'Confirmed' && showQrCode3.value && $h`
+          <div class="mx-3 my-2">
+            <div class="qr_code_preview mt-3 p-4" style="background-color: white">
+              <qr-code qrcode="${record.doc.confirmation_code}" style="width: 100%; height: 100%"></qr-code>
+            </div>
+
+            <a
+              href="#"
+              class="button button-fill color-theme-bg-blue mt-3 external"
+              func="controller_sharing_option"
+              message="{{ _('ACCESS CODE') }}"
+              ref="${getQRCode(record.doc.confirmation_code, false)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">share</i>
+              {{ _('ACCESS CODE') }}
+            </a>
+            <a
+              href="#"
+              class="button button-fill mt-3 external"
+              style="background-color: #0f77ff"
+              @click="${() => addToCalendar(record.doc)}"
+            >
+              <i class="material-icons me-2" style="font-size: 26px; color: white; margin-right: 6px">calendar_month</i>
+              {{ _('add to calender') }}
+            </a>
+          </div>
+          `}
+
+          <!-- Detail -->
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span> {{ _("Booking Details") | safe }}</span>
+            </div>
+            <div class="card-content">
+              <div class="list">
+                <ul>
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">business</i>
+                          {{ _('Facility') }}
+                        </div>
+                        <div class="item-after">${ _(facilityName) }</div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">calendar_month</i>
+                          {{ _('Date') }}
+                        </div>
+                        <div class="item-after">${ record.doc.date }</div>
+                      </div>
+                    </div>
+                  </li>
+
+                  ${!isKtmarina && record.doc.guest_flat ? $h`
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">apartment</i>
+                          {{ _('Guest Flat') }}
+                        </div>
+                        <div class="item-after">${ record.doc.guest_flat }</div>
+                      </div>
+                    </div>
+                  </li>
+                  ` : $h`
+                  <div style="display: none"></div>
+                  `}
+
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">schedule</i>
+                          {{ _('Timeslot') }}
+                        </div>
+                        <div class="item-after">
+                          ${ timeSlot }
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">people</i>
+                          {{ _('Number of Guests') }}
+                        </div>
+                        <div class="item-after">
+                          ${ record.doc.capacity }
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  ${record.doc.remark ? $h`
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">note</i>
+                          {{ _('Remark') }}
+                        </div>
+                        <div class="item-after">
+                          ${ record.doc.remark }
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  ` : $h`
+                  <div style="display: none"></div>
+                  `}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          ${!isKtmarina && $h`
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span> {{ _("Guest Information") | safe }}</span>
+            </div>
+            ${record.tickets.length > 0 && record.doc.status === 'Confirmed' && record.doc.docstatus === 1 && showQrCode1.value ? $h`
+            <div class="card-content">
+              ${record.tickets.map((ticket) => $h`
+              <div
+                class="display-flex flex-direction-row py-3"
+                style="box-sizing: border-box; overflow: hidden; width: 100%; padding-left: 8px"
+              >
+                <div class="avatar avatar-44 elevation-2 rounded-10 bg-color-gray text-color-white">
+                  <i class="material-icons">qr_code_scanner</i>
+                </div>
+                <div
+                  class="text-align-left display-flex flex-direction-row align-items-center justify-content-flex-start px-2"
+                  style="flex: 1; box-sizing: border-box; min-width: 0"
+                >
+                  <h5 class="no-margin-bottom text-truncate">${ ticket.guest_name || ticket.ticket_name }</h5>
+
+                  <p class="size-12 no-margin-bottom" style="margin-left: 4px">
+                    ${ticket.status === 'Activated' ? $h`
+                    <span class="badge color-green px-2">${ ticket.status }</span>
+                    ` : ticket.status === 'Used' ? $h`
+                    <span class="badge color-orange px-2">${ ticket.status }</span>
+                    ` : $h`
+                    <span class="badge color-red px-2">${ ticket.status }</span>
+                    ` }
+                  </p>
+                </div>
+
+                ${ticket.status === 'Activated' && $h`
+                <div class="no-padding-right" style="margin-right: 8px">
+                  <a href="#" class="button button-fill button-44 color-theme button-raised" @click="${() => showQRCodeSheet(ticket)}">
+                    <i class="material-icons">navigate_next</i>
+                  </a>
+                </div>
+                `}
+              </div>
+              `)}
+            </div>
+            ` : $h`
+            <div class="card-content">
+              <div class="list media-list">
+                <ul>
+                  ${record.doc.guests.map((gst) => $h`
+                  <li>
+                    <div class="item-content px-2">
+                      <div class="item-media">
+                        <i class="material-icons text-color-gray size-48">account_circle</i>
+                      </div>
+                      <div class="item-inner pe-2">
+                        <div class="item-title-row">
+                          <div class="item-title"><strong>${ gst.guest_name }</strong></div>
+                          <div class="item-after">
+                            <strong><span>\$</span>${ gst.price }</strong>
+                          </div>
+                        </div>
+                        <div class="item-subtitle">${ _(gst.ticket_type) }</div>
+                        ${gst.guest_phone && $h`
+                        <div class="item-subtitle">${ _(gst.guest_phone) }</div>
+                        `}
+                      </div>
+                    </div>
+                  </li>
+                  `)}
+                </ul>
+              </div>
+            </div>
+            `}
+          </div>
+          `}
+
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span> {{ _("Payment Details") }}</span>
+            </div>
+            <div class="card-content">
+              <div class="list">
+                <ul>
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">monetization_on</i>
+                          {{ _('Total Amount') }}
+                        </div>
+                        <div class="item-after size-18">
+                          <strong><span>\$</span>${ record.doc.price }</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  ${record.doc.price > 0 && $h`
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">
+                          <i class="material-icons size-18">credit_card</i>
+                          {{ _('Payment Method') }}
+                        </div>
+
+                        <div class="item-after">
+                          <div class="row mt-2 payment-list">
+                            <label class="col-25 payment-detail-box">
+                              <i class="material-icons size-22">add_card</i>
+                              <span class="mt-2">${ _(record.doc.mode_of_payment) }</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  `}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          ${record.facility && record.facility.booking_terms_and_conditions && $h`
+          <div class="card no-border rounded-card">
+            <div class="card-header bg-color-primary text-color-white">
+              <span> {{ _("Terms and Conditions") }}</span>
+            </div>
+            <div class="card-content card-content-padding scrollable-content pe-3" style="height: 160px; overflow-y: auto">
+              <ql-editor-viewer
+                style="word-break: break-word"
+                content="${tran(record.facility.booking_terms_and_conditions)}"
+              ></ql-editor-viewer>
+            </div>
+          </div>
+          `}
+        </div>
+
+        ${record.doc.docstatus === 0 && $h`
+        <div class="card-footer" style="flex-direction: column">
+          <div class="row">
+            <div class="col">
+              <a href="#" class="button button-fill" @click="${() => confirmBooking()}"> {{ _('CONFIRM')}} </a>
+            </div>
+          </div>
+        </div>
+        `}
+        <!------>
+        ${!isKtmarina && record.doc.docstatus !== 0 && record.doc.status === 'Pending Payment' && record.doc.price > 0 && $h`
+        <div class="card-footer" style="flex-direction: column">
+          <div class="row">
+            <div class="col">
+              <a
+                href="#"
+                class="button button-fill"
+                style="background-color: #ff7130"
+                func="app_core_sharing_file"
+                message="${record.pos_invoice}"
+                path="${record.pos_invoice}.pdf"
+                ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${record.pos_invoice}&format=App_Yoswit_POS_Invoice_V3"
+              >
+                <!-- ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${record.pos_invoice}&format=App_Yoswit_POS_Invoice_V3" -->
+                <i class="material-icons me-2">file_download</i>
+                {{ _('INVOICE')}}
+              </a>
+            </div>
+          </div>
+        </div>
+        `}
+        <!------>
+        ${!isKtmarina && record.doc.docstatus !== 0 && record.doc.status === 'Confirmed' && record.doc.price > 0 && $h`
+        <div class="card-footer" style="flex-direction: column">
+          <div class="row">
+            <div class="col-100">
+              <a
+                href="#"
+                class="button button-fill"
+                style="background-color: #ff7130"
+                func="app_core_sharing_file"
+                message="${record.pos_invoice}"
+                path="${record.pos_invoice}.pdf"
+                ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${record.pos_invoice}&format=App_Yoswit_POS_Invoice_V3"
+              >
+                <i class="material-icons me-2">file_download</i>
+                {{ _('INVOICE')}}
+              </a>
+            </div>
+            <div class="col-100">
+              <a
+                href="#"
+                class="button button-fill mt-3"
+                style="background-color: #0f77ff"
+                func="app_core_sharing_file"
+                message="${record.pos_invoice}"
+                path="${record.pos_invoice}.pdf"
+                ref="/api/method/frappe.utils.print_format.download_pdf?doctype=POS%20Invoice&name=${record.pos_invoice}&format=App_Yoswit_POS_Receipt_V3"
+              >
+                <i class="material-icons me-2">file_download</i>
+                {{ _('RECEIPT')}}
+              </a>
+            </div>
+          </div>
+        </div>
+        `}
+      </div>
+      `}
+    </yo-skeleton>
+
+    <!-- action sheet for ticket payment create, start-->
+    <div class="sheet-modal facilit-ticket-sheet-swipe-to-close" style="height: auto; --f7-sheet-bg-color: #fff">
+      <div class="sheet-modal-inner">
+        <div class="display-flex padding justify-content-center align-items-center flex-direction-column">
+          <div class="block-title mt-0" id="guest-name"></div>
+          <div
+            class="ticket_qr_code_container justify-content-center align-items-center flex-direction-column pb-3"
+            style="display: flex"
+          >
+            <img src="" alt="qr_code" id="ticket_qr_code" style="height: 200px; width: 200px" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- action sheet for ticket payment create, end-->
+  </div>
+</div>
+</template>
+
+<script>
+export default async (props, ctx) => {
+  const $f7 = ctx.$f7,
+    $ref = ctx.$ref,
+    $f7route = ctx.$f7route,
+    $update = ctx.$update,
+    $on = ctx.$on,
+    $onBeforeMount = ctx.$onBeforeMount,
+    $onMounted = ctx.$onMounted,
+    $onBeforeUpdate = ctx.$onBeforeUpdate,
+    $onUpdated = ctx.$onUpdated,
+    $onBeforeUnmount = ctx.$onBeforeUnmount,
+    $onUnmounted = ctx.$onUnmounted;
+
+  const docname = $f7route.query.docname;
+  const reservationExpiryRef = $ref('');
+  const showPayment = $ref(false);
+  let browserListener = null;
+  let browserPageLoadedListener = null;
+  let lockScroll = false;
+
+  let latestStatus = null;
+  let isLoading = true;
+  let record = null;
+  let payment_gateway_url = null;
+  let facilityName = '';
+  let timeSlot = '';
+
+  // 二维码控制显示
+  const showQrCode1 = $ref(false); // Guest Information闸机码 1
+  const showQrCode2 = $ref(false); // 手带打印码 2
+  const showQrCode3 = $ref(false); // 闸机通行码 3
+  const showQrCode4 = $ref(false); // 动态二维码 4
+  const showQrCode5 = $ref(false); // 蓝牙开门 5
+
+  const isKtmarina = (() => {
+    try {
+      return erp.appId === 'com.yoswit.ktmarina';
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  async function getData() {
+    try {
+      isLoading = true;
+      const response = await http2.request({
+        url: encodeURI('/api/method/appv6.query_record'),
+        params: {
+          docname: docname,
+        },
+        responseType: 'json',
+        method: 'GET',
+      });
+      console.log('record', response.data);
+
+      record = response.data;
+      try {
+        facilityName = record.facility?.facility_code;
+        timeSlot = `${dayjs(record.doc.from_time).format('HH:mm')} - ${dayjs(record.doc.to_time).format('HH:mm')}`;
+        if (facilityName !== record.facility?.facility_name) {
+          facilityName = record.facility?.facility_name;
+        }
+        const fromTime = new Date(record.doc.from_time);
+        const toTime = new Date(record.doc.to_time);
+        const diffMs = (toTime - fromTime) /  (1000 * 60);
+        if (diffMs <= 1) {
+          timeSlot = dayjs(record.doc.from_time).format('HH:mm');
+        }
+      } catch (error) {
+        console.error('error', error);
+      }
+
+
+
+      // 控制二维码显示隐藏
+      const facilityTypeData = record.facility_type;
+      const { access_control, access_type, create_ticket } = facilityTypeData;
+      // 1
+      if (
+        access_control &&
+        create_ticket &&
+        !findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = true;
+        showQrCode3.value = false;
+        showQrCode4.value = false;
+        showQrCode5.value = false;
+      }
+      // 2
+      if (
+        !access_control &&
+        create_ticket &&
+        !findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = false;
+        showQrCode3.value = false;
+        showQrCode4.value = false;
+        showQrCode5.value = false;
+      }
+      // 3
+      if (
+        access_control &&
+        create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = true;
+        showQrCode2.value = true;
+        showQrCode3.value = false;
+        showQrCode4.value = false;
+        showQrCode5.value = false;
+      }
+      // 4
+      if (
+        access_control &&
+        create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = true;
+        showQrCode2.value = true;
+        showQrCode3.value = false;
+        showQrCode4.value = true;
+        showQrCode5.value = false;
+      }
+      // 5
+      if (
+        access_control &&
+        !create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = false;
+        showQrCode3.value = true;
+        showQrCode4.value = false;
+        showQrCode5.value = false;
+      }
+      // 6
+      if (
+        access_control &&
+        !create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = false;
+        showQrCode3.value = true;
+        showQrCode4.value = true;
+        showQrCode5.value = false;
+      }
+      // 7
+      if (
+        !access_control &&
+        !create_ticket &&
+        !findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        !findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = false;
+        showQrCode3.value = false;
+        showQrCode4.value = false;
+        showQrCode5.value = false;
+      }
+      // 8
+      if (
+        access_control &&
+        create_ticket &&
+        !findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = true;
+        showQrCode3.value = false;
+        showQrCode4.value = false;
+        showQrCode5.value = true;
+      }
+      // 9
+      if (
+        access_control &&
+        create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = true;
+        showQrCode2.value = true;
+        showQrCode3.value = false;
+        showQrCode4.value = false;
+        showQrCode5.value = true;
+      }
+      // 10
+      if (
+        access_control &&
+        create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        findAccessType(access_type, 'Dynamic QR Code') &&
+        findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = true;
+        showQrCode2.value = true;
+        showQrCode3.value = false;
+        showQrCode4.value = true;
+        showQrCode5.value = true;
+      }
+      // 11
+      if (
+        access_control &&
+        !create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        !findAccessType(access_type, 'Dynamic QR Code') &&
+        findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = false;
+        showQrCode3.value = true;
+        showQrCode4.value = false;
+        showQrCode5.value = true;
+      }
+      // 12
+      if (
+        access_control &&
+        !create_ticket &&
+        findAccessType(access_type, 'QR Code') &&
+        findAccessType(access_type, 'Dynamic QR Code') &&
+        findAccessType(access_type, 'Door Management')
+      ) {
+        showQrCode1.value = false;
+        showQrCode2.value = false;
+        showQrCode3.value = true;
+        showQrCode4.value = true;
+        showQrCode5.value = true;
+      }
+
+      console.log(showQrCode1.value, showQrCode2.value, showQrCode3.value, showQrCode4.value, showQrCode5.value);
+
+      if (record.doc.status === 'Pending Payment' && record.doc.docstatus === 1) {
+        if (record.doc.reservation_expiry) {
+          // 检查expiry是否距离当前时间超过5分钟
+          if (dayjs().diff(record.doc.reservation_expiry, 'minute') > 5) {
+            showPayment.value = false;
+          } else {
+            showPayment.value = true;
+          }
+        } else {
+          showPayment.value = true;
+        }
+      } else {
+        showPayment.value = false;
+      }
+
+      // 当需要付款时订阅更新状态
+      if (showPayment.value && record.pos_invoice) {
+        mqtt.useSubscribe(record.pos_invoice, {
+          pageCtx: ctx,
+          callback: () => {
+            setTimeout(() => {
+              getData();
+            }, 3000);
+          },
+        });
+      }
+
+      // check need to notify page refresh
+      if (record) {
+        if (latestStatus !== null && latestStatus !== record.doc.status) {
+          notifyPageSeed();
+        }
+
+        latestStatus = record.doc.status;
+      }
+
+      isLoading = false;
+    } catch (err) {
+      isLoading = false;
+      console.error(err);
+    }
+
+    $update();
+
+    if (lockScroll) {
+      return;
+    } else {
+      lockScroll = true;
+      setTimeout(() => {
+        // scroll to top
+        $('.page-content').scrollTop(0);
+        setTimeout(() => {
+          lockScroll = false;
+        }, 2000);
+      }, 0);
+    }
+  }
+
+  // 查找 access_type
+  function findAccessType(access_type_list, access_type) {
+    return access_type_list.find((item) => item.access_type === access_type);
+  }
+
+  function getQRCode(qrcode, encode) {
+    const v = encode ? `55AA{{${btoa(qrcode)}}}99BB` : qrcode;
+    return erp.get_url(`/sqr?d=${v}`);
+  }
+
+  function showQRCodeSheet(ticket) {
+    cordova.plugins.qrcodejs.encode(
+      'TEXT_TYPE',
+      ticket.qr_code,
+      (base64EncodedQRImage) => {
+        $('#ticket_qr_code').attr('src', base64EncodedQRImage);
+        $('#guest-name').html(ticket.guest_name);
+        $('#counter').html(ticket.valid_to);
+
+        app.sheet.open('.facilit-ticket-sheet-swipe-to-close');
+      },
+      (err) => {},
+      {
+        correctLevel: 0,
+      }
+    );
+  }
+
+  // const PAYMETHOD_MAP = {
+  //   'WeChat': 42,
+  //   'Alipay': 5,
+  //   'Alipay-HKD': 35,
+  //   'Credit Card': 37,
+  //   'Bank Transfer': 13,
+  //   'Octopus': 19,
+  // };
+
+  let paymentRequestLock = false;
+  async function requestPaymentGatewayURL() {
+    if (paymentRequestLock) return;
+    paymentRequestLock = true;
+    try {
+      if (record.doc.mode_of_payment === 'Cheque') {
+        if (record.doc.price > 0) {
+          app.dialog.alert(_('Please Make The Payment At The Resident Service Center.'));
+        }
+        return;
+      }
+      if (record.doc.status === 'Confirmed' || record.doc.status === 'Paid' || !showPayment.value) {
+        return;
+      }
+
+      if (record.mode_of_payment.show_payment_code !== 1) {
+        let cookie =
+          http2
+            .getCookieString()
+            .split(';')
+            .filter((item) => item.trim().startsWith('sid='))[0] || '';
+        cookie = cookie.trim();
+        console.log('cookie', cookie);
+
+        const response = await http2.request({
+          url: encodeURI(
+            '/api/method/mpay_payment_integration.mpay_payment_integration.doctype.mpay_payment_gateway.get_mpay_payment_url'
+          ),
+          method: 'GET',
+          debug: true,
+          params: {
+            // reference_doctype: 'POS Invoice',
+            // reference_docname: record.pos_invoice,
+            pos_invoice_docname: record.pos_invoice,
+            // price_fieldname: 'total',
+            // payer_name: users[users.current].usr,
+            // currency: record.doc.currency,
+            paymethod: record.mode_of_payment.custom_payment_gateway_code || 0,
+            // locale: 'en_US',
+            customizeddata: cookie,
+          },
+        });
+
+        payment_gateway_url = response.data.message;
+        console.log(' ', payment_gateway_url);
+        $update();
+
+        // iOS 并且微信支付
+        if (Capacitor.getPlatform() === 'ios' && record.mode_of_payment.custom_payment_gateway_code == 42) {
+          window.open(payment_gateway_url, '_blank');
+        } else {
+          // webview 新开窗口
+          Capacitor.Plugins.InAppBrowser.openWebView({
+            url: payment_gateway_url,
+            toolbarType: 'navigation',
+            title: _(record.pos_invoice),
+          });
+        }
+
+        // window.open(payment_gateway_url, '_blank');
+      }
+    } catch (error) {
+      console.error('requestPaymentGatewayURL', error);
+      app.toast.show({
+        text: _(error),
+        position: 'bottom',
+        closeTimeout: 2000,
+      });
+    } finally {
+      paymentRequestLock = false;
+    }
+  }
+
+  async function confirmBooking() {
+    try {
+      app.preloader.show();
+      await http2.request({
+        url: encodeURI('/api/resource/Facility Booking/' + docname),
+        method: 'PUT',
+        responseType: 'json',
+        serializer: 'json',
+        data: {
+          docstatus: 1,
+        },
+      });
+
+      await getData();
+      requestPaymentGatewayURL();
+
+      app.preloader.hide();
+    } catch (error) {
+      app.preloader.hide();
+
+      app.toast.show({
+        text: _(error),
+        position: 'bottom',
+        closeTimeout: 2000,
+      });
+    }
+  }
+
+  async function refresh(e, done) {
+    try {
+      await getData();
+    } catch (err) {
+      // ignore
+    } finally {
+      done();
+    }
+  }
+
+  function notifyPageSeed() {
+    window.pageRefresher.goup('Facility Booking');
+  }
+
+  function addToCalendar(booking) {
+    console.log(booking);
+
+    const location = booking.facility_flat;
+    const title = booking.facility_type;
+    const startDate = dayjs(booking.from_time).toDate();
+    const endDate = dayjs(booking.to_time).toDate();
+
+    window.plugins.calendar.createEventInteractively(
+      title,
+      location,
+      '',
+      startDate,
+      endDate,
+      () => {
+        // success
+      },
+      (err) => {
+        console.log(err);
+      }
+    );
+  }
+
+  $onMounted(() => {
+    getData();
+    emitter.on('cap:app:resume', getData);
+
+    try {
+      browserListener = Capacitor.Plugins.InAppBrowser.addListener('closeEvent', () => {
+        getData();
+      });
+
+      browserPageLoadedListener = Capacitor.Plugins.InAppBrowser.addListener('browserPageLoaded', () => {
+        Capacitor.Plugins.InAppBrowser.executeScript({
+          code: `
+          // hook window.confirm
+          window.confirm = function() { return true; };
+          `,
+        });
+      });
+    } catch (error) {
+      // ignore
+    }
+  });
+
+  $onUnmounted(() => {
+    try {
+      if (browserListener) {
+        browserListener.remove();
+      }
+    } catch (error) {
+      // ignore
+    }
+
+    try {
+      if (browserPageLoadedListener) {
+        browserPageLoadedListener.remove();
+      }
+    } catch (error) {
+      // ignore
+    }
+
+    emitter.off('cap:app:resume', getData);
+  });
+
+  return $render;
+};
+</script>
+
+<style>
+.size-16 {
+    font-size: 16px;
+  }
+
+  .size-20 {
+    font-size: 20px;
+  }
+
+  .rounded-card {
+    border-radius: 13px;
+    overflow: hidden;
+  }
+
+  .rounded-card .card-header {
+    color: white;
+  }
+
+  .payment-list {
+    justify-content: flex-start;
+  }
+
+  .payment-detail-box {
+    border-radius: 8px;
+    padding: 10px 6px;
+    height: 70px;
+    margin: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    background-color: var(--f7-theme-color);
+    color: white;
+    flex: 1;
+  }
+
+  .payment-detail-box span {
+    font-size: 10px;
+    margin-top: 5px;
+    line-height: 12px;
+  }
+
+  .door-list-box {
+    border: 1px solid var(--f7-messagebar-border-color);
+    border-radius: 5px;
+    margin-top: 5px !important;
+  }
+
+  .door-list-box .item-content .item-inner {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .door-list-box .item-inner:after {
+    content: '';
+    position: absolute;
+    background-color: var(--f7-list-item-border-color);
+    display: block;
+    z-index: 15;
+    top: auto;
+    right: auto;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    width: 100%;
+    transform-origin: 50% 100%;
+    transform: scaleY(calc(1 / var(--f7-device-pixel-ratio)));
+  }
+
+  .door_data_list {
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .facility-booking-content .item-content .item-title {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    flex-shrink: 0;
+    flex-basis: content;
+  }
+
+  .facility-booking-content .item-content .item-title i {
+    margin-right: 3px;
+  }
+  
+  .facility-booking-content .item-content .item-after {
+    word-break: break-all;
+    flex-shrink: 1;
+    white-space: normal;
+  }
+
+  .step-card {
+    color: #fff;
+    height: 150px;
+    font-size: 18px;
+    background-position: center;
+    background-size: cover;
+  }
+
+  .theme-color {
+    background-color: var(--f7-theme-color);
+  }
+
+  .size-15 {
+    font-size: 15px;
+  }
+</style>
